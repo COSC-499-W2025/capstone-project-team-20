@@ -16,4 +16,4 @@ Log Checkbox:
     positively alter the requirements that we had for the project. We took note of these changes to edit our requirements later on, and polish it for
     later submission.
 
-    Our group later discussed the changes that we wanted to reflect on our updated requirements document online, came up with an updated version of our draft. And submitted our updated draft for evaluation.
+    Our group later discussed the changes that we wanted to reflect on our updated requirements document online, came up with an updated version of our draft. We also submitted our updated draft for evaluation. 
