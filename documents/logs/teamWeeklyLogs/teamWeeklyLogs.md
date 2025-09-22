@@ -1,6 +1,6 @@
 ## Team 20 Weekly Log 
 
-### Week 1 (September 14-21)
+### Week 3 (September 15-21)
 
 **Work Performed:**
 
