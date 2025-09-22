@@ -4,11 +4,11 @@
 
 **Types of Tasks Worked On**
 
-![week 3 task categories](imagesForJoyLogs/week-3-tasks.png)
+![week 3 task categories](imagesForJoyLogs/week-3-log-ss.png)
 
 **Recap of Goals**
 
-[#1]: https://github.com/COSC-499-W2025/capstone-project-team-20/issues/1
+- Issue [#1](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/1)
 
 This week, our team collectively worked on determining an initial set of functional and non-functional requirements based on the given project specification.
 
