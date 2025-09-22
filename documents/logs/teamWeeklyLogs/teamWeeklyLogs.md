@@ -23,4 +23,6 @@
 
 ![open tasks week 1](teamWeeklyLogsImages/openWeek1.png)
 
+**Burnup Chart**
 
+![burnup chart week 3](teamWeeklyLogsImages/week-3-burnup-chart.png)
