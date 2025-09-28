@@ -25,6 +25,12 @@ Our last goal was to define more goals in our team's project board. We filled ou
 
 **Weekly Goals Recap:**
 
+This week, our teams goal was to prepare a system architecture diagram based on our current understanding of the project. Our team collectively worked on it and we created the diagram between Monday and Wednesday and gathered feedback from 4 other teams during the Wednesday class.
+
+We are also working on our Project Proposal. We are adding issues into our GitHub project (Issues #10, #11, #12, #13) to distribute workload among our team members for the different sections of the proposal. I am working on the "Proposed Solution" section of the proposal, Issue [COSC-499-W2025/capstone-project-team-20#11](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/11)
+
+All of this went into project planning, assigning people to tasks, deciding on task priorities, writing class reports, helping others and receiving help for work completed. 
+
 
  
 
