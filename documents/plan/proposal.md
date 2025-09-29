@@ -9,7 +9,7 @@
 - Sven Annist (42486720)
 - Joy Musiel-Henseleit (16289167)
 - Lex Nash (84668540)
--
+- Dylan Alexander (16394025)
 
 ## 1 Project Scope and Usage Scenario
 The intended users are those who use their computer to create/store files from creative or professional activities, and that wish to gather information and view metrics on their activities over time. Some such users may include graduating students or early professionals wishing to improve or update their resume. Upon starting the program, the user will be presented with options to select a starting directory, and exclude certain directories or files if they do not wish for their entire computer to be searched. Upon starting the search, the program will analyze all files in its search area compiling information on each based on their metadata. Upon completion, the user will be presented with various metrics organized by file type containing information on individual projects. The user can then choose to export these metrics into a single file.
