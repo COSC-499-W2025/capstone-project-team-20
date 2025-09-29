@@ -124,6 +124,15 @@ Our solution is a desktop application that allows users to scan any files on the
 
 ### Technology Stack:
 
+| Component | Technology | Purpose |
+|-----------|------------|---------|
+| Language | **Python 3.11+** | Main development language, cross-platform support |
+| File Scanning | `os`, `pathlib` | Traverse file system, detect file types |
+| Database | **SQLite** | Local storage for scanned metadata, supports fast queries |
+| User Interface | **Tkinter** | Desktop application interface, cross-platform |
+| Unit Testing | **pytest** | Write and run automated test cases for core functionality |
+| Packaging | **PyInstaller** | Create standalone executables for Windows, macOS, Linux |
+
 ### Test Framework:
 
 | Requirement | Description | Test Cases | Who | H / M / E |  
