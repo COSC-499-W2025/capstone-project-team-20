@@ -7,7 +7,7 @@
 - Branden Kennedy (42474551)
 - Necmi Kaan Sapoglu (17014796)
 - Sven Annist (42486720)
--
+- Joy Musiel-Henseleit (16289167)
 -
 -
 
