@@ -21,3 +21,9 @@ We additionally outlined methods for testing each requirement, the target user g
 **Types of Tasks Worked On**
 
 ![week 4 task categories](imagesForJoyLogs/week-4-tasks.png)
+
+**Recap of Goals**
+
+- Issue [#3](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/3)
+- Issue [#16](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/16)
+
