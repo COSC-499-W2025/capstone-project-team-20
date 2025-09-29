@@ -138,4 +138,15 @@ User cancels export before completion.
 
 | Requirement | Description | Test Cases | Who | H / M / E |  
 | --- | --- | --- | --- | --- | 
-| Short phrase or sentence | Description of the feature, the steps involved, the complexity of it, potential difficulties | <ul><li>test case 1</li><li>test case 2</li></ul> | name | Hard |
+| Select folders/files to scan | An interface allows users to specify files, folders, or artifacts to include in the scan. Complexity: handling multiple file formats and updating scan configurations accordingly. Potential difficulties include ensuring that user selections are saved and reflected in scans. | <ul><li>1</li><li>2</li></ul> | . | M |
+| Exclude folders/files from scanning | Prior to scanning, users will be able to specify files and folders to exclude. Complexity: maintaining exclusion to nested directories. Potential difficulties include performance with complex exclusion rules, and accurately updating exclusions lists. | <ul><li>1</li><li>2</li></ul> | . | M |
+| Scan and detect file types | The system scans and identifies supported file types. Complexities: handling large directories and multiple file formats. Potential difficulties include handling of unsupported files and performance with large datasets. | <ul><li>1</li><li>2</li></ul> | . | . |
+| Skip excluded files/folders | The system will ensure items marked for exclusion are skipped in all scans. Complexity: ensuring consistency when skipping across nested directories and incremental scans. Potential difficulties include identifying overlapping inclusion/exclusion rules. | <ul><li>1</li><li>2</li></ul> | . | . |
+| Extract metadata | The system will extract file metadata such as creation/modification date, size, language usage, contributions. Complexity: parsing various file types, extracting, and aggregating meaningful metrics. Potential difficulties include handling corrupted files. | <ul><li>1</li><li>2</li></ul> | . | . |
+| Store metadata in local database | The system will save extracted metadata for querying, filtering, and reporting. Complexity: database schema design, efficient storage of data. Potential difficulties include handling large volumes of data and ensuring data integrity. | <ul><li>1</li><li>2</li></ul> | . | . |
+| Incremental scanning | The system will only process new or modified files on subsequent scans. Complexity: accurately tracking file changes and comparing this with previously scanned metadata. Potential difficulties include detecting modifications such as renamed or moved files.  | <ul><li>1</li><li>2</li></ul> | . | . |
+| Calculate metrics | . | <ul><li>1</li><li>2</li></ul> | . | . |
+| Display summary in tables/graphs | . | <ul><li>1</li><li>2</li></ul> | . | . |
+| Search/filter metadata | . | <ul><li>1</li><li>2</li></ul> | . | . |
+| Export metadata summaries | . | <ul><li>1</li><li>2</li></ul> | . | . |
+| Export reports in templates for resumes/portfolios | . | <ul><li>1</li><li>2</li></ul> | . | . |
