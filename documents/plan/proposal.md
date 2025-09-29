@@ -6,129 +6,119 @@
 
 - Branden Kennedy (42474551)
 - Necmi Kaan Sapoglu (17014796)
-- 
-- 
-- 
-- 
+- Sven Annist (42486720)
+-
+-
+-
 
 ## 1 Project Scope and Usage Scenario
 
 
 ## 2 Proposed Solution
-Our solution is a desktop application that allows users to scan any files on their machine. This includes code, images, videos, documents, or other artifacts that the user chooses to have scanned. The system will extract useful information such as metadata and analytics. Users can select which folders, files, or file types to include in the scan, allowing them to exclude select file types. This gives the user control over their data. The system will calculate metrics such as file type distributions, timelines, contribution statistics, longest active projects, most commonly used programming languages, etc. The data that is crawled will be presented in clear tables and visual graphs. The system will also use incremental scanning to only process new or modified files. This will be done with a local database for fast queries and will be able to operate on major operating systems. The user can also export these summaries in CSV or PDF. By keeping the processing local, the system ensures data privacy. Compared to other teams, our application focuses on data privacy and detailed analytics. Other teams have shown that they may develop a web application that requires uploading data to a server. Our desktop solution keeps processing local, ensuring data privacy while still providing analytics and detailed reporting. 
+Our solution is a desktop application that allows users to scan any files on their machine. This includes code, images, videos, documents, or other artifacts that the user chooses to have scanned. The system will extract useful information such as metadata and analytics. Users can select which folders, files, or file types to include in the scan, allowing them to exclude select file types. This gives the user control over their data. The system will calculate metrics such as file type distributions, timelines, contribution statistics, longest active projects, most commonly used programming languages, etc. The data that is crawled will be presented in clear tables and visual graphs. The system will also use incremental scanning to only process new or modified files. This will be done with a local database for fast queries and will be able to operate on major operating systems. The user can also export these summaries in CSV or PDF. By keeping the processing local, the system ensures data privacy. Compared to other teams, our application focuses on data privacy and detailed analytics. Other teams have shown that they may develop a web application that requires uploading data to a server. Our desktop solution keeps processing local, ensuring data privacy while still providing analytics and detailed reporting.
 
 ## 3 Use Cases
 
-Use Case 1: Scan Files/Folders
+### Use Case 1: Scan Files/Folders
 
-Primary actor: User
+**Primary actor:** User
 
-Description: User initiates a scan of selected folders or files to detect supported file types and extract relevant metadata.
+**Description:** User initiates a scan of selected folders or files to detect supported file types and extract relevant metadata.
 
-Precondition: The application is installed and running. The user has selected folders or files.
+**Precondition:** The application is installed and running. The user has selected folders or files.
 
-Postcondition: Metadata about the scanned files is stored in the local database.
+**Postcondition:** Metadata about the scanned files is stored in the local database.
 
-Main Scenario:
+**Main Scenario:**
 
-User selects folders or files to scan.
+1. User selects folders or files to scan.
+2. User clicks “Scan.”
+3. The system identifies supported file types.
+4. The system extracts metadata (file size, type, dates, contributions, etc.).
+5. Metadata is stored in the local database.
 
-User clicks “Scan.”
+**Extensions:**
 
-The system identifies supported file types.
+- User cancels the scan midway.
+- Unsupported file types are skipped.
+- System only scans newly modified files if an incremental scan is chosen.
 
-The system extracts metadata (file size, type, dates, contributions, etc.).
+---
 
-Metadata is stored in the local database.
+### Use Case 2: Exclude Files or Folders
 
-Extensions:
+**Primary actor:** User
 
-User cancels the scan midway.
+**Description:** User specifies files or directories to be ignored during scanning.
 
-Unsupported file types are skipped.
+**Precondition:** User has selected files or folders.
 
-System only scans newly modified files if an incremental scan is chosen.
+**Postcondition:** Excluded items are not processed during future scans.
 
-Use Case 2: Exclude Files or Folders
+**Main Scenario:**
 
-Primary actor: User
+1. User opens scan settings.
+2. User selects files/folders to exclude.
+3. User saves preferences.
+4. System skips excluded items during the next scan.
 
-Description: User specifies files or directories to be ignored during scanning.
+**Extensions:**
 
-Precondition: User has selected files or folders.
+- User removes exclusions later.
+- System prompts if excluded folders overlap with previously included selections.
 
-Postcondition: Excluded items are not processed during future scans.
+---
 
-Main Scenario:
+### Use Case 3: View Analytics and Summaries
 
-User opens scan settings.
+**Primary actor:** User
 
-User selects files/folders to exclude.
+**Description:** User views project statistics in table or graph formats.
 
-User saves preferences.
+**Precondition:** At least one scan has been completed and data exists in the database.
 
-System skips excluded items during the next scan.
+**Postcondition:** Data is displayed as tables and/or visual graphs.
 
-Extensions:
+**Main Scenario:**
 
-User removes exclusions later.
+1. User navigates to the analytics dashboard.
+2. System queries stored metadata.
+3. System generates visualizations (file type distribution, activity timeline, contributions, etc.).
+4. User views results.
 
-System prompts if excluded folders overlap with previously included selections.
+**Extensions:**
 
-Use Case 3: View Analytics and Summaries
+- User applies filters (time range, file type, project).
+- User customizes visualization styles.
 
-Primary actor: User
+---
 
-Description: User views project statistics in table or graph formats.
+### Use Case 4: Export Reports
 
-Precondition: At least one scan has been completed and data exists in the database.
+**Primary actor:** User
 
-Postcondition: Data is displayed as tables and/or visual graphs.
+**Description:** User exports project summaries and analytics to external formats.
 
-Main Scenario:
+**Precondition:** User has generated analytics data.
 
-User navigates to the analytics dashboard.
+**Postcondition:** A report is saved in the chosen format (CSV, PDF, or resume template).
 
-System queries stored metadata.
+**Main Scenario:**
 
-System generates visualizations (file type distribution, activity timeline, contributions, etc.).
+1. User clicks “Export.”
+2. User selects format (CSV, PDF, resume-style).
+3. System generates the report.
+4. System saves or shares the file locally.
 
-User views results.
+**Extensions:**
 
-Extensions:
+- Export fails due to missing permissions → system notifies user.
+- User cancels export before completion.
 
-User applies filters (time range, file type, project).
-
-User customizes visualization styles.
-
-Use Case 4: Export Reports
-
-Primary actor: User
-
-Description: User exports project summaries and analytics to external formats.
-
-Precondition: User has generated analytics data.
-
-Postcondition: A report is saved in the chosen format (CSV, PDF, or resume template).
-
-Main Scenario:
-
-User clicks “Export.”
-
-User selects format (CSV, PDF, resume-style).
-
-System generates the report.
-
-System saves or shares the file locally.
-
-Extensions:
-
-Export fails due to missing permissions → system notifies user.
-
-User cancels export before completion.
+---
 
 ### UML Diagram:
-
+<img src="./umlUseCaseDiagram.png" alt="UML Use Case Diagram" width="50%" />
 
 ## 4 Requirements, Testing, Requirement Verification
 
