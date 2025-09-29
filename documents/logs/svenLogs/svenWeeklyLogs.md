@@ -1,7 +1,7 @@
 ## Sep 14-21
 
 ### Tasked worked on:
-![Svens Tasks for W1](./imagesForSvenLogs/week_1_log_ss.png)
+![Svens Tasks for W3](./imagesForSvenLogs/w3.png)
 
 ## Weekly Goals Recap:
 
