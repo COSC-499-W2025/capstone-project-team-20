@@ -51,3 +51,4 @@
 **In Progress Tasks:**
 
 **Burnup Chart:**
+![burnup chart week 4](teamWeeklyLogsImages/week-4-burnup-chart.png)
