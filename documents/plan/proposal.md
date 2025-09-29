@@ -8,7 +8,7 @@
 - Necmi Kaan Sapoglu (17014796)
 - Sven Annist (42486720)
 - Joy Musiel-Henseleit (16289167)
--
+- Lex Nash (84668540)
 -
 
 ## 1 Project Scope and Usage Scenario
