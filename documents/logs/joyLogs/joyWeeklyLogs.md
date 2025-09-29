@@ -27,3 +27,6 @@ We additionally outlined methods for testing each requirement, the target user g
 - Issue [#3](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/3)
 - Issue [#16](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/16)
 
+At the beginning of the week, our team collaborated to create a system architecture diagram based on our current understanding and expectations of the system to be developed. We interacted with four other teams to provide and receive feedback on our respective diagrams (insights provided on the Canvas quiz).
+
+The remainder of the sprint focused on preparing our project proposal document which is in progress, but set to be completed on time. To help facilitate progress and completion of tasks, I set up issues on our project board corresponding to the various sections of the proposal document.
