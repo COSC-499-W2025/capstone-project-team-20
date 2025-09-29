@@ -7,12 +7,12 @@
 - Branden Kennedy (42474551)
 - Necmi Kaan Sapoglu (17014796)
 - Sven Annist (42486720)
--
--
+- Joy Musiel-Henseleit (16289167)
+- Lex Nash (84668540)
 -
 
 ## 1 Project Scope and Usage Scenario
-
+The intended users are those who use their computer to create/store files from creative or professional activities, and that wish to gather information and view metrics on their activities over time. Some such users may include graduating students or early professionals wishing to improve or update their resume. Upon starting the program, the user will be presented with options to select a starting directory, and exclude certain directories or files if they do not wish for their entire computer to be searched. Upon starting the search, the program will analyze all files in its search area compiling information on each based on their metadata. Upon completion, the user will be presented with various metrics organized by file type containing information on individual projects. The user can then choose to export these metrics into a single file.
 
 ## 2 Proposed Solution
 Our solution is a desktop application that allows users to scan any files on their machine. This includes code, images, videos, documents, or other artifacts that the user chooses to have scanned. The system will extract useful information such as metadata and analytics. Users can select which folders, files, or file types to include in the scan, allowing them to exclude select file types. This gives the user control over their data. The system will calculate metrics such as file type distributions, timelines, contribution statistics, longest active projects, most commonly used programming languages, etc. The data that is crawled will be presented in clear tables and visual graphs. The system will also use incremental scanning to only process new or modified files. This will be done with a local database for fast queries and will be able to operate on major operating systems. The user can also export these summaries in CSV or PDF. By keeping the processing local, the system ensures data privacy. Compared to other teams, our application focuses on data privacy and detailed analytics. Other teams have shown that they may develop a web application that requires uploading data to a server. Our desktop solution keeps processing local, ensuring data privacy while still providing analytics and detailed reporting.
