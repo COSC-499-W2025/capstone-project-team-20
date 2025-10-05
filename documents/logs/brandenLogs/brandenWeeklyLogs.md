@@ -6,7 +6,7 @@
 
 ![week 1 log](imagesForBrandenLogs/week_1_log_ss.png)
 
-**Weekly Goals Recap**
+**Weekly Goals Recap:**
 
 This week, our team's main goal was to prepare functional and non-functional requirements based on our current understanding of the project. We accomplished this, created a draft, and gathered feedback from 3 other teams on areas that we could improve or change.
 
@@ -32,7 +32,14 @@ We are also working on our Project Proposal. We are adding issues into our GitHu
 All of this went into project planning, assigning people to tasks, deciding on task priorities, writing class reports, helping others and receiving help for work completed.  
 
 
+ ### **Date: September 29th - October 5th**
+
+ **Tasks worked on:**
+
+ ![week 3 log](imagesForBrandenLogs/week_3_log_ss.png)
+
+ **Weekly Goals Recap:**
+
+ This week, our team's goal was to prepare a Data Flow Diagram (DFD) for levels 0 and 1. Our team prepared a DFD Level 0 and DFD Level 1 for presentation and feedback on Wednesday. Our DFD's Level 0 and Level 1 were based off of our functional requirements from Week 1. We gathered feedback from and gave feedback to Teams 2, 5, and 10 for both levels of the DFD.
  
-
-
-
+ No additional issues have needed to be added to our project board, so all that was included for the tasks worked on this week was writing class reports, preparing and giving presentations (for the DFD's), team meetings (in class and through discord), and collaborating together on DFD's level 0 and 1.
