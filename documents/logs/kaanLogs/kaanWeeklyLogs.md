@@ -31,3 +31,16 @@ Log Checkbox:
     We have also been developing our project proposal. To ensure progress, we divided the different sections among team members so that responsibilities are clear and evenly managed. My focus has been on drafting the "Use Cases" portion of the document.
 
     Overall, the effort has involved planning the project structure, assigning and prioritizing tasks, contributing to shared reports, and supporting one another throughout the work. 
+
+
+### Week 5
+
+Log Checkbox:
+
+![week 5 log](imagesForKaanLogs/week_5_log.png)
+
+### Weekly Goals
+
+    Our team worked on developing a DFD graph for our project this week. We created a level 0 and a level 1 DFD, in collaboration with everyone through sketches as well as using a lucidchart and talking online while developing the DFD. We presented our DFD to others in class as well as giving feedback to other groups, and saw that everyone's DFD's were pretty much similar while having some minor differences in the names for the procedures, the data flows, or sometimes even having different processes.
+
+    Overall, everyone worked really well together and we created a pretty well reveived DFD for the week.
