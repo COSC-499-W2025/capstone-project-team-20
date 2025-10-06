@@ -4,7 +4,7 @@
 
 **Types of Tasks Worked On**
 
-![week 3 task categories](imagesForJoyLogs/week-3-log-ss.png)
+![week 3 task categories](imagesForJoyLogs/week-3-tasks-ss.png)
 
 **Recap of Goals**
 
@@ -20,7 +20,7 @@ We additionally outlined methods for testing each requirement, the target user g
 
 **Types of Tasks Worked On**
 
-![week 4 task categories](imagesForJoyLogs/week-4-tasks.png)
+![week 4 task categories](imagesForJoyLogs/week-4-tasks-ss.png)
 
 **Recap of Goals**
 
@@ -30,3 +30,10 @@ We additionally outlined methods for testing each requirement, the target user g
 At the beginning of the week, our team collaborated to create a system architecture diagram based on our current understanding and expectations of the system to be developed. We interacted with four other teams to provide and receive feedback on our respective diagrams (insights provided on the Canvas quiz).
 
 The remainder of the sprint focused on preparing our project proposal document which is in progress, but set to be completed on time. To help facilitate progress and completion of tasks, I set up issues on our project board corresponding to the various sections of the proposal document.
+
+## Week 5: September 29-October 5 2025
+
+**Types of Tasks Worked On**
+
+![week 5 task categories](imagesForJoyLogs/week-5-tasks-ss.png)
+
