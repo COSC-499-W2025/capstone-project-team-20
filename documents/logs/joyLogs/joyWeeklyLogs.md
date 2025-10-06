@@ -37,3 +37,10 @@ The remainder of the sprint focused on preparing our project proposal document w
 
 ![week 5 task categories](imagesForJoyLogs/week-5-tasks-ss.png)
 
+**Recap of Goals**
+
+The main goal our team worked on this week was creating Level 0 and 1 Data Flow Diagrams of our system to further clarify and flush out the design of major processes and their interactions with one another.
+
+Discussions with other teams to give and receive feedback on our diagrams provided even more clarity, and it was helpful to see a general consensus between teams regarding the major components the system should include.
+
+There are no associated issues on our project board this week.
