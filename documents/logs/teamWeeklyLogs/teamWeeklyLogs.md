@@ -53,7 +53,7 @@
 **Burnup Chart:**
 ![burnup chart week 4](teamWeeklyLogsImages/week-4-burnup-chart.png)
 
-### Week 5 (September 29-October 5th)\
+### Week 5 (September 29-October 5th)
 
 **Work Performed:**
 
