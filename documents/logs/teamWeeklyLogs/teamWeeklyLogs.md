@@ -72,8 +72,13 @@
 
 **Completed Tasks:**
 
+- No tasks have been added, no extra completed tasks
+
 **In Progress Tasks:**
 
+- No tasks have been added, no extra in progress tasks
+
 **Burnup Chart:**
-![burnup chart week 5](teamWeeklyLogsImages/)
+
+- **No Burnup Chart required this week**
 
