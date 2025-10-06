@@ -29,3 +29,20 @@ Team 8's architecture diagram was very difficult to parse as they had many diffe
 Team 6's feedback on our diagram was insightful, they raised concerns about scanning the entire computer by default, especially when trying to reach our non-functional speed requirements. Their other concern was our use of a locally hosted database when it did not necessarily have a well defined reason to exist judging by our diagram. We will consider the necessity of a database going forward as well as the clarity of its purpose on our diagram.
 
 Our other goal was to create our project proposal based on our requirements as well as the input from other groups. Ultimately, we mostly based it on our original requirements for the project as it was what we desired to do as a group from the start, clarifying some of the less polished aspects where needed.
+
+## Week 5
+
+**Types of Tasks Worked On**
+![Week 5 Tasks](imagesForLexLogs/week_5_lexlog.png)
+
+**Recap of Goals**
+
+Our goal for this week was to create a dataflow diagram (levels 0 and 1), to print and compare to the diagrams of other groups to see how we might be able to improve ours.
+
+As with last week, we struggled a bit with the purpose of our database within the system. The reason why we still included it in our dfd was because it was still part of our requirements that we created so we wanted to stick to it.
+
+Team 2 commented on the database implementation in our DFD, pointing out that we save data to the database and then read from the database in order to organize that data, essencially processing it twice.
+
+Team 10 showed what a DFD could look like for a similar system without the implementation of a database to contend with, and I personally prefer this approach. I hope my team will consider something similar for the project proper.
+
+Not too much going on in the github this week as we did the diagrams on a shared document in an external site so we didnt feel the need to split it into tasks on github.
