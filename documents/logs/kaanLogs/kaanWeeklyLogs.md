@@ -44,3 +44,16 @@ Log Checkbox:
     Our team worked on developing a DFD graph for our project this week. We created a level 0 and a level 1 DFD, in collaboration with everyone through sketches as well as using a lucidchart and talking online while developing the DFD. We presented our DFD to others in class as well as giving feedback to other groups, and saw that everyone's DFD's were pretty much similar while having some minor differences in the names for the procedures, the data flows, or sometimes even having different processes.
 
     Overall, everyone worked really well together and we created a pretty well reveived DFD for the week.
+
+
+### Week 6
+
+Log Checkbox:
+
+![week 6 log](imagesForKaanLogs/week_6_log.png)
+
+### Weekly Goals
+
+    Our team divided the work that we had to do for Milestone 1 into different issues. And we discussed how these issues would be prioritized, as well as distributed among us. We also used our collected knowledge from all the previous sessions where we had presented our system architecture, DFD, and requirements to other groups, and created a final version of those.
+
+    I created a final version of our DFD and updated the README, as well as parsing through the issues in order to start coding on a specific task for next week.
