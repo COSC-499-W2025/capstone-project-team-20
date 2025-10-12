@@ -19,3 +19,30 @@ Please use the provided folder structure for your project. You are free to organ
 
 Please use a branching workflow, and once an item is ready, do remember to issue a PR, review, and merge it into the master branch.
 Be sure to keep your docs and README.md up-to-date.
+
+
+DFD Level 1:
+
+https://lucid.app/lucidchart/13a08813-0a92-4798-84d0-2930be2d6aab/edit?page=0_0&invitationId=inv_bf1a126c-f925-4868-bae1-2bdfacdd4bf7#
+
+![Level 1 DFD](media/DFD_Level_1.png)
+
+This diagram shows how data moves through the system — from user actions to file analysis and reporting.
+
+- User selects files, sets filters, and generates reports.
+
+- Permission & Privacy Logic ensures user consent before processing data.
+
+- File Selection and Exclude Logic handle which files are included or ignored.
+
+- Validation & Scan Logic check and scan files to collect type, size, and metadata.
+
+- The Database stores all scanned data for later use.
+
+- Filter and Aggregation Logic organize and summarize the data.
+
+- User Analytics calculates metrics and insights.
+
+- Display Logic shows charts, tables, and summaries.
+
+- Finally, the user can Generate Reports and export them as PDF or CSV.
