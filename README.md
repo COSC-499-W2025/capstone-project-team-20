@@ -25,6 +25,8 @@ DFD Level 1:
 
 https://lucid.app/lucidchart/13a08813-0a92-4798-84d0-2930be2d6aab/edit?page=0_0&invitationId=inv_bf1a126c-f925-4868-bae1-2bdfacdd4bf7#
 
+![Level 1 DFD](media/DFD Level 1.png)
+
 This diagram shows how data moves through the system — from user actions to file analysis and reporting.
 
 - User selects files, sets filters, and generates reports.
