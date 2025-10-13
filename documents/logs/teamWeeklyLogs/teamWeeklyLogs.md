@@ -52,3 +52,33 @@
 
 **Burnup Chart:**
 ![burnup chart week 4](teamWeeklyLogsImages/week-4-burnup-chart.png)
+
+### Week 5 (September 29-October 5th)
+
+**Work Performed:**
+
+- Created a Data Flow Diagram Level 0, which included:
+    - User and Database entities
+    - A Local Crawler Process
+    - Simple data flow between the 2 entities and the process
+- Created a Data Flow Diagram Level 1, which included:
+    - Further processes for the DFD Level 0
+    - Data stores for the Database entity
+    - A deeper look into the data flow between all entities and processes
+- Recieved feedback from 3 groups (Teams 2, 5, and 10)
+- Gave feedback to 3 groups (Teams 2, 5, and 10)
+
+**There are no milestone goals as of now**
+
+**Completed Tasks:**
+
+- No tasks have been added, no extra completed tasks
+
+**In Progress Tasks:**
+
+- No tasks have been added, no extra in progress tasks
+
+**Burnup Chart:**
+
+- **No Burnup Chart required this week**
+

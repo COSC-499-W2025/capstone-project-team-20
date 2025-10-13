@@ -1,6 +1,6 @@
 ## **Branden Weekly Logs**
 
-### **Date: September 14th - September 21st**
+### **Week 3: September 14th - September 21st**
 
  **Tasks worked on:**
 
@@ -17,7 +17,7 @@ We also collaborated as a team, in person and on a Google Doc, where we discusse
 Our last goal was to define more goals in our team's project board. We filled out a couple more issues, assigned people, and moved the tasks we already completed, to completed.
 
 
-### **Date: September 22nd - September 28th**
+### **Week 4: September 22nd - September 28th**
 
 **Tasks worked on:**
 
