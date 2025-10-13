@@ -82,3 +82,45 @@
 
 - **No Burnup Chart required this week**
 
+### Week 6 (October 6th-October 12th)
+
+**Work Performed:**
+
+Added all Milestone 1 issues to project board, features included in the project plan for this milestone are:
+- issue [COSC-499-W2025/capstone-project-team-20#34](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/34)
+- issue [COSC-499-W2025/capstone-project-team-20#35](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/35)
+- issue [COSC-499-W2025/capstone-project-team-20#36](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/36)
+- issue [COSC-499-W2025/capstone-project-team-20#37](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/37)
+- issue [COSC-499-W2025/capstone-project-team-20#38](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/38)
+- issue [COSC-499-W2025/capstone-project-team-20#39](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/39)
+- issue [COSC-499-W2025/capstone-project-team-20#40](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/40)
+- issue [COSC-499-W2025/capstone-project-team-20#41](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/41)
+- issue [COSC-499-W2025/capstone-project-team-20#42](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/42)
+- issue [COSC-499-W2025/capstone-project-team-20#43](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/43)
+- issue [COSC-499-W2025/capstone-project-team-20#44](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/44)
+- issue [COSC-499-W2025/capstone-project-team-20#45](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/45)
+- issue [COSC-499-W2025/capstone-project-team-20#46](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/46)
+- issue [COSC-499-W2025/capstone-project-team-20#47](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/47)
+- issue [COSC-499-W2025/capstone-project-team-20#48](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/48)
+- issue [COSC-499-W2025/capstone-project-team-20#49](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/49)
+- issue [COSC-499-W2025/capstone-project-team-20#50](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/50)
+- issue [COSC-499-W2025/capstone-project-team-20#51](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/51)
+- issue [COSC-499-W2025/capstone-project-team-20#52](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/52)
+- issue [COSC-499-W2025/capstone-project-team-20#53](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/53)
+
+This includes all basic features and requirements for milestone 1. We have started prioritizing which tasks need to be finished first to build on before the Milestone 1 deadline. With prioritizing, we have assigned issues to each team member that we will be working on. 
+
+**Completed Tasks:**
+- No tasks fully completed this week. We just entered all tasks as issues and assigned them to team members. 
+
+**In Progress Tasks:**
+- Issue [COSC-499-W2025/capstone-project-team-20#30](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/30)
+- Issue [COSC-499-W2025/capstone-project-team-20#54](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/54)
+    - This is an extra task for reading and refreshing ourselves on docker and how to use it. All team members are assigned to this task.
+- Issue [COSC-499-W2025/capstone-project-team-20#31](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/31)
+- Issue [COSC-499-W2025/capstone-project-team-20#42](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/42)
+- Issue [COSC-499-W2025/capstone-project-team-20#48](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/48)
+
+**Burnup Chart:**
+
+![burnup chart week 6](teamWeeklyLogsImages/week-6-burnup-chart.png)
