@@ -1,6 +1,6 @@
 ## Kaan Weekly Logs
 
-### Week 1
+### Week 3
 
 Log Checkbox:
 
@@ -17,3 +17,17 @@ Log Checkbox:
     later submission.
 
     Our group later discussed the changes that we wanted to reflect on our updated requirements document online, came up with an updated version of our draft. We also submitted our updated draft for evaluation. 
+
+### Week 4
+
+Log Checkbox:
+
+![week 4 log](imagesForKaanLogs/week_4_log.png)
+
+### Weekly Goals
+
+    Our team collaborated to design a system architecture diagram based on our current understanding of the project. The diagram was refined through group work and further improved after gathering feedback from several other teams during class discussions.
+
+    We have also been developing our project proposal. To ensure progress, we divided the different sections among team members so that responsibilities are clear and evenly managed. My focus has been on drafting the "Use Cases" portion of the document.
+
+    Overall, the effort has involved planning the project structure, assigning and prioritizing tasks, contributing to shared reports, and supporting one another throughout the work. 
