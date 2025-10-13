@@ -32,7 +32,7 @@ We are also working on our Project Proposal. We are adding issues into our GitHu
 All of this went into project planning, assigning people to tasks, deciding on task priorities, writing class reports, helping others and receiving help for work completed.  
 
 
- ### **Week 5: September 29th - October 5th**
+ ### **Date: September 29th - October 5th**
 
  **Tasks worked on:**
 
@@ -43,3 +43,15 @@ All of this went into project planning, assigning people to tasks, deciding on t
  This week, our team's goal was to prepare a Data Flow Diagram (DFD) for levels 0 and 1. Our team prepared a DFD Level 0 and DFD Level 1 for presentation and feedback on Wednesday. Our DFD's Level 0 and Level 1 were based off of our functional requirements from Week 1. We gathered feedback from and gave feedback to Teams 2, 5, and 10 for both levels of the DFD.
  
  No additional issues have needed to be added to our project board, so all that was included for the tasks worked on this week was writing class reports, preparing and giving presentations (for the DFD's), team meetings (in class and through discord), and collaborating together on DFD's level 0 and 1.
+
+### **Date: October 6th - October 12th**
+
+**Tasks worked on:
+
+![week 4 log](imagesForBrandenLogs/week_4_log_ss.png)
+
+**Weekly Goals Recap:**
+
+This week, our team created tasks in our project board and assigned them to members. We have started prioritizing what will need to be done first in order to have all of milestone 1 ready at the deadline. We also updated our DFD Level 1 and put it in our media folder in our repository. The README was also updated with our DFD Level 1. 
+
+We have started some coding progress thus far, mainly skeletons of what will need to be done and collaborated on how our repository structure will be. 
