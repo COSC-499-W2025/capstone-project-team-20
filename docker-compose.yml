@@ -1,0 +1,10 @@
+services:
+  app:
+    build: .
+    volumes:
+      - ./src:/app/src
+      - ./tests:/app/tests
+      - ./utils:/app/utils
+      - ./pytest.ini:/app/pytest.ini
+      - ./requirements.txt:/app/requirements.txt
+    command: pytest tests/
