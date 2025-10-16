@@ -1,11 +1,6 @@
 import sqlite3
+import json
 from contextlib import contextmanager
-
-# TODO: Decide on whether we use config.db or a more general database here
-# TODO: Look at making this Singleton
-# TODO: ensure contextmanager connection handling works as intended
-# TODO: implement set(), get(), get_all(), delete(), clear()
-# TODO: verify SQLite table initialization works as intended
 
 class ConfigManager: 
     def __init__(self, db_path="config.db"):
@@ -33,10 +28,11 @@ class ConfigManager:
     def set(self, key, value):
         with self._get_connection() as conn:
             cursor = conn.cursor()
+            serialized_value = json.dumps(value)
             cursor.execute("""
             INSERT OR REPLACE INTO configs (key, value)
             VALUES (?, ?)
-            """, (key, str(value)))
+            """, (key, serialized_value))
 
     def get(self, key, default=None):
         with self._get_connection() as conn:
@@ -45,7 +41,12 @@ class ConfigManager:
             SELECT value FROM configs WHERE key = ?
             """, (key,))
             result = cursor.fetchone()
-            return result[0] if result else default
+            if result:
+                try: 
+                    return json.loads(result[0])
+                except json.JSONDecodeError:
+                    return default
+            return default
 
     def delete(self, key):
         with self._get_connection() as conn:
@@ -61,7 +62,12 @@ class ConfigManager:
             SELECT key, value FROM configs
             """)
             results = cursor.fetchall()
-            config_dict = {key: value for key, value in results}
+            config_dict = {}
+            for key, value in results:
+                try:
+                    config_dict[key] = json.loads(value)
+                except json.JSONDecodeError:
+                    config_dict[key] = value
             return config_dict
 
     def clear(self):
@@ -70,5 +76,3 @@ class ConfigManager:
             cursor.execute("""
             DELETE FROM configs
             """)
-
-            
