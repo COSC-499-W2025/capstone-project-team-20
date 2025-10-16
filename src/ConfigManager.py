@@ -27,6 +27,48 @@ class ConfigManager:
             cursor.execute(""" 
             CREATE TABLE IF NOT EXISTS configs (
                 key TEXT PRIMARY KEY,
-                value TEXT NOT NULL
-                )
+                value TEXT NOT NULL)
                 """)
+
+    def set(self, key, value):
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+            INSERT OR REPLACE INTO configs (key, value)
+            VALUES (?, ?)
+            """, (key, str(value)))
+
+    def get(self, key, default=None):
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+            SELECT value FROM configs WHERE key = ?
+            """, (key,))
+            result = cursor.fetchone()
+            return result[0] if result else default
+
+    def delete(self, key):
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+            DELETE FROM configs WHERE key = ?
+            """, (key,))
+    
+    def get_all(self):
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+            SELECT key, value FROM configs
+            """)
+            results = cursor.fetchall()
+            config_dict = {key: value for key, value in results}
+            return config_dict
+
+    def clear(self):
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+            DELETE FROM configs
+            """)
+
+            
