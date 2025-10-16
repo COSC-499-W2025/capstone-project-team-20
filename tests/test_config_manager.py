@@ -1,0 +1,46 @@
+import pytest
+import os
+from src.ConfigManager import ConfigManager
+
+@pytest.fixture
+def config_manager():
+    """Create a ConfigManager with test database, cleanup after."""
+    test_db = "test_config.db"
+    manager = ConfigManager(db_path=test_db)
+    yield manager
+    if os.path.exists(test_db):
+        os.remove(test_db)
+
+def test_set_and_get_basic_types(config_manager):
+    config_manager.set("name", "Alice")
+    config_manager.set("enabled", True)
+    config_manager.set("count", 42)
+    assert config_manager.get("name") == "Alice"
+    assert config_manager.get("enabled") is True
+    assert config_manager.get("count") == 42
+
+def test_get_nonexistent_key_with_default(config_manager):
+    assert config_manager.get("missing") is None
+    assert config_manager.get("missing", default="fallback") == "fallback"
+
+def test_update_existing_value(config_manager):
+    config_manager.set("value", "old")
+    config_manager.set("value", "new")
+    assert config_manager.get("value") == "new"
+
+def test_delete(config_manager):
+    config_manager.set("temp", "data")
+    config_manager.delete("temp")
+    assert config_manager.get("temp") is None
+
+def test_get_all(config_manager):
+    config_manager.set("key1", "value1")
+    config_manager.set("key2", 42)
+    all_configs = config_manager.get_all()
+    assert all_configs == {"key1": "value1", "key2": 42}
+
+def test_clear(config_manager):
+    config_manager.set("key", "value")
+    config_manager.clear()
+    assert config_manager.get_all() == {}
+
