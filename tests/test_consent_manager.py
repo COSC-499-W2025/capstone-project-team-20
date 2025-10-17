@@ -26,3 +26,43 @@ def test_persistence_across_interfaces(tmp_path):
     
     cm2 = ConsentManager(db_path=str(db_path))
     assert cm2.has_user_consented() is True
+
+def test_request_consent_invalid_input(monkeypatch, tmp_path):
+    cm = ConsentManager(db_path=str(tmp_path / "test.db"))
+    monkeypatch.setattr("builtins.input", lambda _: "maybe")
+
+    result = cm.request_consent()
+    assert result is False
+    assert cm.has_user_consented() is False
+
+def test_case_sensitive_input_positive(monkeypatch, tmp_path):
+    cm = ConsentManager(db_path=str(tmp_path / "test.db"))
+    monkeypatch.setattr("builtins.input", lambda _: "YeS")
+
+    result = cm.request_consent()
+    assert result is True
+
+def test_case_sensitive_input_negative(monkeypatch, tmp_path):
+    cm = ConsentManager(db_path=str(tmp_path / "test.db"))
+    monkeypatch.setattr("builtins.input", lambda _: "nO")
+
+    result = cm.request_consent()
+    assert result is False
+
+def test_case_sensitive_input_invalid(monkeypatch, tmp_path):
+    cm = ConsentManager(db_path=str(tmp_path / "test.db"))
+    monkeypatch.setattr("builtins.input", lambda _: "MayBE")
+
+    result = cm.request_consent()
+    assert result is False
+
+def test_corrupted_or_missing_consent(tmp_path):
+    db = tmp_path / "test_config.db"
+    cm = ConsentManager(db_path=str(db))
+
+    with cm.manager._get_connection() as conn:
+        conn.execute(
+            "INSERT OR REPLACE INTO configs (key, value) VALUES (?, ?)",
+            ("user_consent", "}{broken json}")
+        )
+    assert cm.has_user_consented() is False
