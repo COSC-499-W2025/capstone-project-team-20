@@ -13,7 +13,7 @@ class ConsentManager:
     def request_consent(self):
         print("Do you give consent to scan your files?")
         answer = input("(yes/no)")
-        answer.strip().lower() 
+        answer = answer.strip().lower() 
         #allows yes, y and strips leading/trailing characters from String entered
         consent = answer in ("yes", "y")
 
