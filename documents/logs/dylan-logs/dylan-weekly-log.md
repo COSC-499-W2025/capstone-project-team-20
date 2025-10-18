@@ -43,3 +43,27 @@ This week, our team produced a data flow diagram and exchanged them with other g
 This week, our team held discussions over Discord in order to finalize our system architecture designs and will be providing links in our repositories README. 
 
 As for myself, this week I made a PR establishing an initial skeleton setup and basic test framework for our project. This included making a comprehensive .gitignore, establishing the required folder structure, as well as initializing pytest. It's very basic, but it gives us a good place to start building.
+
+### **Week 7: October 13th - October 19th**
+
+ **Tasks worked on**
+
+![week 7 log](images/dylan-week-7-ss.png)
+
+**Weekly Goals Recap**
+
+My goal this week was to create a ConfigManager class to store user configurations. I began by subdividing this task into subissues, thinking through how this class should fit within our system. This was a bit tricky since we are still in the very early stages of development. 
+
+I was able to complete the ConfigManager this week. I'm particularly happy that ConfigManager is capable of storing complex data types by using JSON serialization/deserialization. I was originally thinking I'd use pickling but using JSON made more sense.
+
+[Link to PR: Implement ConfigManager for storing user configurations](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/74)
+
+I also did some code review on the following PRs
+
+[Link to PR: Implement chronological list of skills exercised](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/78)
+
+[Link to PR: Feature/consent manager](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/77)
+
+**Goals for the Week Ahead**
+
+Next week, I'm planning on working on storing project information in the database. I think this should be an achievable goal. I think the main problem I'll run into is trying to decide what information we need to store, but perfect is the enemy of progress.
