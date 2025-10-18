@@ -10,6 +10,11 @@ logs/
 Thumbs.db
 *~
 
+# Local Database Files
+*.db
+*.sqlite
+*.sqlite3
+
 # Python runtime
 __pycache__/
 *.py[cod]
