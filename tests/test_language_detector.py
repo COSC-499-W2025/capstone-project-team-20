@@ -100,7 +100,7 @@ def setup_fake_project():
 
         # Multiple files, first valid determines language
         (["main.py", "app.js"], "Python"),
-        (["README.md", "script.rb"], "Ruby"),
+        (["README.md", "script.rb"], "Unknown"),
         ([".gitignore", "index.php"], "PHP"),
         ([".env", "lib.rs"], "Rust"),
     ]

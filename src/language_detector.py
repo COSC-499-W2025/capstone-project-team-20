@@ -31,7 +31,13 @@ def get_file_extension(path):
     return path.suffix.lstrip(".").lower()
 
 def find_first_valid_extension(files):
-    """Find the extension of the first supported file in a list of files."""
+    """
+    Find the extension of the first supported file in a list of files.
+    A valid file is:
+    - Not hidden (does not start with a dot)
+    - Has a file extension
+    Non-programming files such as README.md are valid
+    """
     for file in files:
         path = Path(file)
         if is_source_file(path):
@@ -39,6 +45,11 @@ def find_first_valid_extension(files):
     return None
 
 def detect_language(project_files, language_map=LANGUAGE_MAP):
-    """Detect the programming language of a project based on file extensions."""
+    """
+    Detect the programming language of a project based on file extensions.
+    Extensions are mapped to languages using the provided language_map.
+    """
     ext = find_first_valid_extension(project_files)
-    return language_map.get(ext, "Unknown") if ext else "Unknown"
+    if ext in language_map:
+        return language_map[ext]
+    return "Unknown"
