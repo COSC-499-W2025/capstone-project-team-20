@@ -124,3 +124,27 @@ This includes all basic features and requirements for milestone 1. We have start
 **Burnup Chart:**
 
 ![burnup chart week 6](teamWeeklyLogsImages/week-6-burnup-chart.png)
+
+### Week 7 (October 13th - October 19th)
+
+**Work Performed:**
+
+- Branden Kennedy (42474551): Worked on The ConsentManager, closing Issues #30, #75, and #76. I also helped convert the WBS to a diagram, and added it into our repo's media folder and README, helping close issues [COSC-499-W2025/capstone-project-team-20#32](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/32) and Issue #48.
+
+
+
+
+**Features included in the project plan for this milestone are:**
+- Issues #30 up to and including Issue [COSC-499-W2025/capstone-project-team-20#82](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/82)
+
+**Table View of Completed Tasks on Project Board:**
+
+[Team 7 completed tasks project board](teamWeeklyLogsImages/week_7_completed_tasks.png)
+
+**Table View of In-Progress Tasks on Project Board:**
+
+[Team 7 In-Progress Tasks on Project Board](teamWeeklyLogsImages/week_7_in_progress_tasks.png)
+
+**Test Report:**
+
+
