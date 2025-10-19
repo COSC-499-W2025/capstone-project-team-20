@@ -32,7 +32,7 @@ We are also working on our Project Proposal. We are adding issues into our GitHu
 All of this went into project planning, assigning people to tasks, deciding on task priorities, writing class reports, helping others and receiving help for work completed.  
 
 
- ### **Date: September 29th - October 5th**
+ ### **Week 5: September 29th - October 5th**
 
  **Tasks worked on:**
 
@@ -44,7 +44,7 @@ All of this went into project planning, assigning people to tasks, deciding on t
  
  No additional issues have needed to be added to our project board, so all that was included for the tasks worked on this week was writing class reports, preparing and giving presentations (for the DFD's), team meetings (in class and through discord), and collaborating together on DFD's level 0 and 1.
 
-### **Date: October 6th - October 12th**
+### **Week 6: October 6th - October 12th**
 
 **Tasks worked on:
 
@@ -55,3 +55,21 @@ All of this went into project planning, assigning people to tasks, deciding on t
 This week, our team created tasks in our project board and assigned them to members. We have started prioritizing what will need to be done first in order to have all of milestone 1 ready at the deadline. We also updated our DFD Level 1 and put it in our media folder in our repository. The README was also updated with our DFD Level 1. 
 
 We have started some coding progress thus far, mainly skeletons of what will need to be done and collaborated on how our repository structure will be. 
+
+### **Week 7: October 13th - October 19th**
+
+ **Tasks worked on:**
+
+
+![week 7 log](imagesForBrandenLogs/week_7_log_ss.png)
+
+**Weekly Goals Recap**
+
+This week, I worked on implementing a ConsentManager into our software. The ConsentManager handles asking for consent prior to the software running on a user's system. It integrates with the ConfigManager to store the value for consent (boolean). This is a necessary first step as it will be one of the first things that the user interacts with when using our program. This included Issues #30, and its subissues #75 and #76. I have fully implemented these 3 issues (1 feature), and they have been reviewed, refactored, reviewed again, then merged.
+
+What I struggled with this week is true prioritizing of my time between classes. I had 4 midterms/quizzes this week so starting to code and work on this feature happened later in the week. In the upcoming weeks, I would like to prioritize having PR's ready earlier in the week, to give my teammates more time to review and change anything in my PR's if need be.
+
+For the upcoming week, I will be starting to work on a new feature, possibly 2. I havent decided exactly which issues yet, but will be deciding by the end of the day monday. Another goal I have is that I would love to get the whole team on the same page for getting work done early in the week so that we all ahve ample time to refactor/change things if needed before the Sunday deadlines. 
+
+
+
