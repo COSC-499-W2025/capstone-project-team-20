@@ -1,24 +1,86 @@
-[![Open in Visual Studio Code](https://classroom.github.com/assets/open-in-vscode-2e0aaae1b6195c2367325f4f02e2d04e9abb55f0b24a779b69b11b9e10269abc.svg)](https://classroom.github.com/online_ide?assignment_repo_id=20510301&assignment_repo_type=AssignmentRepo)
-# Project-Starter
-Please use the provided folder structure for your project. You are free to organize any additional internal folder structure as required by the project. 
+#  Team 20
 
-```
-.
-├── docs                    # Documentation files
-│   ├── contract            # Team contract
-│   ├── proposal            # Project proposal 
-│   ├── design              # UI mocks
-│   ├── minutes             # Minutes from team meetings
-│   ├── logs                # Team and individual Logs
-│   └── ...          
-├── src                     # Source files (alternatively `app`)
-├── tests                   # Automated tests 
-├── utils                   # Utility files
-└── README.md
-```
+## Work Breakdown Structure
 
-Please use a branching workflow, and once an item is ready, do remember to issue a PR, review, and merge it into the master branch.
-Be sure to keep your docs and README.md up-to-date.
+### Milestone #1 (October - December 7th)
+
+---
+
+| Number | Description |
+|--------|-------------|
+| **1.0** | **Project Management and Planning** |
+| 1.1 | Requirements and Use Cases |
+| 1.2 | System Architecture |
+| 1.3 | Team Collaboration and Plan |
+| 1.4 | Initial Project Setup |
+| 1.5 | Docker Containerization |
+
+---
+
+| Number | Description |
+|--------|-------------|
+| **2.0** | **Folder Intake and Exclusion System** |
+| 2.1 | Zip Folder Intake |
+| 2.2 | Exclusion Logic |
+| 2.3 | Request for Consent |
+
+---
+
+| Number | Description |
+|--------|-------------|
+| **3.0** | **File Scanning Engine** |
+| 3.1 | Zip Folder Parsing |
+| 3.2 | Project Tree Generation |
+| 3.3 | Error Handling for Disallowed File Types |
+| 3.4 | File Type, Framework and Language Detection |
+| 3.5 | Collaborative Project Detection |
+| 3.6 | Exclusion of Previously Scanned Files |
+| 3.7 | Progress Tracking and Cancellation |
+
+---
+
+| Number | Description |
+|--------|-------------|
+| **4.0** | **Incremental Scanning System** |
+| 4.1 | File Change Detection |
+| 4.2 | File Timestamp Comparison |
+| 4.3 | Identification of New Files |
+| 4.4 | Individual Contribution Extractor |
+
+---
+
+| Number | Description |
+|--------|-------------|
+| **5.0** | **Metadata Extraction** |
+| 5.1 | Basic File Metadata Extraction |
+| 5.2 | Extraction of Code Metrics |
+| 5.3 | Git Repository Integration |
+| 5.4 | Advanced Metadata Aggregation |
+
+---
+
+| Number | Description |
+|--------|-------------|
+| **6.0** | **Analytics Generation** |
+| 6.1 | Key Skill Identification |
+| 6.2 | Calculation of Creative Metrics |
+| 6.3 | Project Importance Ranking |
+| 6.4 | Timeline Building for Projects and Skills |
+| 6.5 | Highlight Key Individual Contributions |
+| 6.6 | Summary of Key Projects |
+
+---
+
+| Number | Description |
+|--------|-------------|
+| **7.0** | **Database Management** |
+| 7.1 | Local Storage Framework |
+| 7.2 | Storage of Project Information and User Configurations |
+| 7.3 | Retrieval of Previously Generated Portfolio and Resumé Items |
+| 7.4 | Deletion of Previously Generated Insights |
+| 7.5 | Query Optimization and Schema Design |
+
+---
 
 ## System Architecture Diagram
 
