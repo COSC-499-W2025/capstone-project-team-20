@@ -151,4 +151,6 @@ This includes all basic features and requirements for milestone 1. We have start
 
 **Test Report:**
 
+[Week 7 Test Report](teamWeeklyLogsImages/week_7_test_report.png)
+
 
