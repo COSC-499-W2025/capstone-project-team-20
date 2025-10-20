@@ -1,11 +1,8 @@
-from zipfile import ZipFile, ZipInfo
+from zipfile import ZipInfo
 
 class ProjectFolder():
 
     '''Object That represents a folder in a Tree of ProjectFile and ProjectFolder objects'''
-
-    newID=0
-    id: int
 
     is_root: bool
     name: str
@@ -14,10 +11,6 @@ class ProjectFolder():
     children: list
 
     def __init__(self, file: ZipInfo, parent: object):
-
-        #assign ID and increment shared variable
-        self.id=ProjectFolder.newID
-        ProjectFolder.newID += 1
 
         #file.filename is a path string, this seperates it by '/' to isolate the directory name
         namesplit = file.filename.split('/')
