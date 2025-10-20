@@ -72,3 +72,29 @@ The object is essentially a branch node to be used in a tree in place of the dir
 When the constructor of the object is called it is done so using a "ZipInfo" object (from the python zipfile library) which contains metadata information on an individual file from the zip file.
 
 I didn't really think it made sense to write tests for this when it has no methods currently and will only be called and accessed through other classes during runtime, but I will reassess the necessity of such tests upon completion of the parent issue.
+
+## Week 7
+
+**Types of Tasks Worked On**
+![Week 7 Tasks](imagesForLexLogs/week_7_lexlog.png)
+
+**Recap of Goals**
+Currently Working on Completing this Issue:
+- Issue [#31](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/31)
+
+At the start of the week, these sub-issues remained:
+- Issue [#55](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/55)
+
+I became very sick after the Midterm for this course so work has been slow
+I started working on issue #58 at the beginning of the week, but didn't finish it until late on Sunday.
+When I put up the PR, i noticed someone had already put up a PR for the same issue 3 hours prior despite my existing assignment to it.
+I closed the PR without merging as the existing PR had a superior implementation.
+
+I then, in the last few hours, manage to cobble together an implementation of issue #59 (ZipParser) based on some ideas I had already wrote down for its implementation.
+I completed the PR, as well as the peer eval on time. Unfortunately though I am late to writing this log (rewriting what I already had written), and whatever additions i may have to make to the team log.
+
+My goals for next week are to finish the tests I began writing for ZipParser, create some additional ZipParser methods (which will replace issue #55 as that issue is no longer necessary due to my implementation), create some tests for ProjectFile if necessary, and begin planning for the next major issue i will tackle.
+
+Issues closed:
+- Issue [#58](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/58)
+- Issue [#59](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/59)
