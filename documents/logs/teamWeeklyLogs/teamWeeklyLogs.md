@@ -130,7 +130,7 @@ This includes all basic features and requirements for milestone 1. We have start
 **Work Performed:**
 
 - Branden Kennedy (42474551): Worked on The ConsentManager, closing Issues #30, #75, and #76. I also helped convert the WBS to a diagram, and added it into our repo's media folder and README, helping close issues [COSC-499-W2025/capstone-project-team-20#32](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/32) and Issue #48.
-
+- Dylan Alexander (16394025): Worked on ConfigManager, closing issue #43 (Milestone 1 requirement 6) and it's subissues #71, #72 and #73. I also wrote us up a work breakdown structure, which Branden turned into a very lovely diagram.
 
 
 
