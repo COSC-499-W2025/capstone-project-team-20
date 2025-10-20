@@ -15,10 +15,7 @@ def parse(path):
 
         for file in z.infolist():
             if (start is True): #Creating a root
-
-                #Reset newID in case this is not the first parse this session
-                ProjectFolder.newID=0
-
+                
                 #Create a root folder, and add it to the dict, accessed via name
                 root = ProjectFolder(file, None)
                 dirs[root.name] = root
