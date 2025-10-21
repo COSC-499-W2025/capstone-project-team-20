@@ -66,6 +66,7 @@ class StorageManager(ABC):
         with self._get_connection() as conn:
             cursor = conn.cursor()
             values = [data[i] for i in self.columns_list]
+            # serialize any values of complex data type
             serialized_values = [
             json.dumps(v) if isinstance(v, (dict, list, bool)) else v
             for v in values
@@ -84,6 +85,7 @@ class StorageManager(ABC):
             if result:
                 row_dict = dict(zip(self.columns_list, result))
                 for col, val in row_dict.items():
+                    # deserialize any values that need it
                     try:
                         row_dict[col] = json.loads(val)
                     except (json.JSONDecodeError, TypeError):
@@ -105,6 +107,7 @@ class StorageManager(ABC):
             results = cursor.fetchall()
             all_rows = []
             for row in results:
+                # deserialize any values that need it
                 row_dict = dict(zip(self.columns_list, row))
                 for col, val in row_dict.items():
                     try:
