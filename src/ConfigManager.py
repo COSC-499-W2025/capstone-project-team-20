@@ -9,7 +9,7 @@ class ConfigManager(StorageManager):
 
     @property
     def create_table_query(self) -> str:
-        return """ CREATE TABLE IF NOT EXISTS configs (key TEXT PRIMARY KEY,value TEXT)"""
+        return "CREATE TABLE IF NOT EXISTS configs (key TEXT PRIMARY KEY,value TEXT)"
 
     @property
     def table_name(self) -> str:
