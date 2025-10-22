@@ -2,9 +2,7 @@ import sqlite3
 import json
 from contextlib import contextmanager
 from abc import ABC, abstractmethod
-from typing import Any
-from typing import Generator
-from typing import Dict
+from typing import Any, Dict, Generator
 
 class StorageManager(ABC): 
 
@@ -16,6 +14,14 @@ class StorageManager(ABC):
         with self._get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(self.create_table_query)
+
+    def _deserialize_row(self, row_dict: Dict[str, Any]) -> Dict[str, Any]:
+        for col, val in row_dict.items():
+            try:
+                row_dict[col] = json.loads(val)
+            except (json.JSONDecodeError, TypeError):
+                row_dict[col] = val
+        return row_dict
 
     # handles the setup and cleanup for database writes and reads
     # returns a Generator object, ensuring that only one connection is open at once
@@ -37,7 +43,7 @@ class StorageManager(ABC):
 
     @property
     def placeholders(self) -> str:
-           return ", ".join("?" for _ in self.columns_list)
+        return ", ".join("?" for _ in self.columns_list)
 
 
     # the @property and @abstractmethod combination forces child classes to define an attribute
@@ -62,10 +68,10 @@ class StorageManager(ABC):
     def columns(self) -> str:
         pass
 
-    def set(self, data: Dict[str, Any]) -> None:
+    def set(self, row: Dict[str, Any]) -> None:
         with self._get_connection() as conn:
             cursor = conn.cursor()
-            values = [data[i] for i in self.columns_list]
+            values = [row[i] for i in self.columns_list]
             # serialize any values of complex data type
             serialized_values = [
             json.dumps(v) if isinstance(v, (dict, list, bool)) else v
@@ -84,20 +90,17 @@ class StorageManager(ABC):
             result = cursor.fetchone()
             if result:
                 row_dict = dict(zip(self.columns_list, result))
-                for col, val in row_dict.items():
-                    # deserialize any values that need it
-                    try:
-                        row_dict[col] = json.loads(val)
-                    except (json.JSONDecodeError, TypeError):
-                        row_dict[col] = val
-                return row_dict
+                return self._deserialize_row(row_dict)
         return default
 
-    def delete(self, key: str) -> None:
+    #returns true if delete was successful
+    
+    def delete(self, key: str) -> bool:
         with self._get_connection() as conn:
             cursor = conn.cursor()
             query = f"DELETE FROM {self.table_name} WHERE {self.primary_key} = ?"
             cursor.execute(query, (key,))
+            return cursor.rowcount > 0
     
     def get_all(self) -> list[Dict[str, Any]]:
         with self._get_connection() as conn:
@@ -107,14 +110,8 @@ class StorageManager(ABC):
             results = cursor.fetchall()
             all_rows = []
             for row in results:
-                # deserialize any values that need it
                 row_dict = dict(zip(self.columns_list, row))
-                for col, val in row_dict.items():
-                    try:
-                        row_dict[col] = json.loads(val)
-                    except (json.JSONDecodeError, TypeError):
-                        row_dict[col] = val
-                all_rows.append(row_dict)
+                all_rows.append(self._deserialize_row(row_dict))
         return all_rows
 
     def clear(self) -> None:
