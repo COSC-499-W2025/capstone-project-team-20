@@ -16,9 +16,6 @@ path = "tests/test_resource/testzip.zip"
 def test_output_tree_structure():
     '''Generate Tree using ZipParser.parse(), navigate all elements and test that they have correct names, parents, list sizes'''
     root = ZipParser.parse(path)
-
-    ZipParser.zip_print(root)
-    print(len(root.subdir))
     
     #FOR EACH FOLDER: 
         #Check name
