@@ -40,7 +40,7 @@ def build_timeline(projects: Iterable[Dict]) -> List[SkillEvent]:
     events: List[SkillEvent] = []
     for p in projects or []:
         # choose canonical date (date > start_date > end_date)
-        when_raw = p.get("date", p.get("start_date", p.get("end_date")))
+        when_raw = p.get("date") or p.get("start_date") or p.get("end_date")
         when = _to_date(when_raw)
         name = p.get("name")
         for s in p.get("skills") or []:
