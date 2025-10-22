@@ -1,6 +1,5 @@
 from src.StorageManager import StorageManager
-from typing import Any
-from typing import Dict
+from typing import Any, Dict
 
 class ConfigManager(StorageManager):
 
@@ -9,7 +8,7 @@ class ConfigManager(StorageManager):
 
     @property
     def create_table_query(self) -> str:
-        return "CREATE TABLE IF NOT EXISTS configs (key TEXT PRIMARY KEY,value TEXT)"
+        return "CREATE TABLE IF NOT EXISTS configs (key TEXT PRIMARY KEY, value TEXT)"
 
     @property
     def table_name(self) -> str:
@@ -29,7 +28,7 @@ class ConfigManager(StorageManager):
     def get(self, key: str, default: Any = None) -> Any:
         result = super().get(key, default)
         if result and isinstance(result, dict):
-            return result.get("value", default)
+            return result.get("value")
         return default
     
     def get_all(self) -> Dict[str, Any]:
