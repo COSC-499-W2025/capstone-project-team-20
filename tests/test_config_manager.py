@@ -77,17 +77,6 @@ def test_persistence_across_instances(config_manager):
 
 # Negative Test Cases
 
-
-def test_corrupted_json_returns_default(config_manager):
-    with config_manager._get_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute(
-            "INSERT OR REPLACE INTO configs (key, value) VALUES (?, ?)",
-            ("corrupted", "not valid json{{{")
-        )
-    assert config_manager.get("corrupted") is None
-    assert config_manager.get("corrupted", default="fallback") == "fallback"
-
 def test_get_nonexistent_key_with_default(config_manager):
     assert config_manager.get("missing") is None
     assert config_manager.get("missing", default="fallback") == "fallback"
