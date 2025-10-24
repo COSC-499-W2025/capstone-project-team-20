@@ -1,3 +1,5 @@
+import tempfile
+import zipfile
 from zipfile import ZipFile
 
 from ProjectFile import ProjectFile
@@ -15,7 +17,7 @@ def parse(path):
 
         for file in z.infolist():
             if (start is True): #Creating a root
-                
+
                 #Create a root folder, and add it to the dict, accessed via name
                 root = ProjectFolder(file, None)
                 dirs[root.name] = root
@@ -51,3 +53,24 @@ def parse(path):
                     dirs[parent].children.append(temp)
 
     return (root)
+
+def extract_zip(zip_path: str) -> str:
+    """
+    Extracts a zip archive to a temporary directory.
+    Args:
+        zip_path: The path to the .zip file to be extracted.
+    Returns:
+        The path to the temporary directory where files were extracted.
+    Raises:
+        ValueError: If the path is invalid or the file is not a zip archive.
+    """
+    temp_dir = tempfile.mkdtemp()
+    print(f"Extracting {zip_path} to {temp_dir}...")
+    try:
+        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+            zip_ref.extractall(temp_dir)
+    except (zipfile.BadZipFile, FileNotFoundError) as e:
+        raise ValueError(f"Error processing zip file: {e}")
+
+    print("Extraction complete.")
+    return temp_dir
