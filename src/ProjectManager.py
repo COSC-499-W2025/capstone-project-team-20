@@ -69,6 +69,8 @@ class ProjectManager(StorageManager):
     def get(self, id: int) -> Project:
         """Retrieve a Project from the database by its id."""
         file_dict = super().get(id)
+        if file_dict is None:
+            return None
         file = Project.from_dict(file_dict)
         return file
 
