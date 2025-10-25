@@ -15,25 +15,23 @@ def main():
     
     print("Consent confirmed in main.")
 
-    # zip_path = input("Enter the path to the zipped project file: ").strip()
-    # will use this ^ once we have it working further. for now, i am hardcoding in the path below.
-    zip_path = "/Users/admin/Desktop/3rdyear.zip"
+    zip_path = input("Enter the path to the zipped project file: ").strip()
+    # Enter file path, need full path. Example from my testing: /Users/admin/Desktop/3rdyear.zip
+    
 
-    print(f"\n parsing project from: {zip_path}")
+    print(f"\nparsing project from: {zip_path}")
     try:
         root_folder = parse(zip_path)
     except Exception as e:
         print(f"Error while parsing: {e}")
         return
     
-    print("Extracting project metadata")
+    print("\nExtracting project metadata\n")
 
     metadata_extractor = ProjectMetadataExtractor(root_folder)
     metadata_extractor.extract_metadata()
 
-    print("extraction is complete!")
-
-    
+    print("\nextraction is complete!")
 
 if __name__ == "__main__":
     main()
