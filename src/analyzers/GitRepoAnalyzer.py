@@ -9,7 +9,7 @@ from src.language_detector import LANGUAGE_MAP
 from src.ZipParser import extract_zip
 
 
-class ProjectAnalyzer:
+class GitRepoAnalyzer:
     """
     Analyzes projects within a zip archive to determine file authorship.
 
@@ -20,7 +20,7 @@ class ProjectAnalyzer:
 
     def __init__(self) -> None:
         """
-        Initializes the ProjectAnalyzer.
+        Initializes the Repository Analyzer.
         """
         self.analysis_results: List[Dict[str, Any]] = []
         self.supported_extensions = set(LANGUAGE_MAP.keys())

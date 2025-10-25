@@ -1,6 +1,6 @@
 import os
 from src.ConsentManager import ConsentManager
-from src.ProjectAnalyzer import ProjectAnalyzer
+from src.analyzers.GitRepoAnalyzer import GitRepoAnalyzer
 
 def main():
     consent = ConsentManager()
@@ -21,7 +21,7 @@ def main():
             break
         print("The provided path is invalid or the file is not a .zip file. Please try again.")
 
-    analyzer = ProjectAnalyzer()
+    analyzer = GitRepoAnalyzer()
     analyzer.analyze_zip(zip_to_analyze)
 
     print("\nProgram finished.")
