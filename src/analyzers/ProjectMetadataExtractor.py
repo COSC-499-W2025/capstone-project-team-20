@@ -53,7 +53,7 @@ class ProjectMetadataExtractor:
             "total files: ": total_files,
             "total size in kb: ": round(total_size/ 1024, 2),
             "total size in mb: ": round(total_size/ (1024*1024), 2),
-            "average file size in kb:": round(average_file_size_kb, 2),
+            "average file size in kb: ": round(average_file_size_kb, 2),
             "start date: ": earliest.strftime("%Y-%m-%d"),
             "end date: ": latest.strftime("%Y-%m-%d"),
             "duration in days: ": duration_days
@@ -61,3 +61,5 @@ class ProjectMetadataExtractor:
 
         print("\n Project metadata summary: ")
         print(json.dumps(summary, indent=2))
+
+        return summary
