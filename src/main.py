@@ -3,17 +3,11 @@ from src.ConsentManager import ConsentManager
 from src.ProjectAnalyzer import ProjectAnalyzer
 
 def main():
-    """
-    Main function to run the project analysis tool.
-
-    It handles user consent, prompts for a zip file path,
-    and initiates the analysis process.
-    """
     consent = ConsentManager()
 
-    # To reset consent for testing, you can uncomment the following lines:
-    # from src.ConfigManager import ConfigManager
-    # ConfigManager().delete("user_consent")
+    # Uncomment two lines below to reset consent for testing manually
+    from src.ConfigManager import ConfigManager
+    ConfigManager().delete("user_consent")
 
     if not consent.require_consent():
         print("Consent not given. Exiting program.")
