@@ -22,6 +22,10 @@ class StorageManager(ABC):
             except (json.JSONDecodeError, TypeError):
                 row_dict[col] = val
         return row_dict
+    
+    def _retrieve_id(self, cursor: sqlite3.Cursor, row: Dict[str, Any]) -> None:
+        """To be overidden in child classes if needed, for use with schema that include autoincremented ids."""
+        pass
 
     # handles the setup and cleanup for database writes and reads
     # returns a Generator object, ensuring that only one connection is open at once
@@ -79,6 +83,7 @@ class StorageManager(ABC):
             ]
             query = f"INSERT OR REPLACE INTO {self.table_name} ({self.columns}) VALUES ({self.placeholders})"
             cursor.execute(query, serialized_values)
+            self._retrieve_id(cursor, row)
                 
     # default param can be used as a fallback, in case the value you're looking for doesn't exist
         
