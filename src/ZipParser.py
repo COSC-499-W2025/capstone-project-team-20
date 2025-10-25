@@ -1,7 +1,7 @@
 from zipfile import ZipFile
 
-from ProjectFile import ProjectFile
-from ProjectFolder import ProjectFolder
+from src.ProjectFile import ProjectFile
+from src.ProjectFolder import ProjectFolder
 
 def parse(path):
     '''Traverses zipped folder and creates a tree of ProjectFolder and ProjectFile objects, returns the root of the tree as an object'''
@@ -14,6 +14,9 @@ def parse(path):
         dirs: dict[str,ProjectFolder] = {}
 
         for file in z.infolist():
+            if file.filename.startswith("__MACOSX/"):
+                continue
+
             if (start is True): #Creating a root
                 
                 #Create a root folder, and add it to the dict, accessed via name
