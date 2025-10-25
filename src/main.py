@@ -17,7 +17,7 @@ def main():
 
     # zip_path = input("Enter the path to the zipped project file: ").strip()
     # will use this ^ once we have it working further. for now, i am hardcoding in the path below.
-    zip_path = "/Users/admin/Desktop/Development:Ideas.zip"
+    zip_path = "/Users/admin/Desktop/3rdyear.zip"
 
     print(f"\n parsing project from: {zip_path}")
     try:
