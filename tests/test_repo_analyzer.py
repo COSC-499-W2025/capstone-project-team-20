@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 from git import Repo, Actor
 
-from src.ProjectAnalyzer import ProjectAnalyzer
+from src.analyzers.GitRepoAnalyzer import GitRepoAnalyzer
 
 
 @pytest.fixture
@@ -53,7 +53,7 @@ def create_test_repo(tmp_path: Path) -> Path:
 
 def test_analyze_zip_full_scenario(create_test_repo: Path, capsys):
     """
-    Tests the ProjectAnalyzer's zip analysis functionality from end to end.
+    Tests the Repo Analyzers zip analysis functionality from end to end.
 
     This test verifies that the analyzer correctly identifies projects within a
     zip archive, analyzes the Git history of each file, and produces the
@@ -76,7 +76,7 @@ def test_analyze_zip_full_scenario(create_test_repo: Path, capsys):
                 zf.write(file_path, archive_path)
 
     # Initialize and run the analyzer
-    analyzer = ProjectAnalyzer()
+    analyzer = GitRepoAnalyzer()
     analyzer.analyze_zip(str(zip_path))
 
     # Verify the console output
