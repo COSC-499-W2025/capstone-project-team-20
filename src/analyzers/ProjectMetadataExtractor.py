@@ -33,7 +33,7 @@ class ProjectMetadataExtractor:
                 timestamps.append(f.last_modified)
             
             if f.size is not None:
-                sizes.append(f.size())
+                sizes.append(f.size)
 
         if len(timestamps) == 0:
             print("No valid timestamps!!")
