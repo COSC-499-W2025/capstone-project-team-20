@@ -158,12 +158,14 @@ This includes all basic features and requirements for milestone 1. We have start
 
 **Work Performed:**
 - Branden Kennedy (42474551): Worked on extracting project metadata, specifically file sizes, dates, average sizes. This closed issue [COSC-499-W2025/capstone-project-team-20#99](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/99). I also worked on decomposing Issue #34 into multiple subissues (as its quite a large issue). Lastly, I tested and reviewed other team member's code, thoroughly reviewing PR's. 
+- Necmi Kaan Sapoglu (17014796): Worked on enhancing the project analytics and skill tracking functionality. Completed Issue #52, which introduced the SkillEvent class and helper methods for creating a chronological list of skills across projects. This feature allows project data to be structured and analyzed over time. Also completed Issue #78, implementing the Project dataclass for storing metadata such as project name, folder path, timestamps, and technical metrics. This dataclass forms the foundation for how projects are persisted and analyzed throughout the system. I also reviewed other other team member's code through PR's and provided review. I will be starting the new issues that I created for next week.
 
 **Features included in the project plan for this milestone are:**
 - Issues #30 up to and including Issue [COSC-499-W2025/capstone-project-team-20#111](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/111)
 
 **Continuing tasks from last week and plan for the next week:**
 - Issue [COSC-499-W2025/capstone-project-team-20#34](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/34) is being decomposed into multiple subissues. Issue #99 is a subissue of #34 and has been closed. This week, further decomposition of the task will happen and they will be worked on, so it is continuing through to this week.
+- Issue #96 Future adaptation of the chronological list of skills feature. This will involve extending the current timeline logic to incorporate project context and improved data visualization.
 
 **Burnup chart:**
 
