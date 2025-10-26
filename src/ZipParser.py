@@ -15,6 +15,9 @@ def parse(path):
         dirs: dict[str,ProjectFolder] = {}
 
         for file in z.infolist():
+            if file.filename.startswith("__MACOSX/"):
+                continue
+
             if (start is True): #Creating a root
 
                 #Create a root folder, and add it to the dict, accessed via name
