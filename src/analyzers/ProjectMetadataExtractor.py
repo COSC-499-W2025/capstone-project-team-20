@@ -55,6 +55,7 @@ class ProjectMetadataExtractor:
             "end_date: ": latest.strftime("%Y-%m-%d"),
             "duration_days: ": duration_days
         }
+        return summary
     
     def extract_metadata(self):
         files = self.collect_all_files()
