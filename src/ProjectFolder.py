@@ -6,6 +6,7 @@ class ProjectFolder():
     name: str
     parent: object
     children: list
+    subdir: list
     def __init__(self, file: ZipInfo, parent: object):
         #file.filename is a path string, this seperates it by '/' to isolate the directory name
         namesplit = file.filename.split('/')
@@ -14,6 +15,7 @@ class ProjectFolder():
 
         #creates empty list for child objects
         self.children = []
+        self.subdir = []
 
         #if input is not None, its self.parent is parent
         if (parent is not None):
