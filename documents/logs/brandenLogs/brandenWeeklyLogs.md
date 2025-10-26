@@ -72,4 +72,25 @@ What I struggled with this week is true prioritizing of my time between classes.
 For the upcoming week, I will be starting to work on a new feature, possibly 2. I havent decided exactly which issues yet, but will be deciding by the end of the day monday. Another goal I have is that I would love to get the whole team on the same page for getting work done early in the week so that we all ahve ample time to refactor/change things if needed before the Sunday deadlines. 
 
 
+### **Week 8: October 20th - October 26th**
+
+**Tasks worked on:**
+
+![Week 8 log](imagesForBrandenLogs/week_8_log_ss.png)
+
+**Weekly Goals Recap:**
+
+This week, I worked on implementing a feature for extracting project metadata. The ProjectMetadataExtractor analyzes project-level statistics, and collects all files from ProjectFolder tree, parses the file timestampes and sizes, computes the total file count, project duration, and average file size, then prints and returns the summary in a JSON-format. I also implemented unit tests for functionality, on basic extraction of metadata, empty project handling, nested folder recursion, and missing timestamps on files. Implementing this required some refactoring of the ZipParser file as well. This covered Issue [COSC-499-W2025/capstone-project-team-20#99](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/99), which is a subissue of Issue #34.
+
+This implementation correlates directly with our functional requirements of "The system shall extract metadata, such as file creation/modification date, file size, language usage breakdown, contributions per month, etc.)." It handles the file dates and file size.
+
+The full Issue [COSC-499-W2025/capstone-project-team-20#34](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/34) is now what I am working on to break into further subissues. I have created Issue #100 which is also a sub issue of #34, but issue #34 will need even further breaking down. 
+
+I also completed multiple PR reviews this week, and created a when2meet scheduler so that we can all fill out our availability and schedule a second meeting time for our weeks, ensuring we are all properly aligned with everything were working on and can stay on top of coding early in the week.
+
+What I struggled with this week is still real prioritization of time. Last week, I was having trouble with selecting the proper issue to work on next, right up until Wednesday during our meeting times. I talked with my group and Dr. Hui to decide on a new issue, and that is why I am currently working through Issue [COSC-499-W2025/capstone-project-team-20#34](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/34). I want to make sure I can give my team ample time for review, and allow myself the weekend to focus on review/help of any other issues that my team may have.
+
+For The upcoming week, I have issue [COSC-499-W2025/capstone-project-team-20#34](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/34) to breakdown further and work on Issue #100, subissue of #34. So, I believe it should be one or two more subissues added for 34, and I should be able to implement all issues and fully complete issue #34 this week. I am going to try to have one of those pull requests up and ready for our wednesday meeting. 
+
+
 
