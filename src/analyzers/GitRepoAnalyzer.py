@@ -51,6 +51,8 @@ class GitRepoAnalyzer:
         Recursively finds and analyzes all Git repositories in a directory.
         """
         for root, dirs, _ in os.walk(base_dir):
+            if "__MACOSX" in root:
+                continue
             if ".git" in dirs:
                 repo_path = Path(root)
                 project_name = repo_path.name

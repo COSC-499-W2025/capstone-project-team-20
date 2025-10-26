@@ -2,13 +2,12 @@ import tempfile
 import zipfile
 from zipfile import ZipFile
 
-from ProjectFile import ProjectFile
-from ProjectFolder import ProjectFolder
+from src.ProjectFile import ProjectFile
+from src.ProjectFolder import ProjectFolder
 
 def parse(path):
     '''Traverses zipped folder and creates a tree of ProjectFolder and ProjectFile objects, returns the root of the tree as an object'''
     with ZipFile(path, 'r') as z:
-
         start=True
 
         root: ProjectFolder
