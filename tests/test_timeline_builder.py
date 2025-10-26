@@ -181,7 +181,7 @@ def test_projects_with_skills_chronologically_groups_and_sorts_skills():
     first = rows[0]
     assert first[0] == date(2023, 1, 10)
     assert first[1] == "Proj Alpha"
-    assert first[2] == ["python", "pytest"]
+    assert first[2] == ["pytest", "python"]
 
 
 def test_projects_helpers_dedupe_by_name_keep_first_occurrence():
