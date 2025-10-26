@@ -17,7 +17,6 @@ def test_basic_metadata_extraction():
     file3 = DummyFile(4096, datetime(2025, 9, 25))
 
     root = DummyFolder(children = [file1, file2, file3])
-
     extractor = ProjectMetadataExtractor(root)
     summary = extractor.extract_metadata()
 
@@ -27,10 +26,10 @@ def test_basic_metadata_extraction():
     expected_days = (datetime(2025, 9, 25) - datetime(2019, 1, 11)).days
     expected_avg_kb = round(expected_total_kb/3, 2)
 
-    assert summary["total files: "] == 3
-    assert round(summary["total size in kb: "], 2) == expected_total_kb
-    assert summary["duration in days: "] == expected_days
-    assert summary["average file size in kb: "] == expected_avg_kb
+    assert summary["total_files: "] == 3
+    assert round(summary["total_size_kb: "], 2) == expected_total_kb
+    assert summary["duration_days: "] == expected_days
+    assert summary["average_file_size_kb: "] == expected_avg_kb
 
 def test_empty_folder_returns_none(capsys):
     root = DummyFolder(children = [])
@@ -53,14 +52,14 @@ def test_nested_folders_are_counted():
     extractor = ProjectMetadataExtractor(root)
     summary = extractor.extract_metadata()
 
-    assert summary["total files: "] == 3
+    assert summary["total_files: "] == 3
 
     total_size = 4500
     expected_kb = round(total_size/1024, 2)
     expected_days = (datetime(2024, 7, 15) - datetime(2022, 5, 10)).days
 
-    assert summary["duration in days: "] == expected_days
-    assert round(summary["total size in kb: "], 2) == expected_kb
+    assert summary["duration_days: "] == expected_days
+    assert round(summary["total_size_kb: "], 2) == expected_kb
 
 def test_missing_timestamps_ignored():
     f1 = DummyFile(1024, None)
@@ -70,7 +69,7 @@ def test_missing_timestamps_ignored():
     extractor = ProjectMetadataExtractor(root)
     summary = extractor.extract_metadata()
 
-    assert summary["start date: "] == "2025-10-12"
-    assert summary["end date: "] == "2025-10-12"
-    assert summary["total files: "] == 2
+    assert summary["start_date: "] == "2025-10-12"
+    assert summary["end_date: "] == "2025-10-12"
+    assert summary["total_files: "] == 2
 
