@@ -1,5 +1,6 @@
 from datetime import datetime
 import json
+from typing import Dict, Optional, List
 
 class ProjectMetadataExtractor:
 
@@ -19,12 +20,8 @@ class ProjectMetadataExtractor:
 
         return all_files
     
-    def extract_metadata(self):
-        files = self.collect_all_files()
-        if len(files) == 0:
-            print("No files in this project tree!")
-            return None
-        
+    def compute_time_and_size_summary(self, files) -> Optional[Dict]:
+        """Compute file size and file date for a list of files"""
         timestamps = []
         sizes = []
 
@@ -50,16 +47,23 @@ class ProjectMetadataExtractor:
             average_file_size_kb = round(total_size/total_files)/1024
 
         summary = {
-            "total files: ": total_files,
-            "total size in kb: ": round(total_size/ 1024, 2),
-            "total size in mb: ": round(total_size/ (1024*1024), 2),
-            "average file size in kb: ": round(average_file_size_kb, 2),
-            "start date: ": earliest.strftime("%Y-%m-%d"),
-            "end date: ": latest.strftime("%Y-%m-%d"),
-            "duration in days: ": duration_days
+            "total_files: ": total_files,
+            "total_size_kb: ": round(total_size/ 1024, 2),
+            "total_size_mb: ": round(total_size/ (1024*1024), 2),
+            "average_file_size_kb: ": round(average_file_size_kb, 2),
+            "start_date: ": earliest.strftime("%Y-%m-%d"),
+            "end_date: ": latest.strftime("%Y-%m-%d"),
+            "duration_days: ": duration_days
         }
-
-        print("\n Project metadata summary: ")
-        print(json.dumps(summary, indent=2))
-
+    
+    def extract_metadata(self):
+        files = self.collect_all_files()
+        if len(files) == 0:
+            print("No files in this project tree!")
+            return None
+        
+        summary = self.compute_time_and_size_summary(files)
+        if summary:
+            print("\nProject metadata summary: ")
+            print(json.dumps(summary, indent=2))
         return summary
