@@ -16,7 +16,7 @@ def sample_project():
         frameworks=["PyTorch"],
         skills_used=["ML", "Data Analysis"],
         individual_contributions=["Feature extraction"],
-        collaboration_status="COLLABORATIVE",
+        collaboration_status="collaborative",
         date_created=datetime(2025, 1, 1),
         last_modified=datetime(2025, 1, 5),
         last_accessed=datetime(2025, 1, 10)
@@ -34,7 +34,7 @@ def test_project_to_dict_and_from_dict(sample_project):
     
     assert isinstance(d["collaboration_status"], str)
 
-    assert d["collaboration_status"] in ["INDIVIDUAL", "COLLABORATIVE"]
+    assert d["collaboration_status"] in ["individual", "collaborative"]
 
     
     # Ensure dates are ISO strings

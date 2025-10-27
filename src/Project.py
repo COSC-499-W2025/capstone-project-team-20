@@ -22,7 +22,7 @@ class Project:
     frameworks: List[str] = list_field()
     skills_used: List[str] = list_field()
     individual_contributions: List[str] = list_field()
-    collaboration_status: Literal["INDIVIDUAL", "COLLABORATIVE"] = "INDIVIDUAL"
+    collaboration_status: Literal["individual", "collaborative"] = "individual"
     date_created: Optional[datetime] = None
     last_modified: Optional[datetime] = None
     last_accessed: Optional[datetime] = None
