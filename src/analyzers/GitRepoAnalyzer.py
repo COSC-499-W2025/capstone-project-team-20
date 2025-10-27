@@ -5,7 +5,7 @@ from typing import Set, List, Dict, Any
 
 from git import Repo, GitCommandError
 
-from src.language_detector import LANGUAGE_MAP
+from .language_detector import LANGUAGE_MAP
 from src.ZipParser import extract_zip
 
 
