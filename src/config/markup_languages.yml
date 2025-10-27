@@ -1,0 +1,24 @@
+markup_languages:
+  CSS:
+    extensions: [css, scss, sass, less]
+  CSV:
+    extensions: [csv]
+  HTML:
+    extensions: [html, htm]
+  JSON:
+    extensions: [json]
+  LaTeX:
+    extensions: [tex, sty, cls]
+  Markdown:
+    extensions: [md, markdown]
+  Plaintext:
+    extensions: [txt]
+  SVG:
+    extensions: [svg]
+  TOML:
+    extensions: [toml]
+  XML:
+    extensions: [xml, xsd, xsl]
+  YAML:
+    extensions: [yaml, yml]
+
