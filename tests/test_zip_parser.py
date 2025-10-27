@@ -65,3 +65,23 @@ def test_output_tree_structure():
     assert root.subdir[1].subdir[0].parent==root.subdir[1]
     assert len(root.subdir[1].subdir[0].subdir) == 0
     assert len(root.subdir[1].subdir[0].children) == 0
+
+def test_toString():
+    '''Generate Tree using ZipParser.parse(), using root, request a string representation, compare directly to expected result'''
+    root = ZipParser.parse(path)
+
+    result = ZipParser.toString(root)
+    expected = "■[testzip]\n└──testfile.txt\n└──■[testsub]\n   └──testsubfile.txt\n└──■[asubfolder]\n   └──wingydingy.txt\n   └──■[subberfolder]\n"
+
+    #Expected:
+#       ■[testzip]
+#       └──testfile.txt
+#       └──■[testsub]
+#          └──testsubfile.txt
+#       └──■[asubfolder]
+#          └──wingydingy.txt
+#          └──■[subberfolder]
+
+    print(expected)
+    print(result)
+    assert expected == result
