@@ -98,3 +98,31 @@ My goals for next week are to finish the tests I began writing for ZipParser, cr
 Issues closed:
 - Issue [#58](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/58)
 - Issue [#59](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/59)
+
+## Week 8
+
+**Types of Tasks Worked On**
+![Week 8 Tasks](imagesForLexLogs/week_8_lexlog.png)
+
+**Recap of Goals**
+Was working on completing this issue:
+- Issue [#31](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/31)
+
+For this week, these issues remained:
+- [COSC-499-W2025/capstone-project-team-20#119](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/119)
+- [COSC-499-W2025/capstone-project-team-20#111](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/111)
+-[COSC-499-W2025/capstone-project-team-20#127](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/127)
+-#97 (may have accidentally deleted this because its not linking? it appears under issue #31 tho)
+
+These were:
+- A bug fix in ZipParser so it now correctly handles zip files that contain multiple folders of the same name at different points in the file structure.
+- A toString() method for ZipParser to take a root projectFolder object and return a String representation of the tree structure for easy printing, the associated tests for this, and a template for tree traversal for potential future methods
+- Tests for the ProjectFolder class, as it lacked them initially due to being a node class, but upon review it had some 'features' within the constructor that warranted testing
+- Tests for ZipParser, as it was lacking some due to the last minute implementation last week.
+
+I only managed to review one PR this week as only one (that was not made by me) remained by the time i had put aside to look at them.
+
+I did not manage to find an issue to break up into smaller issues for next week as I had planned to do. However as a team we figured out what times we are all free for team meetings so we can meet and plan out implementation of future features together.
+
+Issues closed:
+#31, #119, #111, #127, #97
