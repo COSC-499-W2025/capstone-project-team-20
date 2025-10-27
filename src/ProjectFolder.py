@@ -7,9 +7,9 @@ class ProjectFolder():
     is_root: bool
     name: str
     parent: object
-    subdir: list
     children: list
-
+    subdir: list
+      
     def __init__(self, file: ZipInfo, parent: object):
 
         #file.filename is a path string, this seperates it by '/' to isolate the directory name
