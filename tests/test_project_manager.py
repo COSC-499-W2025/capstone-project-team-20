@@ -28,7 +28,7 @@ def sample_project():
         frameworks=["PyTorch"],
         skills_used=["ML", "Data Analysis"],
         individual_contributions=["Feature extraction"],
-        collaboration_status="COLLABORATIVE",
+        collaboration_status="collaborative",
         date_created=datetime(2025, 1, 1),
         last_modified=datetime(2025, 1, 5),
         last_accessed=datetime(2025, 1, 10)
@@ -47,7 +47,7 @@ def another_project():
         frameworks=[],
         skills_used=[],
         individual_contributions=[],
-        collaboration_status="INDIVIDUAL",
+        collaboration_status="individual",
         date_created=None
     )
 
@@ -115,7 +115,7 @@ def test_edge_cases_empty_lists_and_none(cleanup_db):
         frameworks=[],
         skills_used=[],
         individual_contributions=[],
-        collaboration_status="INDIVIDUAL",
+        collaboration_status="individual",
         date_created=None,
         last_modified=None,
         last_accessed=None
@@ -133,4 +133,4 @@ def test_edge_cases_empty_lists_and_none(cleanup_db):
     assert retrieved.date_created is None
     assert retrieved.last_modified is None
     assert retrieved.last_accessed is None
-    assert retrieved.collaboration_status == "INDIVIDUAL"
+    assert retrieved.collaboration_status == "individual"
