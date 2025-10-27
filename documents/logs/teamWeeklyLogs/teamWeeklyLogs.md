@@ -144,11 +144,11 @@ This includes all basic features and requirements for milestone 1. We have start
 
 **Table View of Completed Tasks on Project Board:**
 
-[Team 7 completed tasks project board](teamWeeklyLogsImages/week_7_completed_tasks.png)
+[Week 7 completed tasks project board](teamWeeklyLogsImages/week_7_completed_tasks.png)
 
 **Table View of In-Progress Tasks on Project Board:**
 
-[Team 7 In-Progress Tasks on Project Board](teamWeeklyLogsImages/week_7_in_progress_tasks.png)
+[Week 7 In-Progress Tasks on Project Board](teamWeeklyLogsImages/week_7_in_progress_tasks.png)
 
 **Test Report:**
 
@@ -160,6 +160,9 @@ This includes all basic features and requirements for milestone 1. We have start
 - Branden Kennedy (42474551): Worked on extracting project metadata, specifically file sizes, dates, average sizes. This closed issue [COSC-499-W2025/capstone-project-team-20#99](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/99). I also worked on decomposing Issue #34 into multiple subissues (as its quite a large issue). Lastly, I tested and reviewed other team member's code, thoroughly reviewing PR's. 
 - Necmi Kaan Sapoglu (17014796): Worked on enhancing the project analytics and skill tracking functionality. Completed Issue #52, which introduced the SkillEvent class and helper methods for creating a chronological list of skills across projects. This feature allows project data to be structured and analyzed over time. Also completed Issue #78, implementing the Project dataclass for storing metadata such as project name, folder path, timestamps, and technical metrics. This dataclass forms the foundation for how projects are persisted and analyzed throughout the system. I also reviewed other other team member's code through PR's and provided review. I will be starting the new issues that I created for next week.
 - Lex Nash (84668540): Completed the rest of the sub issues under issue [COSC-499-W2025/capstone-project-team-20#31](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/31). For this week this included issue #97 (tests for ZipParser), issue #127 (tests for ProjectFolder), issue #111(ZipParser.toString() which takes a root ProjectFolder and returns a String representation of every file and directory within the zipped folder and tests), and a bug fix (issue #119). Reviewed a single PR as that was all that was there at the time. Need to decide on tasks for next week.
+- Dylan Alexander (16394025): Worked on refactoring ConfigManager into a StorageManager base class, Implemented Project dataclass, Implemented ProjectManager for storage of Project objects into the database, and did some refactoring of the database manager classes, adding docstrings and typehints where they were previously missing. I've linked these PRs and the code reviews I did this week in my personal log.
+- Sven Annist (42486720): Worked on distinguishing individual projects from collaborative projects, as outlined in Issue #47, which was resolved in PR #101. This involved analyzing git-based authorship data extracted from project "/.git" directories to inventory authors and delineate individual commits from collaborative contributions. Additionally, created new issues for future development in response to team feedback (Issues #113, #123, and #124). I also conducted code reviews on PR #93 (Dylan's ConfigManager refactoring to StorageManager) and PR #110 (Lex's ZipParser tests)
+
 
 **Features included in the project plan for this milestone are:**
 - Issues #30 up to and including Issue [COSC-499-W2025/capstone-project-team-20#111](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/111)
@@ -170,9 +173,15 @@ This includes all basic features and requirements for milestone 1. We have start
 
 **Burnup chart:**
 
+[Week 8 burnup chart](teamWeeklyLogsImages/week-8-burnup-chart.png)
+
 **Table View of Completed Tasks on Project Board:**
 
+[Week 8 completed tasks project board](teamWeeklyLogsImages/week-8-completed-tasks.png)
+
 **Table View of In-Progress Tasks on Project Board:**
+
+[Week 8 In-Progress Tasks on Project Board](teamWeeklyLogsImages/week-8-in-progress.png)
 
 **Test Report:**
 
