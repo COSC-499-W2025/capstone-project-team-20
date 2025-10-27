@@ -22,9 +22,7 @@ def parse(path):
 
                 #Create a root folder, and add it to the dict, accessed via name
                 root = ProjectFolder(file, None)
-                dirs[root.name] = root
-
-                print(root.name)
+                dirs[file.filename] = root
 
                 start = False
 
@@ -32,7 +30,7 @@ def parse(path):
                 if file.is_dir():
                     #determine parent's name
                     parent = file.filename.split("/")
-                    parent = parent[len(parent)-3]
+                    parent = "/".join(parent[:len(parent)-2])+"/"
 
                     #create the object
                     temp = ProjectFolder(file,dirs[parent])
@@ -41,12 +39,12 @@ def parse(path):
                     dirs[parent].subdir.append(temp)
 
                     #create new dict entry for this file
-                    dirs[temp.name] = temp
+                    dirs[file.filename] = temp
 
                 else:
                     #determine parent's name
                     parent = file.filename.split("/")
-                    parent = parent[len(parent)-2]
+                    parent = "/".join(parent[:len(parent)-1])+"/"
 
                     #create the object
                     temp = ProjectFile(file,dirs[parent])
@@ -76,3 +74,43 @@ def extract_zip(zip_path: str) -> str:
 
     print("Extraction complete.")
     return temp_dir
+
+def toString(root: ProjectFolder):
+    '''Runs the helper method to remove the amount of arguments needed on initial call'''
+    output = _StringHelper(root,'└──','',True)
+    return output
+
+def _StringHelper(folder:ProjectFolder, indent:str, output:str, first:bool):
+    '''Recursively explores the full tree of subfiles and subfolders under "root", combines them into a single string to easily print the tree'''
+    # add name of folder to string
+    if first:
+        output+="■["+folder.name+"]"+'\n'
+    else:
+        output+=indent+"■["+folder.name+"]"+'\n'
+        indent = '   ' + indent
+
+    # traverse child files, adds their names to string
+    if len(folder.children)>0:
+        for child in folder.children:
+            output+= indent + child.file_name + '\n'
+
+    # a recursive call for each subfolder
+    if len(folder.subdir)>0:
+        for subfolder in folder.subdir:
+            output = _StringHelper(subfolder,indent,output,False)
+    
+    return output
+
+"""
+def traverse(folder:ProjectFolder):
+    '''THIS IS A TEMPLATE MEMTHOD FOR TREE TRAVERSAL'''
+    #[ACCESS FOLDER OBJECT]:
+    #---------code---------#
+    if len(folder.children)>0:
+        for child in folder.children:
+            #[ACCESS FILE OBJECT]
+            #---------code---------#
+    if len(folder.subdir)>0:
+        for subfolder in folder.subdir:
+            traverse(subfolder)
+"""
