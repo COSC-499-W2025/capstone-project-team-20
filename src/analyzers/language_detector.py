@@ -17,9 +17,8 @@ with open(MARKUP_FILE, "r") as f:
 LANGUAGES = LANGUAGES_YAML["languages"]
 MARKUP_LANGUAGES = MARKUP_LANGUAGES_YAML["markup_languages"]
 
-# current metadata categories: extensions
+# maps extension as key, language as value
 
-# maps extension -> language
 LANGUAGE_MAP = {}
 for language, category in LANGUAGES.items():
     for extension in category.get("extensions", []):
@@ -29,10 +28,6 @@ MARKUP_LANGUAGE_MAP = {}
 for language, category in MARKUP_LANGUAGES.items():
     for extension in category.get("extensions", []):
         MARKUP_LANGUAGE_MAP[extension.lower()] = language
-
-print(f"LANGUAGE_MAP: {LANGUAGE_MAP}")
-print(f"MARKUP_LANGUAGE_MAP: {MARKUP_LANGUAGE_MAP}")
-
 
 def is_source_file(path):
     """Check if a path object points to a valid, non-hidden file (by name only)."""
