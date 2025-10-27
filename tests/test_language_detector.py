@@ -1,6 +1,6 @@
 import pytest
 from pathlib import Path
-from src.language_detector import *
+from src.analyzers.language_detector import *
 
 def test_is_source_file():
     """
