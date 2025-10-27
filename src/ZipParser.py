@@ -18,9 +18,7 @@ def parse(path):
                 
                 #Create a root folder, and add it to the dict, accessed via name
                 root = ProjectFolder(file, None)
-                dirs[root.name] = root
-
-                print(root.name)
+                dirs[file.filename] = root
 
                 start = False
 
@@ -28,7 +26,7 @@ def parse(path):
                 if file.is_dir():
                     #determine parent's name
                     parent = file.filename.split("/")
-                    parent = parent[len(parent)-3]
+                    parent = "/".join(parent[:len(parent)-2])+"/"
 
                     #create the object
                     temp = ProjectFolder(file,dirs[parent])
@@ -37,12 +35,12 @@ def parse(path):
                     dirs[parent].subdir.append(temp)
 
                     #create new dict entry for this file
-                    dirs[temp.name] = temp
+                    dirs[file.filename] = temp
 
                 else:
                     #determine parent's name
                     parent = file.filename.split("/")
-                    parent = parent[len(parent)-2]
+                    parent = "/".join(parent[:len(parent)-1])+"/"
 
                     #create the object
                     temp = ProjectFile(file,dirs[parent])
