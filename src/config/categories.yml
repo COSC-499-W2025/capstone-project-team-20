@@ -1,20 +1,20 @@
 categories:
   code:
     # links directly to the language groups defined in languages.yml or markup_languages.yml
-    languages: all
+    language_source: languages
 
   test:
   # identifies test files by common path keywords
     path_patterns: ["test", "spec", "__tests__", "unittest"]
-    extensions: []
 
   docs:
-  # all documentation and markup related files
-    languages: [Markdown, Plaintext, HTML, LaTeX]
+  # all documentation and markup related files. References markup_languages.yml
+    language_source: markup_languages
+    # doc specific extensions and folder names
     extensions: [pdf, docx, rst]
     path_patterns: ["docs", "readme", "manual", "guide"]
 
   design:
-  # design or diagram related files
-    extensions: [drawio, fig, cd, psd, png, jpg, jpeg, svg]
+  # design or diagram related files that arent code/markup
+    extensions: [drawio, fig, xd, psd, png, jpg, jpeg, svg]
     path_patterns: ["design", "diagram", "mockup", "ui", "ux"]

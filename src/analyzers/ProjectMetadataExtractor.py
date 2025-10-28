@@ -2,12 +2,16 @@ from datetime import datetime
 import json
 from typing import Dict, Optional, List
 
+from src.FileCategorizer import FileCategorizer
+
 class ProjectMetadataExtractor:
 
     def __init__(self, root_folder):
         self.root = root_folder
+        self.categorizer = FileCategorizer()
     
     def collect_all_files(self):
+        """Traverses project folder tree and collects all file objects."""
         all_files = []
         folder_to_check = [self.root]
 
@@ -61,14 +65,32 @@ class ProjectMetadataExtractor:
         }
         return summary
     
+    def compute_category_summary(self, files: List) -> Dict[str, Dict[str, float]]:
+        """Classify files into categories and compute contribution metrics using FileCategorizer"""
+        files_for_categorization = []
+        for f in files:
+            files_for_categorization.append({
+                "path": f.file_name if hasattr(f, "file_name") else f.name,
+                "language": getattr(f, "language", "Unknown")
+            })
+        return self.categorizer.compute_metrics(files_for_categorization)
+    
     def extract_metadata(self):
+        """Runs all metadata and category analysis for this project"""
         files = self.collect_all_files()
-        if len(files) == 0:
-            print("No files in this project tree!")
+        if not files:
+            print("No files in this project tree")
             return None
         
         summary = self.compute_time_and_size_summary(files)
-        if summary:
-            print("\nProject metadata summary: ")
-            print(json.dumps(summary, indent=2))
-        return summary
+        category_summary = self.compute_category_summary(files)
+
+        full_summary = {
+            "project_metadata": summary,
+            "category_summary": category_summary
+        }
+
+        if full_summary:
+            print("\n===== Project metadata summary: =====")
+            print(json.dumps(full_summary, indent=2))
+        return full_summary
