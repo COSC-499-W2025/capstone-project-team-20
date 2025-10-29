@@ -8,7 +8,7 @@ language_detector.py
 The language detector detects each language used in a project
 and calculates the share of the project programmed in that language.
 
-The main entry point of the language detector is the run_analysis function: 
+The main entry point of the language detector is the analyze_language_share function: 
 
 - This function accepts the path to the root directory of (1) project at a time, as a string.
 - Returns a dict:
@@ -18,11 +18,11 @@ The main entry point of the language detector is the run_analysis function:
 E.g. {"Javascript": 48.6, "Java": 43.6, "CSS": 5.9, "SQL": 1.5, "HTML": 0.3}
 
 Workflow overview: 
-1. run_analysis: acts as the main entry point of the module
+1. analyze_language_share: acts as the main entry point of the module
 2. filter_files: all files are scanned recursively, irrelevant files (e.g. build files, hidden files) are filtered out.
 3. aggregate_loc_by_language: for each 'relevant file', if the extension exists in the LANGUAGE_MAP, calls count_loc_by_file helper function.
 4. count_loc_by_file: counts lines of code of a file, skipping over empty lines.
-5. the final calculation of share per language is done in run_analysis, which returns the dict.
+5. the final calculation of share per language is done in analyze_language_share, which returns the dict.
 
 Current Limitations:
 - does not currently work on non UTF-8 encoded files. 
@@ -58,7 +58,7 @@ IGNORED_DIRS = {
     '.next', '.nuxt', '.cache'
 }
 
-def run_analysis(root_dir: str) -> Dict[str, float]:
+def analyze_language_share(root_dir: str) -> Dict[str, float]:
     """Return a dict where:
     - Key: language name (str)
     - Value: share of project in that language as a percentage (float)

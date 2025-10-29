@@ -3,7 +3,7 @@ from pathlib import Path
 import tempfile
 import shutil
 from src.analyzers.language_detector import (
-    run_analysis,
+    analyze_language_share,
     filter_files,
     aggregate_loc_by_language,
     count_loc_per_file,
@@ -150,20 +150,20 @@ class TestAggregateLOCByLanguage:
 
 
 class TestRunAnalysis:
-    """Integration tests for the run_analysis function."""
+    """Integration tests for the analyze_language_share function."""
     
     def test_simple_project(self, tmp_path):
         (tmp_path / "main.py").write_text("line1\nline2\nline3\nline4\n")
         (tmp_path / "utils.py").write_text("line1\n")
         
-        result = run_analysis(str(tmp_path))
+        result = analyze_language_share(str(tmp_path))
         assert result["Python"] == 100
     
     def test_multi_language_project(self, tmp_path):
         (tmp_path / "main.py").write_text("line1\nline2\nline3\nline4\n")  # 4 lines
         (tmp_path / "App.java").write_text("line1\n")  # 1 line
         
-        result = run_analysis(str(tmp_path))
+        result = analyze_language_share(str(tmp_path))
         assert result["Python"] == 80  # 4/5 = 80%
         assert result["Java"] == 20    # 1/5 = 20%
     
@@ -172,12 +172,12 @@ class TestRunAnalysis:
         (tmp_path / ".gitignore").write_text("node_modules\n")
         (tmp_path / "readme.md").write_text("# Project\n")
         
-        result = run_analysis(str(tmp_path))
+        result = analyze_language_share(str(tmp_path))
         assert "Python" in result
         assert result["Python"] == 100
     
     def test_empty_project(self, tmp_path):
-        result = run_analysis(str(tmp_path))
+        result = analyze_language_share(str(tmp_path))
         assert result == {}
     
     def test_percentages_sum_close_to_100(self, tmp_path):
@@ -186,7 +186,7 @@ class TestRunAnalysis:
         (tmp_path / "Main.java").write_text("line1\nline2\nline3\n")
         (tmp_path / "app.js").write_text("line1\nline2\nline3\n")
         
-        result = run_analysis(str(tmp_path))
+        result = analyze_language_share(str(tmp_path))
         total = sum(result.values())
         # Due to rounding, might be 99 or 100
         assert 99 <= total <= 100
@@ -214,7 +214,7 @@ def project_structure(tmp_path):
 
 def test_realistic_project(project_structure):
     """Test with a realistic project structure."""
-    result = run_analysis(str(project_structure))
+    result = analyze_language_share(str(project_structure))
     assert "Python" in result
     assert result["Python"] == 100
 
@@ -224,5 +224,5 @@ def test_ignores_node_modules(tmp_path):
     node_mods.mkdir(parents=True)
     (node_mods / "index.js").write_text("lots\nof\ncode\n")
     (tmp_path / "main.js").write_text("my\ncode\n")
-    result = run_analysis(str(tmp_path))
+    result = analyze_language_share(str(tmp_path))
     assert result["JavaScript"] == 100  # Only counted main.js
