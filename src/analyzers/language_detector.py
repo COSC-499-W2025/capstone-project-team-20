@@ -1,6 +1,7 @@
 from pathlib import Path
 import yaml
 from src.Project import Project
+from typing import Dict, Optional
 
 CONFIG_DIR = Path(__file__).parent.parent / "config"
 LANGUAGES_FILE = CONFIG_DIR / "languages.yml"
@@ -30,21 +31,54 @@ for language, category in MARKUP_LANGUAGES.items():
     for extension in category.get("extensions", []):
         MARKUP_LANGUAGE_MAP[extension.lower()] = language
 
-def Analyze(proj: Project):
-    #path = Path(proj.root_dir)
-    #Filter(path)
-    pass
+def run_analysis(root_dir: str):
+    path = Path(root_dir)
+    relevant_files = filter_files(path)
+    loc_per_language = aggregate_loc_by_language(relevant_files)
+    share_per_language = loc_per_language.copy()
+    total_loc_count = sum(loc_per_language.values())
+    for language in share_per_language:
+        share_per_language[language] = round((loc_per_language[language] / total_loc_count) * 100)
 
-def Filter(path: Path) -> list[Path]:
+    return
+
+def filter_files(path: Path) -> list[Path]:
     relevant_files = []
     all_files = [f for f in path.rglob("*") if f.is_file()]
     for file in all_files:
-        #Filter irrelevant files
         if file.name.startswith("."):
             continue
         if file.suffix.lstrip(".").lower() not in LANGUAGE_MAP:
             continue
         relevant_files.append(file)
     return relevant_files
+
+def aggregate_loc_by_language(files: list[Path]) -> Dict[str,int]:
+    loc_per_language = {}
+    for file in files:
+        language = detect_language(file)
+        if not language:
+            continue
+        loc = count_loc(file, language)
+        if loc is None:
+            continue
+        loc_per_language[language] = loc_per_language.get(language, 0) + loc
+    return loc_per_language
+
+def count_loc(file: Path, language: str) -> int:
+    # Decodes bytes into text using utf-8 encoding. If that's the wrong encoding the file is skipped.
+    try:
+        with file.open("r", encoding="utf-8", errors="ignore") as f:
+            # Generator expression, adds 1 to the sum as it goes through the file line by line.
+            # Iterating over f automatically yields each line in the file. If line.strip() is not True, the line is blank.
+            return sum(1 for line in f if line.strip())
+    except Exception:
+        return None
+    
+def detect_language(file: Path) -> Optional[str]:
+    extension = file.suffix.lstrip(".").lower()
+    return LANGUAGE_MAP.get(extension, None)
+
+
 
 
