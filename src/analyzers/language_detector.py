@@ -3,6 +3,33 @@ import yaml
 from src.Project import Project
 from typing import Dict, Optional
 
+"""
+language_detector.py
+
+The language detector detects each language used in a project
+and calculates the share of the project programmed in that language.
+
+The main entry point of the language detector is the run_analysis function: 
+
+- This function accepts the root directory of (1) project at a time, as a string.
+- This function returns a dict:
+- Key value: the name of the language as a string.
+- Root value: the share of the project programmed in that language, as a percentage.
+
+E.g. {"Javascript": 48.6, "Java": 43.6, "CSS": 5.9, "SQL": 1.5, "HTML": 0.3}
+
+Workflow overview: 
+1. run_analysis: acts as the main entry point of the module
+2. filter_files: all files are scanned recursively, irrelevant files (e.g. build files, hidden files) are filtered out.
+3. aggregate_loc_by_language: for each 'relevant file', if the extension exists in the LANGUAGE_MAP, calls count_loc_by_file helper function.
+4. count_loc_by_file: counts lines of code of a file, skipping over empty lines.
+5. the final calculation of share per language is done in run_analysis, which returns the dict.
+
+Some notes for future reference:
+- does not currently work on non UTF-8 encoded files. 
+- Accepts comments as a loc.
+"""
+
 
 CONFIG_DIR = Path(__file__).parent.parent / "config"
 LANGUAGES_FILE = CONFIG_DIR / "languages.yml"
@@ -42,16 +69,22 @@ IGNORED_DIRS = {
 }
 
 def run_analysis(root_dir: str) -> Dict[str,int]:
+    """Return a dict where:
+    - Key: language name (str)
+    - Value: share of project in that language as a percentage (float)
+
+    E.g. {"Javascript": 48.6, "Java": 43.6, "CSS": 5.9, "SQL": 1.5, "HTML": 0.3}"""
     path = Path(root_dir)
     relevant_files = filter_files(path)
     loc_per_language = aggregate_loc_by_language(relevant_files)
     share_per_language = loc_per_language.copy()
     total_loc_count = sum(loc_per_language.values())
     for language in share_per_language:
-        share_per_language[language] = round((loc_per_language[language] / total_loc_count) * 100)
-    return share_per_language
+        share_per_language[language] = round((loc_per_language[language] / total_loc_count) * 100, 1)
+    return dict(sorted(share_per_language.items(), key=lambda x: x[1], reverse=True))
 
 def filter_files(path: Path) -> list[Path]:
+    """Return a list of files to analyze, ignoring hidden files and specified directories."""
     relevant_files = []
     all_files = [f for f in path.rglob("*") if f.is_file()]
     for file in all_files:
@@ -65,6 +98,7 @@ def filter_files(path: Path) -> list[Path]:
     return relevant_files
 
 def aggregate_loc_by_language(files: list[Path]) -> Dict[str,int]:
+    """Aggregate lines of code per language from a list of files."""
     loc_per_language = {}
     for file in files:
         language = detect_language_per_file(file)
@@ -77,16 +111,17 @@ def aggregate_loc_by_language(files: list[Path]) -> Dict[str,int]:
     return loc_per_language
 
 def count_loc_per_file(file: Path, language: str) -> int:
+    """Count non-empty lines of code in a single file (UTF-8 only)."""
     # Decodes bytes into text using utf-8 encoding. If that's the wrong encoding the file is skipped.
     try:
         with file.open("r", encoding="utf-8", errors="ignore") as f:
-            # Generator expression, adds 1 to the sum as it goes through the file line by line.
-            # Iterating over f automatically yields each line in the file. If line.strip() is not True, the line is blank.
+            # Generator expression, adds 1 to the sum as it goes through the file line by line, skipping blank lines.
             return sum(1 for line in f if line.strip())
     except Exception:
         return None
     
 def detect_language_per_file(file: Path) -> Optional[str]:
+    """Return the programming language of a file based on its extension, or None if unknown."""
     extension = file.suffix.lstrip(".").lower()
     return LANGUAGE_MAP.get(extension, None)
 
