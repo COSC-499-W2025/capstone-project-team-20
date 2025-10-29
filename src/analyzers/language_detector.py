@@ -32,6 +32,15 @@ for language, category in MARKUP_LANGUAGES.items():
     for extension in category.get("extensions", []):
         MARKUP_LANGUAGE_MAP[extension.lower()] = language
 
+IGNORED_DIRS = {
+    'node_modules', 'vendor', 'bower_components',
+    'build', 'dist', 'target', 'out', 'bin',
+    '__pycache__', '.venv', 'venv', 'env',
+    'coverage', '.pytest_cache', '.gradle',
+    'packages', 'libs', 'dependencies',
+    '.next', '.nuxt', '.cache'
+}
+
 def run_analysis(root_dir: str) -> Dict[str,int]:
     path = Path(root_dir)
     relevant_files = filter_files(path)
@@ -46,6 +55,8 @@ def filter_files(path: Path) -> list[Path]:
     relevant_files = []
     all_files = [f for f in path.rglob("*") if f.is_file()]
     for file in all_files:
+        if any(part in IGNORED_DIRS for part in file.parts):
+            continue
         if file.name.startswith("."):
             continue
         if file.suffix.lstrip(".").lower() not in LANGUAGE_MAP:
