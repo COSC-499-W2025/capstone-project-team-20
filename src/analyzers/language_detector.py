@@ -1,5 +1,6 @@
 from pathlib import Path
 import yaml
+from src.Project import Project
 
 CONFIG_DIR = Path(__file__).parent.parent / "config"
 LANGUAGES_FILE = CONFIG_DIR / "languages.yml"
@@ -29,38 +30,21 @@ for language, category in MARKUP_LANGUAGES.items():
     for extension in category.get("extensions", []):
         MARKUP_LANGUAGE_MAP[extension.lower()] = language
 
-def is_source_file(path):
-    """Check if a path object points to a valid, non-hidden file (by name only)."""
-    if not path.name or path.name.startswith('.') or not path.suffix:
-        return False
-    return True
+def Analyze(proj: Project):
+    #path = Path(proj.root_dir)
+    #Filter(path)
+    pass
 
-def get_file_extension(path):
-    """Extract the file extension from a path object."""
-    if not is_source_file(path):
-        return ""
-    return path.suffix.lstrip(".").lower()
+def Filter(path: Path) -> list[Path]:
+    relevant_files = []
+    all_files = [f for f in path.rglob("*") if f.is_file()]
+    for file in all_files:
+        #Filter irrelevant files
+        if file.name.startswith("."):
+            continue
+        if file.suffix.lstrip(".").lower() not in LANGUAGE_MAP:
+            continue
+        relevant_files.append(file)
+    return relevant_files
 
-def find_first_valid_extension(files):
-    """
-    Find the extension of the first supported file in a list of files.
-    A valid file is:
-    - Not hidden (does not start with a dot)
-    - Has a file extension
-    Non-programming files such as README.md are valid
-    """
-    for file in files:
-        path = Path(file)
-        if is_source_file(path):
-            return get_file_extension(path)
-    return None
 
-def detect_language(project_files, language_map=LANGUAGE_MAP):
-    """
-    Detect the programming language of a project based on file extensions.
-    Extensions are mapped to languages using the provided language_map.
-    """
-    ext = find_first_valid_extension(project_files)
-    if ext in language_map:
-        return language_map[ext]
-    return "Unknown"
