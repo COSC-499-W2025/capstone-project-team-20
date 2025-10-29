@@ -3,6 +3,7 @@ import yaml
 from src.Project import Project
 from typing import Dict, Optional
 
+
 CONFIG_DIR = Path(__file__).parent.parent / "config"
 LANGUAGES_FILE = CONFIG_DIR / "languages.yml"
 MARKUP_FILE = CONFIG_DIR / "markup_languages.yml"
@@ -31,7 +32,7 @@ for language, category in MARKUP_LANGUAGES.items():
     for extension in category.get("extensions", []):
         MARKUP_LANGUAGE_MAP[extension.lower()] = language
 
-def run_analysis(root_dir: str):
+def run_analysis(root_dir: str) -> Dict[str,int]:
     path = Path(root_dir)
     relevant_files = filter_files(path)
     loc_per_language = aggregate_loc_by_language(relevant_files)
@@ -39,8 +40,7 @@ def run_analysis(root_dir: str):
     total_loc_count = sum(loc_per_language.values())
     for language in share_per_language:
         share_per_language[language] = round((loc_per_language[language] / total_loc_count) * 100)
-
-    return
+    return share_per_language
 
 def filter_files(path: Path) -> list[Path]:
     relevant_files = []
@@ -56,16 +56,16 @@ def filter_files(path: Path) -> list[Path]:
 def aggregate_loc_by_language(files: list[Path]) -> Dict[str,int]:
     loc_per_language = {}
     for file in files:
-        language = detect_language(file)
+        language = detect_language_per_file(file)
         if not language:
             continue
-        loc = count_loc(file, language)
+        loc = count_loc_per_file(file, language)
         if loc is None:
             continue
         loc_per_language[language] = loc_per_language.get(language, 0) + loc
     return loc_per_language
 
-def count_loc(file: Path, language: str) -> int:
+def count_loc_per_file(file: Path, language: str) -> int:
     # Decodes bytes into text using utf-8 encoding. If that's the wrong encoding the file is skipped.
     try:
         with file.open("r", encoding="utf-8", errors="ignore") as f:
@@ -75,7 +75,7 @@ def count_loc(file: Path, language: str) -> int:
     except Exception:
         return None
     
-def detect_language(file: Path) -> Optional[str]:
+def detect_language_per_file(file: Path) -> Optional[str]:
     extension = file.suffix.lstrip(".").lower()
     return LANGUAGE_MAP.get(extension, None)
 
