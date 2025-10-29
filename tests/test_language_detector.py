@@ -217,3 +217,12 @@ def test_realistic_project(project_structure):
     result = run_analysis(str(project_structure))
     assert "Python" in result
     assert result["Python"] == 100
+
+def test_ignores_node_modules(tmp_path):
+    # Should NOT count files in node_modules
+    node_mods = tmp_path / "node_modules" / "package"
+    node_mods.mkdir(parents=True)
+    (node_mods / "index.js").write_text("lots\nof\ncode\n")
+    (tmp_path / "main.js").write_text("my\ncode\n")
+    result = run_analysis(str(tmp_path))
+    assert result["JavaScript"] == 100  # Only counted main.js
