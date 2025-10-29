@@ -1,22 +1,33 @@
 from pathlib import Path
+import yaml
 
-LANGUAGE_MAP = {
-    'py': 'Python',
-    'js': 'JavaScript',
-    'ts': 'TypeScript',
-    'java': 'Java',
-    'rb': 'Ruby',
-    'go': 'Go',
-    'cs': 'C#',
-    'c': 'C',
-    'cpp': 'C++',
-    'php': 'PHP',
-    'rs': 'Rust',
-    'kt': 'Kotlin',
-    'sh': 'Shell',
-    'r': 'R',
-    'scala': 'Scala',
-}
+CONFIG_DIR = Path(__file__).parent.parent / "config"
+LANGUAGES_FILE = CONFIG_DIR / "languages.yml"
+MARKUP_FILE = CONFIG_DIR / "markup_languages.yml"
+
+with open(LANGUAGES_FILE, "r") as f:
+    LANGUAGES_YAML = yaml.safe_load(f)
+
+with open(MARKUP_FILE, "r") as f:
+    MARKUP_LANGUAGES_YAML = yaml.safe_load(f)
+
+# LANGUAGES is a dict of dicts. key = language names, values = dict of each category languages store
+#  e.g. {"Python": {"extensions": ["py", "pyw"]}, "Java": {"extensions": ["java", "jsp", "class", "jar"]}}
+
+LANGUAGES = LANGUAGES_YAML["languages"]
+MARKUP_LANGUAGES = MARKUP_LANGUAGES_YAML["markup_languages"]
+
+# maps extension as key, language as value
+
+LANGUAGE_MAP = {}
+for language, category in LANGUAGES.items():
+    for extension in category.get("extensions", []):
+        LANGUAGE_MAP[extension.lower()] = language
+
+MARKUP_LANGUAGE_MAP = {}
+for language, category in MARKUP_LANGUAGES.items():
+    for extension in category.get("extensions", []):
+        MARKUP_LANGUAGE_MAP[extension.lower()] = language
 
 def is_source_file(path):
     """Check if a path object points to a valid, non-hidden file (by name only)."""
