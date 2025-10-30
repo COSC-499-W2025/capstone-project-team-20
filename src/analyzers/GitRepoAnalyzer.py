@@ -25,7 +25,10 @@ class GitRepoAnalyzer:
         Initializes the Repository Analyzer.
         """
         self.analysis_results: List[Dict[str, Any]] = []
+        # LANGUAGE_MAP keys are extensions *without* the dot
         self.supported_extensions = set(LANGUAGE_MAP.keys())
+        # Skill extractor (repo/folder mode)
+        self.skill_extractor = SkillExtractor()
 
     def analyze_zip(self, zip_path: str) -> None:
         """
@@ -65,7 +68,8 @@ class GitRepoAnalyzer:
 
     def _analyze_repository(self, repo_path: Path, project_name: str) -> None:
         """
-        Analyzes a single Git repository to determine file authorship.
+        Analyzes a single Git repository to determine file authorship
+        and infers project skills (once per repo).
         """
         try:
             repo = Repo(repo_path)
@@ -82,7 +86,8 @@ class GitRepoAnalyzer:
             if item.type == 'blob':
                 file_path = item.path
                 # Skip files with unsupported extensions
-                if Path(file_path).suffix.lstrip(".").lower() not in self.supported_extensions:
+                ext = Path(file_path).suffix.lstrip(".").lower()
+                if ext not in self.supported_extensions:
                     continue
 
                 authors: Set[str] = set()
@@ -105,12 +110,29 @@ class GitRepoAnalyzer:
                     "collaboration_status": "collaborative" if author_count > 1 else "individual"
                 }
 
-                # Store result in memory
+                # Store per-file authorship result in memory
                 self.analysis_results.append({
                     "file_path": file_path,
                     "project_name": project_name,
                     "analysis_data": analysis_data,
                 })
+
+        # --- Repo-level skill inference (run once per repo) ---
+        try:
+            profile = self.skill_extractor.extract_from_path(repo_path)
+            skills_payload = [
+                {"skill": s.skill, "confidence": round(s.confidence, 4)}
+                for s in profile[:12]
+            ]
+            self.analysis_results.append({
+                "file_path": "<repo>",
+                "project_name": project_name,
+                "analysis_data": {
+                    "skills": skills_payload
+                },
+            })
+        except Exception as e:
+            print(f"Skill extraction failed for {project_name}: {e}")
 
     def display_analysis_results(self) -> None:
         """
@@ -135,7 +157,21 @@ class GitRepoAnalyzer:
         for project_name, results in results_by_project.items():
             print(f"Project: {project_name}")
             print("-" * (len(project_name) + 9))
-            for result in sorted(results, key=lambda x: x['file_path']):
+
+            # Show repo-level skills first (if present)
+            repo_cards = [r for r in results if r["file_path"] == "<repo>" and "skills" in r["analysis_data"]]
+            if repo_cards:
+                skills = repo_cards[0]["analysis_data"]["skills"]
+                if skills:
+                    print("  Inferred skills:")
+                    for s in skills:
+                        # confidence already 0..1, present as %
+                        print(f"    • {s['skill']}: {s['confidence']*100:.1f}%")
+                    print()
+
+            # Then list per-file authorship
+            file_cards = [r for r in results if r["file_path"] != "<repo>"]
+            for result in sorted(file_cards, key=lambda x: x['file_path']):
                 analysis = result['analysis_data']
                 print(f"  - File: {result['file_path']}")
                 print(f"    Authors: {analysis['author_count']}")
