@@ -8,6 +8,8 @@ from git import Repo, GitCommandError
 from .language_detector import LANGUAGE_MAP
 from src.ZipParser import extract_zip
 
+from .skill_extractor import SkillExtractor
+
 
 class GitRepoAnalyzer:
     """
