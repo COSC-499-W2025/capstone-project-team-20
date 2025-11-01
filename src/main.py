@@ -34,13 +34,24 @@ def main():
     except Exception as e:
         print(f"Error while parsing: {e}")
         return
-    
+
     print("\nExtracting project metadata\n")
 
     metadata_extractor = ProjectMetadataExtractor(root_folder)
     metadata_extractor.extract_metadata()
 
     print("\nextraction is complete!")
+
+
+    try:
+        root_folder_path = extract_zip(zip_path)
+    except Exception as e:
+        print(f"Error while extracting: {e}")
+        return
+
+    d = analyze_language_share(root_folder_path)
+    for language, percentage in d.items():
+        print(f"{language}: {percentage}%")
 
 if __name__ == "__main__":
     main()
