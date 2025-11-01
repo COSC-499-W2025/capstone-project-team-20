@@ -1,57 +1,87 @@
 import tempfile
 import zipfile
-from zipfile import ZipFile
+from zipfile import ZipFile, ZipInfo
+from pathlib import PurePosixPath
 
 from src.ProjectFile import ProjectFile
 from src.ProjectFolder import ProjectFolder
 
-def parse(path):
+def add_to_tree(file: ZipInfo, parent:str, dirs:dict[str, ProjectFolder]) -> None:
+    "Adds a file or folder to the project tree."
+    if parent not in dirs:
+        parent_folder = generate_missing_folder(parent, dirs)
+    else:
+        parent_folder = dirs[parent]
+
+    if file.is_dir():
+        # create the folder we are adding to the tree
+        temp = ProjectFolder(file, parent_folder)
+        # add this new subfolder to its parent's list
+        parent_folder.subdir.append(temp)
+    else:
+        # create the file we are adding to the tree
+        temp = ProjectFile(file, parent_folder)
+        # add this new file to its parent's list
+        parent_folder.children.append(temp)
+
+    dirs[file.filename] = temp
+
+def generate_missing_folder(parent: str, dirs: dict[str, ProjectFolder]) -> ProjectFolder:
+    """
+    Checks that all folders for a given parent's filepath exist.
+    Creates any folders missing from the filepath and returns the deepest one.
+    """
+    parts = PurePosixPath(parent).parts
+    current_path = ""
+    parent_folder = list(dirs.values())[0]  # begin search from the root folder
+    for part in parts:
+        current_path = f"{current_path}{part}/"
+        if current_path not in dirs:
+            # create synthetic ZipInfo (Python’s metadata record for each entry in a ZIP) object for missing folder
+            synthetic_info = ZipInfo(filename=current_path)
+            # create synthetic ProjectFolder object for missing folder
+            synthetic_folder = ProjectFolder(synthetic_info, parent_folder)
+            # add synthetic folder so files with missing parent folders have a somewhere to go
+            parent_folder.subdir.append(synthetic_folder)
+            dirs[current_path] = synthetic_folder
+
+        parent_folder = dirs[current_path]
+
+    return parent_folder
+
+def ignore_file_criteria(file: ZipInfo) -> bool:
+    path_parts = PurePosixPath(file.filename).parts
+    return (
+        "__MACOSX" in path_parts
+        or any(part.startswith("._") for part in path_parts)
+        or file.filename.endswith(".DS_Store")
+    )
+
+def parse(path: str) -> ProjectFolder:
     '''Traverses zipped folder and creates a tree of ProjectFolder and ProjectFile objects, returns the root of the tree as an object'''
     with ZipFile(path, 'r') as z:
         start=True
-
         root: ProjectFolder
-
         dirs: dict[str,ProjectFolder] = {}
-
         for file in z.infolist():
-            if file.filename.startswith("__MACOSX/"):
+            if ignore_file_criteria(file):
                 continue
 
-            if (start is True): #Creating a root
-
+            if start: #Creating a root
                 #Create a root folder, and add it to the dict, accessed via name
                 root = ProjectFolder(file, None)
                 dirs[file.filename] = root
-
                 start = False
 
             else:
+                parent_parts = file.filename.split("/")
                 if file.is_dir():
-                    #determine parent's name
-                    parent = file.filename.split("/")
-                    parent = "/".join(parent[:len(parent)-2])+"/"
-
-                    #create the object
-                    temp = ProjectFolder(file,dirs[parent])
-
-                    #add this subfolder to its parent's list
-                    dirs[parent].subdir.append(temp)
-
-                    #create new dict entry for this file
-                    dirs[file.filename] = temp
+                    parent = "/".join(parent_parts[:-2]) + "/"
+                    add_to_tree(file,parent,dirs)
 
                 else:
-                    #determine parent's name
-                    parent = file.filename.split("/")
-                    parent = "/".join(parent[:len(parent)-1])+"/"
-
-                    #create the object
-                    temp = ProjectFile(file,dirs[parent])
-
-                    #add this file to its parent's list
-                    dirs[parent].children.append(temp)
-
+                    parent = "/".join(parent_parts[:-1]) + "/"
+                    add_to_tree(file,parent,dirs)
     return (root)
 
 def extract_zip(zip_path: str) -> str:
@@ -75,12 +105,12 @@ def extract_zip(zip_path: str) -> str:
     print("Extraction complete.")
     return temp_dir
 
-def toString(root: ProjectFolder):
+def toString(root: ProjectFolder) -> str:
     '''Runs the helper method to remove the amount of arguments needed on initial call'''
     output = _StringHelper(root,'└──','',True)
     return output
 
-def _StringHelper(folder:ProjectFolder, indent:str, output:str, first:bool):
+def _StringHelper(folder:ProjectFolder, indent:str, output:str, first:bool) -> str:
     '''Recursively explores the full tree of subfiles and subfolders under "root", combines them into a single string to easily print the tree'''
     # add name of folder to string
     if first:

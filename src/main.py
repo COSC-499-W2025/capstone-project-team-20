@@ -1,8 +1,10 @@
 import os
 from src.ConsentManager import ConsentManager
-from src.ZipParser import parse
+from src.ZipParser import parse, extract_zip
+from src.analyzers.language_detector import analyze_language_share
 from src.analyzers.ProjectMetadataExtractor import ProjectMetadataExtractor
 from src.analyzers.GitRepoAnalyzer import GitRepoAnalyzer
+from pathlib import Path
 
 def main():
     consent = ConsentManager()
@@ -20,7 +22,10 @@ def main():
     # Enter file path, need full path. Example from my testing: /Users/admin/Desktop/3rdyear.zip
     while True:
         zip_path = input("Please enter the path to the zip file you want to analyze: ").strip()
-        if os.path.exists(zip_path) and zip_path.endswith('.zip'):
+        zip_path = zip_path.strip("'\"")
+        path_obj = Path(zip_path).expanduser()
+        if path_obj.exists() and path_obj.suffix.lower() == '.zip':
+            zip_path = str(path_obj)
             break
         print("The provided path is invalid or the file is not a .zip file. Please try again.")
 
