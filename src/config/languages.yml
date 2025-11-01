@@ -9,6 +9,8 @@ languages:
     extensions: [cs]
   C++:
     extensions: [cpp, cxx, hpp]
+  CSS:
+    extensions: [css, scss, sass, less]
   Dart:
     extensions: [dart]
   Elixir:
@@ -25,6 +27,8 @@ languages:
     extensions: [groovy, gvy]
   Haskell:
     extensions: [hs]
+  HTML:
+    extensions: [html, htm]
   Java:
     extensions: [java, jsp, class, jar]
   JavaScript:
