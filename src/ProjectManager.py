@@ -23,13 +23,17 @@ class ProjectManager(StorageManager):
         return """CREATE TABLE IF NOT EXISTS projects (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL, 
+        file_path TEXT NOT NULL, 
         root_folder TEXT, 
         num_files INTEGER,
-        size INTEGER NOT NULL,
+        size_kb INTEGER,
+        author_count INTEGER,
+        authors TEXT,
         languages TEXT, 
         frameworks TEXT, 
         skills_used TEXT, 
         individual_contributions TEXT, 
+        collaboration_status TEXT,
         date_created TEXT, 
         last_modified TEXT, 
         last_accessed TEXT
@@ -49,9 +53,9 @@ class ProjectManager(StorageManager):
     def columns(self) -> str:
         """Comma-separated list of column names for project storage."""
         return (
-            "name, root_folder, num_files, size, languages, frameworks, "
-            "skills_used, individual_contributions, date_created, "
-            "last_modified, last_accessed"
+            "name, file_path, root_folder, num_files, size_kb, author_count, "
+            "authors, languages, frameworks, skills_used, individual_contributions, "
+            "collaboration_status, date_created, last_modified, last_accessed"
         )
 
     def set(self, proj: Project) -> None:
