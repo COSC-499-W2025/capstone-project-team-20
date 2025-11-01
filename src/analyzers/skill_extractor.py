@@ -319,7 +319,7 @@ class SkillExtractor:
 
     def _scan_gradle(self, files: List[Path], reader) -> List[Evidence]:
         out: List[Evidence] = []
-        for p in (f for f in files if p.name in ("build.gradle","build.gradle.kts")):
+        for p in (f for f in files if f.name in ("build.gradle","build.gradle.kts")):
             text = _safe_text(p, reader)
             if not text: continue
             out.append(self._ev("Gradle", "build_tool", p.name, str(p), 0.75))
@@ -335,7 +335,7 @@ class SkillExtractor:
             out.append(self._ev("Go", "build_tool", "go.mod", str(p), 0.60))
         for p in (f for f in files if f.name == "Cargo.toml"):
             out.append(self._ev("Rust", "build_tool", "Cargo.toml", str(p), 0.60))
-        for p in (f for f in files if p.suffix.lower() == ".csproj"):
+        for p in (f for f in files if f.suffix.lower() == ".csproj"):
             out.append(self._ev(".NET", "build_tool", p.name, str(p), 0.70))
             text = _safe_text(p, reader) or ""
             if re.search(r"Microsoft\.AspNet", text, re.I):
@@ -437,7 +437,7 @@ class SkillExtractor:
             out.append(self._ev("Go","build_tool","go.mod",pseudo.as_posix(),0.60))
         for pseudo, obj in (w for w in wrapped if w[0].name == "Cargo.toml"):
             out.append(self._ev("Rust","build_tool","Cargo.toml",pseudo.as_posix(),0.60))
-        for pseudo, obj in (w for w in wrapped if pseudo.suffix.lower() == ".csproj"):
+        for pseudo, obj in ((a, b) for (a, b) in wrapped if a.suffix.lower() == ".csproj"):
             out.append(self._ev(".NET","build_tool",pseudo.name,pseudo.as_posix(),0.70))
             text = _safe_text_pf(obj, get_bytes) or ""
             if re.search(r"Microsoft\.AspNet", text, re.I):
