@@ -65,6 +65,7 @@ I also created some new issues this week in response to teammate feedback and fu
 
 - **PR #93 - Refactor ConfigManager to inherit from StorageManager (Dylan)**: Reviewed architectural refactoring that improves code reusability and maintains separation of concerns within the system.
 - **PR #110 - Tests for ZipParser (Lex)** : Reviewed comprehensive test coverage for the ZipParser component, ensuring proper validation and error handling mechanisms.
+- **PR #122 - ZipParser Directory BugFix (Lex)** : In PR #110 I mentioned a potential edge case with directory naming within the zip which has been resolved with this PR
 
 ### Problems Encountered:
 
