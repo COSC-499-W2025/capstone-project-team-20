@@ -1,5 +1,5 @@
 import sqlite3
-from typing import Any, Dict
+from typing import Any, Dict, Generator
 from src.StorageManager import StorageManager
 from src.Project import Project
 
@@ -73,6 +73,16 @@ class ProjectManager(StorageManager):
             return None
         file = Project.from_dict(file_dict)
         return file
+    
+    def get_all(self) -> Generator[Project, None, None]:
+        """Return a Generator that yields all stored projects."""
+        for row in super().get_all():
+            yield Project.from_dict(row)
+
+    def get_all_as_dict(self) -> Generator[Dict[str, Any], None, None]:
+        """Return a Generator that yields all stored projects as dicts."""
+        for row in super().get_all():
+            yield row
 
 
 

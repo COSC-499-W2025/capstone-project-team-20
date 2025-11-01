@@ -70,14 +70,14 @@ def test_get_all_and_clear(cleanup_db, sample_project, another_project):
     manager.set(sample_project)
     manager.set(another_project)
     
-    all_projects = manager.get_all()
+    all_projects = list(manager.get_all())
     assert len(all_projects) == 2
-    names = [p['name'] for p in all_projects]
+    names = [p.name for p in all_projects]
     assert "SampleProj" in names and "AnotherProj" in names
     
     # Clear DB and check empty
     manager.clear()
-    assert manager.get_all() == []
+    assert list(manager.get_all()) == []
 
 def test_delete_project(cleanup_db, sample_project):
     manager = ProjectManager(DB_PATH)
@@ -90,7 +90,7 @@ def test_delete_project(cleanup_db, sample_project):
     
     # Make sure it's gone
     assert manager.get(proj_id) is None
-    assert manager.get_all() == []
+    assert list(manager.get_all()) == []
 
 def test_edge_cases_empty_lists_and_none(cleanup_db):
     project = Project(
@@ -117,3 +117,37 @@ def test_edge_cases_empty_lists_and_none(cleanup_db):
     assert retrieved.date_created is None
     assert retrieved.last_modified is None
     assert retrieved.last_accessed is None
+
+    # ... [all your existing code above stays exactly the same] ...
+
+def test_get_all_generator_projects(cleanup_db, sample_project, another_project):
+    manager = ProjectManager(DB_PATH)
+    manager.set(sample_project)
+    manager.set(another_project)
+
+    gen = manager.get_all()
+    projects = list(gen)
+    assert len(projects) == 2
+    for project in projects:
+        assert isinstance(project, Project)
+        # check one attribute to make sure deserialization worked
+        assert hasattr(project, "name")
+        assert hasattr(project, "size")
+
+
+def test_get_all_as_dict_generator(cleanup_db, sample_project, another_project):
+    manager = ProjectManager(DB_PATH)
+    manager.set(sample_project)
+    manager.set(another_project)
+
+    gen = manager.get_all_as_dict()
+    projects_dicts = list(gen)
+    assert len(projects_dicts) == 2
+    for proj_dict in projects_dicts:
+        assert isinstance(proj_dict, dict)
+        # check that the keys match ProjectManager.columns_list
+        for key in ["name", "root_folder", "num_files", "size", "languages",
+                    "frameworks", "skills_used", "individual_contributions",
+                    "date_created", "last_modified", "last_accessed"]:
+            assert key in proj_dict
+
