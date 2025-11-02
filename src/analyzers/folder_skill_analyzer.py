@@ -27,7 +27,11 @@ class FolderSkillAnalyzer:
         try:
             profile = self.skill_extractor.extract_from_path(path)
             skills_payload = [
-                {"skill": s.skill, "confidence": round(s.confidence, 4)}
+                {
+                    "skill": s.skill,
+                    "confidence": round(s.confidence, 4),
+                    "proficiency": round(getattr(s, "proficiency", 0.0), 4),
+                }
                 for s in profile[:12]
             ]
             self.analysis_results.append({
@@ -46,11 +50,20 @@ class FolderSkillAnalyzer:
             return
 
         for result in self.analysis_results:
-            print(f"\nFolder: {result['folder_path']}")
-            print("-" * (len(result['folder_path']) + 9))
-            for s in result["analysis_data"]["skills"]:
-                print(f"  • {s['skill']}: {s['confidence']*100:.1f}%")
-        print()
+            path = result["folder_path"]
+            skills = result["analysis_data"]["skills"]
+            if not skills:
+                continue
+            print(f"\nFolder: {path}")
+            print("-" * (len(path) + 9))
+            for s in skills:
+                print(
+                    f"  • {s['skill']}: "
+                    f"presence {s['confidence']*100:.1f}%, "
+                    f"proficiency {s['proficiency']*100:.1f}%"
+                )
+    print()
+
 
     def get_analysis_results(self) -> List[Dict[str, Any]]:
         return self.analysis_results
