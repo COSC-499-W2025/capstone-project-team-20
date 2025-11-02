@@ -77,13 +77,13 @@ class ProjectMetadataExtractor:
     
     def extract_metadata(self):
         """Runs all metadata and category analysis for this project"""
-        files = self.collect_all_files()
-        if not files:
+        self.files = self.collect_all_files()
+        if not self.files:
             print("No files in this project tree")
             return None
         
-        summary = self.compute_time_and_size_summary(files)
-        category_summary = self.compute_category_summary(files)
+        summary = self.compute_time_and_size_summary(self.files)
+        category_summary = self.compute_category_summary(self.files)
 
         full_summary = {
             "project_metadata": summary,
