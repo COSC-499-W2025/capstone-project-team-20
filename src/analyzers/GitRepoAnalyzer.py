@@ -180,9 +180,20 @@ class GitRepoAnalyzer:
 
     def get_analysis_results(self) -> List[Dict[str, Any]]:
         """
-        Retrieves all analysis results.
-
-        Returns:
-            A list of dictionaries containing the analysis data for each file.
+        Return only per-file analysis results (exclude repo-level summary rows).
         """
-        return self.analysis_results
+        return [
+            r for r in self.analysis_results
+            if r.get("file_path") not in ("<repo>", None)
+        ]
+    
+    def get_repo_summary(self, project_name: str) -> List[Dict[str, Any]] | None:
+        cards = [
+            r for r in self.analysis_results
+            if r.get("project_name") == project_name
+            and r.get("file_path") == "<repo>"
+            and "skills" in r.get("analysis_data", {})
+        ]
+        return cards[0]["analysis_data"]["skills"] if cards else None
+    
+
