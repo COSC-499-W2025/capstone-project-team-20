@@ -1,8 +1,9 @@
 import os
 from src.ConsentManager import ConsentManager
-from src.ZipParser import parse
+from src.ZipParser import parse, extract_zip
 from src.analyzers.ProjectMetadataExtractor import ProjectMetadataExtractor
 from src.analyzers.GitRepoAnalyzer import GitRepoAnalyzer
+from src.analyzers.language_detector import analyze_language_share
 
 def main():
     consent = ConsentManager()

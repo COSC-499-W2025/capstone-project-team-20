@@ -13,8 +13,10 @@ languages:
 
   C++:
     extensions: [cpp, cxx, hpp, h, cc, hh, inl]
+
   CSS:
     extensions: [css, scss, sass, less]
+
   Dart:
     extensions: [dart]
 
@@ -38,8 +40,10 @@ languages:
 
   Haskell:
     extensions: [hs]
+
   HTML:
     extensions: [html, htm]
+
   Java:
     extensions: [java, jsp, class, jar]
 
@@ -111,9 +115,3 @@ languages:
 
   Zig:
     extensions: [zig]
-
-  JSON:
-    extensions: [json] 
-
-  YAML:
-    extensions: [yaml, yml]
