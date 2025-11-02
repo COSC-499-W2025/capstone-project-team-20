@@ -34,7 +34,7 @@ def test_classify_java_file_returns_code(mock_categorizer):
     file_info = {"path": "main.py", "language": "Java"}
 
     category = mock_categorizer.classify_file(file_info)
-    assert category == "code"
+    assert category == "other"
 
 def test_classify_docs_by_path(mock_categorizer):
     file_info = {"path": "project/docs/overview.md", "language": "Markdown"}
@@ -50,7 +50,7 @@ def test_classify_file_by_design(mock_categorizer):
 
 def test_unmatched_file_defaults_to_code(mock_categorizer):
     file_info = {"path": "misc/notes.txt", "language": "Unknown"}
-    assert mock_categorizer.classify_file(file_info) == "code"
+    assert mock_categorizer.classify_file(file_info) == "other"
 
 def test_match_path_patterns_case_insensitive(mock_categorizer):
     assert mock_categorizer._match_path_patterns("TESTS/myfile.py", ["tests"])

@@ -1,20 +1,237 @@
 categories:
   code:
-    # links directly to the language groups defined in languages.yml or markup_languages.yml
+    # Programming / scripting source code
     language_source: languages
+    extensions:
+      - sce
+      - cjs
+      - shader
+      - compute
+      - hlsl
+      - mts
+      - cts
+      - d.mts
+      - d.cts
+      - js.flow
+      - pde
+    path_patterns: ["src", "source", "include", "engine", "core", "scripts"]
 
   test:
-  # identifies test files by common path keywords
-    path_patterns: ["test", "spec", "__tests__", "unittest"]
+    # Identifies test files by common path keywords
+    path_patterns: ["test", "tests", "spec", "__tests__", "unittest", "testing"]
 
   docs:
-  # all documentation and markup related files. References markup_languages.yml
+    # Documentation, markdown, readme, and metadata files
     language_source: markup_languages
-    # doc specific extensions and folder names
-    extensions: [pdf, docx, rst]
-    path_patterns: ["docs", "readme", "manual", "guide"]
+    extensions: [pdf, docx, rst, txt, md]
+    path_patterns:
+      - docs
+      - readme
+      - manual
+      - guide
+      - license
+      - notice
+      - install_notes
+      - makefile
+      - changelog
+      - authors
+      - wheel
+      - installer
+      - record
+      - manifest
+      - copying
+      - requested
+    filenames:
+      - license
+      - notice
+      - changelog
+      - readme
+      - makefile
+      - install_notes
+      - authors
+      - record
+      - wheel
+      - installer
+      - copying
+      - requested
 
   design:
-  # design or diagram related files that arent code/markup
-    extensions: [drawio, fig, xd, psd, png, jpg, jpeg, svg]
-    path_patterns: ["design", "diagram", "mockup", "ui", "ux"]
+    # Diagrams, UI/UX mockups, and graphical assets
+    extensions:
+      - drawio
+      - fig
+      - xd
+      - psd
+      - png
+      - jpg
+      - jpeg
+      - svg
+      - fbx
+      - exr
+      - webp
+      - ttf
+      - tga
+      - ai
+      - afphoto
+    path_patterns:
+      ["design", "diagram", "mockup", "ui", "ux", "textures", "models", "art", "graphics"]
+
+  data:
+    # Raw or structured data files
+    extensions:
+      - csv
+      - json
+      - xml
+      - yaml
+      - yml
+      - parquet
+      - db
+      - xlsx
+      - ods
+      - map
+      - bundle
+      - flat
+      - rsp
+      - rsp2
+    path_patterns: ["data", "dataset"]
+
+  media:
+    # Audio, video, and other multimedia
+    extensions: [png, jpg, jpeg, gif, mp4, mp3, wav, mov, avi]
+    path_patterns: ["media", "audio", "video"]
+
+  archive:
+    # Compressed or packaged archives
+    extensions: [zip, tar, gz, rar, 7z]
+
+  config:
+    # Configuration, environment, and build descriptor files
+    extensions:
+      - toml
+      - ini
+      - cfg
+      - conf
+      - config
+      - properties
+      - xml
+      - plist
+      - gradle
+      - iml
+      - asmdef
+      - modulecompilationtrigger
+      - npmrc
+      - npmignore
+      - prettierignore
+      - prettierrc
+      - csproj
+      - eslint
+      - babelrc
+      - editorconfig
+    path_patterns:
+      - config
+      - settings
+      - resources
+      - env
+      - setup
+      - build
+      - project
+      - properties
+
+  library:
+    # Compiled or packaged libraries
+    extensions: [jar, dll, so, lib, a, class]
+    path_patterns: ["lib", "libs", "dependencies", "vendor"]
+
+  template:
+    # HTML or templating engines and UI frameworks
+    extensions:
+      - vm
+      - html
+      - htm
+      - xhtml
+      - jsp
+      - jinja
+      - mustache
+      - ejs
+      - erb
+      - svelte
+    path_patterns: ["template", "templates", "views", "pages", "components", "ui"]
+
+  logs:
+    # Logging and output
+    extensions: [log, out, err, txt, lst]
+    path_patterns: ["log", "logs", "output"]
+
+  manifest:
+    # Build and version metadata
+    extensions: [mf, manifest, checksum, sha1, sha256, md5]
+    path_patterns: ["manifest", "checksum"]
+
+  script:
+    # Shell, batch, PowerShell, and terminal scripts
+    extensions: [sh, bash, zsh, bat, cmd, ps1, fish, csh]
+    path_patterns: ["script", "scripts"]
+
+  ignore:
+    # Ignore patterns and configuration
+    extensions: [gitignore, dockerignore]
+    path_patterns: [".gitignore", ".dockerignore"]
+
+  game:
+    # Unity, Unreal, or general game-engine files
+    extensions:
+      - meta
+      - prefab
+      - asset
+      - shadergraph
+      - shadersubgraph
+      - unity
+      - anim
+      - controller
+      - terrainlayer
+      - inputactions
+      - playable
+      - idx
+      - pack
+      - rev
+      - uss
+    path_patterns: ["unity", "assets", "projectsettings", "materials", "scenes"]
+
+  binary:
+    # Machine binaries or object files
+    extensions:
+      - bin
+      - o
+      - pdb
+      - bhc
+      - gbc
+      - apk
+      - dex
+      - mvfrm
+      - dag
+      - dag_derived
+      - dag_fsmtime
+      - payloads
+    path_patterns: ["bin", "binaries", "obj", "build", "compiled"]
+
+  font:
+    # Font assets
+    extensions: [ttf, otf, woff, woff2, tt]
+    path_patterns: ["font", "fonts", "typography"]
+
+  misc:
+    # Catch-all for small or non-critical types
+    extensions: [easycpp, temp]
+    path_patterns: ["misc", "tmp", "temp"]
+
+no_extension_rules:
+  docs:
+    filenames: ["license", "readme", "copying", "release", "info", "questionnaire", "authors", "sample"]
+  script:
+    filenames: ["main", "run", "build", "setup", "server", "install", "start"]
+  game:
+    filenames: ["lighting", "rendertexture", "dds", "sgsubgraphdb", "terrainlayer", "dwlt", "index"]
+  binary:
+    filenames: ["uniqueid", "pid", "cache", "compiled", "def", "defines"]
+  config:
+    filenames: ["npmrc", "prettierrc", "npmignore", "editorconfig"]
