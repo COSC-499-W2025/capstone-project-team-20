@@ -18,7 +18,35 @@ categories:
 
   test:
     # Identifies test files by common path keywords
-    path_patterns: ["test", "tests", "spec", "__tests__", "unittest", "testing"]
+    path_patterns: 
+      - test
+      - tests
+      - spec
+      - specs
+      - __tests__
+      - unittest
+      - testing
+      - cypress
+      - playwright
+      - e2e
+      - integration
+      - unit
+      - functional
+      - acceptance
+      - fixtures
+      - __mocks__
+      - __snapshots__
+      - test_integration
+      - test_unit
+      - test_e2e
+      - testcafe
+      - nightwatch
+      - selenium
+      - webdriver
+      - karma
+      - jest
+      - mocha
+      - vitest
 
   docs:
     # Documentation, markdown, readme, and metadata files

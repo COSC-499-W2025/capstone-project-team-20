@@ -20,7 +20,8 @@ class ProjectMetadataExtractor:
             for file in current_folder.children:
                 all_files.append(file)
             for sub in current_folder.subdir:
-                folder_to_check.append(sub)
+                if sub.name not in self.categorizer.ignored_dirs:
+                    folder_to_check.append(sub)
 
         return all_files
     
