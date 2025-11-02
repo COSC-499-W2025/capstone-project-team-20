@@ -188,5 +188,27 @@ This includes all basic features and requirements for milestone 1. We have start
 [week 8 test report](teamWeeklyLogsImages/week-8-test-report.png)
 
 
+### Week 9 (October 27th - November 2nd)
+
+**Work Performed:**
+- Branden Kennedy (42474551): Worked on a FileCategorizer, including tests and ymls for categories.yml and ignored_directories.yml, as well as adding more items to languages.yml. This issue ended up being very extensive, also refactoring the ProjectMetadataExtractor to use the FileCategorizer. Closes Issue [COSC-499-W2025/capstone-project-team-20#100](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/100). I also did multiple PR reviews and discussed with other team members about immediate future plans and what we can work on next to keep things running smoothly.
+- Necmi Kaan Sapoglu (17014796): 
+- Lex Nash (84668540):
+- Dylan Alexander (16394025):
+- Sven Annist (42486720):
+
+**Features included in the project plan for this milestone are:**
+- Issues #30 up to and including Issue [COSC-499-W2025/capstone-project-team-20#151](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/151)
+
+**Continuing tasks from last week and plan for the next week:**
+- Issue [COSC-499-W2025/capstone-project-team-20#142](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/142) for Branden. It was just started sunday and the issue that will be worked on this week, but it was started sunday so i am classifying it as a "continuing task"
+
+**Burnup chart:**
+
+**Table View of Completed Tasks on Project Board:**
+
+**Table View of In-Progress Tasks on Project Board:**
+
+**Test Report:**
 
 
