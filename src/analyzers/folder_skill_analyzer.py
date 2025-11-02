@@ -1,4 +1,43 @@
 # src/analyzers/folder_skill_analyzer.py
+"""
+folder_skill_analyzer.py
+
+Analyzes a NON-Git folder to infer languages, frameworks, tools, and skills.
+
+Main entry point
+- `FolderSkillAnalyzer.analyze_folder(folder_path: str)`:
+  - Accepts: absolute or relative directory path.
+  - Side effects: appends a result object into `self.analysis_results`.
+
+Result shape (per folder)
+{
+  "folder_path": "<absolute path>",
+  "analysis_data": {
+    "skills": [
+      {
+        "skill": "<name>",               # e.g., "Python", "React", "Docker"
+        "confidence": <0..1>,            # presence likelihood
+        "proficiency": <0..1>            # heuristic usage depth (see SkillExtractor)
+      },
+      ...
+    ],
+    "source": "folder"
+  }
+}
+
+Workflow overview:
+1) Validate the path (must exist & be a directory).
+2) Delegate to `SkillExtractor.extract_from_path(Path(folder))` for evidence
+   collection from manifests, configs, snippet patterns, and language hints.
+3) Convert the resulting `SkillProfileItem`s into a compact payload (top ~12).
+4) Store results into `self.analysis_results`.
+5) Optional pretty printer: `display_analysis_results()`.
+
+Notes:
+- Supported extensions are derived from `LANGUAGE_MAP` in `language_detector`.
+- Proficiency is a heuristic. It currently has deeper signals for Python/Docker
+  and baseline scoring for common frameworks/tools.
+"""
 
 from pathlib import Path
 from typing import List, Dict, Any
@@ -62,8 +101,6 @@ class FolderSkillAnalyzer:
                     f"presence {s['confidence']*100:.1f}%, "
                     f"proficiency {s['proficiency']*100:.1f}%"
                 )
-    print()
-
 
     def get_analysis_results(self) -> List[Dict[str, Any]]:
         return self.analysis_results

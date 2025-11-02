@@ -1,12 +1,44 @@
 # -*- coding: utf-8 -*-
 """
-SkillExtractor
-- Works on: (A) filesystem repo/folder paths, (B) your ProjectFolder tree
-- Reuses LANGUAGE_MAP from .language_detector for language detection
-- Detects frameworks/tools from manifests, configs, snippet patterns
-- Returns ranked skills with:
-    - confidence: presence likelihood (original behavior)
-    - proficiency: usage quality/depth (new heuristic score)
+skill_extractor.py
+
+SkillExtractor builds a ranked skill profile for a project directory or an
+in-memory ProjectFolder tree.
+
+What it detects
+- Languages (via `LANGUAGE_MAP` file extensions + snippet patterns).
+- Frameworks & tools (package manifests, config filenames, imports, snippets).
+- Databases / cloud services (presence in deps/configs).
+- Testing stacks (e.g., PyTest, JUnit, Jest).
+
+Outputs
+- List[SkillProfileItem] sorted by `confidence` (desc):
+  - `skill`: name (e.g., "Python", "React", "Docker")
+  - `confidence`: 0..1 presence likelihood (evidence-driven, capped at 0.98)
+  - `proficiency`: 0..1 heuristic usage depth (capped at 0.98)
+  - `evidence`: minimal audit trail (file path / token / source)
+
+Entry points
+- Filesystem mode:    `extract_from_path(root_path: Path) -> List[SkillProfileItem]`
+- ProjectFolder mode: `extract_from_project_folder(root, get_path, get_bytes) -> List[...]`
+
+Workflow overview:
+1) Gather candidate files (rglob or ProjectFolder traversal).
+2) Collect light code stats for proficiency (currently deeper for Python & Docker).
+3) Build evidence from:
+   - File extensions → languages, known config filenames.
+   - package.json / requirements*.txt / pyproject.toml / pom.xml / gradle / csproj / etc.
+   - Snippet patterns (imports / idioms / build tool markers).
+4) Merge & score:
+   - Combine evidence per skill with diminishing returns.
+   - Apply small “pair” bonuses for common stacks (e.g., Python+Django).
+   - Compute heuristic `proficiency` per skill using `code_stats` and evidence variety.
+5) Return a ranked list for display or downstream aggregation.
+
+Notes / assumptions:
+- No external tools are invoked; regex-level scanning only.
+- UTF-8 decoding with "ignore" to be robust on mixed encodings.
+- Add specialized proficiency heuristics per framework as needed (extensible).
 """
 
 from __future__ import annotations
