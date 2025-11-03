@@ -1,73 +1,117 @@
 languages:
   Ada:
     extensions: [adb, ads]
+
   Assembly:
     extensions: [asm, s]
+
   C:
     extensions: [c, h]
+
   C#:
-    extensions: [cs]
+    extensions: [cs, csproj]
+
   C++:
-    extensions: [cpp, cxx, hpp]
+    extensions: [cpp, cxx, hpp, h, cc, hh, inl]
+
   CSS:
     extensions: [css, scss, sass, less]
+
   Dart:
     extensions: [dart]
+
   Elixir:
     extensions: [ex, exs]
+
   Erlang:
     extensions: [erl, es]
+
   F#:
     extensions: [fs, fsi, fsl]
+
   Fortran:
     extensions: [f, for, f90, f95]
+
   Go:
     extensions: [go]
+
   Groovy:
     extensions: [groovy, gvy]
+
   Haskell:
     extensions: [hs]
+
   HTML:
     extensions: [html, htm]
+
   Java:
     extensions: [java, jsp, class, jar]
+
   JavaScript:
-    extensions: [js, jsx, mjs]
+    extensions: [js, jsx, mjs, cjs, flow]
+
   Julia:
     extensions: [jl]
+
   Kotlin:
     extensions: [kt, kts]
+
   Lua:
     extensions: [lua]
+
   MATLAB:
-    extensions: [m, mat]
+    extensions: [m, mat, sce]
+
   Objective-C:
-    extensions: [mm]
+    extensions: [m, mm, h]
+
   Perl:
     extensions: [pl, pm]
+
   PHP:
     extensions: [php, phtml, php3, php4, php5, phps]
+
+  Processing:
+    extensions: [pde]
+
   Prolog:
     extensions: [pro]
+
   Python:
-    extensions: [py, pyw]
+    extensions: [py, pyw, pyi] 
+
   R:
     extensions: [r, rmd]
+
   Ruby:
     extensions: [rb, rbw]
+
   Rust:
     extensions: [rs]
+
   Scala:
     extensions: [scala]
+
   Shell:
-    extensions: [sh, bash, zsh]
+    extensions: [sh, bash, zsh, fish, csh]
+
   SQL:
     extensions: [sql]
+
   Swift:
     extensions: [swift]
+
   TypeScript:
-    extensions: [ts, tsx]
+    extensions: [ts, tsx, mts, cts, d.ts, d.mts, d.cts] 
+
   Visual Basic:
     extensions: [vb, vbs]
+
+  Svelte:
+    extensions: [svelte]  
+
+  GLSL:
+    extensions: [glsl, vert, frag, geom, tesc, tese, comp, hlsl]  
+
   Zig:
     extensions: [zig]

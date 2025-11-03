@@ -1,7 +1,5 @@
 import pytest
 from pathlib import Path
-import tempfile
-import shutil
 from src.analyzers.language_detector import (
     analyze_language_share,
     filter_files,

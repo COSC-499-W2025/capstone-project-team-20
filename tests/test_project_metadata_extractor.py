@@ -1,10 +1,25 @@
 from datetime import datetime
 from src.analyzers.ProjectMetadataExtractor import ProjectMetadataExtractor
 
+def mock_file_categorizer(monkeypatch):
+    """Prevents FileCategorizer from running real logic during tests."""
+    class DummyCategorizer:
+        def compute_metrics(self, files):
+
+            return {
+                "counts": {"code": len(files)},
+                "percentages": {"code": 100.0}
+            }
+    monkeypatch.setattr(
+        "src.analyzers.ProjectMetadataExtractor.FileCategorizer",
+        DummyCategorizer
+    )
+
 class DummyFile:
     def __init__(self, size, modified):
         self.size = size
         self.last_modified = modified
+        self.name = "dummy.txt"
 
 class DummyFolder:
     def __init__(self, children=None, subdir=None):
@@ -18,7 +33,7 @@ def test_basic_metadata_extraction():
 
     root = DummyFolder(children = [file1, file2, file3])
     extractor = ProjectMetadataExtractor(root)
-    summary = extractor.extract_metadata()
+    summary = extractor.extract_metadata()["project_metadata"]
 
     assert summary is not None, "Extractor returned None"
 
@@ -47,10 +62,13 @@ def test_nested_folders_are_counted():
     f3 = DummyFile(2500, datetime(2024, 7, 15))
 
     subfolder = DummyFolder(children=[f2, f3])
+    subfolder.name = "subfolder"
+
     root = DummyFolder(children=[f1], subdir=[subfolder])
+    root.name = "root"
 
     extractor = ProjectMetadataExtractor(root)
-    summary = extractor.extract_metadata()
+    summary = extractor.extract_metadata()["project_metadata"]
 
     assert summary["total_files:"] == 3
 
@@ -67,9 +85,13 @@ def test_missing_timestamps_ignored():
 
     root = DummyFolder(children=[f1, f2])
     extractor = ProjectMetadataExtractor(root)
-    summary = extractor.extract_metadata()
+    full_summary = extractor.extract_metadata()
 
-    assert summary["start_date:"] == "2025-10-12"
-    assert summary["end_date:"] == "2025-10-12"
-    assert summary["total_files:"] == 2
+    # ✅ project-level summary is nested
+    project_summary = full_summary["project_metadata"]
+
+    assert project_summary["start_date:"] == "2025-10-12"
+    assert project_summary["end_date:"] == "2025-10-12"
+    assert project_summary["total_files:"] == 2
+
 
