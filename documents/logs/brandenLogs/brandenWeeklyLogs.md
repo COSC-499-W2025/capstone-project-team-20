@@ -109,6 +109,14 @@ I also refactored the projectMetadataExtractor, which now calls the FileCategori
 While this implementation goes beyond our original functional requirements, it significantly enhances the project’s ability to categorize files and compute contribution metrics based on an extensive set of categories and file types.
 
 I also completed several PR reviews this week and worked together with my teammates to decide on implementation details and next steps for our file crawler.
+These PR reviews are:
+#132
+#138
+#140
+#141
+#144
+#150
+Logs: #155, #157, #159
 
 This week, I was better with time management and able to get my PR's up early, with requested changes (this is where the extensive yml files came from) on my PR also being implemented by saturday evening. The requested change from Dylan had me take a deeper dive into the FileCategorizer, making it robust for our project, as well as adding the ignored_directories yml. 
 
