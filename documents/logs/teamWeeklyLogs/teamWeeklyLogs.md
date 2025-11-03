@@ -210,10 +210,16 @@ This includes all basic features and requirements for milestone 1. We have start
 
 **Burnup chart:**
 
+[Week 9 burnup chart](teamWeeklyLogsImages/week-9-burnup-chart.png)
+
 **Table View of Completed Tasks on Project Board:**
+
+[Week 9 completed tasks](teamWeeklyLogsImages/week_9_completed_tasks.png)
 
 **Table View of In-Progress Tasks on Project Board:**
 
+[Week 9 In-Progress tasks](teamWeeklyLogsImages/week_9_in_progress.png)
+
 **Test Report:**
 
-
+[Week 9 Test Report](teamWeeklyLogsImages/)
