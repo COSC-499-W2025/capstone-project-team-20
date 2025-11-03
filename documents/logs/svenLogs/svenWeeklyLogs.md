@@ -74,3 +74,27 @@ Due to it being the midterm season I've had to divert my attention at times to o
 ### Looking Ahead:
 
 As I said, I am planning on addressing some minor refactorization in the new ``GitRepoAnalyzer`` class I created this week along with working on our plaintext handling. I would also like if we could get some kind of frontend attached to the application soon so that we can display these statistical findings so I'd like to get going with that hopefully soon.
+
+## Week 9: Oct 26th-Nov 2nd
+
+### Tasks worked on:
+**N/A** Evaluations were not available as they shut down early accidentally
+
+### Weekly Goals Recap:
+This week, my primary focus was on implementing a robust document handling system as outlined in **Issue #124**. The objective was to create a flexible and modular tool for extracting plaintext content from common document formats (`.txt`, `.pdf`, `.docx`). The development process involved several architectural refinements to ensure the system was decoupled, testable, and aligned with future development goals.
+
+The final implementation centers on a new `DocumentScraper` module, which orchestrates the extraction process by traversing a directory of files. The core logic is now integrated directly into the main application workflow, where `main.py` calls `ZipParser` to extract a user-provided archive into a temporary directory, and then passes that directory to the `DocumentScraper` for processing. This provides a centralized yet modular approach, with the extracted text aggregated into a lookup table for future use with analytical tools or LLM pipelines.
+
+### New Issues:
+I also created a new issue this week to address the user experience of file input, as handling zip files exclusively can be cumbersome for testing and for the end-user.
+*   **Issue #151**: Expand accepted input to unzipped files and folders
+
+### Code Reviews:
+*   **PR #144 - Concrete Implementation of Language Detector (dylanstephenalexander)**: Reviewed the successful merge of a new language detection feature, enhancing the project's analytical capabilities.
+*   **PR #140 - Refactor StorageManager get_all() to return a Generator (dylanstephenalexander)**: Reviewed an open pull request aimed at optimizing memory usage by refactoring `get_all()` to use a generator, which is particularly useful for handling large datasets.
+
+### Problems Encountered:
+No significant problems were encountered this week. Development proceeded smoothly, with the main challenge being the iterative refinement of the system's architecture to find the optimal balance between integration and modularity.
+
+### Looking Ahead:
+With the foundation for document handling now in place, the immediate next step is to address **Issue #151** by expanding the application's input handling to accept direct file and folder paths. Following that, I plan to explore how to best utilize the aggregated text from the `DocumentScraper`, either by piping it into a stylistic analysis tool or an LLM for deeper insights. I also plan to expand the `document_handler` to support a wider range of file types as needed.
