@@ -1,3 +1,6 @@
 GitPython==3.1.45
 PyYAML==6.0.3
-
+pytest
+python-docx
+PyPDF2
+reportlab
