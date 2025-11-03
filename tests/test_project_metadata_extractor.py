@@ -62,7 +62,10 @@ def test_nested_folders_are_counted():
     f3 = DummyFile(2500, datetime(2024, 7, 15))
 
     subfolder = DummyFolder(children=[f2, f3])
+    subfolder.name = "subfolder"
+
     root = DummyFolder(children=[f1], subdir=[subfolder])
+    root.name = "root"
 
     extractor = ProjectMetadataExtractor(root)
     summary = extractor.extract_metadata()["project_metadata"]
