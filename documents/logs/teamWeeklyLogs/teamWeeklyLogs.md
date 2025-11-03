@@ -188,5 +188,38 @@ This includes all basic features and requirements for milestone 1. We have start
 [week 8 test report](teamWeeklyLogsImages/week-8-test-report.png)
 
 
+### Week 9 (October 27th - November 2nd)
 
+**Work Performed:**
+- Branden Kennedy (42474551): Worked on a FileCategorizer, including tests and ymls for categories.yml and ignored_directories.yml, as well as adding more items to languages.yml. This issue ended up being very extensive, also refactoring the ProjectMetadataExtractor to use the FileCategorizer. Closes Issue [COSC-499-W2025/capstone-project-team-20#100](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/100). I also did multiple PR reviews and discussed with other team members about immediate future plans and what we can work on next to keep things running smoothly.
 
+- Necmi Kaan Sapoglu (17014796): Created the complete Skill Analyzer subsystem for the project, implementing the `SkillExtractor`, `FolderSkillAnalyzer`, and `analyze_any` modules. This feature enables the system to detect programming languages, frameworks, and tools used within uploaded repositories, and to assign heuristic proficiency scores based on code structure, testing density, and typing or documentation usage. I also designed and implemented the proficiency scoring model and integrated Docker/Compose test commands to make the system reproducible in all environments. Comprehensive unit tests were written to verify the accuracy of the analyzer, and I finalized the PR with full documentation and module-level explanations. Closes Issue [COSC-499-W2025/capstone-project-team-20#36](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/36).
+
+- Lex Nash (84668540): Created the ProgressBar.Bar class and associated tests, a progress bar object takes a total size in bytes of a group of files, and displays a progress bar which you can then update with the size of files you have finished analyzing to update the progress bar. The progress bars are designed to be quite precise as it uses unicode block characters to be able to divide each character width segment of the bar into 8 sub-segments. The plan going forward is to individually implement the progress bar into different parts of the project that involve looping through files. Closes issue [COSC-499-W2025/capstone-project-team-20#158](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/158).
+
+- Dylan Alexander (16394025): Overhauled and fully implemented the Language Detector. Updated the ZIP parser to handle out-of-order/missing/empty directories, and correctly parse file paths containing spaces or semicolons. Refactored the ZIP parser to eliminate code duplication. Updated the Project dataclass to account for the storage of metrics our system computes. Refactored the get() and get_all() methods in StorageManager to return a generator for improved efficiency.
+
+- Sven Annist (42486720): Implemented a comprehensive document handling system to address Issue #124, enabling the application to extract and process plaintext content from various document formats (.txt, .pdf, .docx). This involved creating a new, reusable DocumentScraper module responsible for orchestrating the text extraction process and a document_handler utility for format-specific parsing. The system was architected to be modular and testable, with the final implementation integrated directly into the main application workflow. main.py now calls ZipParser to extract a user-provided archive, then passes the resulting directory to the DocumentScraper to aggregate text content into a lookup table for future analysis.
+
+**Features included in the project plan for this milestone are:**
+- Issues #30 up to and including Issue [COSC-499-W2025/capstone-project-team-20#151](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/151)
+
+**Continuing tasks from last week and plan for the next week:**
+- Issue [COSC-499-W2025/capstone-project-team-20#142](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/142) for Branden. It was just started sunday and the issue that will be worked on this week, but it was started sunday so i am classifying it as a "continuing task"
+- Issue [COSC-499-W2025/capstone-project-team-20#36](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/36) for Kaan. I will be continuing this issue next week to expand the Skill Analyzer’s language coverage and ensure full compatibility with the Skill Detector by defining additional standards for classification and scoring.
+
+**Burnup chart:**
+
+[Week 9 burnup chart](teamWeeklyLogsImages/week-9-burnup-chart.png)
+
+**Table View of Completed Tasks on Project Board:**
+
+[Week 9 completed tasks](teamWeeklyLogsImages/week_9_completed_tasks.png)
+
+**Table View of In-Progress Tasks on Project Board:**
+
+[Week 9 In-Progress tasks](teamWeeklyLogsImages/week_9_in_progress.png)
+
+**Test Report:**
+
+[Week 9 Test Report](teamWeeklyLogsImages/week_9_test_report.png)
