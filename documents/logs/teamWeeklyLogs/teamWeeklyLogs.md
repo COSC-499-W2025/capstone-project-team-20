@@ -192,9 +192,13 @@ This includes all basic features and requirements for milestone 1. We have start
 
 **Work Performed:**
 - Branden Kennedy (42474551): Worked on a FileCategorizer, including tests and ymls for categories.yml and ignored_directories.yml, as well as adding more items to languages.yml. This issue ended up being very extensive, also refactoring the ProjectMetadataExtractor to use the FileCategorizer. Closes Issue [COSC-499-W2025/capstone-project-team-20#100](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/100). I also did multiple PR reviews and discussed with other team members about immediate future plans and what we can work on next to keep things running smoothly.
+
 - Necmi Kaan Sapoglu (17014796): 
+
 - Lex Nash (84668540):
-- Dylan Alexander (16394025):
+
+- Dylan Alexander (16394025): Overhauled and fully implemented the Language Detector. Updated the ZIP parser to handle out-of-order/missing/empty directories, and correctly parse file paths containing spaces or semicolons. Refactored the ZIP parser to eliminate code duplication. Updated the Project dataclass to account for the storage of metrics our system computes. Refactored the get() and get_all() methods in StorageManager to return a generator for improved efficiency.
+
 - Sven Annist (42486720):
 
 **Features included in the project plan for this milestone are:**
