@@ -1,5 +1,5 @@
 import sqlite3
-from typing import Any, Dict
+from typing import Any, Dict, Generator
 from src.StorageManager import StorageManager
 from src.Project import Project
 
@@ -23,13 +23,17 @@ class ProjectManager(StorageManager):
         return """CREATE TABLE IF NOT EXISTS projects (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL, 
+        file_path TEXT NOT NULL, 
         root_folder TEXT, 
         num_files INTEGER,
-        size INTEGER NOT NULL,
+        size_kb INTEGER,
+        author_count INTEGER,
+        authors TEXT,
         languages TEXT, 
         frameworks TEXT, 
         skills_used TEXT, 
         individual_contributions TEXT, 
+        collaboration_status TEXT,
         date_created TEXT, 
         last_modified TEXT, 
         last_accessed TEXT
@@ -49,9 +53,9 @@ class ProjectManager(StorageManager):
     def columns(self) -> str:
         """Comma-separated list of column names for project storage."""
         return (
-            "name, root_folder, num_files, size, languages, frameworks, "
-            "skills_used, individual_contributions, date_created, "
-            "last_modified, last_accessed"
+            "name, file_path, root_folder, num_files, size_kb, author_count, "
+            "authors, languages, frameworks, skills_used, individual_contributions, "
+            "collaboration_status, date_created, last_modified, last_accessed"
         )
 
     def set(self, proj: Project) -> None:
@@ -73,6 +77,16 @@ class ProjectManager(StorageManager):
             return None
         file = Project.from_dict(file_dict)
         return file
+    
+    def get_all(self) -> Generator[Project, None, None]:
+        """Return a Generator that yields all stored projects."""
+        for row in super().get_all():
+            yield Project.from_dict(row)
+
+    def get_all_as_dict(self) -> Generator[Dict[str, Any], None, None]:
+        """Return a Generator that yields all stored projects as dicts."""
+        for row in super().get_all():
+            yield row
 
 
 

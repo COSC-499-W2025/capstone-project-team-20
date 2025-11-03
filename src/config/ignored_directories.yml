@@ -1,0 +1,170 @@
+ignored_dirs:
+  # Common package/dependency directories
+  - node_modules
+  - vendor
+  - bower_components
+  - packages
+  - libs
+  - dependencies
+  - site-packages
+
+  # Build and output folders
+  - build
+  - dist
+  - target
+  - out
+  - bin
+  - obj
+  - Generated
+  - GeneratedFiles
+  - compiled
+  - artifacts
+  - export
+  - releases
+
+  # Temporary or cache directories
+  - __pycache__
+  - .pytest_cache
+  - .gradle
+  - .next
+  - .nuxt
+  - .cache
+  - .temp
+  - temp
+  - tmp
+  - cache
+  - logs
+  - log
+  - coverage
+
+  # Development / environment folders
+  - .venv
+  - venv
+  - env
+  - virtualenv
+
+  # IDE / project metadata
+  - .idea
+  - .vscode
+  - .github
+  - .git
+  - .svn
+  - .hg
+
+  # Game-engine build directories (Unity, Unreal, Godot, etc.)
+  - Library
+  - Temp
+  - Logs
+  - Obj
+  - Intermediate
+  - DerivedDataCache
+  - Binaries
+  - Saved
+  - BuildCache
+  - MemoryCaptures
+  - ProjectSettings
+  - UserSettings
+  - Cache
+  - CacheServer
+  - LocalCache
+  - AssetStore
+  - PluginCache
+
+  # Continuous integration / project automation
+  - .circleci
+  - .azure-pipelines
+  - .gitlab
+  - .teamcity
+  - .buildkite
+
+ignored_extensions:
+  # Compiled / binary files
+  - pyc
+  - exe
+  - dll
+  - so
+  - o
+  - a
+  - bin
+  - obj
+  - pdb
+  - bhc
+  - gbc
+  - flat
+  - rsp
+  - rsp2
+
+  # Metadata or tool-generated files
+  - DS_Store
+  - key
+  - pem
+  - typed
+  - 13
+  - 13 2
+  - g
+  - jj
+  - lst
+  - easycpp
+  - tmp
+  - temp
+  - bak
+  - swp
+  - old
+  - copy
+  - duplicate
+  - backup
+
+  # Game-engine cache / asset processor files
+  - meta
+  - assetbundle
+  - assetbundlemanifest
+  - shadercache
+  - unitypackage
+  - uasset
+  - umap
+  - pch
+  - modulemap
+  - pdb.meta
+  - dll.meta
+
+ignored_filenames:
+  # System and metadata junk
+  - .ds_store
+  - thumbs.db
+  - desktop.ini
+  - icon\r
+  - .spotlight-v100
+  - .trashes
+
+  # Git internal references and hook samples
+  - head
+  - orig_head
+  - fetch_head
+  - packed-refs
+  - index
+  - exclude
+  - commit-msg.sample
+  - pre-rebase.sample
+  - pre-commit.sample
+  - pre-push.sample
+  - post-update.sample
+  - applypatch-msg.sample
+  - fsmonitor-watchman.sample
+  - pre-receive.sample
+  - prepare-commit-msg.sample
+  - pre-merge-commit.sample
+  - pre-applypatch.sample
+  - update.sample
+  - push-to-checkout.sample
+  - .easycpp
+
+  # Editor / temp files
+  - .project
+  - .classpath
+  - .factorypath
+  - .settings
+  - .editorconfig
+  - temp
+  - tmp
+  - backup
+  - old
