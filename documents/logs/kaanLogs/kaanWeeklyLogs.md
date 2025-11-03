@@ -100,3 +100,23 @@ These additions aim to make our analytics more engaging, scalable, and user-frie
 What I struggled with this week was time allocation between implementation and review — several PRs came in close together, and balancing detailed feedback with my own development work was challenging. However, I found that combining test validation in Docker and manual inspection of PR logic made reviews much faster and more effective.
 
 For the upcoming week, I plan to work on Issue #114, implementing the first version of the Fun Fact and Badge System for project analytics. This will involve designing badge thresholds, assigning them dynamically based on metadata, and preparing a lightweight data model that the frontend can use to display badges and fun summaries. I’ll also continue supporting reviews on related analytics or UI PRs as others start implementing their parts.
+
+### Week 9
+
+Log Checkbox:
+
+![week 9 log](imagesForKaanLogs/week_9_log.png)
+
+Couldn't reach evaluations for this week, as they were inaccessible.
+
+### Weekly Goals
+
+This week, I created the entire Skill Analyzer subsystem, which included the implementation of the `SkillExtractor`, `FolderSkillAnalyzer`, and `analyze_any` modules. This system serves as the foundation for detecting and evaluating programming languages, frameworks, and tools used across different projects in the repository.
+
+I developed the core `SkillExtractor` logic from scratch to analyze both real filesystem paths and in-memory project trees, recognize programming languages, frameworks, and libraries through manifests (such as `package.json`, `pyproject.toml`, `pom.xml`, and others), and compute heuristic proficiency scores for each detected skill.  
+I also designed and implemented the heuristic model that calculates proficiency using factors like typing usage, testing density, and docstring presence in Python projects, along with advanced detection rules for frameworks, data tools, and build systems.
+
+In addition, I wrote comprehensive unit tests for each module to ensure correctness and maintainability:
+- Verified that the `FolderSkillAnalyzer` exposed the correct public API and generated accurate analysis results.  
+- Tested that `analyze_any` properly coordinated both Git and non-Git folder analysis paths.  
+- Confirmed that the `SkillExtractor` consistently detected multiple languages, frameworks, and build tools in both filesystem and in-memory test environments.
