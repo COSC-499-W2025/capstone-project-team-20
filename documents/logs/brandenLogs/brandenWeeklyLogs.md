@@ -92,5 +92,31 @@ What I struggled with this week is still real prioritization of time. Last week,
 
 For The upcoming week, I have issue [COSC-499-W2025/capstone-project-team-20#34](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/34) to breakdown further and work on Issue #100, subissue of #34. So, I believe it should be one or two more subissues added for 34, and I should be able to implement all issues and fully complete issue #34 this week. I am going to try to have one of those pull requests up and ready for our wednesday meeting. 
 
+### **Week 9: October 27th - November 2nd**
+
+**Tasks worked on:**
+
+![Week 9 log](imagesForBrandenLogs/week_9_log_ss.png)
+
+Evaluation was unavailable to do this week. closed at 7:50 AM on November 2nd.
+
+**Weekly Goals Recap:**
+
+I have completed Issue [COSC-499-W2025/capstone-project-team-20#100](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/100), which ended up being a larger undertaking than I had originally anticipated. That issue alone took up most of the time I had to work on it for the week. The FileCategorizer is responsible for classifying files into various categories. This is what ended up taking up a lot of time for the week, it was spent debugging and manually testing behavior. I ran tests on a 25 gb zipped folder to ensure proper classification across many file types. The FileCategorizer now classifies files into categories (code, design, docs, tests, data, media, archive, config, library, template, and many other categories) using YAML definitions for languages, markup languages, and categories. 
+
+I also refactored the projectMetadataExtractor, which now calls the FileCategorizer to give a detailed summary. Additionally, I created an ignored_directories.yml file that became rather extensive as well, containing numerous files and extensions that our analyzers should automatically exclude during scanning. This includes common package/dependency directories, cache directories, build and output folders, etc. Alongside that, I refactored the ProjectMetadataExtractor to use the FileCategorizer, updating the tests for the ProjectMetadataExtractor and ensuring compatability.
+
+While this implementation goes beyond our original functional requirements, it significantly enhances the project’s ability to categorize files and compute contribution metrics based on an extensive set of categories and file types.
+
+I also completed several PR reviews this week and worked together with my teammates to decide on implementation details and next steps for our file crawler.
+
+This week, I was better with time management and able to get my PR's up early, with requested changes (this is where the extensive yml files came from) on my PR also being implemented by saturday evening. The requested change from Dylan had me take a deeper dive into the FileCategorizer, making it robust for our project, as well as adding the ignored_directories yml. 
+
+What I struggled with this week is finding a lot of time to put into the project. I managed my time well to get my PR up early, but I would have loved to complete more issues for the week, but I am happy with my contributions for the week, especially with how long the FileCategorizer ended up taking! One more thing is, I realized after that it was an extensive PR that I had put up (especially after finishing the requested changes). I must remember to create seperate issues for everything that I do. Right now, it seems as though i only did 1 issue, but i could/should have created multiple issues, especially when accounting for the requested changes. 
+
+Next week, I am continuing on with the ProjectAnalyzer. I have only just started this issue on Sunday, so it is being carried on into the following week. The ProjectAnalyzer will use all of our analyzers (GitRepoAnalyzer, FileCategorizer, ProjectMetadataExtractor, etc.) in a single component. This will also allow me to cleanup our main file, so that it only needs to ask for consent and call the ProjectAnalyzer. Additionally, I plan on cleaning up the rest of our repository, with just simple housekeeping like creating a dedicated Managers folder, cleaning up main, and synthesizing analyzers. This will correlate with issue [COSC-499-W2025/capstone-project-team-20#142](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/142)
+
+
+
 
 
