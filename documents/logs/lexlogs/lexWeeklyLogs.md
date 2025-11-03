@@ -126,3 +126,27 @@ I did not manage to find an issue to break up into smaller issues for next week 
 
 Issues closed:
 #31, #119, #111, #127, #97
+
+## Week 9
+**Types of Tasks Worked On**
+![Week 9 Tasks](imagesForLexLogs/week_9_lexlog.png)
+
+**Recap of Goals**
+My goal was to begin work on planning and implementing a progress bar for showing better feedback to the user.
+This resulted in the creation of the issue:
+- [COSC-499-W2025/capstone-project-team-20#146](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/146)
+And the first major sub-issue:
+- [COSC-499-W2025/capstone-project-team-20#158](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/158)
+
+I began work on issue #158 to create an object that could be used to display a project bar that would be reuseable by various segments of our program.
+
+Considerable time was spent researching how best to display a loading bar, as most examples of text loading bars did not really look like a smooth continuous bar. I eventually managed to find the unicode block characters, which would prove to be exactly what i was looking for, being able to display a continuous bar as well as divide each bar into 8 different segments by cycling through characters.
+
+One important part of the planning process was figuring out how i could program the class in such a way that it could be tested easily and simply, while i think i failed at simplicity, my tests are very comprehensive and handle many niche edge cases.
+
+I think my implementation could have been a lot simpler; I feel like most things in our program occur too rapidly for a progress bar programmed to look very pretty to be shown off very well.
+
+The next steps for the progress bar are to do individual implementations for the various analyzers and parsers in the project, so that each is able to have a loading bar. Theres also a potential for parallelization that i have been considering in order to have the bar look prettier in motion, but next week im definitely going to focus on perfecting the functionality of the bar through implementation rather than getting caught up in visuals.
+
+Issues closed:
+issue [COSC-499-W2025/capstone-project-team-20#158](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/158)
