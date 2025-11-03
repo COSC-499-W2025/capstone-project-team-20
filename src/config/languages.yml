@@ -1,0 +1,73 @@
+languages:
+  Ada:
+    extensions: [adb, ads]
+  Assembly:
+    extensions: [asm, s]
+  C:
+    extensions: [c, h]
+  C#:
+    extensions: [cs]
+  C++:
+    extensions: [cpp, cxx, hpp]
+  CSS:
+    extensions: [css, scss, sass, less]
+  Dart:
+    extensions: [dart]
+  Elixir:
+    extensions: [ex, exs]
+  Erlang:
+    extensions: [erl, es]
+  F#:
+    extensions: [fs, fsi, fsl]
+  Fortran:
+    extensions: [f, for, f90, f95]
+  Go:
+    extensions: [go]
+  Groovy:
+    extensions: [groovy, gvy]
+  Haskell:
+    extensions: [hs]
+  HTML:
+    extensions: [html, htm]
+  Java:
+    extensions: [java, jsp, class, jar]
+  JavaScript:
+    extensions: [js, jsx, mjs]
+  Julia:
+    extensions: [jl]
+  Kotlin:
+    extensions: [kt, kts]
+  Lua:
+    extensions: [lua]
+  MATLAB:
+    extensions: [m, mat]
+  Objective-C:
+    extensions: [mm]
+  Perl:
+    extensions: [pl, pm]
+  PHP:
+    extensions: [php, phtml, php3, php4, php5, phps]
+  Prolog:
+    extensions: [pro]
+  Python:
+    extensions: [py, pyw]
+  R:
+    extensions: [r, rmd]
+  Ruby:
+    extensions: [rb, rbw]
+  Rust:
+    extensions: [rs]
+  Scala:
+    extensions: [scala]
+  Shell:
+    extensions: [sh, bash, zsh]
+  SQL:
+    extensions: [sql]
+  Swift:
+    extensions: [swift]
+  TypeScript:
+    extensions: [ts, tsx]
+  Visual Basic:
+    extensions: [vb, vbs]
+  Zig:
+    extensions: [zig]
