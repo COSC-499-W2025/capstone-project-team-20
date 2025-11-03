@@ -96,7 +96,9 @@ For The upcoming week, I have issue [COSC-499-W2025/capstone-project-team-20#34]
 
 **Tasks worked on:**
 
-![Week 9 log](imagesForBrandenLogs/)
+![Week 9 log](imagesForBrandenLogs/week_9_log_ss.png)
+
+Evaluation was unavailable to do this week. closed at 7:50 AM on November 2nd.
 
 **Weekly Goals Recap:**
 
