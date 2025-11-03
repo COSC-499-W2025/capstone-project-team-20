@@ -73,6 +73,7 @@ class GitRepoAnalyzer:
 
         # Using traverse() to iterate through all files in the commit
         for item in repo.head.commit.tree.traverse():
+            repo.head.commit.tree.size
             """
             In Git's object model, files are represented as "blobs".
             This check ensures we are only processing files, not directories or other object types.
