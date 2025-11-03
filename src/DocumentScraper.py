@@ -22,6 +22,8 @@ def scrape_and_display(file_path: str) -> str:
         The full extracted text as a string, or an empty string if no text
         is found, the file is unsupported, or an error occurs.
     """
+    if os.path.basename(file_path).startswith('._'):
+        return ""
     try:
         # Delegate the core extraction logic to the handler in 'utils'
         content = extract_text(file_path)
