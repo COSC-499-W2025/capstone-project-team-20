@@ -74,18 +74,29 @@ Log Checkbox:
 
 Log Checkbox:
 
-Couldn't reach evaluations this week.
-
 ![week 8 log](imagesForKaanLogs/week_8_log.png)
 
 ### Weekly Goals
 
-This week, I created the entire Skill Analyzer subsystem, which included the implementation of the `SkillExtractor`, `FolderSkillAnalyzer`, and `analyze_any` modules. This system serves as the foundation for detecting and evaluating programming languages, frameworks, and tools used across different projects in the repository.
+This week, I worked on implementing and reviewing several features tied to our ongoing project metadata and analytics system. My main focus was on building the chronological skill timeline and Project dataclass modules, which are used to structure and store project-level data in a consistent format. I wrote the SkillEvent class, helper methods like _to_date, and a build_timeline function that compiles events across projects into an ordered chronological list. I also added comprehensive unit tests to verify serialization and date handling logic.
 
-I developed the core `SkillExtractor` logic from scratch to analyze both real filesystem paths and in-memory project trees, recognize programming languages, frameworks, and libraries through manifests (such as `package.json`, `pyproject.toml`, `pom.xml`, and others), and compute heuristic proficiency scores for each detected skill.  
-I also designed and implemented the heuristic model that calculates proficiency using factors like typing usage, testing density, and docstring presence in Python projects, along with advanced detection rules for frameworks, data tools, and build systems.
+In addition to coding, I completed multiple code reviews for Dylan’s and Branden’s pull requests:
 
-In addition, I wrote comprehensive unit tests for each module to ensure correctness and maintainability:
-- Verified that the `FolderSkillAnalyzer` exposed the correct public API and generated accurate analysis results.  
-- Tested that `analyze_any` properly coordinated both Git and non-Git folder analysis paths.  
-- Confirmed that the `SkillExtractor` consistently detected multiple languages, frameworks, and build tools in both filesystem and in-memory test environments.
+- Reviewed Dylan’s PR implementing the Project and ProjectManager classes, which handle project storage, retrieval, and metadata persistence in the database.
+
+- Reviewed Branden’s PR for the ProjectMetadataExtractor, ensuring the handling of missing timestamps, division-by-zero cases, and normalization of summary key names.
+
+- Suggested improvements like adding pagination support for scalable queries, and replacing print() statements with structured logging.
+
+We also created several new issues for future development, including:
+
+- 114: Add a “Fun Fact” and badge system for project analytics — a gamified approach similar to “Spotify Wrapped,” where users receive badges and fun summaries based on project statistics (e.g., “Gigantanamamous” for very large projects).
+
+- 115: Extend get_all() with pagination and streaming support for scalability in large datasets.
+
+These additions aim to make our analytics more engaging, scalable, and user-friendly.
+
+
+What I struggled with this week was time allocation between implementation and review — several PRs came in close together, and balancing detailed feedback with my own development work was challenging. However, I found that combining test validation in Docker and manual inspection of PR logic made reviews much faster and more effective.
+
+For the upcoming week, I plan to work on Issue #114, implementing the first version of the Fun Fact and Badge System for project analytics. This will involve designing badge thresholds, assigning them dynamically based on metadata, and preparing a lightweight data model that the frontend can use to display badges and fun summaries. I’ll also continue supporting reviews on related analytics or UI PRs as others start implementing their parts.
