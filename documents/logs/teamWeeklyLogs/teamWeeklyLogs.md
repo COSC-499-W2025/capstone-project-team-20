@@ -193,7 +193,7 @@ This includes all basic features and requirements for milestone 1. We have start
 **Work Performed:**
 - Branden Kennedy (42474551): Worked on a FileCategorizer, including tests and ymls for categories.yml and ignored_directories.yml, as well as adding more items to languages.yml. This issue ended up being very extensive, also refactoring the ProjectMetadataExtractor to use the FileCategorizer. Closes Issue [COSC-499-W2025/capstone-project-team-20#100](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/100). I also did multiple PR reviews and discussed with other team members about immediate future plans and what we can work on next to keep things running smoothly.
 
-- Necmi Kaan Sapoglu (17014796): 
+- Necmi Kaan Sapoglu (17014796): Created the complete Skill Analyzer subsystem for the project, implementing the `SkillExtractor`, `FolderSkillAnalyzer`, and `analyze_any` modules. This feature enables the system to detect programming languages, frameworks, and tools used within uploaded repositories, and to assign heuristic proficiency scores based on code structure, testing density, and typing or documentation usage. I also designed and implemented the proficiency scoring model and integrated Docker/Compose test commands to make the system reproducible in all environments. Comprehensive unit tests were written to verify the accuracy of the analyzer, and I finalized the PR with full documentation and module-level explanations. Closes Issue [COSC-499-W2025/capstone-project-team-20#36](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/36).
 
 - Lex Nash (84668540):
 
@@ -206,6 +206,7 @@ This includes all basic features and requirements for milestone 1. We have start
 
 **Continuing tasks from last week and plan for the next week:**
 - Issue [COSC-499-W2025/capstone-project-team-20#142](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/142) for Branden. It was just started sunday and the issue that will be worked on this week, but it was started sunday so i am classifying it as a "continuing task"
+- Issue [COSC-499-W2025/capstone-project-team-20#36](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/36) for Kaan. I will be continuing this issue next week to expand the Skill Analyzer’s language coverage and ensure full compatibility with the Skill Detector by defining additional standards for classification and scoring.
 
 **Burnup chart:**
 
