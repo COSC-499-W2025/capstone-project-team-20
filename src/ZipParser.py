@@ -4,6 +4,7 @@ from zipfile import ZipFile
 
 from src.ProjectFile import ProjectFile
 from src.ProjectFolder import ProjectFolder
+from src.ProgressBar import Bar
 
 def parse(path):
     '''Traverses zipped folder and creates a tree of ProjectFolder and ProjectFile objects, returns the root of the tree as an object'''
@@ -13,6 +14,12 @@ def parse(path):
         root: ProjectFolder
 
         dirs: dict[str,ProjectFolder] = {}
+
+        zipsize = 0
+        for file in z.infolist():
+            zipsize+=file.file_size
+
+        progress = Bar(zipsize)
 
         for file in z.infolist():
             if file.filename.startswith("__MACOSX/"):
@@ -51,6 +58,8 @@ def parse(path):
 
                     #add this file to its parent's list
                     dirs[parent].children.append(temp)
+            
+            progress.update(file.file_size)
 
     return (root)
 
@@ -114,3 +123,5 @@ def traverse(folder:ProjectFolder):
         for subfolder in folder.subdir:
             traverse(subfolder)
 """
+
+#mytree = parse("C:/Users/liamt/Downloads/84668540_L9_304.zip")
