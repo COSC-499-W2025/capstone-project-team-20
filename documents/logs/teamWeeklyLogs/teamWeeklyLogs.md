@@ -222,4 +222,4 @@ This includes all basic features and requirements for milestone 1. We have start
 
 **Test Report:**
 
-[Week 9 Test Report](teamWeeklyLogsImages/)
+[Week 9 Test Report](teamWeeklyLogsImages/week_9_test_report.png)
