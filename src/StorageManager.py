@@ -135,22 +135,24 @@ class StorageManager(ABC):
             cursor.execute(query, (key,))
             return cursor.rowcount > 0
     
-    def get_all(self) -> list[Dict[str, Any]]:
+    def get_all(self) -> Generator[Dict[str, Any], None, None]:
         """
-        Retrieve all rows from a table.
+        Retrieve all rows from a table as a Generator.
 
-        Rows are returned as a list of dicts with deserialized values.
+        Yields deserialized rows one at a time as dicts.
+
+        Can be wrapped as list(Manager.get_all()) if you need to load the whole table into memory.
         """
         with self._get_connection() as conn:
             cursor = conn.cursor()
             query = f"SELECT {self.columns} FROM {self.table_name}"
             cursor.execute(query)
-            results = cursor.fetchall()
-            all_rows = []
-            for row in results:
+            while True: 
+                row = cursor.fetchone()
+                if row is None:
+                    break
                 row_dict = dict(zip(self.columns_list, row))
-                all_rows.append(self._deserialize_row(row_dict))
-        return all_rows
+                yield self._deserialize_row(row_dict)
 
     def clear(self) -> None:
         """

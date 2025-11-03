@@ -1,7 +1,10 @@
 import os
 import shutil
+from pathlib import Path
+
 from src.ConsentManager import ConsentManager
 from src.ZipParser import parse, extract_zip
+from src.analyzers.language_detector import analyze_language_share
 from src.analyzers.ProjectMetadataExtractor import ProjectMetadataExtractor
 from src.analyzers.GitRepoAnalyzer import GitRepoAnalyzer
 from src.DocumentScraper import process_directory
@@ -20,17 +23,30 @@ def main():
     if not consent.require_consent():
         print("Consent not given. Exiting program.")
         return
-
+    
     print("Consent confirmed. The application will now proceed.")
 
+    zip_path = input("Enter the path to the zipped project file: ").strip()
+    while not (os.path.exists(zip_path) and zip_path.endswith(".zip")):
+        zip_path = input("Invalid path or not a .zip file. try again: ").strip()
     # Enter file path, need full path. Example from my testing: /Users/admin/Desktop/3rdyear.zip
     while True:
         zip_path = input("Please enter the path to the zip file you want to analyze: ").strip()
-        if os.path.exists(zip_path) and zip_path.endswith('.zip'):
+        zip_path = zip_path.strip("'\"")
+        path_obj = Path(zip_path).expanduser()
+        if path_obj.exists() and path_obj.suffix.lower() == '.zip':
+            zip_path = str(path_obj)
             break
         print("The provided path is invalid or the file is not a .zip file. Please try again.")
 
     temp_dir = None
+    analyzer = GitRepoAnalyzer()
+    analyzer.analyze_zip(zip_path)
+
+    print("\nGit analysis complete.")
+
+
+    print(f"\nparsing project from: {zip_path}")
     try:
         #analyzer = GitRepoAnalyzer()
         #analyzer.analyze_zip(zip_path)
