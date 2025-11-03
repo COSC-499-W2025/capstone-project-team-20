@@ -158,6 +158,8 @@ def test_update_overflow():
 def test_negative_update():
     '''Updating a bar with negative values should not impact the current progress'''
     testbar = Bar(8)
+
+    #test after update, then test same changes after subtracting -1
     testbar.update(1)
     assert testbar.BSUB[testbar.sSub] == '▏'
     assert testbar.total==1

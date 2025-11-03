@@ -19,7 +19,7 @@ class Bar:
     sB:int      #amount of bytes in current stage
 
     bDone:str   #string representing completed portion
-    BSUB = []   #in between stages
+    BSUB = []   #in between stages will go here
     bLeft:str   #string representing remaining portion
 
     def __init__(self, totalbytes:int):
