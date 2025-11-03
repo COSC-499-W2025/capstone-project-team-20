@@ -1,6 +1,5 @@
 # General
 *.log
-logs/
 *.log.*
 *.tmp
 *.swp
