@@ -114,7 +114,7 @@ Here's an issue I've made as a first step for my week ahead: [Link to issue: Pre
 
 **Tasks worked on** 
 
-submission is closed for peer eval, so i'm currently unable to complete this section 
+![week 9 log](images/dylan-week-9-ss.png)
 
 **Weekly Goals Recap**
 
