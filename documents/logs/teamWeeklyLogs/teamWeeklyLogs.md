@@ -199,7 +199,7 @@ This includes all basic features and requirements for milestone 1. We have start
 
 - Dylan Alexander (16394025): Overhauled and fully implemented the Language Detector. Updated the ZIP parser to handle out-of-order/missing/empty directories, and correctly parse file paths containing spaces or semicolons. Refactored the ZIP parser to eliminate code duplication. Updated the Project dataclass to account for the storage of metrics our system computes. Refactored the get() and get_all() methods in StorageManager to return a generator for improved efficiency.
 
-- Sven Annist (42486720):
+- Sven Annist (42486720): Implemented a comprehensive document handling system to address Issue #124, enabling the application to extract and process plaintext content from various document formats (.txt, .pdf, .docx). This involved creating a new, reusable DocumentScraper module responsible for orchestrating the text extraction process and a document_handler utility for format-specific parsing. The system was architected to be modular and testable, with the final implementation integrated directly into the main application workflow. main.py now calls ZipParser to extract a user-provided archive, then passes the resulting directory to the DocumentScraper to aggregate text content into a lookup table for future analysis.
 
 **Features included in the project plan for this milestone are:**
 - Issues #30 up to and including Issue [COSC-499-W2025/capstone-project-team-20#151](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/151)
