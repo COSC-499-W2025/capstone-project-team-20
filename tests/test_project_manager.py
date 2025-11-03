@@ -81,14 +81,14 @@ def test_get_all_and_clear(cleanup_db, sample_project, another_project):
     manager.set(sample_project)
     manager.set(another_project)
     
-    all_projects = manager.get_all()
+    all_projects = list(manager.get_all())
     assert len(all_projects) == 2
     names = [p['name'] for p in all_projects]
     assert "SampleProj" in names and "AnotherProj" in names
     
     # Clear DB and check empty
     manager.clear()
-    assert manager.get_all() == []
+    assert list(manager.get_all()) == []
 
 def test_delete_project(cleanup_db, sample_project):
     manager = ProjectManager(DB_PATH)
@@ -101,7 +101,7 @@ def test_delete_project(cleanup_db, sample_project):
     
     # Make sure it's gone
     assert manager.get(proj_id) is None
-    assert manager.get_all() == []
+    assert list(manager.get_all()) == []
 
 def test_edge_cases_empty_lists_and_none(cleanup_db):
     project = Project(
