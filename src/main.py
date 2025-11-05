@@ -1,6 +1,8 @@
 import os
 import json
 from collections import defaultdict
+import shutil
+from pathlib import Path
 
 from src.ConsentManager import ConsentManager
 from src.ConfigManager import ConfigManager
@@ -10,6 +12,7 @@ from src.analyzers.GitRepoAnalyzer import GitRepoAnalyzer
 from src.analyzers.folder_skill_analyzer import FolderSkillAnalyzer
 from src.analyzers.language_detector import analyze_language_share
 from pathlib import Path
+from src.DocumentScraper import process_directory
 
 
 def _summarize_top_skills(merged, limit=10):
@@ -29,9 +32,15 @@ def _summarize_top_skills(merged, limit=10):
 
 
 def main():
+    """
+    Main application entry point. Manages user consent, input, and orchestrates
+    the analysis and document scraping of a provided zip archive.
+    """
     consent = ConsentManager()
 
     # (Your testing reset—leave commented in normal runs)
+    # Uncomment two lines below to reset consent for testing manually
+    # from src.ConfigManager import ConfigManager
     # ConfigManager().delete("user_consent")
 
     if not consent.require_consent():
@@ -145,10 +154,8 @@ def main():
     # ---- Project metadata (your existing flow) ----
     print(f"\nparsing project from: {zip_path}")
     try:
-        root_folder = parse(zip_path)
-    except Exception as e:
-        print(f"Error while parsing: {e}")
-        return
+        #analyzer = GitRepoAnalyzer()
+        #analyzer.analyze_zip(zip_path)
 
     print("\nExtracting project metadata\n")
     try:
@@ -161,16 +168,27 @@ def main():
     print("\nProgram finished.")
 
 
+        # Pass the extracted directory to the DocumentScraper
+        scraped_data = process_directory(temp_dir)
 
-    try:
-        root_folder_path = extract_zip(zip_path)
+        if not scraped_data:
+            print("\nNo supported documents (.txt, .pdf, .docx) were found for scraping.")
+        else:
+            print(f"\nSummary: Aggregated text from {len(scraped_data)} document(s).")
+            # The 'scraped_data' dictionary is now available here for any future
+            # steps, such as piping its contents to another analysis tool.
+
     except Exception as e:
-        print(f"Error while extracting: {e}")
-        return
+        print(f"\nAn unexpected error occurred during the process: {e}")
+    finally:
+        # Ensure the temporary directory is always removed, even if errors occur.
+        if temp_dir and os.path.exists(temp_dir):
+            print(f"\nCleaning up temporary directory: {temp_dir}")
+            # The shutil.rmtree function recursively deletes a directory.
+            # Ref: https://docs.python.org/3/library/shutil.html#shutil.rmtree
+            shutil.rmtree(temp_dir)
 
-    d = analyze_language_share(root_folder_path)
-    for language, percentage in d.items():
-        print(f"{language}: {percentage}%")
+        print("\nProgram finished.")
 
 if __name__ == "__main__":
     main()
