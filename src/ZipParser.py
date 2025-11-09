@@ -4,6 +4,7 @@ from zipfile import ZipFile
 
 from src.ProjectFile import ProjectFile
 from src.ProjectFolder import ProjectFolder
+from src.ProgressBar import Bar
 
 def parse(path):
     '''Traverses zipped folder and creates a tree of ProjectFolder and ProjectFile objects, returns the root of the tree as an object'''
@@ -13,6 +14,14 @@ def parse(path):
         root: ProjectFolder
 
         dirs: dict[str,ProjectFolder] = {}
+
+        #-----     PROGRESS BAR     -----#
+        #Get total size of files in zip folder
+        total_bytes = 0
+        for file in z.infolist():
+            total_bytes+=file.file_size()
+        my_bar = Bar(total_bytes)
+        #--------------------------------#
 
         for file in z.infolist():
             if file.filename.startswith("__MACOSX/"):
@@ -51,6 +60,10 @@ def parse(path):
 
                     #add this file to its parent's list
                     dirs[parent].children.append(temp)
+
+            #-----     PROGRESS BAR     -----#
+            my_bar.update(int(file.file_size()))
+            #--------------------------------#
 
     return (root)
 
