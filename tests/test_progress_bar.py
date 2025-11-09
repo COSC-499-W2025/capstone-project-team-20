@@ -6,7 +6,7 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from ProgressBar import Bar
+from Progresstage_progressar import Bar
 
 def test_too_small_abort():
     '''Bars created with 7 or less bytes (including negative numbers) should abort (create an already completed bar where STAGES is 1)'''
@@ -16,15 +16,15 @@ def test_too_small_abort():
     for n in bytes_to_test:
         testbar = Bar(n)
         #Check the bar will display as: |█| (n Bytes/n Bytes)
-        assert testbar.bDone == '█'
-        assert testbar.bLeft == ''
-        assert testbar.sSub == 8
-        assert testbar.TOTALB == n
-        assert testbar.total == n
+        assert testbar.bar_complete == '█'
+        assert testbar.bar_remaining == ''
+        assert testbar.sub_stage_idx == 8
+        assert testbar.current_current_total_BYTES == n
+        assert testbar.current_current_total == n
 
         #Check that the bar is incomplete
-        assert testbar.sDone == 1
-        assert testbar.sLeft == 0
+        assert testbar.stages_completed == 1
+        assert testbar.stages_remaining == 0
 
 def test_bars_have_correct_length():
     '''Bars created with bytes in the range [8-15] should create a bar of length 1'''
@@ -33,15 +33,15 @@ def test_bars_have_correct_length():
     for n in bytes_to_test:
         testbar = Bar(n)
         #check general variables are correct
-        assert testbar.TOTALB == n
-        assert testbar.sDone == 0
-        assert testbar.sSub == 0
-        assert testbar.bDone == ''
-        assert testbar.total == 0
+        assert testbar.current_current_total_BYTES == n
+        assert testbar.stages_completed == 0
+        assert testbar.sub_stage_idx == 0
+        assert testbar.bar_complete == ''
+        assert testbar.current_current_total == 0
 
         #check variables that will change between sizes
-        assert testbar.bLeft == ''
-        assert testbar.sLeft == 1
+        assert testbar.bar_remaining == ''
+        assert testbar.stages_remaining == 1
         assert testbar.STAGES == 1
 
     '''Bars created with bytes in the range [16-31] should create a bar of length 2'''
@@ -50,15 +50,15 @@ def test_bars_have_correct_length():
     for n in bytes_to_test:
         testbar = Bar(n)
         #check general variables are correct
-        assert testbar.TOTALB == n
-        assert testbar.sDone == 0
-        assert testbar.sSub == 0
-        assert testbar.bDone == ''
-        assert testbar.total == 0
+        assert testbar.current_current_total_BYTES == n
+        assert testbar.stages_completed == 0
+        assert testbar.sub_stage_idx == 0
+        assert testbar.bar_complete == ''
+        assert testbar.current_current_total == 0
 
         #check variables that will change between sizes
-        assert testbar.bLeft == ' '
-        assert testbar.sLeft == 2
+        assert testbar.bar_remaining == ' '
+        assert testbar.stages_remaining == 2
         assert testbar.STAGES == 2
 
     '''Bars created with bytes in the range [32-63] should create a bar of length 4'''
@@ -67,15 +67,15 @@ def test_bars_have_correct_length():
     for n in bytes_to_test:
         testbar = Bar(n)
         #check general variables are correct
-        assert testbar.TOTALB == n
-        assert testbar.sDone == 0
-        assert testbar.sSub == 0
-        assert testbar.bDone == ''
-        assert testbar.total == 0
+        assert testbar.current_current_total_BYTES == n
+        assert testbar.stages_completed == 0
+        assert testbar.sub_stage_idx == 0
+        assert testbar.bar_complete == ''
+        assert testbar.current_current_total == 0
 
         #check variables that will change between sizes
-        assert testbar.bLeft == '   '
-        assert testbar.sLeft == 4
+        assert testbar.bar_remaining == '   '
+        assert testbar.stages_remaining == 4
         assert testbar.STAGES == 4
 
     '''Bars created with bytes in the range [64-127] should create a bar of length 8'''
@@ -84,15 +84,15 @@ def test_bars_have_correct_length():
     for n in bytes_to_test:
         testbar = Bar(n)
         #check general variables are correct
-        assert testbar.TOTALB == n
-        assert testbar.sDone == 0
-        assert testbar.sSub == 0
-        assert testbar.bDone == ''
-        assert testbar.total == 0
+        assert testbar.current_current_total_BYTES == n
+        assert testbar.stages_completed == 0
+        assert testbar.sub_stage_idx == 0
+        assert testbar.bar_complete == ''
+        assert testbar.current_current_total == 0
 
         #check variables that will change between sizes
-        assert testbar.bLeft == '       '
-        assert testbar.sLeft == 8
+        assert testbar.bar_remaining == '       '
+        assert testbar.stages_remaining == 8
         assert testbar.STAGES == 8
 
     '''Bars created with bytes in the range [128-255] should create a bar of length 16'''
@@ -101,15 +101,15 @@ def test_bars_have_correct_length():
     for n in bytes_to_test:
         testbar = Bar(n)
         #check general variables are correct
-        assert testbar.TOTALB == n
-        assert testbar.sDone == 0
-        assert testbar.sSub == 0
-        assert testbar.bDone == ''
-        assert testbar.total == 0
+        assert testbar.current_current_total_BYTES == n
+        assert testbar.stages_completed == 0
+        assert testbar.sub_stage_idx == 0
+        assert testbar.bar_complete == ''
+        assert testbar.current_current_total == 0
 
         #check variables that will change between sizes
-        assert testbar.bLeft == '               '
-        assert testbar.sLeft == 16
+        assert testbar.bar_remaining == '               '
+        assert testbar.stages_remaining == 16
         assert testbar.STAGES == 16
 
     '''Bars created with bytes in the range [256-511] should create a bar of length 32'''
@@ -118,15 +118,15 @@ def test_bars_have_correct_length():
     for n in bytes_to_test:
         testbar = Bar(n)
         #check general variables are correct
-        assert testbar.TOTALB == n
-        assert testbar.sDone == 0
-        assert testbar.sSub == 0
-        assert testbar.bDone == ''
-        assert testbar.total == 0
+        assert testbar.current_current_total_BYTES == n
+        assert testbar.stages_completed == 0
+        assert testbar.sub_stage_idx == 0
+        assert testbar.bar_complete == ''
+        assert testbar.current_current_total == 0
 
         #check variables that will change between sizes
-        assert testbar.bLeft == '                               '
-        assert testbar.sLeft == 32
+        assert testbar.bar_remaining == '                               '
+        assert testbar.stages_remaining == 32
         assert testbar.STAGES == 32
 
     '''Bars created with 512 or more bytes should create a bar of length 64'''
@@ -135,25 +135,25 @@ def test_bars_have_correct_length():
     for n in bytes_to_test:
         testbar = Bar(n)
         #check general variables are correct
-        assert testbar.TOTALB == n
-        assert testbar.sDone == 0
-        assert testbar.sSub == 0
-        assert testbar.bDone == ''
-        assert testbar.total == 0
+        assert testbar.current_current_total_BYTES == n
+        assert testbar.stages_completed == 0
+        assert testbar.sub_stage_idx == 0
+        assert testbar.bar_complete == ''
+        assert testbar.current_current_total == 0
 
         #check variables that will change between sizes
-        assert testbar.bLeft == '                                                               '
-        assert testbar.sLeft == 64
+        assert testbar.bar_remaining == '                                                               '
+        assert testbar.stages_remaining == 64
         assert testbar.STAGES == 64
 
 def test_update_overflow():
     '''Updating a bar with more bytes than remain in the bar should result in a completed bar with correct values i.e (x bytes/x bytes)'''
     testbar = Bar(8)
     testbar.update(16)
-    assert testbar.total == 8
-    assert testbar.bDone == '█'
-    assert testbar.sSub == 8
-    assert testbar.bLeft == ''
+    assert testbar.current_current_total == 8
+    assert testbar.bar_complete == '█'
+    assert testbar.sub_stage_idx == 8
+    assert testbar.bar_remaining == ''
 
 def test_negative_update():
     '''Updating a bar with negative values should not impact the current progress'''
@@ -161,11 +161,11 @@ def test_negative_update():
 
     #test after update, then test same changes after subtracting -1
     testbar.update(1)
-    assert testbar.BSUB[testbar.sSub] == '▏'
-    assert testbar.total==1
+    assert testbar.SUB_CHARS[testbar.sub_stage_idx] == '▏'
+    assert testbar.current_current_total==1
     testbar.update(-1)
-    assert testbar.BSUB[testbar.sSub] == '▏'
-    assert testbar.total==1
+    assert testbar.SUB_CHARS[testbar.sub_stage_idx] == '▏'
+    assert testbar.current_current_total==1
 
 
 def test_update_completed_bar():
@@ -173,14 +173,14 @@ def test_update_completed_bar():
     testbar = Bar(8)
 
     testbar.update(8)
-    assert testbar.BSUB[testbar.sSub] == ''
-    assert testbar.bDone == '█'
-    assert testbar.total==8
+    assert testbar.SUB_CHARS[testbar.sub_stage_idx] == ''
+    assert testbar.bar_complete == '█'
+    assert testbar.current_current_total==8
 
     testbar.update(35783849)
-    assert testbar.BSUB[testbar.sSub] == ''
-    assert testbar.bDone == '█'
-    assert testbar.total==8
+    assert testbar.SUB_CHARS[testbar.sub_stage_idx] == ''
+    assert testbar.bar_complete == '█'
+    assert testbar.current_current_total==8
 
 def test_auto_complete():
     '''Bars not evenly divisible into stages will auto complete (adding the remainder) when the visual progress completes'''
@@ -190,7 +190,7 @@ def test_auto_complete():
     testbar.update(8)
 
     #should auto complete to be at 9
-    assert testbar.total == 9
+    assert testbar.current_current_total == 9
 
 def test_substage_cycle():
     '''Test that substages are correctly cycled through producing the correct string at each point'''
@@ -199,5 +199,5 @@ def test_substage_cycle():
     sub_stages = [" ", "▏", "▎", "▍", "▌", "▋", "▊", "▉",""]
 
     for s in sub_stages:
-        assert testbar.BSUB[testbar.sSub] == s
+        assert testbar.SUB_CHARS[testbar.sub_stage_idx] == s
         testbar.update(1)
