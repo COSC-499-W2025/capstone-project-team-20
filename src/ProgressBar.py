@@ -17,24 +17,24 @@ class Bar:
     SUB_CHARS = []   #in between stages will go here
     bar_remaining:str   #string representing remaining portion
 
-    def __init__(self, TOTAL_BYTESytes:int):
-        self.TOTAL_BYTES = TOTAL_BYTESytes
+    def __init__(self, TOTAL_BYTES:int):
+        self.TOTAL_BYTES = TOTAL_BYTES
         self.current_total = 0
         self.stages_completed = 0
 
-        #if checks for a valid TOTAL_BYTESytes fail, abort is set to True, if True, bar will be really short and already completed to avoid error
+        #if checks for a valid TOTAL_BYTES fail, abort is set to True, if True, bar will be really short and already completed to avoid error
         abort = False
 
         #logic for adjusting stage count and stage size so that STAGES is never 0 and the progress bar still runs smoothly:
         idx = 0
-        self.STAGE_SIZE = int(TOTAL_BYTESytes/8) #8 portions per bar, so needs to be at least 8 bytes to function
+        self.STAGE_SIZE = int(TOTAL_BYTES/8) #8 portions per bar, so needs to be at least 8 bytes to function
 
         if self.STAGE_SIZE <= 0: # if self.STAGE_SIZE is already 0 at this point, make the progress bar already complete
             abort = True
             self.STAGES = 1
             self.STAGE_SIZE = 1
         else:
-            while (int(self.STAGE_SIZE/self.POTENTIAL_STAGES[idx])<=0): #if there are too many stages for the TOTAL_BYTESytes, lessen the amount of stages
+            while (int(self.STAGE_SIZE/self.POTENTIAL_STAGES[idx])<=0): #if there are too many stages for the TOTAL_BYTES, lessen the amount of stages
                 idx+=1
                 if idx > len(self.POTENTIAL_STAGES) -1:
                     abort = True
