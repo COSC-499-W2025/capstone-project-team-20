@@ -1,110 +1,107 @@
-import os
-import zipfile
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
 from git import Repo, Actor
 
+# Import components to be tested or mocked
 from src.analyzers.GitRepoAnalyzer import GitRepoAnalyzer
+from utils.RepoFinder import RepoFinder
+from src.ProjectManager import ProjectManager
+from src.Project import Project
 
 
 @pytest.fixture
-def create_test_repo(tmp_path: Path) -> Path:
+def create_real_repo(tmp_path: Path) -> Path:
     """
-    A pytest fixture to create a temporary Git repository for testing.
-
-    This fixture sets up a Git repository, creates a source file, and
-    simulates a commit history with both single-author and collaborative
-    contributions. This provides a realistic test case for analysis.
-
-    Args:
-        tmp_path: The pytest fixture for a temporary directory path.
-
-    Returns:
-        The path to the root of the created Git repository.
+    Creates a real, temporary Git repository for testing the core analysis logic.
     """
-    repo_path = tmp_path / "test_project"
+    repo_path = tmp_path / "real_test_project"
     repo_path.mkdir()
     repo = Repo.init(repo_path)
-
-    # Define authors for commits
-    author1 = Actor("Author One", "author1@example.com")
-    author2 = Actor("Author Two", "author2@example.com")
-
-    # Create and commit a file by the first author
-    individual_file_path = repo_path / "individual_file.py"
-    individual_file_path.write_text("print('hello from author one')")
-    repo.index.add([str(individual_file_path)])
-    repo.index.commit("Initial commit of individual file", author=author1, committer=author1)
-
-    # Create a collaborative file and commit it
-    collaborative_file_path = repo_path / "collaborative_file.py"
-    collaborative_file_path.write_text("print('hello world')")
-    repo.index.add([str(collaborative_file_path)])
-    repo.index.commit("Initial commit", author=author1, committer=author1)
-
-    # Modify the collaborative file as the second author
-    collaborative_file_path.write_text("print('hello world, now updated')")
-    repo.index.add([str(collaborative_file_path)])
-    repo.index.commit("Second commit", author=author2, committer=author2)
-
+    author1 = Actor("Real Author 1", "author1@real.com")
+    author2 = Actor("Real Author 2", "author2@real.com")
+    (repo_path / "file1.py").write_text("c1")
+    repo.index.add(["file1.py"])
+    repo.index.commit("commit 1", author=author1, committer=author1)
+    (repo_path / "file2.py").write_text("c2")
+    repo.index.add(["file2.py"])
+    repo.index.commit("commit 2", author=author2, committer=author2)
     return repo_path
 
 
-def test_analyze_zip_full_scenario(create_test_repo: Path, capsys):
+def test_analyzer_orchestration_workflow():
     """
-    Tests the Repo Analyzers zip analysis functionality from end to end.
-
-    This test verifies that the analyzer correctly identifies projects within a
-    zip archive, analyzes the Git history of each file, and produces the
-    expected human-readable output for both individual and collaborative files.
-
-    Args:
-        create_test_repo: The fixture that provides a path to a test repository.
-        capsys: The pytest fixture for capturing stdout and stderr.
+    Unit tests the `run_analysis_from_path` method's orchestration logic.
+    This test uses mocks to isolate the analyzer from its dependencies.
     """
-    repo_path = create_test_repo
-    tmp_dir = repo_path.parent
-    zip_path = tmp_dir / "test_project.zip"
+    # Arrange: Create mocks for all external dependencies.
+    mock_finder = MagicMock(spec=RepoFinder)
+    mock_manager = MagicMock(spec=ProjectManager)
 
-    # Create a zip archive from the repository directory
-    with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zf:
-        for root, _, files in os.walk(repo_path):
-            for file in files:
-                file_path = Path(root) / file
-                archive_path = file_path.relative_to(repo_path.parent)
-                zf.write(file_path, archive_path)
+    # Configure mocks to simulate finding one existing project.
+    repo_path = Path("/fake/repo")
+    mock_finder.find_repos.return_value = [repo_path]
 
-    # Initialize and run the analyzer
-    analyzer = GitRepoAnalyzer()
-    analyzer.analyze_zip(str(zip_path))
+    existing_project = Project(id=123, name="repo")
+    mock_manager.get_by_name.return_value = existing_project
 
-    # Verify the console output
-    captured = capsys.readouterr()
-    output = captured.out
+    # Act: Instantiate the analyzer with mocks and run the workflow.
+    analyzer = GitRepoAnalyzer(mock_finder, mock_manager)
 
-    # Check for correct project identification and analysis summary
-    assert "Project: test_project" in output
-    # Verify analysis of the collaborative file
-    assert "File: collaborative_file.py" in output
-    assert "Authors: 2" in output
-    assert "Status: collaborative" in output
-    # Verify analysis of the individual file
-    assert "File: individual_file.py" in output
-    assert "Authors: 1" in output
-    assert "Status: individual" in output
+    # Mock the internal analysis method to return predictable data.
+    # This prevents the need for a real Git repo in this orchestration test.
+    analyzer._analyze_and_prepare_project = MagicMock(return_value=existing_project)
 
-    # Verify the internal state of the analyzer
-    results = analyzer.get_analysis_results()
-    assert len(results) == 2
+    analyzer.run_analysis_from_path(Path("/any/path"))
 
-    collaborative_result = next((r for r in results if r['file_path'] == 'collaborative_file.py'), None)
-    individual_result = next((r for r in results if r['file_path'] == 'individual_file.py'), None)
+    # Assert: Verify that the dependencies were called as expected.
+    mock_finder.find_repos.assert_called_once()
+    analyzer._analyze_and_prepare_project.assert_called_once_with(repo_path)
+    mock_manager.set.assert_called_once_with(existing_project)
 
-    assert collaborative_result is not None
-    assert collaborative_result['analysis_data']['author_count'] == 2
-    assert collaborative_result['analysis_data']['collaboration_status'] == 'collaborative'
 
-    assert individual_result is not None
-    assert individual_result['analysis_data']['author_count'] == 1
-    assert individual_result['analysis_data']['collaboration_status'] == 'individual'
+def test_analyzer_prepare_project_logic_for_new_project(create_real_repo: Path):
+    """
+    Unit tests the private `_analyze_and_prepare_project` method's logic
+    for a project that does not yet exist in the database.
+    """
+    # Arrange
+    mock_manager = MagicMock(spec=ProjectManager)
+    mock_manager.get_by_name.return_value = None # Simulate project not found
+    analyzer = GitRepoAnalyzer(repo_finder=None, project_manager=mock_manager)
+
+    # Act
+    project = analyzer._analyze_and_prepare_project(create_real_repo)
+
+    # Assert
+    assert project is not None
+    assert project.id is None # ID should be None for a new project
+    assert project.name == "real_test_project"
+    assert project.author_count == 2
+    assert project.collaboration_status == "collaborative"
+    mock_manager.get_by_name.assert_called_once_with("real_test_project")
+
+def test_analyzer_prepare_project_logic_for_existing_project(create_real_repo: Path):
+    """
+    Unit tests the `_analyze_and_prepare_project` method's logic
+    for a project that already exists in the database.
+    """
+    # Arrange
+    mock_manager = MagicMock(spec=ProjectManager)
+    existing_project = Project(id=456, name="real_test_project", authors=["old_author"])
+    mock_manager.get_by_name.return_value = existing_project # Simulate project found
+    analyzer = GitRepoAnalyzer(repo_finder=None, project_manager=mock_manager)
+
+    # Act
+    project = analyzer._analyze_and_prepare_project(create_real_repo)
+
+    # Assert
+    assert project is not None
+    # The existing ID should be preserved.
+    assert project.id == 456
+    # The author list and count should be updated by the new analysis.
+    assert project.author_count == 2
+    assert "author1@real.com" in project.authors
+    assert "old_author" not in project.authors
+    mock_manager.get_by_name.assert_called_once_with("real_test_project")
