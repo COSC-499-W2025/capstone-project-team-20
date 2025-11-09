@@ -1,150 +1,110 @@
-import os
-import shutil
 from pathlib import Path
-from typing import Set, List, Dict, Any
+from typing import Set, List, Dict, Any, Optional
 
-from git import Repo, GitCommandError
-
-from .language_detector import LANGUAGE_MAP
-from src.ZipParser import extract_zip
+from src.Project import Project
+from src.ProjectManager import ProjectManager
+from utils.RepoFinder import RepoFinder
 
 
 class GitRepoAnalyzer:
     """
-    Analyzes projects within a zip archive to determine file authorship.
-
-    This class orchestrates the analysis of projects extracted from a
-    zip archive. The results are stored in memory and can be displayed
-    in a readable format.
+    Orchestrates the analysis and storage of Git repository projects.
+    This class is responsible for finding repositories, analyzing them,
+    and persisting the results to the database.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, repo_finder: RepoFinder, project_manager: ProjectManager):
         """
-        Initializes the Repository Analyzer.
-        """
-        self.analysis_results: List[Dict[str, Any]] = []
-        self.supported_extensions = set(LANGUAGE_MAP.keys())
-
-    def analyze_zip(self, zip_path: str) -> None:
-        """
-        Analyzes the contents of a zip archive.
+        Initializes the GitRepoAnalyzer with its dependencies.
 
         Args:
-            zip_path: The path to the .zip file to be analyzed.
+            repo_finder: An instance of RepoFinder to discover repositories.
+            project_manager: An instance of ProjectManager for database operations.
         """
-        temp_dir = None
-        try:
-            temp_dir = extract_zip(zip_path)
-            print("Starting analysis...")
-            self._find_and_analyze_repos(temp_dir)
-            print("Analysis complete.")
-            self.display_analysis_results()
-        except ValueError as e:
-            print(e)
-        finally:
-            if temp_dir and os.path.exists(temp_dir):
-                shutil.rmtree(temp_dir)
-                print(f"Cleaned up temporary directory: {temp_dir}")
+        self._repo_finder = repo_finder
+        self._project_manager = project_manager
+        print("GitRepoAnalyzer initialized with dependencies.")
 
-    def _find_and_analyze_repos(self, base_dir: str) -> None:
+    def run_analysis_from_path(self, base_dir: Path) -> List[Project]:
         """
-        Recursively finds and analyzes all Git repositories in a directory.
-        """
-        for root, dirs, _ in os.walk(base_dir):
-            if "__MACOSX" in root:
-                continue
-            if ".git" in dirs:
-                repo_path = Path(root)
-                project_name = repo_path.name
-                print(f"Found Git repository for project: {project_name}")
-                self._analyze_repository(repo_path, project_name)
-                # Stop searching deeper in this directory to avoid analyzing submodules as separate projects
-                dirs.clear()
+        Executes the full workflow: find, analyze, and persist projects.
 
-    def _analyze_repository(self, repo_path: Path, project_name: str) -> None:
-        """
-        Analyzes a single Git repository to determine file authorship.
-        """
-        try:
-            repo = Repo(repo_path)
-        except GitCommandError as e:
-            print(f"Error opening repository at {repo_path}: {e}")
-            return
+        This method serves as the primary entry point for the analysis process.
+        It uses the injected RepoFinder to discover projects, analyzes each one,
+        and then uses an "upsert" logic to save the results via the ProjectManager.
 
-        # Using traverse() to iterate through all files in the commit
-        for item in repo.head.commit.tree.traverse():
-            """
-            In Git's object model, files are represented as "blobs".
-            This check ensures we are only processing files, not directories or other object types.
-            """
-            if item.type == 'blob':
-                file_path = item.path
-                # Skip files with unsupported extensions
-                if Path(file_path).suffix.lstrip(".").lower() not in self.supported_extensions:
-                    continue
-
-                authors: Set[str] = set()
-                try:
-                    # Retrieve all commits that modified this file path
-                    commits = list(repo.iter_commits(paths=file_path))
-                    if not commits:
-                        # Skip files that have no commit history (e.g., added but not committed)
-                        continue
-                    for commit in commits:
-                        authors.add(commit.author.email)
-                except Exception as e:
-                    # This can happen for various reasons, e.g., issues with file paths or commit data
-                    print(f"Could not process file {file_path} in {project_name}: {e}")
-                    continue
-
-                author_count = len(authors)
-                analysis_data = {
-                    "author_count": author_count,
-                    "collaboration_status": "collaborative" if author_count > 1 else "individual"
-                }
-
-                # Store result in memory
-                self.analysis_results.append({
-                    "file_path": file_path,
-                    "project_name": project_name,
-                    "analysis_data": analysis_data,
-                })
-
-    def display_analysis_results(self) -> None:
-        """
-        Groups results by project and prints them in a readable format.
-        """
-        if not self.analysis_results:
-            print("No analysis results to display.")
-            return
-
-        # Group results by project name for structured output
-        results_by_project: Dict[str, List[Dict[str, Any]]] = {}
-        for result in self.analysis_results:
-            project_name = result["project_name"]
-            if project_name not in results_by_project:
-                results_by_project[project_name] = []
-            results_by_project[project_name].append(result)
-
-        print("\n" + "="*30)
-        print("      Analysis Results")
-        print("="*30 + "\n")
-
-        for project_name, results in results_by_project.items():
-            print(f"Project: {project_name}")
-            print("-" * (len(project_name) + 9))
-            for result in sorted(results, key=lambda x: x['file_path']):
-                analysis = result['analysis_data']
-                print(f"  - File: {result['file_path']}")
-                print(f"    Authors: {analysis['author_count']}")
-                print(f"    Status: {analysis['collaboration_status']}\n")
-            print("\n")
-
-    def get_analysis_results(self) -> List[Dict[str, Any]]:
-        """
-        Retrieves all analysis results.
+        Args:
+            base_dir: The directory where to start searching for Git repositories.
 
         Returns:
-            A list of dictionaries containing the analysis data for each file.
+            A list of the analyzed and persisted Project objects.
         """
-        return self.analysis_results
+        print(f"Starting analysis workflow from base directory: {base_dir}")
+        projects_found = self._repo_finder.find_repos(base_dir)
+        analyzed_projects: List[Project] = []
+
+        if not projects_found:
+            print("No projects found to analyze.")
+            return analyzed_projects
+
+        for project in projects_found:
+            # Perform the core analysis of the repository.
+            analysis_data = self._analyze_repo(project)
+            if not analysis_data:
+                continue
+
+            # Check if a project with the same name already exists in the database.
+            existing_project = self._project_manager.get_by_name(project.name)
+            if existing_project:
+                print(f"Found existing project '{project.name}'. Merging results.")
+                project.id = existing_project.id  # Preserve the original database ID.
+
+            # Update the project object with the new analysis data.
+            project.authors = analysis_data["authors"]
+            project.collaboration_status = analysis_data["collaboration_status"]
+            project.update_author_count()
+
+            # Persist the final, enriched project object to the database.
+            self._project_manager.set(project)
+            print(f"Successfully stored/updated project '{project.name}' in the database.")
+            analyzed_projects.append(project)
+
+        return analyzed_projects
+
+    def _analyze_repo(self, project: Project) -> Optional[Dict[str, Any]]:
+        """
+        Performs a repository-wide analysis for a single project.
+
+        This private method contains the logic for iterating through commits to
+        determine the unique authors and overall collaboration status.
+
+        Args:
+            project: The Project object to analyze.
+
+        Returns:
+            A dictionary with analysis results, or None if analysis fails.
+        """
+        if not project.repo:
+            print(f"Skipping analysis for '{project.name}' due to missing repository object.")
+            return None
+
+        print(f"Analyzing repository for project: '{project.name}'")
+        all_authors: Set[str] = set()
+
+        try:
+            # Ref: repo.iter_commits() provides an iterator for all commits.
+            # https://gitpython.readthedocs.io/en/stable/reference.html#git.repo.base.Repo.iter_commits
+            commits = list(project.repo.iter_commits())
+            for commit in commits:
+                all_authors.add(commit.author.email)
+        except Exception as e:
+            print(f"Error during commit analysis for '{project.name}': {e}")
+            return None
+
+        author_count = len(all_authors)
+        status = "collaborative" if author_count > 1 else "individual"
+
+        return {
+            "authors": sorted(list(all_authors)),
+            "collaboration_status": status
+        }
