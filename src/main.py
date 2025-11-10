@@ -52,9 +52,8 @@ def main():
         print("Error: The provided path is invalid or is not a .zip file. Exiting.")
         return
 
-    temp_dir = None
+    temp_dir: Path | None = None
     try:
-        # --- Initialization ---
         # Instantiate all dependencies here at the highest level.
         repo_finder = RepoFinder()
         project_manager = ProjectManager()
@@ -63,15 +62,13 @@ def main():
         print(f"Extracting archive: {path_obj}")
         temp_dir = extract_zip(str(path_obj))
         analyzed_projects = git_analyzer.run_analysis_from_path(temp_dir)
-
-        # --- Display Results ---
         display_analysis_results(analyzed_projects)
 
     except Exception as e:
         print(f"\nAn unexpected error occurred: {e}")
     finally:
         # --- Cleanup ---
-        if temp_dir and os.path.exists(temp_dir):
+        if temp_dir and temp_dir.exists() and temp_dir.is_dir():
             print(f"\nCleaning up temporary directory: {temp_dir}")
             shutil.rmtree(temp_dir)
         print("\nProgram finished.")
