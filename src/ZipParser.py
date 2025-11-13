@@ -19,7 +19,7 @@ def parse(path):
         #Get total size of files in zip folder
         total_bytes = 0
         for file in z.infolist():
-            total_bytes+=file.file_size()
+            total_bytes+=file.file_size
         my_bar = Bar(total_bytes)
         #--------------------------------#
 
@@ -62,7 +62,7 @@ def parse(path):
                     dirs[parent].children.append(temp)
 
             #-----     PROGRESS BAR     -----#
-            my_bar.update(int(file.file_size()))
+            my_bar.update(file.file_size)
             #--------------------------------#
 
     return (root)
