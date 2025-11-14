@@ -3,7 +3,8 @@ from src.ZipParser import parse, toString
 from src.analyzers.ProjectMetadataExtractor import ProjectMetadataExtractor
 from src.analyzers.GitRepoAnalyzer import GitRepoAnalyzer
 from src.FileCategorizer import FileCategorizer
-from src.analyzers.language_detector import detect_language
+from src.analyzers.language_detector import detect_language_per_file
+from pathlib import Path
 
 class ProjectAnalyzer:
     """
@@ -67,11 +68,12 @@ class ProjectAnalyzer:
     def analyze_languages(self):
         print("Language Detection")
         files = self.metadata_extractor.collect_all_files()
-        langs = {
-            detect_language([f.file_name])
-            for f in files
-            if detect_language([f.file_name]) != "Unknown"
-        }
+        langs = set()
+
+        for f in files:
+            lang = detect_language_per_file(Path(f.file_name))
+            if lang:
+                langs.add(lang)
 
         if not langs:
             print("No languages detected")
@@ -85,7 +87,7 @@ class ProjectAnalyzer:
         self.analyze_git()
         self.analyze_metadata()
         self.analyze_categories()
-        self.print_tree
+        self.print_tree()
         self.analyze_languages()
         print("\nAnalyses complete.\n")
 
@@ -105,7 +107,8 @@ class ProjectAnalyzer:
                 4. Print Project Folder Structure
                 5. Analyze Languages Detected
                 6. Run All Analyses
-                7. Exit
+                7. Analyze New Folder
+                8. Exit
                   """)
 
     
@@ -124,6 +127,12 @@ class ProjectAnalyzer:
             elif choice == "6":
                 self.run_all()
             elif choice == "7":
+                print ("\nLoading new project...")
+                if self.load_zip():
+                    print("New project loaded successfully\n")
+                else:
+                    print("Failed to load new project\n")
+            elif choice == "8":
                 print("Exiting Project Analyzer.")
                 return
             else:
