@@ -1,5 +1,5 @@
 import os
-import PyPDF2
+import pypdf
 import docx
 
 class UnsupportedFileType(Exception):
@@ -17,19 +17,19 @@ def extract_text_from_txt(file_path):
 def extract_text_from_pdf(file_path):
     """
     Extracts all text from a PDF file (.pdf).
-    Ref: https://pypdf2.readthedocs.io/en/latest/user/extract-text.html
+    Ref: https://pypdf.readthedocs.io/en/stable/user/extract-text.html
     """
     text = ""
     try:
         with open(file_path, 'rb') as f:
-            reader = PyPDF2.PdfReader(f)
+            reader = pypdf.PdfReader(f)
             if reader.is_encrypted:
                 reader.decrypt('') # Attempt decryption with a blank password
             for page in reader.pages:
                 page_text = page.extract_text()
                 if page_text:
                     text += page_text
-    except PyPDF2.errors.PdfReadError as e:
+    except pypdf.errors.PdfReadError as e:
         print(f"Error reading PDF file {os.path.basename(file_path)}: {e}")
         return "" # Return empty string for corrupted or unreadable PDFs
     return text
