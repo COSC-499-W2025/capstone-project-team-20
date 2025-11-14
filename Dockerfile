@@ -13,5 +13,10 @@ COPY tests/ tests/
 COPY utils/ utils/
 COPY pytest.ini .
 
+# System deps (git for GitPython)
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends git \
+ && rm -rf /var/lib/apt/lists/*
+
 # Just runs tests for now, will be updated in the future
 CMD ["pytest", "tests/"]
