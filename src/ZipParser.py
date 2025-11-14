@@ -1,7 +1,7 @@
 import tempfile
 import zipfile
 from zipfile import ZipFile, ZipInfo
-from pathlib import PurePosixPath
+from pathlib import Path, PurePosixPath
 
 from src.ProjectFile import ProjectFile
 from src.ProjectFolder import ProjectFolder
@@ -84,26 +84,30 @@ def parse(path: str) -> ProjectFolder:
                     add_to_tree(file,parent,dirs)
     return (root)
 
-def extract_zip(zip_path: str) -> str:
+def extract_zip(zip_path: str) -> Path:
     """
     Extracts a zip archive to a temporary directory.
     Args:
         zip_path: The path to the .zip file to be extracted.
     Returns:
-        The path to the temporary directory where files were extracted.
+        A `pathlib.Path` object pointing to the temporary directory.
     Raises:
         ValueError: If the path is invalid or the file is not a zip archive.
     """
-    temp_dir = tempfile.mkdtemp()
-    print(f"Extracting {zip_path} to {temp_dir}...")
+    # Create the temporary directory path as a string first.
+    temp_dir_str = tempfile.mkdtemp()
+    print(f"Extracting {zip_path} to {temp_dir_str}...")
     try:
         with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-            zip_ref.extractall(temp_dir)
+            zip_ref.extractall(temp_dir_str)
     except (zipfile.BadZipFile, FileNotFoundError) as e:
+        # If extraction fails, ensure the created temp directory is cleaned up.
+        shutil.rmtree(temp_dir_str)
         raise ValueError(f"Error processing zip file: {e}")
 
     print("Extraction complete.")
-    return temp_dir
+    # Return the path as a Path object to ensure type consistency.
+    return Path(temp_dir_str)
 
 def toString(root: ProjectFolder) -> str:
     '''Runs the helper method to remove the amount of arguments needed on initial call'''
@@ -128,7 +132,7 @@ def _StringHelper(folder:ProjectFolder, indent:str, output:str, first:bool) -> s
     if len(folder.subdir)>0:
         for subfolder in folder.subdir:
             output = _StringHelper(subfolder,indent,output,False)
-    
+
     return output
 
 """

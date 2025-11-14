@@ -1,150 +1,109 @@
-import os
-import shutil
 from pathlib import Path
-from typing import Set, List, Dict, Any
+from typing import Set, List, Dict, Any, Optional
 
+# Import GitPython for direct use within the analyzer.
 from git import Repo, GitCommandError
 
-from .language_detector import LANGUAGE_MAP
-from src.ZipParser import extract_zip
+from src.Project import Project
+from src.ProjectManager import ProjectManager
+from utils.RepoFinder import RepoFinder
 
 
 class GitRepoAnalyzer:
     """
-    Analyzes projects within a zip archive to determine file authorship.
-
-    This class orchestrates the analysis of projects extracted from a
-    zip archive. The results are stored in memory and can be displayed
-    in a readable format.
+    Orchestrates the analysis and storage of Git repository projects.
+    This class is the central component for the Git analysis workflow.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, repo_finder: RepoFinder, project_manager: ProjectManager):
         """
-        Initializes the Repository Analyzer.
-        """
-        self.analysis_results: List[Dict[str, Any]] = []
-        self.supported_extensions = set(LANGUAGE_MAP.keys())
-
-    def analyze_zip(self, zip_path: str) -> None:
-        """
-        Analyzes the contents of a zip archive.
+        Initializes the GitRepoAnalyzer with its dependencies.
 
         Args:
-            zip_path: The path to the .zip file to be analyzed.
+            repo_finder: An instance of RepoFinder to discover repository paths.
+            project_manager: An instance of ProjectManager for database operations.
         """
-        temp_dir = None
-        try:
-            temp_dir = extract_zip(zip_path)
-            print("Starting analysis...")
-            self._find_and_analyze_repos(temp_dir)
-            print("Analysis complete.")
-            self.display_analysis_results()
-        except ValueError as e:
-            print(e)
-        finally:
-            if temp_dir and os.path.exists(temp_dir):
-                shutil.rmtree(temp_dir)
-                print(f"Cleaned up temporary directory: {temp_dir}")
+        self._repo_finder = repo_finder
+        self._project_manager = project_manager
+        print("GitRepoAnalyzer initialized with dependencies.")
 
-    def _find_and_analyze_repos(self, base_dir: str) -> None:
+    def run_analysis_from_path(self, base_dir: Path) -> List[Project]:
         """
-        Recursively finds and analyzes all Git repositories in a directory.
-        """
-        for root, dirs, _ in os.walk(base_dir):
-            if "__MACOSX" in root:
-                continue
-            if ".git" in dirs:
-                repo_path = Path(root)
-                project_name = repo_path.name
-                print(f"Found Git repository for project: {project_name}")
-                self._analyze_repository(repo_path, project_name)
-                # Stop searching deeper in this directory to avoid analyzing submodules as separate projects
-                dirs.clear()
+        Executes the full workflow: find, analyze, and persist projects.
 
-    def _analyze_repository(self, repo_path: Path, project_name: str) -> None:
-        """
-        Analyzes a single Git repository to determine file authorship.
-        """
-        try:
-            repo = Repo(repo_path)
-        except GitCommandError as e:
-            print(f"Error opening repository at {repo_path}: {e}")
-            return
+        This method serves as the primary entry point. It uses the RepoFinder to
+        get repository paths, analyzes each one, and uses "upsert" logic to save
+        the resulting `Project` data object.
 
-        # Using traverse() to iterate through all files in the commit
-        for item in repo.head.commit.tree.traverse():
-            """
-            In Git's object model, files are represented as "blobs".
-            This check ensures we are only processing files, not directories or other object types.
-            """
-            if item.type == 'blob':
-                file_path = item.path
-                # Skip files with unsupported extensions
-                if Path(file_path).suffix.lstrip(".").lower() not in self.supported_extensions:
-                    continue
-
-                authors: Set[str] = set()
-                try:
-                    # Retrieve all commits that modified this file path
-                    commits = list(repo.iter_commits(paths=file_path))
-                    if not commits:
-                        # Skip files that have no commit history (e.g., added but not committed)
-                        continue
-                    for commit in commits:
-                        authors.add(commit.author.email)
-                except Exception as e:
-                    # This can happen for various reasons, e.g., issues with file paths or commit data
-                    print(f"Could not process file {file_path} in {project_name}: {e}")
-                    continue
-
-                author_count = len(authors)
-                analysis_data = {
-                    "author_count": author_count,
-                    "collaboration_status": "collaborative" if author_count > 1 else "individual"
-                }
-
-                # Store result in memory
-                self.analysis_results.append({
-                    "file_path": file_path,
-                    "project_name": project_name,
-                    "analysis_data": analysis_data,
-                })
-
-    def display_analysis_results(self) -> None:
-        """
-        Groups results by project and prints them in a readable format.
-        """
-        if not self.analysis_results:
-            print("No analysis results to display.")
-            return
-
-        # Group results by project name for structured output
-        results_by_project: Dict[str, List[Dict[str, Any]]] = {}
-        for result in self.analysis_results:
-            project_name = result["project_name"]
-            if project_name not in results_by_project:
-                results_by_project[project_name] = []
-            results_by_project[project_name].append(result)
-
-        print("\n" + "="*30)
-        print("      Analysis Results")
-        print("="*30 + "\n")
-
-        for project_name, results in results_by_project.items():
-            print(f"Project: {project_name}")
-            print("-" * (len(project_name) + 9))
-            for result in sorted(results, key=lambda x: x['file_path']):
-                analysis = result['analysis_data']
-                print(f"  - File: {result['file_path']}")
-                print(f"    Authors: {analysis['author_count']}")
-                print(f"    Status: {analysis['collaboration_status']}\n")
-            print("\n")
-
-    def get_analysis_results(self) -> List[Dict[str, Any]]:
-        """
-        Retrieves all analysis results.
+        Args:
+            base_dir: The directory where to start searching for Git repositories.
 
         Returns:
-            A list of dictionaries containing the analysis data for each file.
+            A list of the analyzed and persisted `Project` objects.
         """
-        return self.analysis_results
+        print(f"Starting analysis workflow from base directory: {base_dir}")
+        repo_paths = self._repo_finder.find_repos(base_dir)
+        analyzed_projects: List[Project] = []
+
+        if not repo_paths:
+            return analyzed_projects
+
+        for repo_path in repo_paths:
+            # The entire process for a single repo is encapsulated here.
+            project_data = self._analyze_and_prepare_project(repo_path)
+            if project_data:
+                self._project_manager.set(project_data)
+                print(f"Successfully stored/updated project '{project_data.name}' in the database.")
+                analyzed_projects.append(project_data)
+
+        return analyzed_projects
+
+    def _analyze_and_prepare_project(self, repo_path: Path) -> Optional[Project]:
+        """
+        Analyzes a single repository and prepares the Project data object.
+
+        Args:
+            repo_path: The path to the root of the Git repository.
+
+        Returns:
+            An initialized and populated `Project` object, or None if analysis fails.
+        """
+        project_name = repo_path.name
+        print(f"Analyzing repository for project: '{project_name}'")
+
+        try:
+            # The Repo object is now created and managed here, within the analyzer.
+            repo = Repo(repo_path)
+            all_authors: Set[str] = set()
+
+            # Ref: repo.iter_commits() provides an iterator for all commits.
+            # https://gitpython.readthedocs.io/en/stable/reference.html#git.repo.base.Repo.iter_commits
+            for commit in repo.iter_commits():
+                all_authors.add(commit.author.email)
+
+            author_count = len(all_authors)
+            status = "collaborative" if author_count > 1 else "individual"
+
+            # Check for an existing project in the database.
+            existing_project = self._project_manager.get_by_name(project_name)
+            if existing_project:
+                print(f"Found existing project '{project_name}'. Merging results.")
+                # Use the existing project as a base to preserve its ID and other data.
+                project = existing_project
+                project.authors = sorted(list(all_authors))
+                project.collaboration_status = status
+                project.update_author_count()
+            else:
+                # Create a new, pure Project data object.
+                project = Project(
+                    name=project_name,
+                    authors=sorted(list(all_authors)),
+                    collaboration_status=status
+                )
+                project.update_author_count()
+
+            return project
+
+        except (GitCommandError, Exception) as e:
+            print(f"Error during analysis of '{project_name}': {e}")
+            return None
