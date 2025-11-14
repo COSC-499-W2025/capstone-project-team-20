@@ -16,9 +16,10 @@ def main():
     from src.ConfigManager import ConfigManager
     ConfigManager().delete("user_consent")
 
-    if not consent.require_consent():
-        print("Consent not given. Exiting program")
-        return
+    while True:
+        if consent.require_consent():
+            break
+        print("Consent is required to run the program. Please try again.\n")
     
     analyzer = ProjectAnalyzer()
     analyzer.run()
