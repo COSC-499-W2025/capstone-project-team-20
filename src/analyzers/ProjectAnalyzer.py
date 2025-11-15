@@ -1,10 +1,17 @@
 import os
+import shutil
 from src.ZipParser import parse, toString
 from src.analyzers.ProjectMetadataExtractor import ProjectMetadataExtractor
 from src.analyzers.GitRepoAnalyzer import GitRepoAnalyzer
 from src.FileCategorizer import FileCategorizer
 from src.analyzers.language_detector import detect_language_per_file
 from pathlib import Path
+from typing import Iterable
+from src.analyzers.GitRepoAnalyzer import GitRepoAnalyzer
+from src.ZipParser import extract_zip
+from utils.RepoFinder import RepoFinder
+from src.ProjectManager import ProjectManager
+from src.Project import Project
 
 class ProjectAnalyzer:
     """
@@ -16,6 +23,9 @@ class ProjectAnalyzer:
     4. Folder tree printing
     5. Language detection
     6. Run all analyses
+    7. Analyze New Folder
+    8. Display Previous Results
+    9. Exit
     """
 
     def __init__(self):
@@ -23,11 +33,21 @@ class ProjectAnalyzer:
         self.zip_path = None
         self.metadata_extractor = ProjectMetadataExtractor(self.root_folder)
         self.file_categorizer = FileCategorizer()
-        self.git_analyzer = GitRepoAnalyzer()
+        self.repo_finder = RepoFinder()
+        self.project_manager = ProjectManager()
+        self.git_analyzer = GitRepoAnalyzer(self.repo_finder, self.project_manager)
+    
+    def _print_project(self, project: Project) -> None:
+            print(f"Project: {project.name}")
+            print("-" * (len(project.name) + 9))
+            print(f"  - Authors ({project.author_count}): {', '.join(project.authors)}")
+            print(f"  - Status: {project.collaboration_status}\n")
+            # Will display other variables from Project classes in the future
 
     def load_zip(self):
         """Prompts user for ZIP file and parses into folder tree"""
         zip_path = input("Please enter the path to the zipped folder: ")
+        zip_path = os.path.expanduser(zip_path)
         while not (os.path.exists(zip_path) and zip_path.endswith(".zip")):
             zip_path = input("Invalid path or not a zipped file. Please try again: ")
 
@@ -42,10 +62,19 @@ class ProjectAnalyzer:
         
         self.metadata_extractor = ProjectMetadataExtractor(self.root_folder)
         return True
-    
+
     def analyze_git(self):
         print("\nGit repository Analysis")
-        self.git_analyzer.analyze_zip(self.zip_path)
+        path_obj = Path(self.zip_path)
+        if not path_obj.exists() or path_obj.suffix.lower() != ".zip":
+            print(f"Error: {path_obj} is not a valid zip file.")
+            return
+        
+        temp_dir = extract_zip(str(path_obj))
+        try:
+            self.git_analyzer.run_analysis_from_path(temp_dir)
+        finally:
+            shutil.rmtree(temp_dir)
 
     def analyze_metadata(self):
         print("\nMetadata & File Statistics:")
@@ -81,6 +110,28 @@ class ProjectAnalyzer:
         
         for lang in sorted(langs):
             print(f" - {lang}")
+    
+    def display_analysis_results(self, projects: Iterable[Project]) -> None:
+        """
+        Prints the analysis results for a list of Project objects.
+
+        Args:
+            projects: The list of analyzed Project objects to display.
+        """
+        projects_iter = iter(projects)
+        try:
+            first_project = next(projects_iter)
+        except StopIteration:
+            print("\nNo analysis results to display.")
+            return
+        print("\n" + "="*30)
+        print("      Analysis Results")
+        print("="*30 + "\n")
+        self._print_project(first_project)
+
+        for project in projects_iter:
+            self._print_project(project)
+
 
     def run_all(self):
         print("Running All Analyzers\n")
@@ -92,9 +143,6 @@ class ProjectAnalyzer:
         print("\nAnalyses complete.\n")
 
     def run(self):
-        if not self.load_zip():
-            return
-        
         while True:
             print("""
                 =================
@@ -108,11 +156,17 @@ class ProjectAnalyzer:
                 5. Analyze Languages Detected
                 6. Run All Analyses
                 7. Analyze New Folder
-                8. Exit
+                8. Display Previous Results
+                9. Exit
                   """)
 
     
             choice = input ("Selection: ").strip()
+
+            if choice in {"1", "2", "3", "4", "5", "6", "7"}:
+                if not self.zip_path:
+                    if not self.load_zip():
+                        continue 
 
             if choice == "1":
                 self.analyze_git()
@@ -126,6 +180,7 @@ class ProjectAnalyzer:
                 self.analyze_languages()
             elif choice == "6":
                 self.run_all()
+            # TO DO: Write Functionality For Analyzing a New Folder
             elif choice == "7":
                 print ("\nLoading new project...")
                 if self.load_zip():
@@ -133,6 +188,9 @@ class ProjectAnalyzer:
                 else:
                     print("Failed to load new project\n")
             elif choice == "8":
+                projects = self.project_manager.get_all()
+                self.display_analysis_results(projects)
+            elif choice == "9":
                 print("Exiting Project Analyzer.")
                 return
             else:
