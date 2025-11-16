@@ -31,15 +31,25 @@ def test_load_zip_parse_error():
                 assert analyzer.load_zip() is False
 
 def test_analyze_git_calls_run_analysis_from_path():
+    """Test that analyze_git extracts zip, analyzes it, and cleans up temp dir"""
     analyzer = ProjectAnalyzer()
     analyzer.zip_path = "some.zip"
-    analyzer.git_analyzer = MagicMock()
-    with patch("src.analyzers.ProjectAnalyzer.extract_zip", return_value=Path("/tmp/extracted")) as mock_extract:
-        with patch("shutil.rmtree") as mock_rmtree:
-            analyzer.analyze_git()
-            analyzer.git_analyzer.run_analysis_from_path.assert_called_once_with(Path("/tmp/extracted"))
-            mock_extract.assert_called_once_with("some.zip")
-            mock_rmtree.assert_called_once_with(Path("/tmp/extracted"))
+    git_mock = MagicMock()
+    analyzer.git_analyzer = git_mock
+    
+    with patch("pathlib.Path.exists", return_value=True):
+        with patch("pathlib.Path.suffix", new_callable=lambda: property(lambda self: ".zip")):
+            with patch("src.analyzers.ProjectAnalyzer.extract_zip", return_value=Path("/tmp/extracted")) as mock_extract:
+                with patch("shutil.rmtree") as mock_rmtree:
+                    analyzer.analyze_git()
+                    mock_extract.assert_called_once_with("some.zip")
+                    git_mock.run_analysis_from_path.assert_called_once()
+                    called_arg = git_mock.run_analysis_from_path.call_args[0][0]
+                    assert isinstance(called_arg, Path)
+                    assert str(called_arg) == "/tmp/extracted"
+                    mock_rmtree.assert_called_once_with(Path("/tmp/extracted"))
+
+
 
 def test_analyze_metadata_calls_metadata_extractor():
     analyzer = ProjectAnalyzer()
