@@ -1,50 +1,77 @@
 import os
+import shutil
+from pathlib import Path
+from typing import List
+
 from src.ConsentManager import ConsentManager
-from src.ZipParser import parse
-from src.analyzers.ProjectMetadataExtractor import ProjectMetadataExtractor
+from src.ZipParser import extract_zip
 from src.analyzers.GitRepoAnalyzer import GitRepoAnalyzer
+from utils.RepoFinder import RepoFinder
+from src.ProjectManager import ProjectManager
+from src.Project import Project
+
+
+def display_analysis_results(projects: List[Project]) -> None:
+    """
+    Prints the analysis results for a list of Project objects.
+
+    Args:
+        projects: The list of analyzed Project objects to display.
+    """
+    if not projects:
+        print("\nNo analysis results to display.")
+        return
+
+    print("\n" + "="*30)
+    print("      Analysis Results")
+    print("="*30 + "\n")
+
+    for project in sorted(projects, key=lambda p: p.name):
+        print(f"Project: {project.name}")
+        print("-" * (len(project.name) + 9))
+        print(f"  - Authors ({project.author_count}): {', '.join(project.authors)}")
+        print(f"  - Status: {project.collaboration_status}\n")
+        # Will display other variables from Project classes in the future
 
 def main():
+    """
+    Main application entry point. Handles user input and initiates the
+    Git analysis workflow.
+    """
     consent = ConsentManager()
-
-    # Uncomment two lines below to reset consent for testing manually
-    from src.ConfigManager import ConfigManager
-    ConfigManager().delete("user_consent")
-
     if not consent.require_consent():
         print("Consent not given. Exiting program.")
         return
 
-    zip_path = input("Enter the path to the zipped project file: ").strip()
-    # Enter file path, need full path. Example from my testing: /Users/admin/Desktop/3rdyear.zip
-    
     print("Consent confirmed. The application will now proceed.")
 
-    while True:
-        zip_to_analyze = input("Please enter the path to the zip file you want to analyze: ")
-        if os.path.exists(zip_to_analyze) and zip_to_analyze.endswith('.zip'):
-            break
-        print("The provided path is invalid or the file is not a .zip file. Please try again.")
+    zip_path_str = input("Please enter the path to the zip file to analyze: ").strip().strip("'\"")
+    path_obj = Path(zip_path_str).expanduser()
 
-    analyzer = GitRepoAnalyzer()
-    analyzer.analyze_zip(zip_to_analyze)
-
-    print("\nProgram finished.")
-
-
-    print(f"\nparsing project from: {zip_path}")
-    try:
-        root_folder = parse(zip_path)
-    except Exception as e:
-        print(f"Error while parsing: {e}")
+    if not (path_obj.exists() and path_obj.suffix.lower() == '.zip'):
+        print("Error: The provided path is invalid or is not a .zip file. Exiting.")
         return
-    
-    print("\nExtracting project metadata\n")
 
-    metadata_extractor = ProjectMetadataExtractor(root_folder)
-    metadata_extractor.extract_metadata()
+    temp_dir: Path | None = None
+    try:
+        # Instantiate all dependencies here at the highest level.
+        repo_finder = RepoFinder()
+        project_manager = ProjectManager()
+        git_analyzer = GitRepoAnalyzer(repo_finder, project_manager)
 
-    print("\nextraction is complete!")
+        print(f"Extracting archive: {path_obj}")
+        temp_dir = extract_zip(str(path_obj))
+        analyzed_projects = git_analyzer.run_analysis_from_path(temp_dir)
+        display_analysis_results(analyzed_projects)
+
+    except Exception as e:
+        print(f"\nAn unexpected error occurred: {e}")
+    finally:
+        # --- Cleanup ---
+        if temp_dir and temp_dir.exists() and temp_dir.is_dir():
+            print(f"\nCleaning up temporary directory: {temp_dir}")
+            shutil.rmtree(temp_dir)
+        print("\nProgram finished.")
 
 if __name__ == "__main__":
     main()
