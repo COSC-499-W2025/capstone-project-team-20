@@ -60,6 +60,7 @@ def ignore_file_criteria(file: ZipInfo) -> bool:
 
 def parse(path: str) -> ProjectFolder:
     '''Traverses zipped folder and creates a tree of ProjectFolder and ProjectFile objects, returns the root of the tree as an object'''
+
     with ZipFile(path, 'r') as z:
         start=True
         root: ProjectFolder
@@ -90,21 +91,13 @@ def parse(path: str) -> ProjectFolder:
                     add_to_tree(file,parent,dirs)
 
                 else:
-                    #determine parent's name
-                    parent = file.filename.split("/")
-                    parent = "/".join(parent[:len(parent)-1])+"/"
-
-                    #create the object
-                    temp = ProjectFile(file,dirs[parent])
-
-                    #add this file to its parent's list
-                    dirs[parent].children.append(temp)
-
                     parent = "/".join(parent_parts[:-1]) + "/"
                     add_to_tree(file,parent,dirs)
+
             #-----     PROGRESS BAR     -----#
             my_bar.update(file.file_size)
             #--------------------------------#
+
     return (root)
 
 def extract_zip(zip_path: str) -> Path:
