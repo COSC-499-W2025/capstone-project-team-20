@@ -166,7 +166,7 @@ class ProjectAnalyzer:
             if choice in {"1", "2", "3", "4", "5", "6", "7"}:
                 if not self.zip_path:
                     if not self.load_zip():
-                        continue 
+                        return 
 
             if choice == "1":
                 self.analyze_git()
@@ -180,7 +180,6 @@ class ProjectAnalyzer:
                 self.analyze_languages()
             elif choice == "6":
                 self.run_all()
-            # TO DO: Write Functionality For Analyzing a New Folder
             elif choice == "7":
                 print ("\nLoading new project...")
                 if self.load_zip():
