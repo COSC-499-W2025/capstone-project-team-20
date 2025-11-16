@@ -1,17 +1,21 @@
 import os
 import shutil
-from src.ZipParser import parse, toString
+from pathlib import Path
+from typing import Iterable, Dict, Any, Set
+from src.ZipParser import parse, toString, extract_zip
 from src.analyzers.ProjectMetadataExtractor import ProjectMetadataExtractor
 from src.analyzers.GitRepoAnalyzer import GitRepoAnalyzer
 from src.FileCategorizer import FileCategorizer
-from src.analyzers.language_detector import detect_language_per_file
-from pathlib import Path
-from typing import Iterable
-from src.analyzers.GitRepoAnalyzer import GitRepoAnalyzer
-from src.ZipParser import extract_zip
+from src.analyzers.language_detector import detect_language_per_file, analyze_language_share
 from utils.RepoFinder import RepoFinder
 from src.ProjectManager import ProjectManager
 from src.Project import Project
+from src.analyzers.folder_skill_analyzer import FolderSkillAnalyzer
+from src.analyzers.badge_engine import (
+    ProjectAnalyticsSnapshot,
+    assign_badges,
+    build_fun_facts,
+)
 
 class ProjectAnalyzer:
     """
@@ -31,11 +35,16 @@ class ProjectAnalyzer:
     def __init__(self):
         self.root_folder = None
         self.zip_path = None
+
         self.metadata_extractor = ProjectMetadataExtractor(self.root_folder)
         self.file_categorizer = FileCategorizer()
+
         self.repo_finder = RepoFinder()
         self.project_manager = ProjectManager()
         self.git_analyzer = GitRepoAnalyzer(self.repo_finder, self.project_manager)
+
+        self.folder_analyzer = FolderSkillAnalyzer()
+
     
     def _print_project(self, project: Project) -> None:
             print(f"Project: {project.name}")
@@ -68,13 +77,17 @@ class ProjectAnalyzer:
         path_obj = Path(self.zip_path)
         if not path_obj.exists() or path_obj.suffix.lower() != ".zip":
             print(f"Error: {path_obj} is not a valid zip file.")
-            return
-        
+            return []
+
         temp_dir = extract_zip(str(path_obj))
         try:
-            self.git_analyzer.run_analysis_from_path(temp_dir)
+            projects = self.git_analyzer.run_analysis_from_path(temp_dir)
         finally:
-            shutil.rmtree(temp_dir)
+            shutil.rmtree(temp_dir, ignore_errors=True)
+
+        # Optional: print summarized results here if desired
+        return projects or []
+
 
     def analyze_metadata(self):
         print("\nMetadata & File Statistics:")
@@ -135,12 +148,92 @@ class ProjectAnalyzer:
 
     def run_all(self):
         print("Running All Analyzers\n")
-        self.analyze_git()
-        self.analyze_metadata()
+
+        # 1) Git analysis – also gives us author / collaboration info
+        projects = self.analyze_git()
+        current_project: Project | None = projects[0] if projects else None
+
+        # 2) Metadata & category summary (drives size, duration, categories)
+        print("\nMetadata & File Statistics:")
+        meta_payload = self.metadata_extractor.extract_metadata() or {}
+        project_meta: Dict[str, Any] = meta_payload.get("project_metadata") or {}
+        category_summary: Dict[str, Dict[str, Any]] = meta_payload.get("category_summary") or {}
+
+        total_files = int(project_meta.get("total_files:", 0))
+        total_size_kb = float(project_meta.get("total_size_kb:", 0.0))
+        total_size_mb = float(project_meta.get("total_size_mb:", 0.0))
+        duration_days = int(project_meta.get("duration_days:", 0))
+
+        # 3) Language share + skills (filesystem-based, using the extracted zip)
+        languages: Dict[str, float] = {}
+        skills: Set[str] = set()
+
+        if self.zip_path:
+            path_obj = Path(self.zip_path)
+            if path_obj.exists() and path_obj.suffix.lower() == ".zip":
+                temp_dir = extract_zip(str(path_obj))
+                try:
+                    # language share
+                    languages = analyze_language_share(temp_dir)
+
+                    # skills via FolderSkillAnalyzer (top-12 skills per folder)
+                    self.folder_analyzer.analysis_results.clear()
+                    self.folder_analyzer.analyze_folder(temp_dir)
+                    for result in self.folder_analyzer.get_analysis_results():
+                        for s in result["analysis_data"]["skills"]:
+                            skills.add(s["skill"])
+                finally:
+                    shutil.rmtree(temp_dir, ignore_errors=True)
+
+        # 4) Author / collaboration info from ProjectManager
+        author_count = current_project.author_count if current_project else 1
+        collaboration_status = (
+            current_project.collaboration_status if current_project else "individual"
+        )
+
+        project_name = (
+            current_project.name
+            if current_project
+            else (getattr(self.root_folder, "name", None) or "project")
+        )
+
+        snapshot = ProjectAnalyticsSnapshot(
+            name=project_name,
+            total_files=total_files,
+            total_size_kb=total_size_kb,
+            total_size_mb=total_size_mb,
+            duration_days=duration_days,
+            category_summary=category_summary,
+            languages=languages,
+            skills=skills,
+            author_count=author_count,
+            collaboration_status=collaboration_status,
+        )
+
+        badge_ids = assign_badges(snapshot)
+        fun_facts = build_fun_facts(snapshot, badge_ids)
+
+        # 5) Display badges & fun facts alongside existing analytics
+        print("\n=== BADGES ===")
+        if badge_ids:
+            for b in badge_ids:
+                print(f"  - {b}")
+        else:
+            print("  (no badges assigned)")
+
+        print("\n=== FUN FACTS ===")
+        if fun_facts:
+            for f in fun_facts:
+                print(f"  • {f}")
+        else:
+            print("  (no fun facts generated)")
+
+        # 6) Preserve existing outputs for project analytics
         self.analyze_categories()
         self.print_tree()
         self.analyze_languages()
         print("\nAnalyses complete.\n")
+
 
     def run(self):
         while True:
