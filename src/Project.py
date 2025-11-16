@@ -24,6 +24,7 @@ class Project:
     languages: List[str] = list_field()
     frameworks: List[str] = list_field()
     skills_used: List[str] = list_field()
+    badges: List[str] = list_field()
     individual_contributions: List[str] = list_field()
     collaboration_status: Literal["individual", "collaborative"] = "individual"
     date_created: Optional[datetime] = None
@@ -43,6 +44,16 @@ class Project:
 
         # Ensure author_count is consistent with the authors list.
         proj_dict["author_count"] = len(self.authors)
+
+        # Serialize list-based fields to JSON strings.
+        for field_name in [
+            "authors",
+            "languages",
+            "frameworks",
+            "skills_used",
+            "individual_contributions",
+            "badges",
+        ]: proj_dict[field_name] = json.dumps(proj_dict[field_name])
 
         # Serialize datetime objects to ISO 8601 format strings.
         proj_dict["date_created"] = self.date_created.isoformat() if self.date_created else None
@@ -74,6 +85,21 @@ class Project:
                 proj_dict_copy[field_name] = datetime.fromisoformat(value)
             else:
                 proj_dict_copy[field_name] = None
+
+        # Deserialize JSON strings back into lists.
+        for field_name in [
+            "authors",
+            "languages",
+            "frameworks",
+            "skills_used",
+            "individual_contributions",
+            "badges",                      # <-- NEW
+        ]:
+            value = proj_dict_copy.get(field_name)
+            if isinstance(value, str):
+                proj_dict_copy[field_name] = json.loads(value)
+            elif value is None:
+                proj_dict_copy[field_name] = []
 
         # Ensure only known fields are passed to the constructor.
         known_keys = {f.name for f in cls.__dataclass_fields__.values()}

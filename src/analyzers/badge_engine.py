@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Dict, List, Set
+from typing import Any, Dict, Iterable, List, Set
 
 
 @dataclass
@@ -189,3 +189,20 @@ def build_fun_facts(snapshot: ProjectAnalyticsSnapshot, badges: List[str]) -> Li
         facts.append("Containerization is part of this project’s deployment story.")
 
     return facts
+
+
+def aggregate_badges(projects: Iterable[Any]) -> Dict[str, int]:
+    """
+    Aggregate how many projects earned each badge.
+
+    This is what you’ll use for the user's 'profile' view:
+    - badge_id -> number of projects that have this badge.
+    """
+    totals: Dict[str, int] = {}
+
+    for proj in projects:
+        badge_list = getattr(proj, "badges", None) or []
+        for b in badge_list:
+            totals[b] = totals.get(b, 0) + 1
+
+    return totals
