@@ -107,8 +107,6 @@ Log Checkbox:
 
 ![week 9 log](imagesForKaanLogs/week_9_log.png)
 
-Couldn't reach evaluations for this week, as they were inaccessible.
-
 ### Weekly Goals
 
 This week, I created the entire Skill Analyzer subsystem, which included the implementation of the `SkillExtractor`, `FolderSkillAnalyzer`, and `analyze_any` modules. This system serves as the foundation for detecting and evaluating programming languages, frameworks, and tools used across different projects in the repository.
@@ -120,3 +118,22 @@ In addition, I wrote comprehensive unit tests for each module to ensure correctn
 - Verified that the `FolderSkillAnalyzer` exposed the correct public API and generated accurate analysis results.  
 - Tested that `analyze_any` properly coordinated both Git and non-Git folder analysis paths.  
 - Confirmed that the `SkillExtractor` consistently detected multiple languages, frameworks, and build tools in both filesystem and in-memory test environments.
+
+
+### Week 10-11
+
+Log Checkbox:
+
+![week 10 log](imagesForKaanLogs/week_10_log.png)
+
+Couldn't reach evaluations for this week.
+
+### Weekly Goals
+
+This week, I continued building out the analytics layer around the Skill Analyzer subsystem and started implementing a profile-level badge system.
+
+On the skills side, I refactored the original monolithic `skill_extractor.py` into a set of cohesive, testable components, including the `SkillExtractor`, `SkillEvidenceScanner`, `CodeStatsCollector`, `ProficiencyEstimator`, and associated data models and patterns. This compartmentalization makes the pipeline easier to extend and reason about, while preserving all existing detection capabilities for languages, frameworks, tools, and build systems. I also finalized the proficiency scoring logic, ensuring that Python proficiency incorporates code structure, typing usage, testing density, and documentation signals, and that frameworks, data tools, and infrastructure stacks receive consistent heuristic scores.
+
+In parallel, I collaborated with the team to design and partially implement a badge system that runs on top of the existing project analytics. This includes deriving project snapshots (metadata, language share, categories, and inferred skills), assigning badges based on thresholds (e.g., size, duration, test/docs balance, and stack composition), and wiring persistence so badges can be stored per project for later aggregation at the user profile level. The system is functional at the backend level but still in progress in terms of full integration and UI exposure.
+
+Finally, I reviewed and merged several teammates’ changes into the main branch, focusing on consistency with the new modular Skill Analyzer architecture, ensuring that their contributions integrated cleanly with the updated APIs and that the overall analytics flow remained stable and maintainable.
