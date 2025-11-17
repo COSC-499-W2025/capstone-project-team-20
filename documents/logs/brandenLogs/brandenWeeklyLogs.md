@@ -124,7 +124,19 @@ What I struggled with this week is finding a lot of time to put into the project
 
 Next week, I am continuing on with the ProjectAnalyzer. I have only just started this issue on Sunday, so it is being carried on into the following week. The ProjectAnalyzer will use all of our analyzers (GitRepoAnalyzer, FileCategorizer, ProjectMetadataExtractor, etc.) in a single component. This will also allow me to cleanup our main file, so that it only needs to ask for consent and call the ProjectAnalyzer. Additionally, I plan on cleaning up the rest of our repository, with just simple housekeeping like creating a dedicated Managers folder, cleaning up main, and synthesizing analyzers. This will correlate with issue [COSC-499-W2025/capstone-project-team-20#142](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/142)
 
+### **Week 11: November 10th - 16th**
 
+I did complete the week 10 **Tasks worked on** but, unfortunately i misunderstood and thought that last week was the one not to do, so i have this week's stuff, but can not screenshot my already completed week 10 **Tasks worked on** form. 
+
+**Weekly Goals Recap:**
+
+This week, I have completed Issue #142, a project analyzer and a cleanup of main. This issue/code has introduced the Project Analyzer. This analyzer synthesizes all of the other analyzers in one location. Its displayed in a menu where you can select which analyzer you would like to use, run all of them, switch the zipped folder being analyzed, or exit the app. Now, in main, we only need to call the Consent Manager and then the project analyzer. It greatly reduces clutter in main and is a major step to helping present our demonstration. I also completed a full test suite for the project analyzer. 
+
+I also completed multiple PR reviews (which will continue into sunday night), and now that we have the project analyzer, we have an even better idea and visualization for the general direction that our project is moving.
+
+This week, I was overall happy with my school progress and capstone progress. It was a well-deserved reading week, so i did take time to recouperate and get ready for the last stretch of this semester. Overall, I feel like we are in a great spot with our capstone project so I am happy with the overall progress this week!
+
+Next week, I have a few options for next steps. I think I may work on refactoring the git repo analyzer to improve its efficiency. Its currently our slowest analyzer by a considerable amount. I believe paralellizing it could greatly improve its efficiency, or refactoring exactly how its implemented. I did not make the original git repository analyzer so there will be some learning to do with how its currently implemented in order to make decisions on what could be changed. 
 
 
 
