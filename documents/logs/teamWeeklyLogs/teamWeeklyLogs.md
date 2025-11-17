@@ -249,15 +249,15 @@ Issue [COSC-499-W2025/capstone-project-team-20#146](https://github.com/COSC-499-
 
 **Burnup chart:**
 
-[Week 11 burnup chart](teamWeeklyLogsImages/)
+[Week 11 burnup chart](teamWeeklyLogsImages/week-11-burnup-chart.png)
 
 **Table View of Completed Tasks on Project Board:**
 
-[Week 11 completed tasks](teamWeeklyLogsImages/)
+[Week 11 completed tasks](teamWeeklyLogsImages/week_11_completed_tasks.png)
 
 **Table View of In-Progress Tasks on Project Board:**
 
-[Week 11 In-Progress tasks](teamWeeklyLogsImages/)
+[Week 11 In-Progress tasks](teamWeeklyLogsImages/week_11_in_progress.png)
 
 **Test Report:**
 
