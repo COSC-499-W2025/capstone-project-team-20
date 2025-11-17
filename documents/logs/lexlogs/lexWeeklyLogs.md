@@ -150,3 +150,25 @@ The next steps for the progress bar are to do individual implementations for the
 
 Issues closed:
 issue [COSC-499-W2025/capstone-project-team-20#158](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/158)
+
+## Week 10
+**Types of Tasks Worked On**
+![Week 10 Tasks](imagesForLexLogs/week_10_lexlog.png)
+
+**Recap of Goals**
+My goal was to continue implementation of:
+- [COSC-499-W2025/capstone-project-team-20#146](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/146)
+
+The focus for this week was on progress bar implementation into zip parser, in issue #160
+
+As with a few others of our team members I had a busy week 10 with many midterms, by the time I had free time to implement there were already some changes I needed to make.
+
+Had to fix some existing bugs in ProgressBar that arose from my shoddy job replacing variable names that resulted in some tests failing. I implemented progress bar into zip parser, and then realized some of the code I had already studied and familiarize myself with was completely different from refactoring changes, so i decided to hang back this week and focus more on reviewing the code of teammates in-order to better undertstand what my approach should be going forward. I also found a slight error in existing code that caused a test to fail for some uses but not for others, fixed this in Issue #182.
+
+Things are only getting busier so i really need to focus up for this final stretch of the term.
+
+One issue I am having at the moment is figuring out what to implement. Most of the core features are already implemented or in the process of being implemented, so I'm struggling to determine what to do next. Will bring this up at the next team meeting.
+
+Issues closed:
+- Issue #160
+- Issue #182 
