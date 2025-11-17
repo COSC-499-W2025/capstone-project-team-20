@@ -223,3 +223,38 @@ This includes all basic features and requirements for milestone 1. We have start
 **Test Report:**
 
 [Week 9 Test Report](teamWeeklyLogsImages/week_9_test_report.png)
+
+
+### Week 11 (November 10th - November 16th)
+
+**Work Performed:**
+- Branden Kennedy (42474551): This week, I implemented the Project Analyzer and cleaned up main.py. The project analyzer synthesizes all of our analyzers into one location. It shows a simple menu where you can select which analyzer youd like to use, use all of them, analyze a new zipped folder, or exit the application. Closing Issue #142. I also implemented a full test suite for the project analyzer and did multiple PR reviews. 
+
+- Necmi Kaan Sapoglu (17014796):
+
+- Lex Nash (84668540):
+
+- Dylan Alexander (16394025):
+
+- Sven Annist (42486720):
+
+**Features included in the project plan for this milestone are:**
+- Issues #30 up to and including 
+
+**Continuing tasks from last week and plan for the next week:**
+
+**Burnup chart:**
+
+[Week 11 burnup chart](teamWeeklyLogsImages/)
+
+**Table View of Completed Tasks on Project Board:**
+
+[Week 11 completed tasks](teamWeeklyLogsImages/)
+
+**Table View of In-Progress Tasks on Project Board:**
+
+[Week 11 In-Progress tasks](teamWeeklyLogsImages/)
+
+**Test Report:**
+
+[Week 11 Test Report](teamWeeklyLogsImages/)
