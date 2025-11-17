@@ -223,3 +223,42 @@ This includes all basic features and requirements for milestone 1. We have start
 **Test Report:**
 
 [Week 9 Test Report](teamWeeklyLogsImages/week_9_test_report.png)
+
+
+### Week 11 (November 10th - November 16th)
+
+**Work Performed:**
+- Branden Kennedy (42474551): This week, I implemented the Project Analyzer and cleaned up main.py. The project analyzer synthesizes all of our analyzers into one location. It shows a simple menu where you can select which analyzer youd like to use, use all of them, analyze a new zipped folder, or exit the application. Closing Issue #142. I also implemented a full test suite for the project analyzer and did multiple PR reviews. 
+
+- Necmi Kaan Sapoglu (17014796): This week I compertmantalized the monolith of a feature I had which was the skill extractor, also making minor tweaks where necessary to make sure that the pr would be easier to review and incremental under issue [COSC-499-W2025/capstone-project-team-20#36](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/36). I also started working on the badge feature and implemented the basic qualifications of a badge as well as developing the system itself to be functional, working on issue #114. I also did multiple PR reviews of my team mates codes.
+
+- Lex Nash (84668540): This week I implemented a progress bar into ZipParser, closing issue #160 and fixed a slight issue in another teammate's code, causing a test to fail, closing issue #182. Other than that I have been mostly focusing on reviewing teammate's code this week as I need to understand refactoring changes and new analysis tools in order to properly implement loading bars for them.
+
+- Dylan Alexander (16394025):
+
+- Sven Annist (42486720): Executed a comprehensive architectural refactoring of the Git repository analysis workflow. Repositioned GitRepoAnalyzer as a central orchestrator instead of a utility unit, significantly reducing complexity in main.py and improving overall code organization. Implemented an "upsert" (update/insert) mechanism in ProjectManager to prevent duplicate project record creation in the database. Additionally resolved a NameError in PDF document scraping logic by correcting pypdf library usage. Conducted a code review on PR #169 (ProgressBar x ZipParser). Closes Issues COSC-499-W2025/capstone-project-team-20#113 and COSC-499-W2025/capstone-project-team-20#123.
+
+**Features included in the project plan for this milestone are:**
+- Issues #30 up to and including 
+
+**Continuing tasks from last week and plan for the next week:**
+
+Issue [COSC-499-W2025/capstone-project-team-20#114](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/36) for Kaan. I will be continuing this issue next week to expand the badge system and integrate it so that it works in tandem with the rest of the program.
+
+Issue [COSC-499-W2025/capstone-project-team-20#146](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/146) for Lex. Finishing off the sub issues needed for this, including refactoring changes to allow a wider range of uses for the progress bar.
+
+**Burnup chart:**
+
+[Week 11 burnup chart](teamWeeklyLogsImages/week-11-burnup-chart.png)
+
+**Table View of Completed Tasks on Project Board:**
+
+[Week 11 completed tasks](teamWeeklyLogsImages/week_11_completed_tasks.png)
+
+**Table View of In-Progress Tasks on Project Board:**
+
+[Week 11 In-Progress tasks](teamWeeklyLogsImages/week_11_in_progress.png)
+
+**Test Report:**
+
+[Week 11 Test Report](teamWeeklyLogsImages/week_11_test_report.png)
