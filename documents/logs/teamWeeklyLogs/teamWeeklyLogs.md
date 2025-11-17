@@ -236,7 +236,7 @@ This includes all basic features and requirements for milestone 1. We have start
 
 - Dylan Alexander (16394025):
 
-- Sven Annist (42486720):
+- Sven Annist (42486720): Executed a comprehensive architectural refactoring of the Git repository analysis workflow. Repositioned GitRepoAnalyzer as a central orchestrator instead of a utility unit, significantly reducing complexity in main.py and improving overall code organization. Implemented an "upsert" (update/insert) mechanism in ProjectManager to prevent duplicate project record creation in the database. Additionally resolved a NameError in PDF document scraping logic by correcting pypdf library usage. Conducted a code review on PR #169 (ProgressBar x ZipParser). Closes Issues COSC-499-W2025/capstone-project-team-20#113 and COSC-499-W2025/capstone-project-team-20#123.
 
 **Features included in the project plan for this milestone are:**
 - Issues #30 up to and including 
