@@ -261,4 +261,4 @@ Issue [COSC-499-W2025/capstone-project-team-20#146](https://github.com/COSC-499-
 
 **Test Report:**
 
-[Week 11 Test Report](teamWeeklyLogsImages/)
+[Week 11 Test Report](teamWeeklyLogsImages/week_11_test_report.png)
