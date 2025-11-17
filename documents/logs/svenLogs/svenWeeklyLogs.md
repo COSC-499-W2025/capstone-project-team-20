@@ -98,3 +98,25 @@ No significant problems were encountered this week. Development proceeded smooth
 
 ### Looking Ahead:
 With the foundation for document handling now in place, the immediate next step is to address **Issue #151** by expanding the application's input handling to accept direct file and folder paths. Following that, I plan to explore how to best utilize the aggregated text from the `DocumentScraper`, either by piping it into a stylistic analysis tool or an LLM for deeper insights. I also plan to expand the `document_handler` to support a wider range of file types as needed.
+
+
+## Week 11: Nov 10th-Nov 16th
+
+### Tasks worked on:
+**PR #168 - Refactor and attach code analysis to storage**: Completed comprehensive architectural refactoring of the Git repository analysis workflow, extracting larger methods from `GitRepoAnalyzer` into a utility class `RepoFinder.py`. Repositioned `GitRepoAnalyzer` as a central orchestrator managing the entire find-analyze-persist lifecycle, reducing complexity in `main.py`. Implemented an "upsert" (update/insert) mechanism in `ProjectManager` to prevent duplicate project records in the database. Resolved a `NameError` in PDF document scraping logic by correcting `pypdf` library usage.
+
+_Due to the peer eval window closing on the 9th, I was not able to get a screenshot in time_
+
+### Weekly Goals Recap:
+The primary focus this week was on improving the architectural integrity of the codebase through strategic refactoring. The refactoring effort consolidated responsibilities into appropriately scoped modules, transforming `GitRepoAnalyzer` from a monolithic implementation into a clean orchestrator pattern. This separation of concerns enhances testability and maintainability while ensuring the application's data persistence layer remains consistent and free of duplicate entries.
+
+Architectural improvements included replacing flawed integration tests with focused unit tests utilizing `unittest.mock` for component isolation, while retaining real repository fixtures for core Git analysis validation. The implementation addresses issues #113 and #123.
+
+### Code Reviews:
+*   **PR #169 - ProgressBar x ZipParser (Lex)**: Reviewed user experience enhancement that introduces a progress bar to the ZipParser extraction process alongside print formatting improvements for a smoother user experience, closing issue #160.
+
+### Problems Encountered:
+Initial integration tests were failing due to architectural limitations in the original design. The refactoring addressed these limitations by decomposing monolithic methods and establishing clearer component boundaries, enabling more robust and isolated unit testing.
+
+### Looking Ahead:
+With the architectural foundation now solidified through improved separation of concerns and the upsert mechanism preventing data inconsistencies, the next phase will focus on expanding the application's capabilities while maintaining the established modularity and testability standards.
