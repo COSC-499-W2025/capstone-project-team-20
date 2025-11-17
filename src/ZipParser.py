@@ -5,6 +5,7 @@ from pathlib import Path, PurePosixPath
 
 from src.ProjectFile import ProjectFile
 from src.ProjectFolder import ProjectFolder
+from src.ProgressBar import Bar
 
 def add_to_tree(file: ZipInfo, parent:str, dirs:dict[str, ProjectFolder]) -> None:
     "Adds a file or folder to the project tree."
@@ -59,10 +60,20 @@ def ignore_file_criteria(file: ZipInfo) -> bool:
 
 def parse(path: str) -> ProjectFolder:
     '''Traverses zipped folder and creates a tree of ProjectFolder and ProjectFile objects, returns the root of the tree as an object'''
+
     with ZipFile(path, 'r') as z:
         start=True
         root: ProjectFolder
         dirs: dict[str,ProjectFolder] = {}
+
+        #-----     PROGRESS BAR     -----#
+        #Get total size of files in zip folder
+        total_bytes = 0
+        for file in z.infolist():
+            total_bytes+=file.file_size
+        my_bar = Bar(total_bytes)
+        #--------------------------------#
+
         for file in z.infolist():
             if ignore_file_criteria(file):
                 continue
@@ -82,6 +93,11 @@ def parse(path: str) -> ProjectFolder:
                 else:
                     parent = "/".join(parent_parts[:-1]) + "/"
                     add_to_tree(file,parent,dirs)
+
+            #-----     PROGRESS BAR     -----#
+            my_bar.update(file.file_size)
+            #--------------------------------#
+
     return (root)
 
 def extract_zip(zip_path: str) -> Path:
