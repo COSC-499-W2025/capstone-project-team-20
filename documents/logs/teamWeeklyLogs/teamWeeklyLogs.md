@@ -232,7 +232,7 @@ This includes all basic features and requirements for milestone 1. We have start
 
 - Necmi Kaan Sapoglu (17014796): This week I compertmantalized the monolith of a feature I had which was the skill extractor, also making minor tweaks where necessary to make sure that the pr would be easier to review and incremental under issue [COSC-499-W2025/capstone-project-team-20#36](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/36). I also started working on the badge feature and implemented the basic qualifications of a badge as well as developing the system itself to be functional, working on issue #114. I also did multiple PR reviews of my team mates codes.
 
-- Lex Nash (84668540):
+- Lex Nash (84668540): This week I implemented a progress bar into ZipParser, closing issue #160 and fixed a slight issue in another teammate's code, causing a test to fail, closing issue #182. Other than that I have been mostly focusing on reviewing teammate's code this week as I need to understand refactoring changes and new analysis tools in order to properly implement loading bars for them.
 
 - Dylan Alexander (16394025):
 
@@ -244,6 +244,8 @@ This includes all basic features and requirements for milestone 1. We have start
 **Continuing tasks from last week and plan for the next week:**
 
 Issue [COSC-499-W2025/capstone-project-team-20#114](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/36) for Kaan. I will be continuing this issue next week to expand the badge system and integrate it so that it works in tandem with the rest of the program.
+
+Issue [COSC-499-W2025/capstone-project-team-20#146](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/146) for Lex. Finishing off the sub issues needed for this, including refactoring changes to allow a wider range of uses for the progress bar.
 
 **Burnup chart:**
 
