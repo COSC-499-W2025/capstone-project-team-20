@@ -19,7 +19,7 @@ Notes:
 import csv
 import subprocess
 from pathlib import Path
-from typing import Tuple, List, Dict
+from typing import Dict, List, Tuple
 
 
 def ensure_gitignore() -> bool:
