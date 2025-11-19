@@ -12,6 +12,8 @@ class Bar:
     stages_remaining:int   #stages remaining
     sub_stage_idx:int    #from 0 to 7, how far through the sub-stage are you 
     stage_progress:int      #amount of bytes in current stage
+    
+    TOTAL_digits:int
 
     bar_complete:str   #string representing completed portion
     SUB_CHARS = []   #in between stages will go here
@@ -19,6 +21,7 @@ class Bar:
 
     def __init__(self, TOTAL_BYTES:int):
         self.TOTAL_BYTES = TOTAL_BYTES
+        self.TOTAL_digits = len(str(TOTAL_BYTES))
         self.current_total = 0
         self.stages_completed = 0
 
@@ -64,7 +67,7 @@ class Bar:
             self.current_total = self.TOTAL_BYTES
             self.sub_stage_idx = 8
         
-        print('|' + self.bar_complete + self.SUB_CHARS[self.sub_stage_idx] + self.bar_remaining + '|' + ' (' + str(self.current_total) + ' Bytes/' + str(self.TOTAL_BYTES) + ' Bytes)\r',end="")
+        print('|' + self.bar_complete + self.SUB_CHARS[self.sub_stage_idx] + self.bar_remaining + '|' + ' (' + f'{self.current_total:0{self.TOTAL_digits}d}' + ' Bytes/' + str(self.TOTAL_BYTES) + ' Bytes)\r',end="")
     
     def stageup(self):
         '''increase the stage by one'''
@@ -110,7 +113,7 @@ class Bar:
 
                 #print:
                 #(\r returns cursor to the start of the line, end="" prevents newline, so essentially the string will keep replacing itself)
-                print('|' + self.bar_complete + self.SUB_CHARS[self.sub_stage_idx] + self.bar_remaining + '|' + ' (' + str(self.current_total) + ' Bytes/' + str(self.TOTAL_BYTES) + ' Bytes)\r',end="")
+                print('|' + self.bar_complete + self.SUB_CHARS[self.sub_stage_idx] + self.bar_remaining + '|' + ' (' + f'{self.current_total:0{self.TOTAL_digits}d}' + ' Bytes/' + str(self.TOTAL_BYTES) + ' Bytes)\r',end="")
                 #time.sleep(0.0001)
         else:
-            print('|' + self.bar_complete + self.SUB_CHARS[self.sub_stage_idx] + self.bar_remaining + '|' + ' (' + str(self.current_total) + ' Bytes/' + str(self.TOTAL_BYTES) + ' Bytes)\r',end="")
+            print('|' + self.bar_complete + self.SUB_CHARS[self.sub_stage_idx] + self.bar_remaining + '|' + ' (' + f'{self.current_total:0{self.TOTAL_digits}d}' + ' Bytes/' + str(self.TOTAL_BYTES) + ' Bytes)\r', end='')

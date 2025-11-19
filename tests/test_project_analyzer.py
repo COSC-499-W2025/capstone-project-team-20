@@ -46,7 +46,7 @@ def test_analyze_git_calls_run_analysis_from_path():
                     git_mock.run_analysis_from_path.assert_called_once()
                     called_arg = git_mock.run_analysis_from_path.call_args[0][0]
                     assert isinstance(called_arg, Path)
-                    assert str(called_arg) == "/tmp/extracted"
+                    assert str(called_arg) == "/tmp/extracted" or str(called_arg) == "\\tmp\\extracted"
                     mock_rmtree.assert_called_once_with(Path("/tmp/extracted"))
 
 
