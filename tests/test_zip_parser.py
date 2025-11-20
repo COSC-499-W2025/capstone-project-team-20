@@ -173,6 +173,24 @@ def test_ignore_apple_double_files():
     assert len(root.children) == 1  # Only file.txt
     assert root.children[0].file_name == 'file.txt'
 
+def test_ignore_binary_file():
+    """Test that binary files are ignored correctly without triggering duplicate warnings"""
+    zip_path = create_test_zip('binary.zip', [
+        ('project', True),
+        ('project/binary.bin', False),
+        ('project/normal.txt', False),
+    ])
+
+    root = ZipParser.parse(zip_path)
+    assert root.name == 'project'
+    # normal.txt should be included
+    normal_file = next((f for f in root.children if f.file_name == 'normal.txt'), None)
+    assert normal_file is not None
+    # binary.bin should be ignored
+    binary_file = next((f for f in root.children if f.file_name == 'binary.bin'), None)
+    assert binary_file is None
+
+
 
 def test_nested_macosx_in_path():
     """Test __MACOSX appearing anywhere in the path"""
@@ -236,8 +254,8 @@ def test_complex_real_world_structure():
     
     root = ZipParser.parse(zip_path)
     assert root.name == 'my-project'
-    # Should have .git, src, tests (no __MACOSX)
-    assert len(root.subdir) == 3
+    # Should have src, tests (no __MACOSX, no .git)
+    assert len(root.subdir) == 2
     # Should have README.md and .gitignore at root
     assert len(root.children) == 2
 
