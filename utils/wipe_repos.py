@@ -1,6 +1,12 @@
 """
 This module wipes each repository from repo_dataset.csv from your machine.
 For use after cloning and analyzing the repos to reclaim disk space.
+
+Workflow:
+1. python3 -m utils.clone_repos
+2. python3 -m utils.zip_repos
+3. python3 -m utils.analyze_repos
+4. python3 -m utils.wipe_repos <- THIS SCRIPT
 """
 
 import csv
