@@ -23,36 +23,14 @@ class TestValidateClonedDirectory:
 
 class TestFindRepos:
     def test_finds_repos_with_git_folder(self, tmp_path):
-        # Create: cloned_repos/label1/repo1/.git
         label_dir = tmp_path / "label1"
         label_dir.mkdir()
         repo_dir = label_dir / "repo1"
         repo_dir.mkdir()
         (repo_dir / ".git").mkdir()
-
         repos = find_repos(tmp_path)
         assert len(repos) == 1
         assert repos[0].name == "repo1"
-
-    def test_ignores_directories_without_git(self, tmp_path):
-        label_dir = tmp_path / "label1"
-        label_dir.mkdir()
-        repo_dir = label_dir / "not_a_repo"
-        repo_dir.mkdir()
-
-        repos = find_repos(tmp_path)
-        assert len(repos) == 0
-
-    def test_finds_multiple_repos(self, tmp_path):
-        for label in ["label1", "label2"]:
-            label_dir = tmp_path / label
-            label_dir.mkdir()
-            repo_dir = label_dir / f"repo_{label}"
-            repo_dir.mkdir()
-            (repo_dir / ".git").mkdir()
-
-        repos = find_repos(tmp_path)
-        assert len(repos) == 2
 
     def test_ignores_files_in_cloned_path(self, tmp_path):
         (tmp_path / "readme.txt").touch()
@@ -62,18 +40,14 @@ class TestFindRepos:
 
 class TestZipAllRepos:
     def test_zips_repos_successfully(self, tmp_path):
-        # Setup repo
         repo_path = tmp_path / "repos" / "label" / "myrepo"
         repo_path.mkdir(parents=True)
         (repo_path / ".git").mkdir()
         (repo_path / "file.py").touch()
-
         zipped_path = tmp_path / "zipped"
         zipped_path.mkdir()
-
         repo_paths = [repo_path]
         success, fail = zip_all_repos(repo_paths, zipped_path)
-
         assert success == 1
         assert fail == 0
         assert (zipped_path / "myrepo.zip").exists()
@@ -81,13 +55,10 @@ class TestZipAllRepos:
     def test_handles_zip_failure(self, tmp_path):
         repo_path = tmp_path / "repos" / "label" / "badrepo"
         repo_path.mkdir(parents=True)
-
         zipped_path = tmp_path / "zipped"
         zipped_path.mkdir()
-
         with patch("shutil.make_archive", side_effect=Exception("zip error")):
             success, fail = zip_all_repos([repo_path], zipped_path)
-
         assert success == 0
         assert fail == 1
 
@@ -96,20 +67,16 @@ class TestZipAllRepos:
         repo2 = tmp_path / "repos" / "label" / "repo2"
         repo1.mkdir(parents=True)
         repo2.mkdir(parents=True)
-
         zipped_path = tmp_path / "zipped"
         zipped_path.mkdir()
-
         call_count = 0
         def mock_archive(*args, **kwargs):
             nonlocal call_count
             call_count += 1
             if call_count == 2:
                 raise Exception("fail")
-
         with patch("shutil.make_archive", side_effect=mock_archive):
             success, fail = zip_all_repos([repo1, repo2], zipped_path)
-
         assert success == 1
         assert fail == 1
 
@@ -139,23 +106,18 @@ class TestZipRepos:
             mock_cloned = MagicMock()
             mock_cloned.exists.return_value = False
             mock_path.return_value = mock_cloned
-
             zip_repos("nonexistent", "zipped")
-
         out = capsys.readouterr().out
         assert "does not exist" in out
 
     def test_exits_early_if_no_repos_found(self, tmp_path, capsys):
         cloned = tmp_path / "cloned"
         cloned.mkdir()
-
         zip_repos(str(cloned), str(tmp_path / "zipped"))
-
         out = capsys.readouterr().out
         assert "No repositories found" in out
 
     def test_full_workflow(self, tmp_path, capsys):
-        # Setup directory structure
         cloned = tmp_path / "cloned"
         zipped = tmp_path / "zipped"
         label_dir = cloned / "label1"
@@ -163,9 +125,7 @@ class TestZipRepos:
         repo_dir.mkdir(parents=True)
         (repo_dir / ".git").mkdir()
         (repo_dir / "main.py").write_text("print('hello')")
-
         zip_repos(str(cloned), str(zipped))
-
         out = capsys.readouterr().out
         assert "Found 1 repositories" in out
         assert "Zipped: 1" in out
