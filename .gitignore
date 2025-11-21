@@ -52,3 +52,4 @@ coverage.xml
 *.whl
 dist/
 build/
+cloned_repos/
