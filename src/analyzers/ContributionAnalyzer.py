@@ -1,17 +1,17 @@
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List, Dict, Set, Tuple
-from git import Repo, Commit
+from git import Repo
 
 @dataclass
 class ContributionStats:
     """
-    A data container for aggregated contribution statistics.
-    Can be used for a single user, a group of users, or an entire project.
+    A data container for contribution statistics. Can be used for an individual
+    author or aggregated for a group or an entire project.
     """
-    total_commits: int = 0
     lines_added: int = 0
     lines_deleted: int = 0
+    total_commits: int = 0
     files_touched: Set[str] = field(default_factory=set)
     contribution_by_type: Dict[str, int] = field(default_factory=lambda: {"code": 0, "docs": 0, "test": 0})
 
@@ -23,7 +23,7 @@ class ContributionStats:
 
 class ContributionAnalyzer:
     """
-    Analyzes and aggregates the contributions of authors in a Git repository.
+    Analyzes all author contributions in a Git repository in a single pass.
     """
     def _categorize_file_path(self, path: str) -> str:
         """Categorizes a file path into 'code', 'docs', or 'test'."""
@@ -34,49 +34,38 @@ class ContributionAnalyzer:
             return "docs"
         return "code"
 
-    def analyze(self, repo_path: str, selected_author_names: List[str]) -> Tuple[ContributionStats, ContributionStats]:
+    def analyze(self, repo_path: str) -> Dict[str, ContributionStats]:
         """
-        Crawls a Git repository to produce aggregated contribution statistics.
-
-        This method iterates through all commits to calculate two sets of stats:
-        1. Aggregated stats for the `selected_author_names`.
-        2. Aggregated stats for the entire project (all authors).
+        Performs a comprehensive analysis of a Git repository, calculating
+        detailed contribution statistics for every author in a single pass.
 
         Args:
             repo_path: The file system path to the Git repository.
-            selected_author_names: A list of author names to aggregate for the primary analysis.
 
         Returns:
-            A tuple containing two ContributionStats objects:
-            (stats_for_selected_authors, stats_for_total_project)
+            A dictionary mapping each author's name to their ContributionStats object.
         """
         repo = Repo(repo_path)
-        selected_stats = ContributionStats()
-        total_stats = ContributionStats()
+        author_stats: Dict[str, ContributionStats] = {}
 
         for commit in repo.iter_commits():
             author_name = commit.author.name
 
-            # Aggregate stats for the entire project in every iteration
-            total_stats.total_commits += 1
+            # Get or create the stats object for the commit author.
+            if author_name not in author_stats:
+                author_stats[author_name] = ContributionStats()
+
+            stats = author_stats[author_name]
+            stats.total_commits += 1
+
             commit_stats = commit.stats.files
-            for file_path, file_stats in commit_stats.items():
-                lines_changed = file_stats['insertions'] + file_stats['deletions']
-                total_stats.lines_added += file_stats['insertions']
-                total_stats.lines_deleted += file_stats['deletions']
-                total_stats.files_touched.add(file_path)
+            for file_path, file_stat_values in commit_stats.items():
+                lines_changed = file_stat_values['insertions'] + file_stat_values['deletions']
+                stats.lines_added += file_stat_values['insertions']
+                stats.lines_deleted += file_stat_values['deletions']
+                stats.files_touched.add(file_path)
+
                 category = self._categorize_file_path(file_path)
-                total_stats.contribution_by_type[category] += lines_changed
+                stats.contribution_by_type[category] += lines_changed
 
-            # If the author is in the selected list, aggregate their stats separately
-            if author_name in selected_author_names:
-                selected_stats.total_commits += 1
-                for file_path, file_stats in commit_stats.items():
-                    lines_changed = file_stats['insertions'] + file_stats['deletions']
-                    selected_stats.lines_added += file_stats['insertions']
-                    selected_stats.lines_deleted += file_stats['deletions']
-                    selected_stats.files_touched.add(file_path)
-                    category = self._categorize_file_path(file_path)
-                    selected_stats.contribution_by_type[category] += lines_changed
-
-        return selected_stats, total_stats
+        return author_stats
