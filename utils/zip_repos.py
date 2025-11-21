@@ -11,7 +11,6 @@ import shutil
 from pathlib import Path
 from typing import Tuple
 
-
 def zip_repos(cloned_dir: str = 'cloned_repos', zipped_dir: str = 'zipped_repos') -> None:
     """Zip all cloned repositories for analysis."""
     cloned_path = Path(cloned_dir)
@@ -29,7 +28,7 @@ def zip_repos(cloned_dir: str = 'cloned_repos', zipped_dir: str = 'zipped_repos'
         return
     
     print(f"\n📦 Found {len(repo_paths)} repositories to zip\n")
-    
+
     success_count, fail_count = zip_all_repos(repo_paths, zipped_path)
     
     print_summary(success_count, fail_count, zipped_dir)

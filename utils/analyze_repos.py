@@ -6,20 +6,10 @@ Workflow:
 2. Run 'python3 -m utils.zip_repos' to zip them
 3. Run 'python3 -m utils.analyze_repos' to analyze  <- THIS SCRIPT
 4. Run 'python3 -m utils.wipe_repos' to clean up
-
-This script:
-- Reads each .zip file from zipped_repos/
-- Runs GitRepoAnalyzer to extract author/collaboration data
-- Parses zip structure and extracts metadata (files, size, dates)
-- Detects languages used in the project
-- Persists Project objects to the database via ProjectManager
-- Cleans up temporary files
 """
-
 import shutil
 from pathlib import Path
-from typing import List, Optional, Set, Tuple
-
+from typing import List, Set, Tuple
 from src.ZipParser import parse, extract_zip
 from src.ProjectManager import ProjectManager
 from src.Project import Project
