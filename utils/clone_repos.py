@@ -6,9 +6,10 @@ you can run analysis on them, store that analysis locally, and then delete them.
 The Project objects associated with the repos will persist.
 
 Workflow:
-1. Run 'python3 -m utils.clone_repos.py' to clone repositories into cloned_repos/
-2. Run 'python3 -m utils.analyze_cloned_repos' to analyze the repos and store results locally.
-3. Run 'python3 -m utils.wipe_repos' to remove the repos from your machine.
+1. Run 'python3 -m utils.clone_repos.py' to clone repositories into cloned_repos/ <- THIS SCRIPT
+1. Run 'python3 -m utils.zip_repos.py' to zip each repository into zipped_repos/
+3. Run 'python3 -m utils.analyze_cloned_repos' to analyze the repos and store results locally.
+4. Run 'python3 -m utils.wipe_repos' to remove the repos from your machine.
 
 Notes: 
 - These repos are cloned to the cloned_repos/ directory within our project, where they're organized by repo_label (e.g. mobile_app)
