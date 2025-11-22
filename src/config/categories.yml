@@ -47,6 +47,10 @@ categories:
       - jest
       - mocha
       - vitest
+      - testclasses
+      - test_classes
+      - testsuite
+      - testclass
 
   docs:
     # Documentation, markdown, readme, and metadata files
