@@ -44,6 +44,43 @@ class ProjectAnalyzer:
             print(f"  - Status: {project.collaboration_status}\n")
             # Will display other variables from Project classes in the future
 
+    def batch_analyze(self, zipped_repos_dir: str = 'zipped_repos') -> None:
+        """
+        Loops through all zipped repositories in a directory (`zipped_repos/` by default) and calls run_all(). Called from utils/analyze_repos.py
+        """
+        zipped_repos_path = Path(zipped_repos_dir)
+        if not zipped_repos_path.exists():
+            print(f"Nothing to analyze - {zipped_repos_dir}/ doesn't exist")
+            return
+        
+        zip_files = list(zipped_repos_path.rglob('*.zip'))
+        if not zip_files:
+            print(f"No .zip files found in {zipped_repos_dir}/")
+            return
+        
+        print(f"\nBatch analyzing {len(zip_files)} repositories...\n")
+        analyzed, failed = 0, 0
+
+        for zip_path in zip_files:
+            repo_name = zip_path.stem
+            try:
+                self.zip_path = str(zip_path)
+                self.root_folder = parse(self.zip_path)
+                self.metadata_extractor = ProjectMetadataExtractor(self.root_folder)
+                print(f"\n{'='*50}")
+                print(f"Analyzing: {repo_name}")
+                print(f"{'='*50}")
+                self.run_all()
+                analyzed += 1
+
+            except Exception as e:
+                print(f"❌ {repo_name}: {str(e)[:50]}")
+                failed += 1
+
+        print(f"\n{'='*40}")
+        print(f"Analyzed: {analyzed} | Failed: {failed}")
+        print(f"{'='*40}\n")
+
     def load_zip(self):
         """Prompts user for ZIP file and parses into folder tree"""
         zip_path = input("Please enter the path to the zipped folder: ")
@@ -112,25 +149,17 @@ class ProjectAnalyzer:
             print(f" - {lang}")
     
     def display_analysis_results(self, projects: Iterable[Project]) -> None:
-        """
-        Prints the analysis results for a list of Project objects.
-
-        Args:
-            projects: The list of analyzed Project objects to display.
-        """
-        projects_iter = iter(projects)
-        try:
-            first_project = next(projects_iter)
-        except StopIteration:
+        projects_list = list(projects)
+        if not projects_list:
             print("\nNo analysis results to display.")
             return
-        print("\n" + "="*30)
+        
+        print(f"\n{'='*30}")
         print("      Analysis Results")
-        print("="*30 + "\n")
-        self._print_project(first_project)
-
-        for project in projects_iter:
-            self._print_project(project)
+        print(f"{'='*30}")
+        
+        for project in projects_list:
+            project.display()
 
 
     def run_all(self):
