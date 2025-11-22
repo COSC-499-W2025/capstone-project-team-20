@@ -3,10 +3,9 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Set
 
-from analyzers.skill_models import Evidence, SkillProfileItem, TAXONOMY
-from analyzers.skill_patterns import DEP_TO_SKILL, SNIPPET_PATTERNS, KNOWN_CONFIG_HINTS
-from analyzers.skill_proficiency import ProficiencyEstimator
-from analyzers.code_metrics_analyzer import CodeMetricsAnalyzer, CodeFileAnalysis
+from .code_metrics_analyzer import CodeMetricsAnalyzer, CodeFileAnalysis
+from .skill_models import Evidence, SkillProfileItem, TAXONOMY
+from .skill_patterns import DEP_TO_SKILL, SNIPPET_PATTERNS, KNOWN_CONFIG_HINTS
 
 
 class SkillAnalyzer:
@@ -26,7 +25,6 @@ class SkillAnalyzer:
     def __init__(self, root_dir: Path) -> None:
         self.root_dir = Path(root_dir)
         self.metrics_analyzer = CodeMetricsAnalyzer(self.root_dir)
-        self.prof_estimator = ProficiencyEstimator()
 
     # ------------------------------------------------------------------
     # Public entry point
@@ -248,41 +246,25 @@ class SkillAnalyzer:
     # Building SkillProfileItem objects
     # ------------------------------------------------------------------
 
-    def _build_skill_profiles(
-        self, evidence: List[Evidence], stats: Dict[str, Any]
-    ) -> List[SkillProfileItem]:
-        """
-        Aggregate Evidence into SkillProfileItem objects and compute proficiency.
-        """
-        # Group evidence by skill
+    def _build_skill_profiles(self, evidence: List[Evidence], stats: Dict[str, Any]) -> List[SkillProfileItem]:
         by_skill: Dict[str, List[Evidence]] = {}
         for e in evidence:
             by_skill.setdefault(e.skill, []).append(e)
 
         profiles: List[SkillProfileItem] = []
-
         for skill, ev_list in by_skill.items():
             if not skill:
                 continue
-
-            score = self.prof_estimator.estimate(skill, ev_list, stats)
-
-            # Simple confidence heuristic: more distinct evidence sources → more confidence
-            distinct_sources = len({e.source for e in ev_list})
-            confidence = min(0.99, 0.4 + 0.15 * distinct_sources)
-
             profiles.append(
                 SkillProfileItem(
                     skill=skill,
-                    proficiency=score,
-                    confidence=confidence,
                     evidence=ev_list,
                 )
             )
 
-        # Sort descending by proficiency then confidence for nicer display
+        # Sort by “importance” = evidence count
         profiles.sort(
-            key=lambda p: (p.proficiency, p.confidence, len(p.evidence)),
+            key=lambda p: len(p.evidence),
             reverse=True,
         )
         return profiles
