@@ -59,7 +59,7 @@ class CodeMetricsAnalyzer:
             if category in ("ignored", None):
                 continue
 
-            is_test = (category == "tests")
+            is_test = self._is_test_file(rel_path, category)
             if category not in ("code", "tests"):
                 # For now this is empty as analysis is only done in code/test files.
                 continue
@@ -283,6 +283,36 @@ class CodeMetricsAnalyzer:
             return True
 
         return False
+
+    def _is_test_file(self, rel_path: Path, category: Optional[str]) -> bool:
+        """
+        Heuristic to decide whether a file should be treated as a test file.
+
+        We combine:
+          - FileCategorizer category (if it explicitly says "tests"/"test"),
+          - Common path/name patterns: tests/, test_*.py, *_test.py, etc.
+        """
+        if category in ("tests", "test"):
+            return True
+
+        # Normalize parts and name for path-based heuristics
+        parts = [p.lower() for p in rel_path.parts]
+        name = rel_path.name.lower()
+
+        # Typical test directories: tests/, test/, __tests__/, etc.
+        if any(part in ("tests", "test", "__tests__") for part in parts):
+            return True
+
+        # Typical test filenames: test_foo.py, foo_test.py, *.spec.js, *.test.ts
+        if name.startswith("test_") or name.endswith("_test.py"):
+            return True
+        if name.endswith(".spec.js") or name.endswith(".test.js"):
+            return True
+        if name.endswith(".spec.ts") or name.endswith(".test.ts"):
+            return True
+
+        return False
+
 
     def _looks_like_function_def(self, stripped: str, language: Optional[str]) -> bool:
         lang = (language or "").lower()
