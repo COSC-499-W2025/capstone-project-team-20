@@ -12,6 +12,9 @@ from src.ZipParser import extract_zip
 from utils.RepoFinder import RepoFinder
 from src.ProjectManager import ProjectManager
 from src.Project import Project
+from src.analyzers.skill_analyzer import SkillAnalyzer
+from src.analyzers.code_metrics_analyzer import CodeMetricsAnalyzer
+
 
 class ProjectAnalyzer:
     """
@@ -111,6 +114,115 @@ class ProjectAnalyzer:
         for lang in sorted(langs):
             print(f" - {lang}")
     
+    def analyze_skills(self):
+        """
+        Run skill analysis on the currently loaded zip project.
+
+        Produces:
+          - A resume-friendly list of languages and tools/frameworks,
+          - High-level feedback about testing, documentation, modularity, etc.
+        """
+        if not self.zip_path:
+            print("No project loaded. Please load a zip file first.\n")
+            return
+
+        path_obj = Path(self.zip_path)
+        if not path_obj.exists() or path_obj.suffix.lower() != ".zip":
+            print(f"Error: {path_obj} is not a valid zip file.")
+            return
+
+        print("\nSkill Analysis (languages, frameworks, tooling):")
+        temp_dir = extract_zip(str(path_obj))
+        try:
+            skill_analyzer = SkillAnalyzer(Path(temp_dir))
+            result = skill_analyzer.analyze()
+            skills = result.get("skills", [])
+            stats = result.get("stats", {})
+            dimensions = result.get("dimensions", {})
+
+            overall = stats.get("overall", {})
+            per_lang = stats.get("per_language", {})
+
+            # --- Project-level metrics (you already had these) ---
+            print("\nProject-level code metrics:")
+            for k, v in overall.items():
+                print(f"  - {k}: {v}")
+
+            # --- Resume-friendly: primary languages by LOC ---
+            print("\nPrimary languages (by LOC):")
+            if not per_lang:
+                print("  (no code files detected)")
+            else:
+                # Sort languages by LOC descending
+                sorted_langs = sorted(
+                    per_lang.items(),
+                    key=lambda kv: kv[1].get("loc", 0),
+                    reverse=True,
+                )
+                for lang, data in sorted_langs:
+                    loc = data.get("loc", 0)
+                    files = data.get("files", 0)
+                    # Ignore tiny/accidental usage
+                    if loc < 100:
+                        continue
+                    print(f"  * {lang}: ~{loc} LOC across {files} files")
+
+            # --- Resume-friendly: notable tools / frameworks ---
+            # Treat language names as the keys from per_lang; anything else is a tool/lib.
+            language_names = set(per_lang.keys())
+            non_language_skills = [
+                s for s in skills
+                if s.skill not in language_names
+            ]
+
+            if non_language_skills:
+                print("\nNotable tools / frameworks:")
+                # Sort simply by number of evidence hints (more usage → more important)
+                non_language_skills.sort(
+                    key=lambda s: len(s.evidence),
+                    reverse=True,
+                )
+                for item in non_language_skills[:20]:
+                    print(f"  * {item.skill} (seen in {len(item.evidence)} files/configs)")
+
+            # --- Feedback based on dimensions ---
+            def print_dim(title: str, key: str, explanation: str):
+                dim = dimensions.get(key)
+                if not dim:
+                    return
+                level = dim.get("level", "unknown")
+                score = dim.get("score", 0.0)
+                print(f"\n{title}: {level} (score={score})")
+                print(f"  {explanation}")
+
+            print_dim(
+                "Testing discipline",
+                "testing_discipline",
+                "Higher is better: more tests relative to code files."
+            )
+            print_dim(
+                "Documentation habits",
+                "documentation_habits",
+                "Higher is better: more comments/docstrings relative to code."
+            )
+            print_dim(
+                "Modularity",
+                "modularity",
+                "Higher is better: more, shorter functions instead of a few huge ones."
+            )
+            print_dim(
+                "Language depth",
+                "language_depth",
+                "Higher is better: deeper usage in one or more languages (non-toy LOC)."
+            )
+
+            print("\n(You can use the language + tools lists directly as resume/portfolio items.)")
+
+        finally:
+            shutil.rmtree(temp_dir, ignore_errors=True)
+
+
+
     def display_analysis_results(self, projects: Iterable[Project]) -> None:
         """
         Prints the analysis results for a list of Project objects.
@@ -140,6 +252,7 @@ class ProjectAnalyzer:
         self.analyze_categories()
         self.print_tree()
         self.analyze_languages()
+        self.analyze_skills()
         print("\nAnalyses complete.\n")
 
     def run(self):
@@ -157,13 +270,14 @@ class ProjectAnalyzer:
                 6. Run All Analyses
                 7. Analyze New Folder
                 8. Display Previous Results
-                9. Exit
+                9. Analyze Skills
+                10. Exit
                   """)
 
     
             choice = input ("Selection: ").strip()
 
-            if choice in {"1", "2", "3", "4", "5", "6", "7"}:
+            if choice in {"1", "2", "3", "4", "5", "6", "9"}:
                 if not self.zip_path:
                     if not self.load_zip():
                         return 
@@ -181,7 +295,8 @@ class ProjectAnalyzer:
             elif choice == "6":
                 self.run_all()
             elif choice == "7":
-                print ("\nLoading new project...")
+                print("\nLoading new project...")
+                self.zip_path = None
                 if self.load_zip():
                     print("New project loaded successfully\n")
                 else:
@@ -190,6 +305,8 @@ class ProjectAnalyzer:
                 projects = self.project_manager.get_all()
                 self.display_analysis_results(projects)
             elif choice == "9":
+                self.analyze_skills()
+            elif choice == "10":
                 print("Exiting Project Analyzer.")
                 return
             else:

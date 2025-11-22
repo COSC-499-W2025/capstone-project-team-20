@@ -21,8 +21,6 @@ class Evidence:
 @dataclass
 class SkillProfileItem:
     skill: str
-    proficiency: float       # 0–1, normalized
-    confidence: float        # 0–1, how sure we are
     evidence: List[Evidence]
 
     # Extra resume-friendly fields
