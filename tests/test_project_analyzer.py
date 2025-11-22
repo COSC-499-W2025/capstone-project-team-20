@@ -133,7 +133,7 @@ class TestBatchAnalyze:
         assert "No .zip files found" in captured.out
 
     @patch.object(ProjectAnalyzer, 'run_all')
-    @patch('src.ProjectAnalyzer.parse')
+    @patch('src.analyzers.ProjectAnalyzer.parse')
     def test_calls_run_all_for_each_zip(self, mock_parse, mock_run_all, tmp_path: Path):
         (tmp_path / "repo1.zip").touch()
         (tmp_path / "repo2.zip").touch()
@@ -143,7 +143,7 @@ class TestBatchAnalyze:
         assert mock_run_all.call_count == 2
 
     @patch.object(ProjectAnalyzer, 'run_all')
-    @patch('src.ProjectAnalyzer.parse')
+    @patch('src.analyzers.ProjectAnalyzer.parse')
     def test_sets_zip_path_before_run_all(self, mock_parse, mock_run_all, tmp_path: Path):
         zip_file = tmp_path / "test_repo.zip"
         zip_file.touch()
@@ -153,7 +153,7 @@ class TestBatchAnalyze:
         assert analyzer.zip_path == str(zip_file)
 
     @patch.object(ProjectAnalyzer, 'run_all')
-    @patch('src.ProjectAnalyzer.parse')
+    @patch('src.analyzers.ProjectAnalyzer.parse')
     def test_increments_analyzed_on_success(self, mock_parse, mock_run_all, tmp_path: Path, capsys):
         (tmp_path / "repo1.zip").touch()
         (tmp_path / "repo2.zip").touch()
@@ -164,7 +164,7 @@ class TestBatchAnalyze:
         assert "Analyzed: 2" in captured.out
 
     @patch.object(ProjectAnalyzer, 'run_all')
-    @patch('src.ProjectAnalyzer.parse')
+    @patch('src.analyzers.ProjectAnalyzer.parse')
     def test_increments_failed_on_exception(self, mock_parse, mock_run_all, tmp_path: Path, capsys):
         (tmp_path / "repo1.zip").touch()
         mock_parse.side_effect = Exception("Parse failed")
@@ -174,7 +174,7 @@ class TestBatchAnalyze:
         assert "Failed: 1" in captured.out
 
     @patch.object(ProjectAnalyzer, 'run_all')
-    @patch('src.ProjectAnalyzer.parse')
+    @patch('src.analyzers.ProjectAnalyzer.parse')
     def test_continues_after_single_failure(self, mock_parse, mock_run_all, tmp_path: Path, capsys):
         (tmp_path / "repo1.zip").touch()
         (tmp_path / "repo2.zip").touch()
