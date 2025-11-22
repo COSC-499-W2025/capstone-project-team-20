@@ -15,12 +15,12 @@ from pathlib import Path
 from typing import Dict, List, Tuple
 
 
-def run_wipe_workflow(csv_path:str ='src/config/repo_dataset.csv', cloned_repos_dir:str ='cloned_repos') -> None:
+def run_wipe_workflow(csv_path:str, repos_dir: str) -> None:
     """Delete all cloned repositories."""
-    cloned_repos_dir = Path(cloned_repos_dir)
+    repos_dir = Path(repos_dir)
     
-    if not cloned_repos_dir.exists():
-        print("Nothing to wipe - cloned_repos/ doesn't exist")
+    if not repos_dir.exists():
+        print(f"Nothing to wipe - {repos_dir}/ doesn't exist")
         return
     
     csv_full_path = Path(csv_path)
@@ -31,10 +31,17 @@ def run_wipe_workflow(csv_path:str ='src/config/repo_dataset.csv', cloned_repos_
     with open(csv_full_path) as f:
         repos = list(csv.DictReader(f))
         
-    existing_repos = [
-        row for row in repos
-        if (cloned_repos_dir / row['repo_label'] / row['repo_name']).exists()
-    ]
+    existing_repos = []
+
+    for row in repos:
+        repo_name = row['repo_name']
+        repo_label = row['repo_label']
+        repo_dir  = repos_dir / repo_label / repo_name
+        repo_zip  = repos_dir / repo_label / f"{repo_name}.zip"
+
+        if repo_dir.exists() or repo_zip.exists():
+            existing_repos.append(row)
+
 
     if not existing_repos:
         print("No repositories found to delete")
@@ -42,20 +49,20 @@ def run_wipe_workflow(csv_path:str ='src/config/repo_dataset.csv', cloned_repos_
 
     print(f"\nDeleting {len(existing_repos)} repositories...\n")
     
-    deleted_count, failed_count = wipe_repos(existing_repos, cloned_repos_dir)
+    deleted_count, failed_count = wipe_repos(existing_repos, repos_dir)
 
-    clean_up_directories(cloned_repos_dir)
+    clean_up_directories(repos_dir)
     
     print_summary(deleted_count, failed_count)
 
-def wipe_repos(repos: List[Dict[str,str]], cloned_repos_dir: Path) -> Tuple[int, int]:
+def wipe_repos(repos: List[Dict[str,str]], repos_dir: Path) -> Tuple[int, int]:
     """Deletes repos from your machine, returns deleted_count, failed_count"""
     deleted_count = 0  
     failed_count = 0
     for row in repos:
         repo_name = row['repo_name']
         repo_label = row['repo_label']
-        repo_path = cloned_repos_dir / repo_label / repo_name
+        repo_path = repos_dir / repo_label / repo_name
             
         try:
             shutil.rmtree(repo_path)
@@ -66,16 +73,16 @@ def wipe_repos(repos: List[Dict[str,str]], cloned_repos_dir: Path) -> Tuple[int,
             failed_count += 1
     return deleted_count, failed_count
 
-def clean_up_directories(cloned_repos_dir: Path) -> None:
-    """Clean up empty label sub-directories and cloned_repos directory"""
-    for label_dir in cloned_repos_dir.iterdir():
+def clean_up_directories(repos_dir: Path) -> None:
+    """Clean up empty label sub-directories and repo directory"""
+    for label_dir in repos_dir.iterdir():
         if label_dir.is_dir() and not any(label_dir.iterdir()):
             label_dir.rmdir()
             print(f"🗑️  {label_dir.name}/ (empty)")
     
-    if not any(cloned_repos_dir.iterdir()):
-        cloned_repos_dir.rmdir()
-        print(f"🗑️  cloned_repos/ (empty)")
+    if not any(repos_dir.iterdir()):
+        repos_dir.rmdir()
+        print(f"🗑️  {repos_dir}(empty)")
     
 
 def print_summary(deleted_count: int, failed_count:int) -> None:
@@ -89,4 +96,5 @@ def print_summary(deleted_count: int, failed_count:int) -> None:
 
 
 if __name__ == '__main__':
-    run_wipe_workflow()
+    run_wipe_workflow('src/config/repo_dataset.csv','cloned_repos')
+    run_wipe_workflow('src/config/repo_dataset.csv', 'zipped_repos')
