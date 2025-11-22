@@ -1,10 +1,9 @@
-import os
-import shutil
+import os, sys, contextlib, shutil
 from src.ZipParser import parse, toString
 from src.analyzers.ProjectMetadataExtractor import ProjectMetadataExtractor
 from src.analyzers.GitRepoAnalyzer import GitRepoAnalyzer
 from src.FileCategorizer import FileCategorizer
-from src.analyzers.language_detector import detect_language_per_file
+from src.analyzers.language_detector import detect_language_per_file, analyze_language_share
 from pathlib import Path
 from typing import Iterable
 from src.analyzers.GitRepoAnalyzer import GitRepoAnalyzer
@@ -12,6 +11,7 @@ from src.ZipParser import extract_zip
 from utils.RepoFinder import RepoFinder
 from src.ProjectManager import ProjectManager
 from src.Project import Project
+from src.generators.ResumeInsightsGenerator import ResumeInsightsGenerator
 
 class ProjectAnalyzer:
     """
@@ -36,6 +36,20 @@ class ProjectAnalyzer:
         self.repo_finder = RepoFinder()
         self.project_manager = ProjectManager()
         self.git_analyzer = GitRepoAnalyzer(self.repo_finder, self.project_manager)
+
+    @contextlib.contextmanager
+    def suppress_output(self):
+        """Temporarily suppress stdout and stderr."""
+        with open(os.devnull, "w") as devnull:
+            old_stdout = sys.stdout
+            old_stderr = sys.stderr
+            sys.stdout = devnull
+            sys.stderr = devnull
+            try:
+                yield
+            finally:
+                sys.stdout = old_stdout
+                sys.stderr = old_stderr
     
     def _print_project(self, project: Project) -> None:
             print(f"Project: {project.name}")
@@ -132,6 +146,61 @@ class ProjectAnalyzer:
         for project in projects_iter:
             self._print_project(project)
 
+    def generate_resume_insights(self):
+        print("\nGenerating Resume Insights...\n")
+
+        with self.suppress_output():
+            # 1. Collect metadata
+            metadata = self.metadata_extractor.extract_metadata()
+
+            # 2. Collect categorized file metrics
+            files = self.metadata_extractor.collect_all_files()
+            file_dicts = [
+                {"path": f.file_name, "language": getattr(f, "language", "Unknown")}
+                for f in files
+            ]
+            categorized_files = self.file_categorizer.compute_metrics(file_dicts)
+
+            # 3. Detect language share
+            temp_dir = extract_zip(self.zip_path)
+
+            try:
+                language_share = analyze_language_share(temp_dir)
+
+
+                # 4. Git repo analysis (returns list of Project objects)
+                projects = self.git_analyzer.run_analysis_from_path(temp_dir)
+                project = projects[0] if projects else None
+            finally:
+                shutil.rmtree(temp_dir)
+
+        if not project:
+            print("⚠️ Could not generate resume insights (no git project found).")
+            return
+
+        # 5. Generate resume insights
+        generator = ResumeInsightsGenerator(
+            metadata=metadata,
+            categorized_files=categorized_files,
+            language_share=language_share,
+            project=project
+        )
+
+        bullets = generator.generate_resume_bullet_points()
+        summary = generator.generate_project_summary()
+        tech_stack = generator.generate_tech_stack()
+
+        # 6. Print results
+        print("Resume Bullet Points:")
+        for b in bullets:
+            print(f" • {b}")
+
+        print("\nProject Summary:")
+        print(summary)
+
+        print("\n" + tech_stack + "\n")
+
+
 
     def run_all(self):
         print("Running All Analyzers\n")
@@ -143,6 +212,11 @@ class ProjectAnalyzer:
         print("\nAnalyses complete.\n")
 
     def run(self):
+        print("Welcome to the Project Analyzer.\n")
+
+        if not self.load_zip():
+            return
+
         while True:
             print("""
                 =================
@@ -157,16 +231,12 @@ class ProjectAnalyzer:
                 6. Run All Analyses
                 7. Analyze New Folder
                 8. Display Previous Results
-                9. Exit
+                9. Generate Resume Insights
+                10. Exit
                   """)
 
     
             choice = input ("Selection: ").strip()
-
-            if choice in {"1", "2", "3", "4", "5", "6", "7"}:
-                if not self.zip_path:
-                    if not self.load_zip():
-                        return 
 
             if choice == "1":
                 self.analyze_git()
@@ -190,6 +260,8 @@ class ProjectAnalyzer:
                 projects = self.project_manager.get_all()
                 self.display_analysis_results(projects)
             elif choice == "9":
+                self.generate_resume_insights()
+            elif choice == "10":
                 print("Exiting Project Analyzer.")
                 return
             else:

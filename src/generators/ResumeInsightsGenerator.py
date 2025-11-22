@@ -1,4 +1,4 @@
-from analyzers.language_detector import analyze_language_share
+from src.analyzers.language_detector import analyze_language_share
 
 
 """
@@ -14,15 +14,23 @@ class ResumeInsightsGenerator:
         self.language_share = language_share
         self.project = project
 
+    def get_category_counts(self):
+        """Returns (code_files, doc_files, test_files, config_files)"""
+        counts= self.categorized_files.get("counts", 0)
+
+        code_files = counts.get("code", 0)
+        doc_files = counts.get("docs", 0)
+        test_files = counts.get("test", 0) or counts.get("tests", 0)
+        config_files = counts.get("config", 0)
+
+        return code_files, doc_files, test_files, config_files
+
     def generate_resume_bullet_points(self) -> list[str]:
         """Return 3-6 strong resume bullet points describing project"""
 
         bullets = []
 
-        code_files = self.categorized_files.get("code", 0)
-        doc_files = self.categorized_files.get("docs", 0)
-        test_files = self.categorized_files.get("tests", 0)
-        config_files = self.categorized_files.get("config", 0)
+        code_files, doc_files, test_files, config_files = self.get_category_counts()
 
         authors = getattr(self.project, "authors", [])
         team_size = getattr(self.project, "author_count", len(authors))
@@ -70,20 +78,24 @@ class ResumeInsightsGenerator:
     # 2. PROJECT SUMMARY
     # ----------------------------------------
     def generate_project_summary(self) -> str:
+
+        code_files, doc_files, test_files, config_files = self.get_category_counts()
+        counts = self.categorized_files["counts"]
+        
         langs_sorted = list(self.language_share.keys())
         top_langs = ", ".join(langs_sorted[:4]) if langs_sorted else "multiple languages"
 
         duration = self._compute_project_duration()
         duration_text = f" over {duration} months" if duration else ""
 
-        total_files = sum(self.categorized_files.values())
+        total_files = sum(counts.values())
 
         summary = (
             f"This project was built using {top_langs}{duration_text}. "
             f"It consists of {total_files} total files, including "
-            f"{self.categorized_files.get('code', 0)} code modules, "
-            f"{self.categorized_files.get('tests', 0)} tests, and "
-            f"{self.categorized_files.get('docs', 0)} documentation files. "
+            f"{code_files} code modules, "
+            f"{test_files} tests, and "
+            f"{doc_files} documentation files. "
         )
 
         team_size = getattr(self.project, "author_count", 1)
