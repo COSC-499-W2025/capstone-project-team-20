@@ -87,14 +87,14 @@ def clone_repos(repos: List[Dict[str, str]], cloned_repos_dir: Path) -> Tuple[in
                 ['git', 'clone', '--depth', '1', repo_link, str(repo_path)],
                 check=True,
                 capture_output=True,
-                timeout=300,
+                timeout=120,
                 text=True
             )
             print(f"[{i}/{len(repos)}] ✅ {repo_name}")
             success_count += 1
                 
         except subprocess.TimeoutExpired:
-            print(f"[{i}/{len(repos)}] ⏱️  {repo_name} (timeout after 5 minutes)")
+            print(f"[{i}/{len(repos)}] ⏱️  {repo_name} (timeout after 120 seconds)")
             fail_count += 1
                 
         except subprocess.CalledProcessError as e:
