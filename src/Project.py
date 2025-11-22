@@ -19,13 +19,42 @@ class Project:
     root_folder: str = ""
     num_files: int = 0
     size_kb: int = 0
+
     author_count: int = 0
     authors: List[str] = list_field()
+
+    # High-level tech stack
     languages: List[str] = list_field()
     frameworks: List[str] = list_field()
     skills_used: List[str] = list_field()
     individual_contributions: List[str] = list_field()
     collaboration_status: Literal["individual", "collaborative"] = "individual"
+
+    # === New: derived skill/metrics info ===
+    # Primary languages (e.g. top by LOC, subset of `languages`)
+    primary_languages: List[str] = list_field()
+
+    # Overall code metrics (from CodeMetricsAnalyzer.summarize()["overall"])
+    total_loc: int = 0
+    comment_ratio: float = 0.0
+    test_file_ratio: float = 0.0
+    avg_functions_per_file: float = 0.0
+    max_function_length: int = 0
+
+    # Skill dimensions (from SkillAnalyzer._compute_dimensions)
+    testing_discipline_level: str = ""       # "strong" | "good" | "ok" | "needs_improvement"
+    testing_discipline_score: float = 0.0
+
+    documentation_habits_level: str = ""
+    documentation_habits_score: float = 0.0
+
+    modularity_level: str = ""
+    modularity_score: float = 0.0
+
+    language_depth_level: str = ""
+    language_depth_score: float = 0.0
+
+    # Timestamps
     date_created: Optional[datetime] = None
     last_modified: Optional[datetime] = None
     last_accessed: Optional[datetime] = None
@@ -38,7 +67,15 @@ class Project:
         proj_dict = asdict(self)
 
         # Serialize list-based fields to JSON strings.
-        for field_name in ["authors", "languages", "frameworks", "skills_used", "individual_contributions"]:
+        list_fields = [
+            "authors",
+            "languages",
+            "frameworks",
+            "skills_used",
+            "individual_contributions",
+            "primary_languages",
+        ]
+        for field_name in list_fields:
             proj_dict[field_name] = json.dumps(proj_dict[field_name])
 
         # Ensure author_count is consistent with the authors list.
@@ -48,6 +85,7 @@ class Project:
         proj_dict["date_created"] = self.date_created.isoformat() if self.date_created else None
         proj_dict["last_modified"] = self.last_modified.isoformat() if self.last_modified else None
         proj_dict["last_accessed"] = self.last_accessed.isoformat() if self.last_accessed else None
+
         return proj_dict
 
     @classmethod
@@ -60,7 +98,15 @@ class Project:
         proj_dict_copy = proj_dict.copy()
 
         # Deserialize JSON strings back into lists.
-        for field_name in ["authors", "languages", "frameworks", "skills_used", "individual_contributions"]:
+        list_fields = [
+            "authors",
+            "languages",
+            "frameworks",
+            "skills_used",
+            "individual_contributions",
+            "primary_languages",
+        ]
+        for field_name in list_fields:
             value = proj_dict_copy.get(field_name)
             if isinstance(value, str):
                 proj_dict_copy[field_name] = json.loads(value)
