@@ -149,8 +149,11 @@ class FileCategorizer:
                 return category
             if "extensions" in conf and ext in [e.lower() for e in conf["extensions"]]:
                 return category
-            if "filenames" in conf and filename in [f.lower() for f in conf["filenames"]]:
-                return category
+            if "filenames" in conf:
+                lowered = filename.lower()
+                for key in conf["filenames"]:
+                    if key.lower() in lowered:
+                        return category
 
         # Handle files without extensions
         if not ext:
