@@ -117,3 +117,71 @@ def test_display_analysis_results_empty(capsys):
     out = capsys.readouterr().out
     assert "No analysis results to display" in out
 
+
+class TestBatchAnalyze:
+    def test_exits_early_when_directory_missing(self, tmp_path: Path, capsys):
+        analyzer = ProjectAnalyzer()
+        nonexistent = tmp_path / "nonexistent"
+        analyzer.batch_analyze(str(nonexistent))
+        captured = capsys.readouterr()
+        assert "doesn't exist" in captured.out
+
+    def test_exits_early_when_no_zip_files(self, tmp_path: Path, capsys):
+        analyzer = ProjectAnalyzer()
+        analyzer.batch_analyze(str(tmp_path))
+        captured = capsys.readouterr()
+        assert "No .zip files found" in captured.out
+
+    @patch.object(ProjectAnalyzer, 'run_all')
+    @patch('src.ProjectAnalyzer.parse')
+    def test_calls_run_all_for_each_zip(self, mock_parse, mock_run_all, tmp_path: Path):
+        (tmp_path / "repo1.zip").touch()
+        (tmp_path / "repo2.zip").touch()
+        mock_parse.return_value = MagicMock()
+        analyzer = ProjectAnalyzer()
+        analyzer.batch_analyze(str(tmp_path))
+        assert mock_run_all.call_count == 2
+
+    @patch.object(ProjectAnalyzer, 'run_all')
+    @patch('src.ProjectAnalyzer.parse')
+    def test_sets_zip_path_before_run_all(self, mock_parse, mock_run_all, tmp_path: Path):
+        zip_file = tmp_path / "test_repo.zip"
+        zip_file.touch()
+        mock_parse.return_value = MagicMock()
+        analyzer = ProjectAnalyzer()
+        analyzer.batch_analyze(str(tmp_path))
+        assert analyzer.zip_path == str(zip_file)
+
+    @patch.object(ProjectAnalyzer, 'run_all')
+    @patch('src.ProjectAnalyzer.parse')
+    def test_increments_analyzed_on_success(self, mock_parse, mock_run_all, tmp_path: Path, capsys):
+        (tmp_path / "repo1.zip").touch()
+        (tmp_path / "repo2.zip").touch()
+        mock_parse.return_value = MagicMock()
+        analyzer = ProjectAnalyzer()
+        analyzer.batch_analyze(str(tmp_path))
+        captured = capsys.readouterr()
+        assert "Analyzed: 2" in captured.out
+
+    @patch.object(ProjectAnalyzer, 'run_all')
+    @patch('src.ProjectAnalyzer.parse')
+    def test_increments_failed_on_exception(self, mock_parse, mock_run_all, tmp_path: Path, capsys):
+        (tmp_path / "repo1.zip").touch()
+        mock_parse.side_effect = Exception("Parse failed")
+        analyzer = ProjectAnalyzer()
+        analyzer.batch_analyze(str(tmp_path))
+        captured = capsys.readouterr()
+        assert "Failed: 1" in captured.out
+
+    @patch.object(ProjectAnalyzer, 'run_all')
+    @patch('src.ProjectAnalyzer.parse')
+    def test_continues_after_single_failure(self, mock_parse, mock_run_all, tmp_path: Path, capsys):
+        (tmp_path / "repo1.zip").touch()
+        (tmp_path / "repo2.zip").touch()
+        mock_parse.side_effect = [Exception("First fails"), MagicMock()]
+        analyzer = ProjectAnalyzer()
+        analyzer.batch_analyze(str(tmp_path))
+        captured = capsys.readouterr()
+        assert "Analyzed: 1" in captured.out
+        assert "Failed: 1" in captured.out
+
