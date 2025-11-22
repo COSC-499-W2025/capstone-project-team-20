@@ -262,31 +262,30 @@ class SkillAnalyzer:
         profiles: List[SkillProfileItem] = []
 
         for skill, ev_list in by_skill.items():
-            # Ignore completely unknown / empty skills
             if not skill:
                 continue
 
             score = self.prof_estimator.estimate(skill, ev_list, stats)
 
-            # Simple confidence heuristic: more evidence sources -> more confidence
+            # Simple confidence heuristic: more distinct evidence sources → more confidence
             distinct_sources = len({e.source for e in ev_list})
             confidence = min(0.99, 0.4 + 0.15 * distinct_sources)
 
             profiles.append(
                 SkillProfileItem(
                     skill=skill,
+                    proficiency=score,
                     confidence=confidence,
                     evidence=ev_list,
-                    proficiency=score,
                 )
             )
 
         # Sort descending by proficiency then confidence for nicer display
         profiles.sort(
-            key=lambda p: (p.proficiency, p.confidence, len(p.evidence)), reverse=True
+            key=lambda p: (p.proficiency, p.confidence, len(p.evidence)),
+            reverse=True,
         )
         return profiles
-
 
     # ------------------------------------------------------------------
     # Internal helpers
