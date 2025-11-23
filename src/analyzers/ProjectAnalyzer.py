@@ -158,22 +158,54 @@ class ProjectAnalyzer:
             if not repo_paths:
                 print("No Git repositories found in the provided ZIP.")
                 return
+            repo_path = str(repo_paths[0])
 
-            # Step 1: Run a single, comprehensive analysis to get per-author stats.
-            all_author_stats = self.contribution_analyzer.analyze(str(repo_paths[0]))
-            all_authors_list = sorted(all_author_stats.keys())
+            # Step 1: Efficiently get all author names.
+            all_authors_list = self.contribution_analyzer.get_all_authors(repo_path)
 
-            # Step 2: Use the results to get the active usernames.
+            # Step 2: Handle user selection.
             usernames = self._get_or_select_usernames(all_authors_list)
 
             if usernames:
-                # Step 3: Aggregate stats from the data we already have, without re-analyzing.
+                # Step 3: Run the full analysis only if needed.
+                all_author_stats = self.contribution_analyzer.analyze(repo_path)
                 selected_stats = self._aggregate_stats(all_author_stats, usernames)
                 total_stats = self._aggregate_stats(all_author_stats)
 
                 # Step 4: Display the results.
                 self._display_contribution_results(selected_stats, total_stats, usernames)
 
+        finally:
+            shutil.rmtree(temp_dir)
+
+    def change_selected_users(self):
+        """
+        Allows the user to change their configured username selection.
+        """
+        print("\n--- Change Selected Users ---")
+        path_obj = Path(self.zip_path)
+        if not path_obj.exists() or path_obj.suffix.lower() != ".zip":
+            print(f"Error: {path_obj} is not a valid zip file.")
+            return
+
+        temp_dir = extract_zip(str(path_obj))
+        try:
+            repo_paths = self.repo_finder.find_repos(temp_dir)
+            if not repo_paths:
+                print("No Git repositories found in the provided ZIP.")
+                return
+
+            # Get the current list of authors to present to the user.
+            all_authors_list = self.contribution_analyzer.get_all_authors(str(repo_paths[0]))
+
+            print("Please select the new set of usernames you would like to use.")
+            new_usernames = self._prompt_for_usernames(all_authors_list)
+
+            if new_usernames:
+                self._config_manager.set("usernames", new_usernames)
+                print(f"\nSuccessfully updated selected users to: {', '.join(new_usernames)}")
+            else:
+                print("\nNo changes made to user selection.")
         finally:
             shutil.rmtree(temp_dir)
 
@@ -256,7 +288,6 @@ class ProjectAnalyzer:
 
     def run(self):
         while True:
-            # Menu has been simplified and tidied.
             print("""
                 ========================
                 Project Analyzer
@@ -269,13 +300,14 @@ class ProjectAnalyzer:
                 5. Analyze Languages Detected
                 6. Run All Analyses
                 7. Analyze New Folder
-                8. Exit
+                8. Change Selected Users
+                9. Exit
                   """)
 
 
             choice = input ("Selection: ").strip()
 
-            if choice in {"1", "2", "3", "4", "5", "6", "7"}:
+            if choice in {"1", "2", "3", "4", "5", "6", "7", "8"}:
                 if not self.zip_path:
                     if not self.load_zip():
                         return
@@ -299,6 +331,8 @@ class ProjectAnalyzer:
                 else:
                     print("Failed to load new project\n")
             elif choice == "8":
+                self.change_selected_users()
+            elif choice == "9":
                 print("Exiting Project Analyzer.")
                 return
             else:
