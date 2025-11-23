@@ -23,16 +23,28 @@ class ContributionStats:
 
 class ContributionAnalyzer:
     """
-    Analyzes all author contributions in a Git repository in a single pass.
+    Analyzes all author contributions in a Git repository.
     """
     def _categorize_file_path(self, path: str) -> str:
         """Categorizes a file path into 'code', 'docs', or 'test'."""
         p = Path(path.lower())
-        if "test" in p.parts:
+        # Check for both singular and plural forms
+        if "test" in p.parts or "tests" in p.parts:
             return "test"
         if "doc" in p.parts or "docs" in p.parts:
             return "docs"
         return "code"
+
+    def get_all_authors(self, repo_path: str) -> List[str]:
+        """
+        Scans a repository to get a unique list of all author names.
+        This is a lightweight operation focused solely on retrieving contributors.
+        """
+        repo = Repo(repo_path)
+        author_names: Set[str] = set()
+        for commit in repo.iter_commits():
+            author_names.add(commit.author.name)
+        return sorted(list(author_names))
 
     def analyze(self, repo_path: str) -> Dict[str, ContributionStats]:
         """
