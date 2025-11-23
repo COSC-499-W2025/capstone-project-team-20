@@ -3,10 +3,10 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Set
 
-from analyzers.skill_models import Evidence, SkillProfileItem, TAXONOMY
-from analyzers.skill_patterns import DEP_TO_SKILL, SNIPPET_PATTERNS, KNOWN_CONFIG_HINTS
-from analyzers.skill_proficiency import ProficiencyEstimator
-from analyzers.code_metrics_analyzer import CodeMetricsAnalyzer, CodeFileAnalysis
+from src.analyzers.skill_models import Evidence, SkillProfileItem, TAXONOMY
+from src.analyzers.skill_patterns import DEP_TO_SKILL, SNIPPET_PATTERNS, KNOWN_CONFIG_HINTS
+from src.analyzers.skill_proficiency import ProficiencyEstimator
+from src.analyzers.code_metrics_analyzer import CodeMetricsAnalyzer, CodeFileAnalysis
 
 
 class SkillAnalyzer:
