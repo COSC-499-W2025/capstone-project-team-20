@@ -68,6 +68,8 @@ class GitRepoAnalyzer:
         Returns:
             An initialized and populated `Project` object, or None if analysis fails.
         """
+
+
         project_name = repo_path.name
         print(f"Analyzing repository for project: '{project_name}'")
 
@@ -101,6 +103,10 @@ class GitRepoAnalyzer:
                     collaboration_status=status
                 )
                 project.update_author_count()
+
+            # Attach repo folder path inside the extracted ZIP directory.
+            project.file_path = str(repo_path) 
+            project.root_folder = str(repo_path)
 
             return project
 

@@ -1,3 +1,4 @@
+import datetime
 import os, sys, contextlib, shutil
 from src.ZipParser import parse, toString
 from src.analyzers.ProjectMetadataExtractor import ProjectMetadataExtractor
@@ -146,60 +147,139 @@ class ProjectAnalyzer:
         for project in projects_iter:
             self._print_project(project)
 
+
     def generate_resume_insights(self):
         print("\nGenerating Resume Insights...\n")
 
-        with self.suppress_output():
-            # 1. Collect metadata
-            metadata = self.metadata_extractor.extract_metadata()
+        # 0. Cache ONLY Git repo scan results (never metadata)
+        if getattr(self, "cached_projects", None) is not None:
+            projects = self.cached_projects
+        else:
+            # Extract ZIP once
+            if getattr(self, "cached_extract_dir", None) is None:
+                self.cached_extract_dir = extract_zip(self.zip_path)
 
-            # 2. Collect categorized file metrics
-            files = self.metadata_extractor.collect_all_files()
-            file_dicts = [
-                {"path": f.file_name, "language": getattr(f, "language", "Unknown")}
-                for f in files
-            ]
-            categorized_files = self.file_categorizer.compute_metrics(file_dicts)
+            extract_dir = self.cached_extract_dir
 
-            # 3. Detect language share
-            temp_dir = extract_zip(self.zip_path)
+            with self.suppress_output():
+                projects = self.git_analyzer.run_analysis_from_path(extract_dir)
 
-            try:
-                language_share = analyze_language_share(temp_dir)
+            self.cached_projects = projects
 
-
-                # 4. Git repo analysis (returns list of Project objects)
-                projects = self.git_analyzer.run_analysis_from_path(temp_dir)
-                project = projects[0] if projects else None
-            finally:
-                shutil.rmtree(temp_dir)
-
-        if not project:
-            print("⚠️ Could not generate resume insights (no git project found).")
+        if not projects:
+            print("No Git projects found. Cannot generate insights.")
             return
 
-        # 5. Generate resume insights
-        generator = ResumeInsightsGenerator(
-            metadata=metadata,
-            categorized_files=categorized_files,
-            language_share=language_share,
-            project=project
-        )
+        # ---- Project selection loop ----
+        while True:
+            print("\nMultiple Git projects detected:")
+            for i, proj in enumerate(projects, start=1):
+                print(f" {i}. {proj.name}")
 
-        bullets = generator.generate_resume_bullet_points()
-        summary = generator.generate_project_summary()
-        tech_stack = generator.generate_tech_stack()
+            return_option = len(projects) + 1
+            print("\nSelect an option:")
+            print(" 0. Generate insights for ALL projects")
+            print(f" {return_option}. Return to Main Menu")
 
-        # 6. Print results
-        print("Resume Bullet Points:")
-        for b in bullets:
-            print(f" • {b}")
+            choice = input("Choose a project number: ").strip()
 
-        print("\nProject Summary:")
-        print(summary)
+            if choice == str(return_option):
+                print("\nReturning to main menu...\n")
+                return
 
-        print("\n" + tech_stack + "\n")
+            if choice == "0":
+                selected = projects
+            else:
+                try:
+                    idx = int(choice) - 1
+                    if idx < 0 or idx >= len(projects):
+                        print("Invalid selection.\n")
+                        continue
+                    selected = [projects[idx]]
+                except ValueError:
+                    print("Invalid input.\n")
+                    continue
 
+            # ---- Analyze each selected repo using ZIP folder tree ----
+            for proj in selected:
+                print("\n==============================")
+                print(f" Resume Insights for: {proj.name}")
+                print("==============================\n")
+
+                folder = self._find_folder_by_name(self.root_folder, proj.name)
+                if folder is None:
+                    print(f"Repo folder '{proj.name}' not found inside ZIP tree. Skipping...")
+                    continue
+
+                extractor = ProjectMetadataExtractor(folder)
+                metadata = extractor.extract_metadata()["project_metadata"]
+                files = extractor.collect_all_files()
+
+                # Categorization input
+                file_dicts = []
+                for f in files:
+                    file_dicts.append({
+                        "path": f.file_name,
+                        "language": getattr(f, "language", "Unknown")
+                    })
+
+                categorized_files = self.file_categorizer.compute_metrics(file_dicts)
+
+                # 4. Compute language share manually (based on filtered files)
+                language_share = {}
+                for f in file_dicts:
+                    lang = getattr(f, "language", "Unknown")
+                    language_share[lang] = language_share.get(lang, 0) + 1
+
+                # 5. Generate resume insights
+                generator = ResumeInsightsGenerator(
+                    metadata=metadata,
+                    categorized_files=categorized_files,
+                    language_share=language_share,
+                    project=proj
+                )
+
+                bullets = generator.generate_resume_bullet_points()
+                summary = generator.generate_project_summary()
+
+                print("Resume Bullet Points:")
+                for b in bullets:
+                    print(f" • {b}")
+
+                print("\nProject Summary:")
+                print(summary)
+                print("\n")
+
+    def _find_folder_by_name(self, folder, target_name):
+        """Recursively search the ZIP-parsed tree for a folder that matches a repo name."""
+        if folder.name == target_name:
+            return folder
+
+        for sub in folder.subdir:
+            found = self._find_folder_by_name(sub, target_name)
+            if found:
+                return found
+
+        return None
+
+    def analyze_new_folder(self):
+
+        if hasattr(self, "cached_extract_dir") and self.cached_extract_dir:
+            try:
+                shutil.rmtree(self.cached_extract_dir, ignore_errors=True)
+            except Exception:
+                pass
+            self.cached_extract_dir = None
+
+        self.cached_projects = None
+
+        print("\nLoading new project...")
+        success = self.load_zip()
+
+        if success:
+            print("\nNew project loaded successfully\n")
+        else:
+            print("\nFailed to load new project.\n")
 
 
     def run_all(self):
@@ -251,11 +331,7 @@ class ProjectAnalyzer:
             elif choice == "6":
                 self.run_all()
             elif choice == "7":
-                print ("\nLoading new project...")
-                if self.load_zip():
-                    print("New project loaded successfully\n")
-                else:
-                    print("Failed to load new project\n")
+                self.analyze_new_folder()
             elif choice == "8":
                 projects = self.project_manager.get_all()
                 self.display_analysis_results(projects)
