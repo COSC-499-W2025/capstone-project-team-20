@@ -6,9 +6,7 @@ from src.analyzers.GitRepoAnalyzer import GitRepoAnalyzer
 from src.FileCategorizer import FileCategorizer
 from src.analyzers.language_detector import detect_language_per_file
 from pathlib import Path
-from typing import Iterable, List, Optional, Tuple
-from src.analyzers.GitRepoAnalyzer import GitRepoAnalyzer
-from src.analyzers.ContributionAnalyzer import ContributionAnalyzer, ContributionStats
+from typing import Iterable, List, Optional
 from src.ZipParser import extract_zip
 from utils.RepoFinder import RepoFinder
 from src.ProjectManager import ProjectManager
@@ -41,7 +39,6 @@ class ProjectAnalyzer:
         self.repo_finder = RepoFinder()
         self.project_manager = ProjectManager()
         self.git_analyzer = GitRepoAnalyzer(self.repo_finder, self.project_manager)
-        self.contribution_analyzer = ContributionAnalyzer()
 
     def _print_project(self, project: Project) -> None:
             print(f"Project: {project.name}")
@@ -111,12 +108,29 @@ class ProjectAnalyzer:
             print("\nOperation cancelled by user.")
             return None
 
-    def analyze_git_and_contributions(self):
+    def _get_or_select_usernames(self, authors: List[str]) -> Optional[List[str]]:
         """
-        Orchestrates the entire Git analysis workflow, from project discovery to
-        displaying aggregated contribution statistics.
+        Retrieves configured usernames or prompts the user to select them.
         """
-        print("\n--- Git Repository & Contribution Analysis ---")
+        usernames = self._config_manager.get("usernames")
+        if usernames and isinstance(usernames, list):
+            print(f"\nWelcome back! Analyzing contributions for: {', '.join(usernames)}")
+            return usernames
+
+        if authors:
+            print("\nNo usernames found in configuration. Let's set them up.")
+            new_usernames = self._prompt_for_usernames(authors)
+            if new_usernames:
+                self._config_manager.set("usernames", new_usernames)
+                print(f"Usernames '{', '.join(new_usernames)}' have been saved.")
+                return new_usernames
+
+        print("No authors found or selected.")
+        return None
+
+    def analyze_git(self):
+        """Analyzes git repositories and handles user selection"""
+        print("\nGit repository Analysis")
         path_obj = Path(self.zip_path)
         if not path_obj.exists() or path_obj.suffix.lower() != ".zip":
             print(f"Error: {path_obj} is not a valid zip file.")
@@ -124,58 +138,17 @@ class ProjectAnalyzer:
 
         temp_dir = extract_zip(str(path_obj))
         try:
-            # Step 1: Run initial Git analysis to find projects and authors.
             projects, authors = self.git_analyzer.run_analysis_from_path(temp_dir)
             self.display_analysis_results(projects)
 
-            # Step 2: Handle user selection and configuration.
-            usernames = self._config_manager.get("usernames")
-            if not (usernames and isinstance(usernames, list)):
-                if authors:
-                    print("\nNo usernames found in configuration. Let's set them up.")
-                    new_usernames = self._prompt_for_usernames(authors)
-                    if new_usernames:
-                        self._config_manager.set("usernames", new_usernames)
-                        usernames = new_usernames
-                        print(f"Usernames '{', '.join(usernames)}' have been saved.")
-                    else:
-                        print("No usernames were selected. Skipping contribution analysis.")
-                        return
-                else:
-                    print("No authors found in repository. Skipping contribution analysis.")
-                    return
-            else:
-                 print(f"\nWelcome back! Analyzing contributions for: {', '.join(usernames)}")
-
-            # Step 3: Run contribution analysis using the configured usernames.
-            repo_paths = self.repo_finder.find_repos(temp_dir)
-            if not repo_paths:
-                print("No Git repositories found in the provided ZIP.")
-                return
-            repo_path = str(repo_paths[0])
-
-            # Step 1: Efficiently get all author names.
-            all_authors_list = self.contribution_analyzer.get_all_authors(repo_path)
-
-            # Step 2: Handle user selection.
-            usernames = self._get_or_select_usernames(all_authors_list)
-
-            if usernames:
-                # Step 3: Run the full analysis only if needed.
-                all_author_stats = self.contribution_analyzer.analyze(repo_path)
-                selected_stats = self._aggregate_stats(all_author_stats, usernames)
-                total_stats = self._aggregate_stats(all_author_stats)
-
-                # Step 4: Display the results.
-                self._display_contribution_results(selected_stats, total_stats, usernames)
+            # Handle username selection and configuration
+            self._get_or_select_usernames(authors)
 
         finally:
             shutil.rmtree(temp_dir)
 
     def change_selected_users(self):
-        """
-        Allows the user to change their configured username selection.
-        """
+        """Allows the user to change their configured username selection"""
         print("\n--- Change Selected Users ---")
         path_obj = Path(self.zip_path)
         if not path_obj.exists() or path_obj.suffix.lower() != ".zip":
@@ -184,16 +157,11 @@ class ProjectAnalyzer:
 
         temp_dir = extract_zip(str(path_obj))
         try:
-            repo_paths = self.repo_finder.find_repos(temp_dir)
-            if not repo_paths:
-                print("No Git repositories found in the provided ZIP.")
-                return
-
-            # Get the current list of authors to present to the user.
-            all_authors_list = self.contribution_analyzer.get_all_authors(str(repo_paths[0]))
+            # Get authors from the repository
+            _, authors = self.git_analyzer.run_analysis_from_path(temp_dir)
 
             print("Please select the new set of usernames you would like to use.")
-            new_usernames = self._prompt_for_usernames(all_authors_list)
+            new_usernames = self._prompt_for_usernames(authors)
 
             if new_usernames:
                 self._config_manager.set("usernames", new_usernames)
@@ -202,38 +170,6 @@ class ProjectAnalyzer:
                 print("\nNo changes made to user selection.")
         finally:
             shutil.rmtree(temp_dir)
-
-    def _display_contribution_results(self, selected_stats: ContributionStats, total_stats: ContributionStats, usernames: List[str]):
-        """Formats and prints the aggregated contribution analysis results."""
-
-        header = f"Contribution Share for: {', '.join(usernames)}"
-        print("\n" + "="*80)
-        print(f"{header:^80}")
-        print("="*80)
-
-        total_lines_edited_project = total_stats.lines_added + total_stats.lines_deleted
-        total_lines_edited_selected = selected_stats.lines_added + selected_stats.lines_deleted
-
-        if total_lines_edited_project > 0:
-            project_share = (total_lines_edited_selected / total_lines_edited_project) * 100
-            print(f"\nCollectively, you contributed {project_share:.2f}% of the total lines edited in the project.")
-        else:
-            print("\nNo line changes were found in the project to calculate contribution share.")
-
-        print("\n--- Combined Statistics for Selected Users ---")
-        print(f"  Total Commits: {selected_stats.total_commits}")
-        print(f"  Files Touched: {len(selected_stats.files_touched)}")
-        print(f"  Lines Added:   {selected_stats.lines_added}")
-        print(f"  Lines Deleted: {selected_stats.lines_deleted}")
-
-        total_lines_by_type = sum(selected_stats.contribution_by_type.values())
-        if total_lines_by_type > 0:
-            print("  Contribution Share by Type:")
-            for type, count in selected_stats.contribution_by_type.items():
-                percentage = (count / total_lines_by_type) * 100
-                print(f"    - {type.capitalize():<5}: {percentage:6.2f}%")
-        print("\n" + "="*80)
-
 
     def analyze_metadata(self):
         print("\nMetadata & File Statistics:")
@@ -271,9 +207,7 @@ class ProjectAnalyzer:
             print(f" - {lang}")
 
     def display_analysis_results(self, projects: Iterable[Project]) -> None:
-        """
-        Prints the analysis results for a list of Project objects.
-        """
+        """Prints the analysis results for a list of Project objects"""
         projects_iter = iter(projects)
         try:
             first_project = next(projects_iter)
@@ -281,17 +215,16 @@ class ProjectAnalyzer:
             print("\nNo analysis results to display.")
             return
         print("\n" + "="*30)
-        print("      Project Analysis Results")
+        print("      Analysis Results")
         print("="*30 + "\n")
         self._print_project(first_project)
 
         for project in projects_iter:
             self._print_project(project)
 
-
     def run_all(self):
         print("Running All Analyzers\n")
-        self.analyze_git_and_contributions()
+        self.analyze_git()
         if self.root_folder:
             self.analyze_metadata()
             self.analyze_categories()
@@ -306,7 +239,7 @@ class ProjectAnalyzer:
                 Project Analyzer
                 ========================
                 Choose an option:
-                1. Analyze Git Repository & Contributions
+                1. Analyze Git Repository
                 2. Extract Metadata & File Statistics
                 3. Categorize Files by Type
                 4. Print Project Folder Structure
@@ -314,19 +247,19 @@ class ProjectAnalyzer:
                 6. Run All Analyses
                 7. Analyze New Folder
                 8. Change Selected Users
-                9. Exit
+                9. Display Previous Results
+                10. Exit
                   """)
-
 
             choice = input ("Selection: ").strip()
 
-            if choice in {"1", "2", "3", "4", "5", "6", "7", "8"}:
+            if choice in {"1", "2", "3", "4", "5", "6", "7", "8", "9"}:
                 if not self.zip_path:
                     if not self.load_zip():
                         return
 
             if choice == "1":
-                self.analyze_git_and_contributions()
+                self.analyze_git()
             elif choice == "2":
                 self.analyze_metadata()
             elif choice == "3":
@@ -346,6 +279,9 @@ class ProjectAnalyzer:
             elif choice == "8":
                 self.change_selected_users()
             elif choice == "9":
+                projects = self.project_manager.get_all()
+                self.display_analysis_results(projects)
+            elif choice == "10":
                 print("Exiting Project Analyzer.")
                 return
             else:
