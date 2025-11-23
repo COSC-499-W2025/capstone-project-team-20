@@ -1,3 +1,4 @@
+import shutil
 import tempfile
 import zipfile
 from zipfile import ZipFile, ZipInfo
