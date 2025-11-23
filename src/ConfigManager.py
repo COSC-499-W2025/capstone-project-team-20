@@ -64,25 +64,3 @@ class ConfigManager(StorageManager):
         """
         rows = super().get_all()
         return {row["key"]: row["value"] for row in rows}
-
-    def delete(self, key: str) -> None:
-        """
-        Delete a configuration item by key.
-
-        key (str): The key of the configuration item to delete.
-        """
-        with self.connect() as conn:
-            cursor = conn.cursor()
-            cursor.execute(f"DELETE FROM {self.table_name} WHERE {self.primary_key}=?", (key,))
-            conn.commit()
-            print(f"Deleted configuration key '{key}'.")
-
-    def clear(self) -> None:
-        """
-        Deletes all entries from the configuration table.
-        """
-        with self.connect() as conn:
-            cursor = conn.cursor()
-            cursor.execute(f"DELETE FROM {self.table_name}")
-            conn.commit()
-            print("Cleared all configurations.")
