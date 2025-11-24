@@ -74,6 +74,8 @@ class GitRepoAnalyzer:
             - An initialized and populated `Project` object, or None if analysis fails.
             - A set of author names found in the repository.
         """
+
+
         project_name = repo_path.name
         print(f"Analyzing repository for project: '{project_name}'")
         all_authors: Set[str] = set()
@@ -107,6 +109,10 @@ class GitRepoAnalyzer:
                     collaboration_status=status
                 )
                 project.update_author_count()
+
+            # Attach repo folder path inside the extracted ZIP directory.
+            project.file_path = str(repo_path) 
+            project.root_folder = str(repo_path)
 
             return project, all_authors
 
