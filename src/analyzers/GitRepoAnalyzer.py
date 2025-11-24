@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Set, List, Dict, Any, Optional
+from typing import Set, List, Dict, Any, Optional, Tuple
 
 # Import GitPython for direct use within the analyzer.
 from git import Repo, GitCommandError
@@ -27,7 +27,7 @@ class GitRepoAnalyzer:
         self._project_manager = project_manager
         print("GitRepoAnalyzer initialized with dependencies.")
 
-    def run_analysis_from_path(self, base_dir: Path) -> List[Project]:
+    def run_analysis_from_path(self, base_dir: Path) -> Tuple[List[Project], List[str]]:
         """
         Executes the full workflow: find, analyze, and persist projects.
 
@@ -39,26 +39,30 @@ class GitRepoAnalyzer:
             base_dir: The directory where to start searching for Git repositories.
 
         Returns:
-            A list of the analyzed and persisted `Project` objects.
+            A tuple containing:
+            - A list of the analyzed and persisted `Project` objects.
+            - A list of all unique author names found across all repositories.
         """
         print(f"Starting analysis workflow from base directory: {base_dir}")
         repo_paths = self._repo_finder.find_repos(base_dir)
         analyzed_projects: List[Project] = []
+        all_authors_across_repos: Set[str] = set()
 
         if not repo_paths:
-            return analyzed_projects
+            return analyzed_projects, []
 
         for repo_path in repo_paths:
             # The entire process for a single repo is encapsulated here.
-            project_data = self._analyze_and_prepare_project(repo_path)
+            project_data, authors = self._analyze_and_prepare_project(repo_path)
             if project_data:
                 self._project_manager.set(project_data)
                 print(f"Successfully stored/updated project '{project_data.name}' in the database.")
                 analyzed_projects.append(project_data)
+                all_authors_across_repos.update(authors)
 
-        return analyzed_projects
+        return analyzed_projects, sorted(list(all_authors_across_repos))
 
-    def _analyze_and_prepare_project(self, repo_path: Path) -> Optional[Project]:
+    def _analyze_and_prepare_project(self, repo_path: Path) -> Tuple[Optional[Project], Set[str]]:
         """
         Analyzes a single repository and prepares the Project data object.
 
@@ -66,20 +70,22 @@ class GitRepoAnalyzer:
             repo_path: The path to the root of the Git repository.
 
         Returns:
-            An initialized and populated `Project` object, or None if analysis fails.
+            A tuple containing:
+            - An initialized and populated `Project` object, or None if analysis fails.
+            - A set of author names found in the repository.
         """
         project_name = repo_path.name
         print(f"Analyzing repository for project: '{project_name}'")
+        all_authors: Set[str] = set()
 
         try:
             # The Repo object is now created and managed here, within the analyzer.
             repo = Repo(repo_path)
-            all_authors: Set[str] = set()
 
-            # Ref: repo.iter_commits() provides an iterator for all commits.
-            # https://gitpython.readthedocs.io/en/stable/reference.html#git.repo.base.Repo.iter_commits
+            # Ref: commit.author.name provides the author's name as configured in git.
+            # https://gitpython.readthedocs.io/en/stable/reference.html#git.objects.util.Actor
             for commit in repo.iter_commits():
-                all_authors.add(commit.author.email)
+                all_authors.add(commit.author.name)
 
             author_count = len(all_authors)
             status = "collaborative" if author_count > 1 else "individual"
@@ -102,8 +108,8 @@ class GitRepoAnalyzer:
                 )
                 project.update_author_count()
 
-            return project
+            return project, all_authors
 
         except (GitCommandError, Exception) as e:
             print(f"Error during analysis of '{project_name}': {e}")
-            return None
+            return None, set()
