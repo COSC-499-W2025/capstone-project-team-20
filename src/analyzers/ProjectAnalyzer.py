@@ -185,6 +185,13 @@ class ProjectAnalyzer:
 
             if choice == str(return_option):
                 print("\nReturning to main menu...\n")
+                # CLEAN UP TEMP EXTRACT DIR
+                if hasattr(self, "cached_extract_dir") and self.cached_extract_dir:
+                    try:
+                        shutil.rmtree(self.cached_extract_dir, ignore_errors=True)
+                    except Exception:
+                        pass
+                    self.cached_extract_dir = None
                 return
 
             if choice == "0":
@@ -206,36 +213,52 @@ class ProjectAnalyzer:
                 print(f" Resume Insights for: {proj.name}")
                 print("==============================\n")
 
-                folder = self._find_folder_by_name(self.root_folder, proj.name)
-                if folder is None:
-                    print(f"Repo folder '{proj.name}' not found inside ZIP tree. Skipping...")
-                    continue
+                # Force resume insights to use the same root folder the metadata system uses
+                # --- Determine correct folder for this project ---
+                if len(projects) == 1:
+                    # Solo repo → use entire ZIP content
+                    folder = self.root_folder
+                else:
+                    # Multi-repo ZIP → find the subfolder that matches the repo
+                    folder = self._find_folder_by_name(self.root_folder, proj.name)
+
+                    if folder is None:
+                        print(f"[ERROR] Could not locate the folder for repo '{proj.name}' inside the ZIP.")
+                        print("Skipping this project to avoid incorrect global counts.\n")
+                        continue
+
+
 
                 extractor = ProjectMetadataExtractor(folder)
-                metadata = extractor.extract_metadata()["project_metadata"]
+                with self.suppress_output():
+                    metadata_full = extractor.extract_metadata()
+                metadata = metadata_full["project_metadata"]
                 files = extractor.collect_all_files()
 
                 # Categorization input
-                file_dicts = []
+                categorized_files = metadata_full["category_summary"]
+                print("DEBUG METADATA SUMMARY:", metadata_full["category_summary"])
+
+                # 4.language detector
+                language_share = analyze_language_share(
+                    self.cached_extract_dir / proj.name
+                    )
+                
+                repo_languages = set()
+
                 for f in files:
-                    file_dicts.append({
-                        "path": f.file_name,
-                        "language": getattr(f, "language", "Unknown")
-                    })
+                    lang = detect_language_per_file(Path(f.file_name))
+                    if lang:
+                        repo_languages.add(lang)
 
-                categorized_files = self.file_categorizer.compute_metrics(file_dicts)
-
-                # 4. Compute language share manually (based on filtered files)
-                language_share = {}
-                for f in file_dicts:
-                    lang = getattr(f, "language", "Unknown")
-                    language_share[lang] = language_share.get(lang, 0) + 1
+                repo_languages = sorted(repo_languages)
 
                 # 5. Generate resume insights
                 generator = ResumeInsightsGenerator(
                     metadata=metadata,
                     categorized_files=categorized_files,
                     language_share=language_share,
+                    language_list = repo_languages,
                     project=proj
                 )
 
@@ -249,6 +272,7 @@ class ProjectAnalyzer:
                 print("\nProject Summary:")
                 print(summary)
                 print("\n")
+
 
     def _find_folder_by_name(self, folder, target_name):
         """Recursively search the ZIP-parsed tree for a folder that matches a repo name."""
@@ -339,6 +363,12 @@ class ProjectAnalyzer:
                 self.generate_resume_insights()
             elif choice == "10":
                 print("Exiting Project Analyzer.")
+                # CLEAN UP TEMP DIR ON EXIT
+                if hasattr(self, "cached_extract_dir") and self.cached_extract_dir:
+                    try:
+                        shutil.rmtree(self.cached_extract_dir, ignore_errors=True)
+                    except Exception:
+                        pass
                 return
             else:
                 print("Invalid input. Try again.\n")

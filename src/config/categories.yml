@@ -2,18 +2,7 @@ categories:
   code:
     # Programming / scripting source code
     language_source: languages
-    extensions:
-      - sce
-      - cjs
-      - shader
-      - compute
-      - hlsl
-      - mts
-      - cts
-      - d.mts
-      - d.cts
-      - js.flow
-      - pde
+    extensions: []
     path_patterns: ["src", "source", "include", "engine", "core", "scripts"]
 
   test:
@@ -51,6 +40,12 @@ categories:
       - test_classes
       - testsuite
       - testclass
+    
+    filenames_containing:
+      - Test
+      - Tests
+      - test
+      - tests
 
   docs:
     # Documentation, markdown, readme, and metadata files
