@@ -5,11 +5,12 @@ class ResumeInsightsGenerator:
     Generates resume bullet points and summaries, 
     """
 
-    def __init__(self, metadata, categorized_files, language_share, project):
+    def __init__(self, metadata, categorized_files, language_share, project, language_list):
         self.metadata = metadata
         self.categorized_files = categorized_files
         self.language_share = language_share
         self.project = project
+        self.language_list = language_list
 
         # rotating words for variation in the bullet points/summaries
         self.verbs = [
@@ -53,8 +54,9 @@ class ResumeInsightsGenerator:
         # Project metadata
         authors = getattr(self.project, "authors", [])
         team_size = getattr(self.project, "author_count", len(authors))
-        langs_sorted = list(self.language_share.keys())
-        top_langs = ", ".join(langs_sorted[:3]) if langs_sorted else "multiple languages"
+        langs_sorted = sorted(self.language_share.items(), key=lambda x: x[1], reverse=True)
+        top_langs = ", ".join([lang for lang, pct in langs_sorted[:4]]) if langs_sorted else "multiple languages"
+
 
         verb = random.choice(self.verbs)
         impact = random.choice(self.impact_phrases)
@@ -104,8 +106,7 @@ class ResumeInsightsGenerator:
         counts = self.categorized_files["counts"]
         total_files = sum(counts.values())
 
-        langs_sorted = list(self.language_share.keys())
-        top_langs = ", ".join(langs_sorted[:4]) if langs_sorted else "multiple languages"
+        top_langs = ", ".join(self.language_list[:4]) if self.language_list else "multiple languages"
 
         duration = self._compute_project_duration()
         duration_text = f" over {duration} months" if duration else ""
