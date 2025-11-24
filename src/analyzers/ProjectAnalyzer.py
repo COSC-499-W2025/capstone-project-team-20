@@ -1,5 +1,7 @@
 import os
+import re
 import shutil
+import zipfile
 from src.ZipParser import parse, toString
 from src.analyzers.ProjectMetadataExtractor import ProjectMetadataExtractor
 from src.FileCategorizer import FileCategorizer
@@ -18,14 +20,14 @@ class ProjectAnalyzer:
     """
     Unified interface for analyzing zipped project files.
     Responsibilities:
-    1. Git repo analysis
+    1. Git repo analysis + Contrib share
     2. Metadata and file statistics
     3. File categorization
     4. Folder tree printing
     5. Language detection
     6. Run all analyses
     7. Analyze New Folder
-    8. Display Previous Results
+    8. Change Selected Users
     9. Exit
     """
 
@@ -39,12 +41,21 @@ class ProjectAnalyzer:
         self.project_manager = ProjectManager()
         self.contribution_analyzer = ContributionAnalyzer()
 
+    def clean_path(self, raw_input: str) -> Path:
+        stripped = raw_input.strip()
+        # Only strip quotes that surround path (so that something like `dylan's.zip` does not break the parser)
+        if (stripped.startswith('"') and stripped.endswith('"')) or \
+        (stripped.startswith("'") and stripped.endswith("'")):
+            stripped = stripped[1:-1]
+        # Remove shell escape backslashes (e.g., "my\ file" -> "my file")
+        unescaped = re.sub(r'\\(.)', r'\1', stripped)
+        return Path(os.path.expanduser(unescaped))
+
     def load_zip(self):
         """Prompts user for ZIP file and parses into folder tree"""
-        zip_path = input("Please enter the path to the zipped folder: ")
-        zip_path = os.path.expanduser(zip_path)
-        while not (os.path.exists(zip_path) and zip_path.endswith(".zip")):
-            zip_path = input("Invalid path or not a zipped file. Please try again: ")
+        zip_path = self.clean_path(input("Please enter the path to the zipped folder: "))
+        while not (os.path.exists(zip_path) and zipfile.is_zipfile(zip_path)):
+            zip_path = self.clean_path(input("Invalid path or not a zipped file. Please try again: "))
 
         self.zip_path = zip_path
         print("Parsing ZIP structure...")
@@ -141,6 +152,37 @@ class ProjectAnalyzer:
                     aggregated.contribution_by_type[category] += count
         return aggregated
 
+    def _display_contribution_results(self, selected_stats: ContributionStats, total_stats: ContributionStats, usernames: List[str]):
+        """Formats and prints the aggregated contribution analysis results."""
+
+        header = f"Contribution Share for: {', '.join(usernames)}"
+        print("\n" + "="*80)
+        print(f"{header:^80}")
+        print("="*80)
+
+        total_lines_edited_project = total_stats.lines_added + total_stats.lines_deleted
+        total_lines_edited_selected = selected_stats.lines_added + selected_stats.lines_deleted
+
+        if total_lines_edited_project > 0:
+            project_share = (total_lines_edited_selected / total_lines_edited_project) * 100
+            print(f"\nCollectively, you contributed {project_share:.2f}% of the total lines edited in the project.")
+        else:
+            print("\nNo line changes were found in the project to calculate contribution share.")
+
+        print("\n--- Combined Statistics for Selected Users ---")
+        print(f"  Total Commits: {selected_stats.total_commits}")
+        print(f"  Files Touched: {len(selected_stats.files_touched)}")
+        print(f"  Lines Added:   {selected_stats.lines_added}")
+        print(f"  Lines Deleted: {selected_stats.lines_deleted}")
+
+        total_lines_by_type = sum(selected_stats.contribution_by_type.values())
+        if total_lines_by_type > 0:
+            print("  Contribution Share by Type:")
+            for type, count in selected_stats.contribution_by_type.items():
+                percentage = (count / total_lines_by_type) * 100
+                print(f"    - {type.capitalize():<5}: {percentage:6.2f}%")
+        print("\n" + "="*80)
+
     def analyze_git_and_contributions(self):
         """
         Orchestrates the Git analysis workflow by running a single comprehensive
@@ -174,7 +216,6 @@ class ProjectAnalyzer:
 
                 # Step 4: Display the results.
                 self._display_contribution_results(selected_stats, total_stats, usernames)
-
         finally:
             shutil.rmtree(temp_dir)
 
@@ -208,38 +249,6 @@ class ProjectAnalyzer:
                 print("\nNo changes made to user selection.")
         finally:
             shutil.rmtree(temp_dir)
-
-    def _display_contribution_results(self, selected_stats: ContributionStats, total_stats: ContributionStats, usernames: List[str]):
-        """Formats and prints the aggregated contribution analysis results."""
-
-        header = f"Contribution Share for: {', '.join(usernames)}"
-        print("\n" + "="*80)
-        print(f"{header:^80}")
-        print("="*80)
-
-        total_lines_edited_project = total_stats.lines_added + total_stats.lines_deleted
-        total_lines_edited_selected = selected_stats.lines_added + selected_stats.lines_deleted
-
-        if total_lines_edited_project > 0:
-            project_share = (total_lines_edited_selected / total_lines_edited_project) * 100
-            print(f"\nCollectively, you contributed {project_share:.2f}% of the total lines edited in the project.")
-        else:
-            print("\nNo line changes were found in the project to calculate contribution share.")
-
-        print("\n--- Combined Statistics for Selected Users ---")
-        print(f"  Total Commits: {selected_stats.total_commits}")
-        print(f"  Files Touched: {len(selected_stats.files_touched)}")
-        print(f"  Lines Added:   {selected_stats.lines_added}")
-        print(f"  Lines Deleted: {selected_stats.lines_deleted}")
-
-        total_lines_by_type = sum(selected_stats.contribution_by_type.values())
-        if total_lines_by_type > 0:
-            print("  Contribution Share by Type:")
-            for type, count in selected_stats.contribution_by_type.items():
-                percentage = (count / total_lines_by_type) * 100
-                print(f"    - {type.capitalize():<5}: {percentage:6.2f}%")
-        print("\n" + "="*80)
-
 
     def analyze_metadata(self):
         print("\nMetadata & File Statistics:")
@@ -303,7 +312,6 @@ class ProjectAnalyzer:
                 8. Change Selected Users
                 9. Exit
                   """)
-
 
             choice = input ("Selection: ").strip()
 

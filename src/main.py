@@ -10,10 +10,6 @@ def main():
     consent = ConsentManager()
     config_manager = ConfigManager()
 
-    # The user can uncomment the following line for testing purposes
-    # to reset the saved usernames and trigger the selection prompt.
-    # config_manager.delete("usernames")
-
     while True:
         if consent.require_consent():
             break
