@@ -138,5 +138,24 @@ This week, I was overall happy with my school progress and capstone progress. It
 
 Next week, I have a few options for next steps. I think I may work on refactoring the git repo analyzer to improve its efficiency. Its currently our slowest analyzer by a considerable amount. I believe paralellizing it could greatly improve its efficiency, or refactoring exactly how its implemented. I did not make the original git repository analyzer so there will be some learning to do with how its currently implemented in order to make decisions on what could be changed. 
 
+### **Week 12: November 17th - November 23rd**
+
+**Tasks worked on:**
+
+![Week 12 log](imagesForBrandenLogs/week_12_log_ss.png)
+
+**Weekly Goals Recap:**
+
+This week, I worked on implementing a Resume Insights Generator. It uses our analyzers to take the project analysis data and generates resume bullet points, a project summary, and also a menu to navigate through the zipped folder if there are multiple repositories. This went along with a full test suite to ensure coverage. There were a few refactors that went into it as well, along with lots of debugging. The debugging took many hours, when I was getting numbers that werent matching between what my summary was generating vs what the metadata said was inside the zipped folder. This implementation enhances the project's ability to turn our analyzers into a useful, readable output. I also completed several PR reviews as the first and the second reviewer.
+Issues closed: 
+[COSC-499-W2025/capstone-project-team-20#202](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/202)
+#203
+#204
+#215
+
+
+This week, it was difficult to get my PR out early, as there was many hours of debugging. I am happy that it is finished now as it will be a great addition for presenting our milestone and what our ZIP analyzer can produce. I was better with creating multiple issues for the main issue as they came up, allowing me to close 4 issues this week.
+
+Next week, I will be going further into the resume insight generation and expanding/refactoring what I have done this week. As of right now, the git repository analyzer is still very slow so, time permitting, i will be working on refactoring that to improve efficiency as well. Mainly focusing on our outputs for presenting our demo!
 
 
