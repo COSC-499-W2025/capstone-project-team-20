@@ -262,3 +262,37 @@ Issue [COSC-499-W2025/capstone-project-team-20#146](https://github.com/COSC-499-
 **Test Report:**
 
 [Week 11 Test Report](teamWeeklyLogsImages/week_11_test_report.png)
+
+### Week 12 (November 17th - November 23rd)
+
+**Work Performed:**
+- Branden Kennedy (42474551): Implemented a Resume Insights Generator to use our analyzers to output resume bullet points, project summary, and a menu to navigate which repository the user would like to generate insights for. Closed Issues [COSC-499-W2025/capstone-project-team-20#202](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/202), #203, #204, #215. Developed an extensive test suite for the resume insight generator. I also completed multiple PR reviews as first and second reviewer. 
+
+- Necmi Kaan Sapoglu (17014796): Delivered three major pull requests focused on stabilizing and restructuring the Skill Analyzer subsystem for Milestone 1. The first PR refactored the public skill-analysis output by removing the misleading proficiency/confidence scores and replacing them with a resume-friendly, interpretable format centered on languages, frameworks, tools, and feedback dimensions (testing discipline, documentation habits, modularity, language depth). The second PR extended the `Project` data model and SQLite schema to store derived metrics such as total LOC, comment/test ratios, average functions per file, primary languages by LOC, and all four feedback dimensions. Updated serialization and deserialization logic were implemented to persist these fields across sessions. The third PR completed the integration by wiring SkillAnalyzer results directly into the project persistence pipeline, ensuring that analysis now automatically updates a project's stored metrics via upsert and can be surfaced later through the “Display Previous Results” menu. Additionally, I reviewed and tested several teammate PRs to ensure consistency with the new modular architecture, and attended Friday’s milestone-alignment meeting to help finalize our Milestone 1 demo goals.
+
+- Lex Nash (84668540): implemented methods to display a graph of information to the user to help them easily and quickly visualize the varied data we are extracting from their projects. The issue corresponding to this feature is issue [COSC-499-W2025/capstone-project-team-20#219](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/219). Includes tests and example code to show a potential output. Reviewed multiple pull requests. In general im focusing on prettying-up the output of the program and extracting useful metrics from data. my pr this week: #221.
+
+- Dylan Alexander (16394025):
+
+- Sven Annist (42486720): Implemented comprehensive user identification and contribution analysis features across two pull requests. **PR #208** enables users to select and persist their username(s) from Git commit history using an interactive prompt system integrated with `ConfigManager` for session persistence. **PR #209** introduced the `ContributionAnalyzer` module that performs single-pass Git repository analysis, tracking per-author statistics (lines added/deleted, commits, files touched) and categorizing contributions by type (code/tests/docs). The system aggregates selected users' contributions and calculates their proportional project share with formatted output display. Developed extensive test suites covering unit, integration, and serialization testing for both features. Created Issues #198, #199, #213, and #214 which will be closed by awaiting review PRs. Conducted four code reviews including Dylan's ZIP parser robustness improvements (PR #201, #196) and Kaan's code metrics analyzer and skill domain models (PR #206, #172).
+
+**Features included in the project plan for this milestone are:**
+- Issues #30 up to and including Issue #219
+
+**Continuing tasks from last week and plan for the next week:**
+
+**Burnup chart:**
+
+[Week 12 burnup chart](teamWeeklyLogsImages/week_12_burnup_chart.png)
+
+**Table View of Completed Tasks on Project Board:**
+
+[Week 12 completed tasks](teamWeeklyLogsImages/week_12_completed_tasks.png)
+
+**Table View of In-Progress Tasks on Project Board:**
+
+[Week 12 In-Progress tasks](teamWeeklyLogsImages/week_12_in_progress.png)
+
+**Test Report:**
+
+[Week 12 Test Report](teamWeeklyLogsImages/week_12_test_report.png)
