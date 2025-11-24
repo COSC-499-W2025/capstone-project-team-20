@@ -11,13 +11,14 @@ from src.analyzers.GitRepoAnalyzer import GitRepoAnalyzer
 from src.FileCategorizer import FileCategorizer
 from src.analyzers.language_detector import detect_language_per_file, analyze_language_share
 from pathlib import Path
-from typing import Iterable
-from src.analyzers.GitRepoAnalyzer import GitRepoAnalyzer
+from typing import Iterable, List, Optional
 from src.ZipParser import extract_zip
 from utils.RepoFinder import RepoFinder
 from src.ProjectManager import ProjectManager
 from src.Project import Project
 from src.generators.ResumeInsightsGenerator import ResumeInsightsGenerator
+from src.ConfigManager import ConfigManager
+
 
 class ProjectAnalyzer:
     """
@@ -32,11 +33,13 @@ class ProjectAnalyzer:
     7. Analyze New Folder
     8. Display Previous Results
     9. Exit
+
     """
 
-    def __init__(self):
+    def __init__(self, config_manager: ConfigManager):
         self.root_folder = None
         self.zip_path = None
+        self._config_manager = config_manager
         self.metadata_extractor = ProjectMetadataExtractor(self.root_folder)
         self.file_categorizer = FileCategorizer()
         self.repo_finder = RepoFinder()
@@ -62,7 +65,6 @@ class ProjectAnalyzer:
             print("-" * (len(project.name) + 9))
             print(f"  - Authors ({project.author_count}): {', '.join(project.authors)}")
             print(f"  - Status: {project.collaboration_status}\n")
-            # Will display other variables from Project classes in the future
 
     def clean_path(self, raw_input: str) -> Path:
         stripped = raw_input.strip()
@@ -88,20 +90,113 @@ class ProjectAnalyzer:
         except Exception as e:
             print(f"Error while parsing: {e}")
             return False
-        
+
         self.metadata_extractor = ProjectMetadataExtractor(self.root_folder)
         return True
 
+    def _prompt_for_usernames(self, authors: List[str]) -> Optional[List[str]]:
+        """
+        Prompts user to select multiple usernames from a list of contributors.
+        """
+        print("\nPlease select your username(s) from the list of project contributors:")
+        if not authors:
+            print("No authors found in the commit history.")
+            return None
+
+        for i, author in enumerate(authors):
+            print(f"  {i + 1}: {author}")
+
+        print("\nYou can select multiple authors by entering numbers separated by commas (e.g., 1, 3).")
+
+        try:
+            choice_str = input("Enter your choice(s) (or 'q' to quit): ").strip()
+
+            if choice_str.lower() == 'q':
+                print("Aborting user selection.")
+                return None
+
+            selected_authors = []
+            choices = [c.strip() for c in choice_str.split(',')]
+            for choice in choices:
+                if not choice.isdigit():
+                    print(f"Invalid input '{choice}'. Please use numbers only.")
+                    return self._prompt_for_usernames(authors)
+
+                index = int(choice) - 1
+                if 0 <= index < len(authors):
+                    selected_authors.append(authors[index])
+                else:
+                    print(f"Invalid number '{choice}'. Please try again.")
+                    return self._prompt_for_usernames(authors)
+
+            return sorted(list(set(selected_authors)))
+        except ValueError:
+            print("Invalid input format. Please enter numbers separated by commas.")
+            return self._prompt_for_usernames(authors)
+        except KeyboardInterrupt:
+            print("\nOperation cancelled by user.")
+            return None
+
+    def _get_or_select_usernames(self, authors: List[str]) -> Optional[List[str]]:
+        """
+        Retrieves configured usernames or prompts the user to select them.
+        """
+        usernames = self._config_manager.get("usernames")
+        if usernames and isinstance(usernames, list):
+            print(f"\nWelcome back! Analyzing contributions for: {', '.join(usernames)}")
+            return usernames
+
+        if authors:
+            print("\nNo usernames found in configuration. Let's set them up.")
+            new_usernames = self._prompt_for_usernames(authors)
+            if new_usernames:
+                self._config_manager.set("usernames", new_usernames)
+                print(f"Usernames '{', '.join(new_usernames)}' have been saved.")
+                return new_usernames
+
+        print("No authors found or selected.")
+        return None
+
     def analyze_git(self):
+        """Analyzes git repositories and handles user selection"""
         print("\nGit repository Analysis")
         path_obj = Path(self.zip_path)
         if not path_obj.exists() or path_obj.suffix.lower() != ".zip":
             print(f"Error: {path_obj} is not a valid zip file.")
             return
-        
+
         temp_dir = extract_zip(str(path_obj))
         try:
-            self.git_analyzer.run_analysis_from_path(temp_dir)
+            projects, authors = self.git_analyzer.run_analysis_from_path(temp_dir)
+            self.display_analysis_results(projects)
+
+            # Handle username selection and configuration
+            self._get_or_select_usernames(authors)
+
+        finally:
+            shutil.rmtree(temp_dir)
+
+    def change_selected_users(self):
+        """Allows the user to change their configured username selection"""
+        print("\n--- Change Selected Users ---")
+        path_obj = Path(self.zip_path)
+        if not path_obj.exists() or path_obj.suffix.lower() != ".zip":
+            print(f"Error: {path_obj} is not a valid zip file.")
+            return
+
+        temp_dir = extract_zip(str(path_obj))
+        try:
+            # Get authors from the repository
+            _, authors = self.git_analyzer.run_analysis_from_path(temp_dir)
+
+            print("Please select the new set of usernames you would like to use.")
+            new_usernames = self._prompt_for_usernames(authors)
+
+            if new_usernames:
+                self._config_manager.set("usernames", new_usernames)
+                print(f"\nSuccessfully updated selected users to: {', '.join(new_usernames)}")
+            else:
+                print("\nNo changes made to user selection.")
         finally:
             shutil.rmtree(temp_dir)
 
@@ -136,17 +231,12 @@ class ProjectAnalyzer:
         if not langs:
             print("No languages detected")
             return
-        
+
         for lang in sorted(langs):
             print(f" - {lang}")
-    
-    def display_analysis_results(self, projects: Iterable[Project]) -> None:
-        """
-        Prints the analysis results for a list of Project objects.
 
-        Args:
-            projects: The list of analyzed Project objects to display.
-        """
+    def display_analysis_results(self, projects: Iterable[Project]) -> None:
+        """Prints the analysis results for a list of Project objects"""
         projects_iter = iter(projects)
         try:
             first_project = next(projects_iter)
@@ -322,10 +412,11 @@ class ProjectAnalyzer:
     def run_all(self):
         print("Running All Analyzers\n")
         self.analyze_git()
-        self.analyze_metadata()
-        self.analyze_categories()
-        self.print_tree()
-        self.analyze_languages()
+        if self.root_folder:
+            self.analyze_metadata()
+            self.analyze_categories()
+            self.print_tree()
+            self.analyze_languages()
         print("\nAnalyses complete.\n")
 
     def run(self):
@@ -336,9 +427,9 @@ class ProjectAnalyzer:
 
         while True:
             print("""
-                =================
+                ========================
                 Project Analyzer
-                =================
+                ========================
                 Choose an option:
                 1. Analyze Git Repository
                 2. Extract Metadata & File Statistics
@@ -352,7 +443,6 @@ class ProjectAnalyzer:
                 10. Exit
                   """)
 
-    
             choice = input ("Selection: ").strip()
 
             if choice == "1":
@@ -370,8 +460,7 @@ class ProjectAnalyzer:
             elif choice == "7":
                 self.analyze_new_folder()
             elif choice == "8":
-                projects = self.project_manager.get_all()
-                self.display_analysis_results(projects)
+                self.change_selected_users()
             elif choice == "9":
                 self.generate_resume_insights()
             elif choice == "10":
@@ -385,7 +474,3 @@ class ProjectAnalyzer:
                 return
             else:
                 print("Invalid input. Try again.\n")
-
-
-
-    
