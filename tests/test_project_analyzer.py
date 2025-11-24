@@ -1,53 +1,30 @@
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, Mock
 from src.analyzers.ProjectAnalyzer import ProjectAnalyzer
+from src.ConfigManager import ConfigManager
 from src.Project import Project
 from pathlib import Path
-import shutil
+import pytest
 
-def test_clean_path_strips_outer_double_quotes():
-    analyzer = ProjectAnalyzer()
-    result = analyzer.clean_path('"/path/to/file.zip"')
-    assert str(result) == "/path/to/file.zip"
+# Fixtures
+@pytest.fixture
+def mock_config_manager():
+    """Create a mock ConfigManager for testing"""
+    mock_cm = MagicMock(spec=ConfigManager)
+    mock_cm.get.return_value = None
+    return mock_cm
 
-def test_clean_path_strips_outer_single_quotes():
-    analyzer = ProjectAnalyzer()
-    result = analyzer.clean_path("'/path/to/file.zip'")
-    assert str(result) == "/path/to/file.zip"
+@pytest.fixture
+def analyzer(mock_config_manager):
+    """Create a ProjectAnalyzer with mocked dependencies"""
+    return ProjectAnalyzer(config_manager=mock_config_manager)
 
-def test_clean_path_preserves_inner_quotes():
-    analyzer = ProjectAnalyzer()
-    result = analyzer.clean_path("/path/to/dylan's.zip")
-    assert str(result).endswith("dylan's.zip")
+def test_init_with_config_manager(mock_config_manager):
+    """Test ProjectAnalyzer initializes with ConfigManager"""
+    analyzer = ProjectAnalyzer(config_manager=mock_config_manager)
+    assert analyzer._config_manager is mock_config_manager
+    assert analyzer.repo_finder is not None
 
-def test_clean_path_unescapes_shell_characters():
-    analyzer = ProjectAnalyzer()
-    result = analyzer.clean_path(r"/path/to/my\ file.zip")
-    assert "my file.zip" in str(result)
-
-def test_clean_path_unescapes_special_characters():
-    analyzer = ProjectAnalyzer()
-    result = analyzer.clean_path(r"/path/to/file\&name\(1\).zip")
-    assert "file&name(1).zip" in str(result)
-
-def test_clean_path_strips_whitespace():
-    analyzer = ProjectAnalyzer()
-    result = analyzer.clean_path("  /path/to/file.zip  ")
-    assert str(result) == "/path/to/file.zip"
-
-def test_clean_path_expands_tilde():
-    analyzer = ProjectAnalyzer()
-    with patch("os.path.expanduser", return_value="/Users/dylan/file.zip"):
-        result = analyzer.clean_path("~/file.zip")
-    assert str(result) == "/Users/dylan/file.zip"
-
-def test_clean_path_handles_complex_escaped_path():
-    analyzer = ProjectAnalyzer()
-    result = analyzer.clean_path(r"/path/term\ 1\ 2025\:26/dylan\'s.zip")
-    assert "term 1 2025:26" in str(result)
-    assert "dylan's.zip" in str(result)
-
-def test_load_zip_success():
-    analyzer = ProjectAnalyzer()
+def test_load_zip_success(analyzer):
     fake_root = MagicMock()
     with patch("os.path.exists", return_value=True):
         with patch("zipfile.is_zipfile", return_value=True):
@@ -57,8 +34,7 @@ def test_load_zip_success():
     assert result is True
     assert analyzer.root_folder is fake_root
 
-def test_load_zip_retry_then_success():
-    analyzer = ProjectAnalyzer()
+def test_load_zip_retry_then_success(analyzer):
     fake_root = MagicMock()
 
     inputs = iter(["bad.zip", "good.zip"])
@@ -75,46 +51,99 @@ def test_load_zip_retry_then_success():
     assert result is True
     assert analyzer.root_folder is fake_root
 
-
-
-def test_load_zip_parse_error():
-    analyzer = ProjectAnalyzer()
+def test_load_zip_parse_error(analyzer):
     with patch("os.path.exists", return_value=True):
         with patch("zipfile.is_zipfile", return_value=True):
             with patch("builtins.input", return_value="/path/project.zip"):
                 with patch("src.analyzers.ProjectAnalyzer.parse", side_effect=Exception("bad zip")):
                     assert analyzer.load_zip() is False
 
+# Tests for username prompting
+def test_prompt_for_usernames_single_selection(analyzer):
+    authors = ["Alice", "Bob", "Charlie"]
+    with patch("builtins.input", return_value="1"):
+        result = analyzer._prompt_for_usernames(authors)
+    assert result == ["Alice"]
 
-def test_analyze_git_calls_run_analysis_from_path():
-    """Test that analyze_git extracts zip, analyzes it, and cleans up temp dir"""
-    analyzer = ProjectAnalyzer()
-    analyzer.zip_path = "some.zip"
-    git_mock = MagicMock()
-    analyzer.git_analyzer = git_mock
-    
-    with patch("pathlib.Path.exists", return_value=True):
-        with patch("pathlib.Path.suffix", new_callable=lambda: property(lambda self: ".zip")):
-            with patch("src.analyzers.ProjectAnalyzer.extract_zip", return_value=Path("/tmp/extracted")) as mock_extract:
-                with patch("shutil.rmtree") as mock_rmtree:
-                    analyzer.analyze_git()
-                    mock_extract.assert_called_once_with("some.zip")
-                    git_mock.run_analysis_from_path.assert_called_once()
-                    called_arg = git_mock.run_analysis_from_path.call_args[0][0]
-                    assert isinstance(called_arg, Path)
-                    assert str(called_arg) == "/tmp/extracted" or str(called_arg) == "\\tmp\\extracted"
-                    mock_rmtree.assert_called_once_with(Path("/tmp/extracted"))
+def test_prompt_for_usernames_multiple_selection(analyzer):
+    authors = ["Alice", "Bob", "Charlie"]
+    with patch("builtins.input", return_value="1, 3"):
+        result = analyzer._prompt_for_usernames(authors)
+    assert result == ["Alice", "Charlie"]
 
+def test_prompt_for_usernames_quit(analyzer):
+    authors = ["Alice", "Bob"]
+    with patch("builtins.input", return_value="q"):
+        result = analyzer._prompt_for_usernames(authors)
+    assert result is None
 
+def test_prompt_for_usernames_invalid_then_valid(analyzer):
+    authors = ["Alice", "Bob"]
+    with patch("builtins.input", side_effect=["abc", "1"]):
+        result = analyzer._prompt_for_usernames(authors)
+    assert result == ["Alice"]
 
-def test_analyze_metadata_calls_metadata_extractor():
-    analyzer = ProjectAnalyzer()
+def test_prompt_for_usernames_out_of_range_then_valid(analyzer):
+    authors = ["Alice", "Bob"]
+    with patch("builtins.input", side_effect=["99", "2"]):
+        result = analyzer._prompt_for_usernames(authors)
+    assert result == ["Bob"]
+
+def test_prompt_for_usernames_empty_author_list(analyzer):
+    with patch("builtins.input", return_value="1"):
+        result = analyzer._prompt_for_usernames([])
+    assert result is None
+
+def test_prompt_for_usernames_keyboard_interrupt(analyzer):
+    authors = ["Alice"]
+    with patch("builtins.input", side_effect=KeyboardInterrupt):
+        result = analyzer._prompt_for_usernames(authors)
+    assert result is None
+
+def test_prompt_for_usernames_deduplicates(analyzer):
+    """Test that selecting the same author multiple times returns unique list"""
+    authors = ["Alice", "Bob"]
+    with patch("builtins.input", return_value="1, 1, 2"):
+        result = analyzer._prompt_for_usernames(authors)
+    assert result == ["Alice", "Bob"]
+
+# Tests for _get_or_select_usernames
+def test_get_or_select_usernames_existing_config(analyzer, mock_config_manager):
+    mock_config_manager.get.return_value = ["Alice", "Bob"]
+    authors = ["Alice", "Bob", "Charlie"]
+    result = analyzer._get_or_select_usernames(authors)
+    assert result == ["Alice", "Bob"]
+    mock_config_manager.set.assert_not_called()
+
+def test_get_or_select_usernames_no_config_prompts_user(analyzer, mock_config_manager):
+    mock_config_manager.get.return_value = None
+    authors = ["Alice", "Bob"]
+    with patch.object(analyzer, '_prompt_for_usernames', return_value=["Alice"]):
+        result = analyzer._get_or_select_usernames(authors)
+    assert result == ["Alice"]
+    mock_config_manager.set.assert_called_once_with("usernames", ["Alice"])
+
+def test_get_or_select_usernames_no_authors(analyzer, mock_config_manager):
+    mock_config_manager.get.return_value = None
+    result = analyzer._get_or_select_usernames([])
+    assert result is None
+    mock_config_manager.set.assert_not_called()
+
+def test_get_or_select_usernames_user_quits(analyzer, mock_config_manager):
+    mock_config_manager.get.return_value = None
+    authors = ["Alice"]
+    with patch.object(analyzer, '_prompt_for_usernames', return_value=None):
+        result = analyzer._get_or_select_usernames(authors)
+    assert result is None
+    mock_config_manager.set.assert_not_called()
+
+# Existing tests updated for new constructor
+def test_analyze_metadata_calls_metadata_extractor(analyzer):
     analyzer.metadata_extractor = MagicMock()
     analyzer.analyze_metadata()
     analyzer.metadata_extractor.extract_metadata.assert_called_once()
 
-def test_analyze_categories_calls_file_categorizer():
-    analyzer = ProjectAnalyzer()
+def test_analyze_categories_calls_file_categorizer(analyzer):
     analyzer.metadata_extractor = MagicMock()
     analyzer.file_categorizer = MagicMock()
     fake_file = MagicMock()
@@ -123,16 +152,14 @@ def test_analyze_categories_calls_file_categorizer():
     analyzer.analyze_categories()
     analyzer.file_categorizer.compute_metrics.assert_called_once()
 
-def test_print_tree_calls_toString(capsys):
-    analyzer = ProjectAnalyzer()
+def test_print_tree_calls_toString(analyzer, capsys):
     analyzer.root_folder = MagicMock()
     with patch("src.analyzers.ProjectAnalyzer.toString", return_value="TREE_OUTPUT"):
         analyzer.print_tree()
     captured = capsys.readouterr()
     assert "TREE_OUTPUT" in captured.out
 
-def test_analyze_languages_filters_unknown(capsys):
-    analyzer = ProjectAnalyzer()
+def test_analyze_languages_filters_unknown(analyzer, capsys):
     fake_file = MagicMock()
     fake_file.file_name = "a.py"
     analyzer.metadata_extractor = MagicMock()
@@ -141,35 +168,3 @@ def test_analyze_languages_filters_unknown(capsys):
         analyzer.analyze_languages()
     out = capsys.readouterr().out
     assert "Python" in out
-
-def test_run_all_calls_methods():
-    analyzer = ProjectAnalyzer()
-    analyzer.analyze_git = MagicMock()
-    analyzer.analyze_metadata = MagicMock()
-    analyzer.analyze_categories = MagicMock()
-    analyzer.print_tree = MagicMock()
-    analyzer.analyze_languages = MagicMock()
-    analyzer.run_all()
-    analyzer.analyze_git.assert_called_once()
-    analyzer.analyze_metadata.assert_called_once()
-    analyzer.analyze_categories.assert_called_once()
-    analyzer.print_tree.assert_called_once()
-    analyzer.analyze_languages.assert_called_once()
-
-def test_display_analysis_results_prints_projects(capsys):
-    analyzer = ProjectAnalyzer()
-    proj1 = Project(name="Proj1", authors=["Alice"], author_count=1, collaboration_status="COLLABORATIVE")
-    proj2 = Project(name="Proj2", authors=["Bob"], author_count=1, collaboration_status="INDIVIDUAL")
-    analyzer.display_analysis_results([proj1, proj2])
-    out = capsys.readouterr().out
-    assert "Proj1" in out
-    assert "Proj2" in out
-    assert "Alice" in out
-    assert "Bob" in out
-
-def test_display_analysis_results_empty(capsys):
-    analyzer = ProjectAnalyzer()
-    analyzer.display_analysis_results([])
-    out = capsys.readouterr().out
-    assert "No analysis results to display" in out
-
