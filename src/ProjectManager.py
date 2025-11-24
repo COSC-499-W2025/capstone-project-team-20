@@ -37,7 +37,6 @@ class ProjectManager(StorageManager):
         skills_used TEXT,
         individual_contributions TEXT,
         collaboration_status TEXT,
-        -- new fields for skills/metrics
         primary_languages TEXT,
         total_loc INTEGER,
         comment_ratio REAL,
@@ -52,7 +51,6 @@ class ProjectManager(StorageManager):
         modularity_score REAL,
         language_depth_level TEXT,
         language_depth_score REAL,
-        -- timestamps
         date_created TEXT,
         last_modified TEXT,
         last_accessed TEXT
