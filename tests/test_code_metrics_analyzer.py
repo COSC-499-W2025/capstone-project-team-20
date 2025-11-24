@@ -170,18 +170,18 @@ def test_ignored_directories_are_pruned(tmp_path: Path):
     """
     # "Real" source file we care about
     src_file = tmp_path / "src" / "main.py"
-    _write(src_file, "def foo():\n    return 1\n")
+    _write_file(src_file, "def foo():\n    return 1\n")
 
     # Noisy dirs that should be ignored
     node_file = tmp_path / "node_modules" / "pkg" / "index.js"
-    _write(node_file, "console.log('should be ignored');\n")
+    _write_file(node_file, "console.log('should be ignored');\n")
 
     unity_cache_file = tmp_path / "Library" / "ScriptAssemblies" / "something.dll"
-    _write(unity_cache_file, "binary junk")
+    _write_file(unity_cache_file, "binary junk")
 
     analyzer = CodeMetricsAnalyzer(tmp_path)
 
-    analyses = list(analyzer.analyze())  # ensure it's a list, not just an iterator
+    analyses = list(analyzer.analyze())
     rel_paths = {a.path.relative_to(tmp_path).as_posix() for a in analyses}
 
     # main.py should be present

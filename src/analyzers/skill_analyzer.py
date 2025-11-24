@@ -3,10 +3,10 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Set
 
-from src.analyzers.skill_models import Evidence, SkillProfileItem, TAXONOMY
-from src.analyzers.skill_patterns import DEP_TO_SKILL, SNIPPET_PATTERNS, KNOWN_CONFIG_HINTS
-from src.analyzers.skill_proficiency import ProficiencyEstimator
-from src.analyzers.code_metrics_analyzer import CodeMetricsAnalyzer, CodeFileAnalysis
+from .skill_models import Evidence, SkillProfileItem, TAXONOMY
+from .skill_patterns import DEP_TO_SKILL, SNIPPET_PATTERNS, KNOWN_CONFIG_HINTS
+from .skill_proficiency import ProficiencyEstimator
+from .code_metrics_analyzer import CodeMetricsAnalyzer, CodeFileAnalysis
 
 
 class SkillAnalyzer:
@@ -267,7 +267,7 @@ class SkillAnalyzer:
 
             score = self.prof_estimator.estimate(skill, ev_list, stats)
 
-            # Simple confidence heuristic: more distinct evidence sources → more confidence
+            # Simple confidence heuristic:
             distinct_sources = len({e.source for e in ev_list})
             confidence = min(0.99, 0.4 + 0.15 * distinct_sources)
 
@@ -280,13 +280,13 @@ class SkillAnalyzer:
                 )
             )
 
-        # Sort descending by proficiency then confidence for nicer display
+        # Sort for nicer display / downstream use
         profiles.sort(
             key=lambda p: (p.proficiency, p.confidence, len(p.evidence)),
             reverse=True,
         )
         return profiles
-
+    
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------

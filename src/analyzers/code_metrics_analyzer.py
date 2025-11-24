@@ -10,7 +10,7 @@ import os
 from pathlib import Path
 from typing import Iterable
 from src.FileCategorizer import FileCategorizer
-from src.analyzers.language_detector import detect_language_per_file
+from .language_detector import detect_language_per_file
 
 
 @dataclass
