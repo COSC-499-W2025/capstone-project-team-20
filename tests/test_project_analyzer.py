@@ -4,31 +4,87 @@ from src.Project import Project
 from pathlib import Path
 import shutil
 
+def test_clean_path_strips_outer_double_quotes():
+    analyzer = ProjectAnalyzer()
+    result = analyzer.clean_path('"/path/to/file.zip"')
+    assert str(result) == "/path/to/file.zip"
+
+def test_clean_path_strips_outer_single_quotes():
+    analyzer = ProjectAnalyzer()
+    result = analyzer.clean_path("'/path/to/file.zip'")
+    assert str(result) == "/path/to/file.zip"
+
+def test_clean_path_preserves_inner_quotes():
+    analyzer = ProjectAnalyzer()
+    result = analyzer.clean_path("/path/to/dylan's.zip")
+    assert str(result).endswith("dylan's.zip")
+
+def test_clean_path_unescapes_shell_characters():
+    analyzer = ProjectAnalyzer()
+    result = analyzer.clean_path(r"/path/to/my\ file.zip")
+    assert "my file.zip" in str(result)
+
+def test_clean_path_unescapes_special_characters():
+    analyzer = ProjectAnalyzer()
+    result = analyzer.clean_path(r"/path/to/file\&name\(1\).zip")
+    assert "file&name(1).zip" in str(result)
+
+def test_clean_path_strips_whitespace():
+    analyzer = ProjectAnalyzer()
+    result = analyzer.clean_path("  /path/to/file.zip  ")
+    assert str(result) == "/path/to/file.zip"
+
+def test_clean_path_expands_tilde():
+    analyzer = ProjectAnalyzer()
+    with patch("os.path.expanduser", return_value="/Users/dylan/file.zip"):
+        result = analyzer.clean_path("~/file.zip")
+    assert str(result) == "/Users/dylan/file.zip"
+
+def test_clean_path_handles_complex_escaped_path():
+    analyzer = ProjectAnalyzer()
+    result = analyzer.clean_path(r"/path/term\ 1\ 2025\:26/dylan\'s.zip")
+    assert "term 1 2025:26" in str(result)
+    assert "dylan's.zip" in str(result)
+
 def test_load_zip_success():
     analyzer = ProjectAnalyzer()
     fake_root = MagicMock()
     with patch("os.path.exists", return_value=True):
-        with patch("src.analyzers.ProjectAnalyzer.parse", return_value=fake_root):
-            with patch("builtins.input", side_effect=["/path/fake.zip"]):
-                result = analyzer.load_zip()
+        with patch("zipfile.is_zipfile", return_value=True):
+            with patch("src.analyzers.ProjectAnalyzer.parse", return_value=fake_root):
+                with patch("builtins.input", side_effect=["/path/fake.zip"]):
+                    result = analyzer.load_zip()
     assert result is True
     assert analyzer.root_folder is fake_root
 
 def test_load_zip_retry_then_success():
     analyzer = ProjectAnalyzer()
     fake_root = MagicMock()
-    with patch("os.path.exists", side_effect=[False, True]):
-        with patch("builtins.input", side_effect=["bad.zip", "good.zip"]):
-            with patch("src.analyzers.ProjectAnalyzer.parse", return_value=fake_root):
-                assert analyzer.load_zip() is True
-                assert analyzer.root_folder is fake_root
+
+    inputs = iter(["bad.zip", "good.zip"])
+
+    def check_path(path):
+        return str(path).endswith("good.zip")
+
+    with patch("os.path.exists", side_effect=check_path):
+        with patch("zipfile.is_zipfile", side_effect=check_path):
+            with patch("builtins.input", side_effect=lambda prompt: next(inputs)):
+                with patch("src.analyzers.ProjectAnalyzer.parse", return_value=fake_root):
+                    result = analyzer.load_zip()
+
+    assert result is True
+    assert analyzer.root_folder is fake_root
+
+
 
 def test_load_zip_parse_error():
     analyzer = ProjectAnalyzer()
     with patch("os.path.exists", return_value=True):
-        with patch("builtins.input", return_value="project.zip"):
-            with patch("src.analyzers.ProjectAnalyzer.parse", side_effect=Exception("bad zip")):
-                assert analyzer.load_zip() is False
+        with patch("zipfile.is_zipfile", return_value=True):
+            with patch("builtins.input", return_value="/path/project.zip"):
+                with patch("src.analyzers.ProjectAnalyzer.parse", side_effect=Exception("bad zip")):
+                    assert analyzer.load_zip() is False
+
 
 def test_analyze_git_calls_run_analysis_from_path():
     """Test that analyze_git extracts zip, analyzes it, and cleans up temp dir"""
