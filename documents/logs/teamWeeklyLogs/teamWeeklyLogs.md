@@ -274,7 +274,7 @@ Issue [COSC-499-W2025/capstone-project-team-20#146](https://github.com/COSC-499-
 
 - Dylan Alexander (16394025):
 
-- Sven Annist (42486720):
+- Sven Annist (42486720): Implemented comprehensive user identification and contribution analysis features across two pull requests. **PR #208** enables users to select and persist their username(s) from Git commit history using an interactive prompt system integrated with `ConfigManager` for session persistence. **PR #209** introduced the `ContributionAnalyzer` module that performs single-pass Git repository analysis, tracking per-author statistics (lines added/deleted, commits, files touched) and categorizing contributions by type (code/tests/docs). The system aggregates selected users' contributions and calculates their proportional project share with formatted output display. Developed extensive test suites covering unit, integration, and serialization testing for both features. Created Issues #198, #199, #213, and #214 which will be closed by awaiting review PRs. Conducted four code reviews including Dylan's ZIP parser robustness improvements (PR #201, #196) and Kaan's code metrics analyzer and skill domain models (PR #206, #172).
 
 **Features included in the project plan for this milestone are:**
 - 
