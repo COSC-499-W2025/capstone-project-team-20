@@ -172,3 +172,25 @@ One issue I am having at the moment is figuring out what to implement. Most of t
 Issues closed:
 - Issue #160
 - Issue #182 
+
+## Week 12
+**Types of Tasks Worked On**
+![Week 12 Tasks](imagesForLexLogs/week_12_lexlog.png)
+
+**Recap of Goals**
+My original goal was to finish with the progress bar, but after talking with the TA about our progress towards having a demo and completing milestone 1 I decided I needed to switch gears to making sure we are creating good metrics and insights about projects for our users, and better enable them to create a resume using our program.
+
+I started by discussing with the team what kinds of things we still need to do in terms of gathering data, and in what ways we can process that data in order to give the user valuable insights. I am someone who finds it easier to describe things using visuals, and so I created the following mockup of how I have been envisioning the final milestone 1 to look during a run-through and shared with the team:
+
+![Output Mockup](imagesForLexLogs/lexoutputmockup.png)
+
+The team liked what I made and so I got started on creating GraphPrint.py, in order to show a graph visualization of a given set of data so that the user can easily parse metrics and help decide which projects are valuable for a resume. Outside of my mockup I also described to the group how we could show the user a ranking of which projects are best to show on a resume based on the variety of skills shown along with the percentage of the project that you contributed.
+
+The graph code itself took a lot of fiddling to make it look nice, I decided since I was intending for multiple graphs to appear in the output that I should implement some delay to make sure graphs dont appear all at once and overwhelm the user (or have them miss information). For the delay I made it dynamically animate in the terminal so you can see the graph move and the values change, makes the user feel like the program is actively doing something, and is more engaging then watching a bunch of text pop in all at once and overwhelm the user. 
+
+If you can't tell I think HCI is very fun, and I am looking forward to being able to do front-end stuff next term. as an artist I am hoping to take sort of a leadership role with it, at least in terms of making it look nice and feel good to use.
+
+Did some reviews and such as well.
+
+Issues closed:
+- Issue [COSC-499-W2025/capstone-project-team-20#219](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/219)
