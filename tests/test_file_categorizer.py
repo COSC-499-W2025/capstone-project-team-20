@@ -42,7 +42,7 @@ def test_classify_docs_by_path(mock_categorizer):
 
 def test_classify_by_extension(mock_categorizer):
     file_info = {"path": "tests/unit/sample.spec.js", "language": "JavaScript"}
-    assert mock_categorizer.classify_file(file_info) == "tests"
+    assert mock_categorizer.classify_file(file_info) == "test"
 
 def test_classify_file_by_design(mock_categorizer):
     file_info = {"path": "ui/index.html", "language": "HTML"}
@@ -84,5 +84,5 @@ def test_compute_metrics_counts_and_percentages(mock_categorizer):
     counts = metrics["counts"]
     percentages = metrics["percentages"]
 
-    assert set(counts.keys()) == {"code", "docs", "design", "tests"}
+    assert set(counts.keys()) == {"code", "docs", "design", "test"}
     assert sum(percentages.values()) == pytest.approx(100.0, rel=1e-2)

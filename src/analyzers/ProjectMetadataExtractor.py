@@ -5,6 +5,29 @@ from typing import Dict, Optional, List
 from src.FileCategorizer import FileCategorizer
 
 class ProjectMetadataExtractor:
+    @classmethod
+    def from_subfolder(cls, root_folder, subfolder_path: str):
+        """
+        Build a ProjectMetadataExtractor from a subfolder of the ZIP-parsed tree.
+        `subfolder_path` is something like: 'cosc_304 repository' or 'Project/'
+        """
+
+        parts = subfolder_path.strip("/").split("/")
+
+        node = root_folder
+        for part in parts:
+            found = None
+            for sub in node.subdir:
+                if sub.name == part:
+                    found = sub
+                    break
+
+            if found is None:
+                raise ValueError(f"Subfolder '{subfolder_path}' not found inside ZIP tree.")
+            node = found
+
+        return cls(node)
+
 
     def __init__(self, root_folder):
         self.root = root_folder
