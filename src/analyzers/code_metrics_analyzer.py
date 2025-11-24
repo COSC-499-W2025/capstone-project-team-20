@@ -5,7 +5,10 @@ from pathlib import Path
 from typing import Dict, List, Optional, Any
 
 import re
+import os
 
+from pathlib import Path
+from typing import Iterable
 from src.FileCategorizer import FileCategorizer
 from src.analyzers.language_detector import detect_language_per_file
 
@@ -172,19 +175,53 @@ class CodeMetricsAnalyzer:
     # Internal helpers
     # ------------------------------------------------------------------
 
-    def _iter_candidate_files(self):
+    def _iter_candidate_files(self) -> Iterable[Path]:
         """
-        Iterate over all regular files under root_dir that are not obviously
-        ignored by FileCategorizer's ignored_dirs/exts/files.
+        Iterate over all regular files under root_dir, pruning ignored directories
+        (e.g., node_modules, Unity build/cache folders) before descending.
         """
-        for path in self.root_dir.rglob("*"):
-            if not path.is_file():
-                continue
-            rel = path.relative_to(self.root_dir)
-            # Reuse FileCategorizer's ignore logic
-            if self.categorizer._should_ignore(str(rel)):
-                continue
-            yield path
+        # Minimal centralized set for heavy, noisy dirs.
+        # You can also extend this from FileCategorizer if it exposes such config.
+        PRUNED_DIR_NAMES = {
+            "node_modules",
+            ".git",
+            ".idea",
+            ".vscode",
+            "Library",        # Unity cache
+            "Temp",           # Unity temp
+            "Obj",
+            "obj",
+            "Logs",
+            "Build",
+            "build",
+            "dist",
+            "__pycache__",
+        }
+
+        root_str = str(self.root_dir)
+
+        for root, dirs, files in os.walk(root_str):
+            root_path = Path(root)
+            rel_root = root_path.relative_to(self.root_dir)
+
+            # Prune dirs *before* walking into them
+            dirs[:] = [
+                d
+                for d in dirs
+                if d not in PRUNED_DIR_NAMES
+                # If your FileCategorizer has an "ignore dir" helper, you can add it here:
+                # and not self.categorizer.is_ignored_dir(str(rel_root / d))
+            ]
+
+            for fname in files:
+                file_path = root_path / fname
+                rel = file_path.relative_to(self.root_dir)
+
+                # Reuse FileCategorizer's ignore logic for files
+                if hasattr(self.categorizer, "_should_ignore") and self.categorizer._should_ignore(str(rel)):
+                    continue
+
+                yield file_path
 
     def _analyze_single_file(
         self, file_path: Path, language: Optional[str], is_test: bool
