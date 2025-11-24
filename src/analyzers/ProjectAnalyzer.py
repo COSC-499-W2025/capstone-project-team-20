@@ -237,7 +237,6 @@ class ProjectAnalyzer:
 
                 # Categorization input
                 categorized_files = metadata_full["category_summary"]
-                print("DEBUG METADATA SUMMARY:", metadata_full["category_summary"])
 
                 # 4.language detector
                 language_share = analyze_language_share(
