@@ -120,3 +120,33 @@ Initial integration tests were failing due to architectural limitations in the o
 
 ### Looking Ahead:
 With the architectural foundation now solidified through improved separation of concerns and the upsert mechanism preventing data inconsistencies, the next phase will focus on expanding the application's capabilities while maintaining the established modularity and testability standards.
+
+## Week 12: Nov 17th-Nov 24th
+
+### Tasks worked on:
+![Svens Tasks for W12](./imagesForSvenLogs/w12.png)
+
+### Weekly Goals Recap:
+This week, I completed two significant feature implementations that enhance the application's Git repository analysis capabilities. **PR #208** introduced user selection and configuration functionality, enabling users to identify themselves from a repository's commit history and persist their selection across sessions using the `ConfigManager`. This feature prompts users to select their username(s) from discovered Git authors and stores the selection for future analyses, streamlining the workflow for returning users.
+
+**PR #209** built upon this foundation by implementing contribution aggregation and share calculation based on lines of code (LOC). The new `ContributionAnalyzer` module performs comprehensive Git repository analysis, tracking per-author statistics including lines added/deleted, commit counts, files touched, and categorizing contributions by type (code, tests, documentation). The system aggregates selected users' contributions and calculates their proportional share relative to the entire project, with results displayed through a formatted presentation layer. Both implementations maintain strict separation of concerns, with `ProjectAnalyzer` orchestrating the workflow, `ContributionAnalyzer` handling Git analysis, and `ConfigManager` managing persistent configuration.
+
+
+### New Issues:
+Created several issues to address architectural improvements and user experience enhancements:
+*   **Issue #198**: Refactor username selection workflow to improve user experience
+*   **Issue #199**: Implement contribution visualization and export functionality
+*   **Issue #213**: Enhance contribution categorization heuristics
+*   **Issue #214**: Add support for contribution analysis across multiple repositories
+
+### Code Reviews:
+*   **PR #206 - Feature/code metrics analyzer (Kaan)**: Reviewed comprehensive code metrics analysis implementation that tracks complexity, maintainability, and code quality indicators across the codebase.
+*   **PR #201 - fix: make load_zip more robust (Dylan)**: Reviewed improvements to ZIP file loading that enhance input validation and error handling for malformed or edge-case archive structures.
+*   **PR #196 - Filter Unwanted Files in ZipParser Tree Generation (Dylan)**: Reviewed refinements to the ZipParser that implement intelligent filtering to exclude system metadata and unwanted files from the parsed tree structure.
+*   **PR #172 - Add core skill domain models and patterns (Kaan)**: Reviewed foundational domain modeling work establishing skill detection patterns and core data structures for the skill analysis subsystem.
+
+### Problems Encountered:
+Encountered merge conflicts when integrating test suites due to concurrent development on `main` branch. The conflicts arose from new `clean_path()` tests added to `main` that tested functionality outside the scope of the username selection feature branch. Other than that no real issues with development.
+
+### Looking Ahead:
+With the core contribution analysis infrastructure now established, next week's focus will shift toward finalizing the user-facing output report and implementing export functionality to address Issue #199. I also plan to tackle **Issue #151** by expanding the application's input handling to accept direct file and folder paths in addition to ZIP archives, improving the development and testing workflow. Following these user experience enhancements, I intend to explore more sophisticated contribution visualization options and consider implementing the multi-repository analysis capabilities outlined in Issue #214.
