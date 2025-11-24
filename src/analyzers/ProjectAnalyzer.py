@@ -17,7 +17,7 @@ from utils.RepoFinder import RepoFinder
 from src.ProjectManager import ProjectManager
 from src.Project import Project
 from src.analyzers.skill_analyzer import SkillAnalyzer
-from src.analyzers.code_metrics_analyzer import CodeMetricsAnalyzer  # likely used inside SkillAnalyzer
+from src.analyzers.code_metrics_analyzer import CodeMetricsAnalyzer
 from src.generators.ResumeInsightsGenerator import ResumeInsightsGenerator
 from src.ConfigManager import ConfigManager
 
