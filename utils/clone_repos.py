@@ -6,9 +6,10 @@ you can run analysis on them, store that analysis locally, and then delete them.
 The Project objects associated with the repos will persist.
 
 Workflow:
-1. Run 'python3 -m utils.clone_repos.py' to clone repositories into cloned_repos/
-2. Run 'python3 -m utils.analyze_cloned_repos' to analyze the repos and store results locally.
-3. Run 'python3 -m utils.wipe_repos' to remove the repos from your machine.
+1. Run 'python3 -m utils.clone_repos.py' to clone repositories into cloned_repos/ <- THIS SCRIPT
+1. Run 'python3 -m utils.zip_repos.py' to zip each repository into zipped_repos/
+3. Run 'python3 -m utils.analyze_cloned_repos' to analyze the repos and store results locally.
+4. Run 'python3 -m utils.wipe_repos' to remove the repos from your machine.
 
 Notes: 
 - These repos are cloned to the cloned_repos/ directory within our project, where they're organized by repo_label (e.g. mobile_app)
@@ -86,14 +87,14 @@ def clone_repos(repos: List[Dict[str, str]], cloned_repos_dir: Path) -> Tuple[in
                 ['git', 'clone', '--depth', '1', repo_link, str(repo_path)],
                 check=True,
                 capture_output=True,
-                timeout=300,
+                timeout=120,
                 text=True
             )
             print(f"[{i}/{len(repos)}] ✅ {repo_name}")
             success_count += 1
                 
         except subprocess.TimeoutExpired:
-            print(f"[{i}/{len(repos)}] ⏱️  {repo_name} (timeout after 5 minutes)")
+            print(f"[{i}/{len(repos)}] ⏱️  {repo_name} (timeout after 120 seconds)")
             fail_count += 1
                 
         except subprocess.CalledProcessError as e:
