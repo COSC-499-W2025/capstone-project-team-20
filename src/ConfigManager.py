@@ -21,15 +21,15 @@ class ConfigManager(StorageManager):
     @property
     def table_name(self) -> str:
         return "configs"
-    
+
     @property
     def primary_key(self) -> str:
         return "key"
-    
+
     @property
     def columns(self) -> str:
         return "key, value"
-    
+
     def set(self, key: str, value: Any) -> None:
         """
         Store or update a configuration value by key.
@@ -39,11 +39,11 @@ class ConfigManager(StorageManager):
         value (Any): The value to store. Can be any JSON serializable type.
         """
         super().set({"key": key, "value": value})
-    
+
     def get(self, key: str, default: Any = None) -> Any:
         """
         Retrieve a configuration value by key.
-        
+
         key (str): The configuration key to look up.
 
         default (Any): Value to return if the key is not found. Defaults to None.
@@ -55,7 +55,7 @@ class ConfigManager(StorageManager):
         if result and isinstance(result, dict):
             return result.get("value")
         return default
-    
+
     def get_all(self) -> Dict[str, Any]:
         """
         Retrieve all configuration items as a dictionary.
