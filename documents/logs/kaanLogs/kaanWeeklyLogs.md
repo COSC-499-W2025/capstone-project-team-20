@@ -137,3 +137,21 @@ On the skills side, I refactored the original monolithic `skill_extractor.py` in
 In parallel, I collaborated with the team to design and partially implement a badge system that runs on top of the existing project analytics. This includes deriving project snapshots (metadata, language share, categories, and inferred skills), assigning badges based on thresholds (e.g., size, duration, test/docs balance, and stack composition), and wiring persistence so badges can be stored per project for later aggregation at the user profile level. The system is functional at the backend level but still in progress in terms of full integration and UI exposure.
 
 Finally, I reviewed and merged several teammates’ changes into the main branch, focusing on consistency with the new modular Skill Analyzer architecture, ensuring that their contributions integrated cleanly with the updated APIs and that the overall analytics flow remained stable and maintainable.
+
+### Week 12
+
+Log Checkbox:
+
+![week 12 log](imagesForKaanLogs/week_12_log.png)
+
+### Weekly Goals
+
+This week, I focused heavily on stabilizing and restructuring the Skill Analyzer pipeline for our Milestone 1 demo, delivering three major PRs that reshape how we extract, present, and persist project-level analytics.
+
+The first major task was refactoring the Skill Analyzer output so it aligns with the educational goals of the platform. I removed the misleading “proficiency” and “confidence” metrics, redesigned the user-facing output to emphasize languages, frameworks, and tools actually used in the project, and added interpretable feedback categories (testing discipline, documentation habits, modularity, and language depth). This makes the skill report much more actionable for students and instructors.
+
+The second PR expanded the project data model by introducing new derived metrics—including LOC, comment ratio, test ratio, function metrics, primary languages by LOC, and all four feedback dimensions. I updated the `Project` class, serialization logic, and the database schema to support these fields. I then integrated SkillAnalyzer’s output into the persistence layer so that a full snapshot of project analytics is automatically stored and can be retrieved later without re-running analysis.
+
+The third PR wired these changes into the Project Analyzer CLI, ensuring that skill analysis now populates the database cleanly, updates existing entries through upsert logic, and supports viewing historical results. This creates a unified pipeline from ZIP → analysis → metrics → database → display.
+
+Beyond my own PRs, I reviewed multiple teammate submissions to ensure compatibility with the new modular Skill Analyzer architecture, with special focus on DB consistency, serialization correctness, and cross-module integration. I also attended Friday’s milestone alignment meeting, where we finalized what analytics components must be stable for the Milestone 1 demo and coordinated division of tasks for the upcoming sprint.
