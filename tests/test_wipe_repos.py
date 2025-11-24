@@ -1,25 +1,26 @@
 from pathlib import Path
 from unittest.mock import Mock, patch, mock_open
-from utils.wipe_repos import (run_wipe_workflow,wipe_repos,clean_up_directories)
+from utils.wipe_repos import (run_wipe_workflow, wipe_repos, clean_up_directories)
+
 
 class TestRunWipeWorkflow:
-    def test_cloned_repos_dir_does_not_exist(self):
+    def test_repos_dir_does_not_exist(self):
         with patch('pathlib.Path.exists', return_value=False), \
              patch('builtins.print') as mock_print:
-            run_wipe_workflow()
+            run_wipe_workflow('test.csv', 'cloned_repos')
             mock_print.assert_called_once_with("Nothing to wipe - cloned_repos/ doesn't exist")
-    
+
     def test_csv_not_found(self):
         with patch('pathlib.Path.exists') as mock_exists, \
              patch('builtins.print') as mock_print:
             mock_exists.side_effect = [True, False]
-            run_wipe_workflow('missing.csv')
+            run_wipe_workflow('missing.csv', 'cloned_repos')
             mock_print.assert_called_with("CSV not found: missing.csv")
-    
+
     def test_successful_workflow(self):
-        csv_content = """repo_name,repo_label,repo_link 
-        test-repo,backend,https://github.com/test/repo.git 
-        another-repo,frontend,https://github.com/test/another.git"""
+        csv_content = """repo_name,repo_label,repo_link
+test-repo,backend,https://github.com/test/repo.git
+another-repo,frontend,https://github.com/test/another.git"""
         with patch('pathlib.Path.exists') as mock_exists, \
              patch('builtins.open', mock_open(read_data=csv_content)), \
              patch('utils.wipe_repos.wipe_repos', return_value=(2, 0)) as mock_wipe, \
@@ -27,37 +28,55 @@ class TestRunWipeWorkflow:
              patch('utils.wipe_repos.print_summary') as mock_summary, \
              patch('builtins.print'):
             mock_exists.side_effect = [True, True, True, True]
-            run_wipe_workflow()
+            run_wipe_workflow('test.csv', 'cloned_repos')
             assert mock_wipe.call_count == 1
             repos_arg = mock_wipe.call_args[0][0]
             assert len(repos_arg) == 2
             mock_cleanup.assert_called_once()
             mock_summary.assert_called_once_with(2, 0)
 
+
 class TestWipeRepos:
     def test_successful_delete_multiple_repos(self):
-        """Test successfully deleting multiple repositories."""
         repos = [
             {'repo_name': 'repo1', 'repo_label': 'backend', 'repo_link': 'https://github.com/test/repo1.git'},
             {'repo_name': 'repo2', 'repo_label': 'frontend', 'repo_link': 'https://github.com/test/repo2.git'},
-            {'repo_name': 'repo3', 'repo_label': 'mobile', 'repo_link': 'https://github.com/test/repo3.git'},]
+            {'repo_name': 'repo3', 'repo_label': 'mobile', 'repo_link': 'https://github.com/test/repo3.git'},
+        ]
         cloned_repos_dir = Path('cloned_repos')
         with patch('shutil.rmtree') as mock_rmtree, \
+             patch.object(Path, 'is_dir', return_value=True), \
+             patch.object(Path, 'exists', return_value=False), \
              patch('builtins.print'):
             deleted, failed = wipe_repos(repos, cloned_repos_dir)
             assert deleted == 3
             assert failed == 0
             assert mock_rmtree.call_count == 3
-    
+
     def test_failed_delete(self):
         repos = [{'repo_name': 'locked-repo', 'repo_label': 'backend', 'repo_link': 'https://github.com/test/repo.git'}]
         cloned_repos_dir = Path('cloned_repos')
         with patch('shutil.rmtree', side_effect=PermissionError("Access denied")), \
+             patch.object(Path, 'is_dir', return_value=True), \
+             patch.object(Path, 'exists', return_value=False), \
              patch('builtins.print') as mock_print:
             deleted, failed = wipe_repos(repos, cloned_repos_dir)
             assert deleted == 0
             assert failed == 1
             assert any("Failed to delete" in str(call) for call in mock_print.call_args_list)
+
+    def test_deletes_zip_files(self):
+        repos = [{'repo_name': 'repo1', 'repo_label': 'backend', 'repo_link': 'https://github.com/test/repo.git'}]
+        cloned_repos_dir = Path('cloned_repos')
+        mock_zip = Mock()
+        with patch.object(Path, 'is_dir', return_value=False), \
+             patch.object(Path, 'exists', return_value=True), \
+             patch.object(Path, 'unlink') as mock_unlink, \
+             patch('builtins.print'):
+            deleted, failed = wipe_repos(repos, cloned_repos_dir)
+            assert deleted == 1
+            assert mock_unlink.call_count == 1
+
 
 class TestCleanUpDirectories:
     def test_cleanup_empty_label_directories(self):
@@ -76,17 +95,20 @@ class TestCleanUpDirectories:
             mock_backend.rmdir.assert_called_once()
             mock_frontend.rmdir.assert_not_called()
 
+
 class TestIntegration:
     def test_full_wipe_workflow_integration(self):
         csv_content = """repo_name,repo_label,repo_link
-    test-repo,backend,https://github.com/test/repo.git
-    another-repo,frontend,https://github.com/test/another.git"""
+test-repo,backend,https://github.com/test/repo.git
+another-repo,frontend,https://github.com/test/another.git"""
         with patch('pathlib.Path.exists') as mock_exists, \
-            patch('builtins.open', mock_open(read_data=csv_content)), \
-            patch('shutil.rmtree') as mock_rmtree, \
-            patch('pathlib.Path.iterdir', return_value=[]), \
-            patch('pathlib.Path.rmdir'), \
-            patch('builtins.print'):
+             patch('builtins.open', mock_open(read_data=csv_content)), \
+             patch('shutil.rmtree') as mock_rmtree, \
+             patch.object(Path, 'is_dir', return_value=True), \
+             patch.object(Path, 'unlink') as mock_unlink, \
+             patch('pathlib.Path.iterdir', return_value=[]), \
+             patch('pathlib.Path.rmdir'), \
+             patch('builtins.print'):
             mock_exists.side_effect = [True, True, True, True]
-            run_wipe_workflow('test.csv')
+            run_wipe_workflow('test.csv', 'cloned_repos')
             assert mock_rmtree.call_count == 2

@@ -132,3 +132,29 @@ class Project:
     def update_author_count(self):
         """A helper method to ensure the author_count is always in sync."""
         self.author_count = len(self.authors)
+
+    def display(self) -> None:
+        """Print the project details to the console."""
+        print(f"\n{'='*50}")
+        print(f"  📁 {self.name}")
+        print(f"{'='*50}")
+        if self.file_path:
+            print(f"  Path: {self.file_path}")
+        if self.authors:
+            print(f"  Authors ({self.author_count}): {', '.join(self.authors)}")
+        print(f"  Status: {self.collaboration_status}")
+        if self.languages:
+            print(f"  Languages: {', '.join(self.languages)}")
+        if self.frameworks:
+            print(f"  Frameworks: {', '.join(self.frameworks)}")
+        if self.skills_used:
+            print(f"  Skills: {', '.join(self.skills_used)}")
+        if self.num_files:
+            print(f"  Files: {self.num_files}")
+        if self.size_kb:
+            print(f"  Size: {self.size_kb} KB")
+        if self.date_created:
+            print(f"  Created: {self.date_created.strftime('%Y-%m-%d')}")
+        if self.last_modified:
+            print(f"  Modified: {self.last_modified.strftime('%Y-%m-%d')}")
+        print()
