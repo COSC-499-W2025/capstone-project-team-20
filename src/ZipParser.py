@@ -1,12 +1,24 @@
 import shutil
 import tempfile
 import zipfile
+import shutil
+import yaml
 from zipfile import ZipFile, ZipInfo
 from pathlib import Path, PurePosixPath
 
 from src.ProjectFile import ProjectFile
 from src.ProjectFolder import ProjectFolder
 from src.ProgressBar import Bar
+
+CONFIG_DIR = Path(__file__).parent / "config"
+IGNORE_DIR = CONFIG_DIR / "ignored_directories.yml"
+
+with open(IGNORE_DIR, "r") as file:
+    config = yaml.safe_load(file)
+
+IGNORED_DIRS = set(config.get("ignored_dirs", []))
+IGNORED_EXTS = set(config.get("ignored_extensions", []))
+IGNORED_FILES = set(config.get("ignored_filenames", []))
 
 def add_to_tree(file: ZipInfo, parent:str, dirs:dict[str, ProjectFolder]) -> None:
     "Adds a file or folder to the project tree."
@@ -52,15 +64,40 @@ def generate_missing_folder(parent: str, dirs: dict[str, ProjectFolder]) -> Proj
     return parent_folder
 
 def ignore_file_criteria(file: ZipInfo) -> bool:
+    """
+    Determines if a file/folder should be ignored based on various criteria.
+    Returns True if the file should be skipped.
+    """
     path_parts = PurePosixPath(file.filename).parts
-    return (
-        "__MACOSX" in path_parts
-        or any(part.startswith("._") for part in path_parts)
-        or file.filename.endswith(".DS_Store")
-    )
+    filename = path_parts[-1]
+    
+    # macOS specific ignores
+    if "__MACOSX" in path_parts:
+        return True
+    if any(part.startswith("._") for part in path_parts):
+        return True
+    if file.filename.endswith(".DS_Store"):
+        return True
+    
+    # Ignore unwanted directories
+    if any(part in IGNORED_DIRS for part in path_parts):
+        return True
+    
+    # Ignore unwanted extensions
+    if "." in filename:
+        ext = filename.split(".")[-1].lower()
+        if ext in IGNORED_EXTS:
+            return True
+        
+    # Ignore unwanted files
+    if filename.lower() in IGNORED_FILES:
+        return True
+    
+    return False
 
 def parse(path: str) -> ProjectFolder:
-    '''Traverses zipped folder and creates a tree of ProjectFolder and ProjectFile objects, returns the root of the tree as an object'''
+    """Traverses zipped folder and creates a tree of ProjectFolder and ProjectFile objects
+    Returns the root of the tree as an object"""
 
     with ZipFile(path, 'r') as z:
         start=True
@@ -132,7 +169,7 @@ def toString(root: ProjectFolder) -> str:
     return output
 
 def _StringHelper(folder:ProjectFolder, indent:str, output:str, first:bool) -> str:
-    '''Recursively explores the full tree of subfiles and subfolders under "root", combines them into a single string to easily print the tree'''
+    "Recursively explores the full tree of subfiles and subfolders under 'root', combines them into a single string to easily print the tree"
     # add name of folder to string
     if first:
         output+="■["+folder.name+"]"+'\n'
@@ -154,7 +191,7 @@ def _StringHelper(folder:ProjectFolder, indent:str, output:str, first:bool) -> s
 
 """
 def traverse(folder:ProjectFolder):
-    '''THIS IS A TEMPLATE MEMTHOD FOR TREE TRAVERSAL'''
+    '''THIS IS A TEMPLATE METHOD FOR TREE TRAVERSAL'''
     #[ACCESS FOLDER OBJECT]:
     #---------code---------#
     if len(folder.children)>0:

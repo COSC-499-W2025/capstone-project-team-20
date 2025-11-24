@@ -1,5 +1,10 @@
+import os
+import sys
+import re
+import shutil
 import datetime
-import os, sys, contextlib, shutil
+import contextlib
+import zipfile
 from src.ZipParser import parse, toString
 from src.analyzers.ProjectMetadataExtractor import ProjectMetadataExtractor
 from src.analyzers.GitRepoAnalyzer import GitRepoAnalyzer
@@ -59,12 +64,21 @@ class ProjectAnalyzer:
             print(f"  - Status: {project.collaboration_status}\n")
             # Will display other variables from Project classes in the future
 
+    def clean_path(self, raw_input: str) -> Path:
+        stripped = raw_input.strip()
+        # Only strip quotes that surround path (so that something like `dylan's.zip` does not break the parser)
+        if (stripped.startswith('"') and stripped.endswith('"')) or \
+        (stripped.startswith("'") and stripped.endswith("'")):
+            stripped = stripped[1:-1]
+        # Remove shell escape backslashes (e.g., "my\ file" -> "my file")
+        unescaped = re.sub(r'\\(.)', r'\1', stripped)
+        return Path(os.path.expanduser(unescaped))
+
     def load_zip(self):
         """Prompts user for ZIP file and parses into folder tree"""
-        zip_path = input("Please enter the path to the zipped folder: ")
-        zip_path = os.path.expanduser(zip_path)
-        while not (os.path.exists(zip_path) and zip_path.endswith(".zip")):
-            zip_path = input("Invalid path or not a zipped file. Please try again: ")
+        zip_path = self.clean_path(input("Please enter the path to the zipped folder: "))
+        while not (os.path.exists(zip_path) and zipfile.is_zipfile(zip_path)):
+            zip_path = self.clean_path(input("Invalid path or not a zipped file. Please try again: "))
 
         self.zip_path = zip_path
         print("Parsing ZIP structure...")
