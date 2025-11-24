@@ -283,7 +283,7 @@ Issue [COSC-499-W2025/capstone-project-team-20#146](https://github.com/COSC-499-
 
 **Burnup chart:**
 
-[Week 12 burnup chart](teamWeeklyLogsImages/week-12-burnup-chart.png)
+[Week 12 burnup chart](teamWeeklyLogsImages/week_12_burnup_chart.png)
 
 **Table View of Completed Tasks on Project Board:**
 
