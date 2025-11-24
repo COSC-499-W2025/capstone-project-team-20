@@ -266,7 +266,7 @@ Issue [COSC-499-W2025/capstone-project-team-20#146](https://github.com/COSC-499-
 ### Week 12 (November 17th - November 23rd)
 
 **Work Performed:**
-- Branden Kennedy (42474551):
+- Branden Kennedy (42474551): Implemented a Resume Insights Generator to use our analyzers to output resume bullet points, project summary, and a menu to navigate which repository the user would like to generate insights for. Closed Issues [COSC-499-W2025/capstone-project-team-20#202](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/202), #203, #204, #215. Developed an extensive test suite for the resume insight generator. I also completed multiple PR reviews as first and second reviewer. 
 
 - Necmi Kaan Sapoglu (17014796): 
 
@@ -277,7 +277,7 @@ Issue [COSC-499-W2025/capstone-project-team-20#146](https://github.com/COSC-499-
 - Sven Annist (42486720): Implemented comprehensive user identification and contribution analysis features across two pull requests. **PR #208** enables users to select and persist their username(s) from Git commit history using an interactive prompt system integrated with `ConfigManager` for session persistence. **PR #209** introduced the `ContributionAnalyzer` module that performs single-pass Git repository analysis, tracking per-author statistics (lines added/deleted, commits, files touched) and categorizing contributions by type (code/tests/docs). The system aggregates selected users' contributions and calculates their proportional project share with formatted output display. Developed extensive test suites covering unit, integration, and serialization testing for both features. Created Issues #198, #199, #213, and #214 which will be closed by awaiting review PRs. Conducted four code reviews including Dylan's ZIP parser robustness improvements (PR #201, #196) and Kaan's code metrics analyzer and skill domain models (PR #206, #172).
 
 **Features included in the project plan for this milestone are:**
-- 
+- Issues #30 up to and including Issue #219
 
 **Continuing tasks from last week and plan for the next week:**
 
