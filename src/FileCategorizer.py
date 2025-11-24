@@ -2,7 +2,7 @@ import yaml
 from pathlib import Path
 from collections import Counter
 from typing import List, Dict, Any
-import os
+import os, re
 
 CONFIG_DIR = Path(__file__).parent / "config"
 LANG_FILE = CONFIG_DIR / "languages.yml"
@@ -122,8 +122,10 @@ class FileCategorizer:
         # Otherwise treat as binary/artifact
         else:
             return "binary"
+        
+    def _split_camel(self, name: str) -> List[str]:
+        return re.sub('([a-z])([A-Z])', r'\1 \2', name).lower().split()
 
-    
     def classify_file(self, file_info: Dict[str, Any]) -> str:
         """Determines category based on path, extension, or language
         file_info format: {'path}: str, 'language': str}
@@ -141,6 +143,29 @@ class FileCategorizer:
         if not lang or lang == "Unknown":
             lang = self.language_map.get(ext) or self.markup_map.get(ext)
 
+
+        # Split filename on non-alphanumeric characters to isolate words
+        name_parts = re.split(r'[^a-zA-Z0-9]+', filename)
+        camel_parts = self._split_camel(Path(path).stem)
+        all_parts = set(name_parts + camel_parts)
+
+        # 1. "test" or "tests" appears as its own word
+        if "test" in name_parts or "tests" in name_parts:
+            return "test"
+
+        # 2. Filename starts with test_
+        if filename.startswith("test_"):
+            return "test"
+
+        # 3. Filename ends with _test.<ext>
+        if filename.endswith(f"_test.{ext}"):
+            return "test"
+
+        # 4. Contains .test., .spec., .fixture.
+        if ".test." in filename or ".spec." in filename or ".fixture." in filename:
+            return "test"
+
+
         # Match by YML-defined categories
         for category, conf in self.categories.items():
             if "path_patterns" in conf and self._match_path_patterns(path, conf["path_patterns"]):
@@ -149,8 +174,11 @@ class FileCategorizer:
                 return category
             if "extensions" in conf and ext in [e.lower() for e in conf["extensions"]]:
                 return category
-            if "filenames" in conf and filename in [f.lower() for f in conf["filenames"]]:
-                return category
+            if "filenames" in conf:
+                lowered = filename.lower()
+                for key in conf["filenames"]:
+                    if key.lower() in lowered:
+                        return category
 
         # Handle files without extensions
         if not ext:
