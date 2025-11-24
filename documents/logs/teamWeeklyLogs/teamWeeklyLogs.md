@@ -262,3 +262,37 @@ Issue [COSC-499-W2025/capstone-project-team-20#146](https://github.com/COSC-499-
 **Test Report:**
 
 [Week 11 Test Report](teamWeeklyLogsImages/week_11_test_report.png)
+
+### Week 12 (November 17th - November 23rd)
+
+**Work Performed:**
+- Branden Kennedy (42474551):
+
+- Necmi Kaan Sapoglu (17014796): 
+
+- Lex Nash (84668540):
+
+- Dylan Alexander (16394025):
+
+- Sven Annist (42486720):
+
+**Features included in the project plan for this milestone are:**
+- 
+
+**Continuing tasks from last week and plan for the next week:**
+
+**Burnup chart:**
+
+[Week 12 burnup chart](teamWeeklyLogsImages/week-12-burnup-chart.png)
+
+**Table View of Completed Tasks on Project Board:**
+
+[Week 12 completed tasks](teamWeeklyLogsImages/week_12_completed_tasks.png)
+
+**Table View of In-Progress Tasks on Project Board:**
+
+[Week 12 In-Progress tasks](teamWeeklyLogsImages/week_12_in_progress.png)
+
+**Test Report:**
+
+[Week 12 Test Report](teamWeeklyLogsImages/week_12_test_report.png)
