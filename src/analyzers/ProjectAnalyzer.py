@@ -577,7 +577,8 @@ class ProjectAnalyzer:
                 8. Display Previous Results
                 9. Analyze Skills
                 10. Generate Resume Insights
-                11. Exit
+                11. Display Previous Results
+                12. Exit
                   """)
 
             choice = input("Selection: ").strip()
@@ -609,6 +610,9 @@ class ProjectAnalyzer:
             elif choice == "10":
                 self.generate_resume_insights()
             elif choice == "11":
+                projects = self.project_manager.get_all()
+                self.display_analysis_results(projects)
+            elif choice == "12":
                 print("Exiting Project Analyzer.")
                 # CLEAN UP TEMP DIR ON EXIT
                 if hasattr(self, "cached_extract_dir") and self.cached_extract_dir:
