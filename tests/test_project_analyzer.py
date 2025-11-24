@@ -5,6 +5,7 @@ from src.Project import Project
 from pathlib import Path
 import pytest
 
+# Fixtures
 @pytest.fixture
 def mock_config_manager():
     """Create a mock ConfigManager for testing"""
@@ -26,25 +27,36 @@ def test_init_with_config_manager(mock_config_manager):
 def test_load_zip_success(analyzer):
     fake_root = MagicMock()
     with patch("os.path.exists", return_value=True):
-        with patch("src.analyzers.ProjectAnalyzer.parse", return_value=fake_root):
-            with patch("builtins.input", side_effect=["/path/fake.zip"]):
-                result = analyzer.load_zip()
+        with patch("zipfile.is_zipfile", return_value=True):
+            with patch("src.analyzers.ProjectAnalyzer.parse", return_value=fake_root):
+                with patch("builtins.input", side_effect=["/path/fake.zip"]):
+                    result = analyzer.load_zip()
     assert result is True
     assert analyzer.root_folder is fake_root
 
 def test_load_zip_retry_then_success(analyzer):
     fake_root = MagicMock()
-    with patch("os.path.exists", side_effect=[False, True]):
-        with patch("builtins.input", side_effect=["bad.zip", "good.zip"]):
-            with patch("src.analyzers.ProjectAnalyzer.parse", return_value=fake_root):
-                assert analyzer.load_zip() is True
-                assert analyzer.root_folder is fake_root
+
+    inputs = iter(["bad.zip", "good.zip"])
+
+    def check_path(path):
+        return str(path).endswith("good.zip")
+
+    with patch("os.path.exists", side_effect=check_path):
+        with patch("zipfile.is_zipfile", side_effect=check_path):
+            with patch("builtins.input", side_effect=lambda prompt: next(inputs)):
+                with patch("src.analyzers.ProjectAnalyzer.parse", return_value=fake_root):
+                    result = analyzer.load_zip()
+
+    assert result is True
+    assert analyzer.root_folder is fake_root
 
 def test_load_zip_parse_error(analyzer):
     with patch("os.path.exists", return_value=True):
-        with patch("builtins.input", return_value="project.zip"):
-            with patch("src.analyzers.ProjectAnalyzer.parse", side_effect=Exception("bad zip")):
-                assert analyzer.load_zip() is False
+        with patch("zipfile.is_zipfile", return_value=True):
+            with patch("builtins.input", return_value="/path/project.zip"):
+                with patch("src.analyzers.ProjectAnalyzer.parse", side_effect=Exception("bad zip")):
+                    assert analyzer.load_zip() is False
 
 # Tests for username prompting
 def test_prompt_for_usernames_single_selection(analyzer):
