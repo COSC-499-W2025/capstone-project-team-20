@@ -270,7 +270,7 @@ Issue [COSC-499-W2025/capstone-project-team-20#146](https://github.com/COSC-499-
 
 - Necmi Kaan Sapoglu (17014796): 
 
-- Lex Nash (84668540):
+- Lex Nash (84668540): implemented methods to display a graph of information to the user to help them easily and quickly visualize the varied data we are extracting from their projects. The issue corresponding to this feature is issue [COSC-499-W2025/capstone-project-team-20#219](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/219). Includes tests and example code to show a potential output. Reviewed multiple pull requests. In general im focusing on prettying-up the output of the program and extracting useful metrics from data. my pr this week: #221.
 
 - Dylan Alexander (16394025):
 
