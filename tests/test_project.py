@@ -25,27 +25,27 @@ def sample_project():
 def test_project_to_dict_and_from_dict(sample_project):
     sample_project.update_author_count()
     d = sample_project.to_dict()
-    
+
     # Ensure list fields are JSON strings
     for field in ["authors", "languages", "frameworks", "skills_used", "individual_contributions"]:
         assert isinstance(d[field], str)
         loaded = json.loads(d[field])
         assert isinstance(loaded, list)
-    
+
     assert isinstance(d["collaboration_status"], str)
 
     assert d["collaboration_status"] in ["individual", "collaborative"]
 
-    
+
     # Ensure dates are ISO strings
     for field in ["date_created", "last_modified", "last_accessed"]:
         value = getattr(sample_project, field)
         if value:
             assert isinstance(d[field], str)
-    
+
     # Reconstruct object
     p2 = Project.from_dict(d)
-    
+
     # Check all fields
     p2 = Project.from_dict(d)
     p2.update_author_count()
@@ -65,3 +65,53 @@ def test_project_to_dict_and_from_dict(sample_project):
     assert p2.last_accessed == sample_project.last_accessed
     assert p2.author_count == len(sample_project.authors)
 
+def test_project_author_contributions_serialization():
+    """Test that author_contributions field is properly serialized"""
+    contrib_data = [
+        {"author": "Alice", "lines": 100, "commits": 5},
+        {"author": "Bob", "lines": 50, "commits": 3}
+    ]
+    project = Project(
+        name="TestProject",
+        authors=["Alice", "Bob"],
+        author_contributions=contrib_data
+    )
+    d = project.to_dict()
+    assert isinstance(d["author_contributions"], str)
+    loaded = json.loads(d["author_contributions"])
+    assert loaded == contrib_data
+
+def test_project_author_contributions_deserialization():
+    """Test that author_contributions is properly reconstructed"""
+    contrib_data = [{"author": "Alice", "lines": 100}]
+    project = Project(name="Test", author_contributions=contrib_data)
+    d = project.to_dict()
+    reconstructed = Project.from_dict(d)
+    assert reconstructed.author_contributions == contrib_data
+
+def test_project_empty_author_contributions():
+    """Test handling of empty author_contributions"""
+    project = Project(name="Test", author_contributions=[])
+    d = project.to_dict()
+    reconstructed = Project.from_dict(d)
+    assert reconstructed.author_contributions == []
+
+def test_project_author_contributions_none():
+    """Test handling when author_contributions is None in dict"""
+    project_dict = {
+        "name": "Test",
+        "authors": json.dumps(["Alice"]),
+        "author_contributions": None
+    }
+    project = Project.from_dict(project_dict)
+    assert project.author_contributions == []
+
+def test_project_roundtrip_with_author_contributions(sample_project):
+    """Test full roundtrip with author_contributions field"""
+    sample_project.author_contributions = [
+        {"author": "Alice", "lines": 100, "commits": 10},
+        {"author": "Bob", "lines": 50, "commits": 5}
+    ]
+    d = sample_project.to_dict()
+    reconstructed = Project.from_dict(d)
+    assert reconstructed.author_contributions == sample_project.author_contributions
