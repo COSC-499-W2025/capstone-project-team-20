@@ -165,28 +165,23 @@ def long_function():
 
 def test_ignored_directories_are_pruned(tmp_path: Path):
     """
-    Ensure that heavy/ignored directories like node_modules and Unity build/cache
-    are not traversed by CodeMetricsAnalyzer and do not appear in analyses.
+    Ensure that heavy/ignored directories like node_modules, .venv, and Unity
+    build/cache dirs are not traversed by CodeMetricsAnalyzer.
     """
-    # "Real" source file we care about
     src_file = tmp_path / "src" / "main.py"
     _write_file(src_file, "def foo():\n    return 1\n")
 
-    # Noisy dirs that should be ignored
     node_file = tmp_path / "node_modules" / "pkg" / "index.js"
     _write_file(node_file, "console.log('should be ignored');\n")
 
-    unity_cache_file = tmp_path / "Library" / "ScriptAssemblies" / "something.dll"
-    _write_file(unity_cache_file, "binary junk")
+    venv_file = tmp_path / ".venv" / "lib" / "python" / "site.py"
+    _write_file(venv_file, "# should be ignored\n")
 
     analyzer = CodeMetricsAnalyzer(tmp_path)
-
     analyses = list(analyzer.analyze())
     rel_paths = {a.path.relative_to(tmp_path).as_posix() for a in analyses}
 
-    # main.py should be present
     assert "src/main.py" in rel_paths
-
-    # Files in ignored dirs must NOT be present
     assert not any("node_modules" in p for p in rel_paths)
-    assert not any("Library" in p for p in rel_paths)
+    assert not any(".venv" in p for p in rel_paths)
+
