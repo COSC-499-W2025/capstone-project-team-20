@@ -1,6 +1,6 @@
 from __future__ import annotations
 from dataclasses import dataclass, asdict, field
-from typing import List, Literal, Optional
+from typing import List, Literal, Optional, Dict, Any
 from datetime import datetime
 import json
 
@@ -25,6 +25,7 @@ class Project:
     frameworks: List[str] = list_field()
     skills_used: List[str] = list_field()
     individual_contributions: List[str] = list_field()
+    author_contributions: List[Dict[str, Any]] = list_field()
     collaboration_status: Literal["individual", "collaborative"] = "individual"
     date_created: Optional[datetime] = None
     last_modified: Optional[datetime] = None
@@ -37,8 +38,8 @@ class Project:
         """
         proj_dict = asdict(self)
 
-        # Serialize list-based fields to JSON strings.
-        for field_name in ["authors", "languages", "frameworks", "skills_used", "individual_contributions"]:
+        # Serialize list-based and dict-based fields to JSON strings.
+        for field_name in ["authors", "languages", "frameworks", "skills_used", "individual_contributions", "author_contributions"]:
             proj_dict[field_name] = json.dumps(proj_dict[field_name])
 
         # Ensure author_count is consistent with the authors list.
@@ -59,8 +60,8 @@ class Project:
         # Create a copy to avoid modifying the original dictionary.
         proj_dict_copy = proj_dict.copy()
 
-        # Deserialize JSON strings back into lists.
-        for field_name in ["authors", "languages", "frameworks", "skills_used", "individual_contributions"]:
+        # Deserialize JSON strings back into lists or dicts.
+        for field_name in ["authors", "languages", "frameworks", "skills_used", "individual_contributions", "author_contributions"]:
             value = proj_dict_copy.get(field_name)
             if isinstance(value, str):
                 proj_dict_copy[field_name] = json.loads(value)

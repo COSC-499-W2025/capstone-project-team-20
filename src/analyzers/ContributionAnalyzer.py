@@ -28,7 +28,8 @@ class ContributionAnalyzer:
     def _categorize_file_path(self, path: str) -> str:
         """Categorizes a file path into 'code', 'docs', or 'test'."""
         p = Path(path.lower())
-        if "test" in p.parts:
+        # Check for both singular and plural forms
+        if "test" in p.parts or "tests" in p.parts:
             return "test"
         if "doc" in p.parts or "docs" in p.parts:
             return "docs"
