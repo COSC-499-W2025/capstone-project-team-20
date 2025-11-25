@@ -2,13 +2,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, Iterable, Set
 
-import re
 import os
+import re
 
-from pathlib import Path
-from typing import Iterable
 from src.FileCategorizer import FileCategorizer
 from .language_detector import detect_language_per_file
 
@@ -18,6 +16,7 @@ class CodeFileAnalysis:
     """
     Per-file metrics for code/test files within a project.
     """
+
     path: Path
     language: Optional[str]
     is_test: bool
@@ -44,6 +43,10 @@ class CodeMetricsAnalyzer:
         self.root_dir = Path(root_dir)
         self.categorizer = FileCategorizer()
 
+    # ------------------------------------------------------------------
+    # Public API
+    # ------------------------------------------------------------------
+
     def analyze(self) -> List[CodeFileAnalysis]:
         """
         Perform code-metrics analysis for all code/test files.
@@ -52,8 +55,15 @@ class CodeMetricsAnalyzer:
             A list of CodeFileAnalysis objects, one per analyzed file.
         """
         analyses: List[CodeFileAnalysis] = []
+        seen_paths: Set[Path] = set()
 
         for file_path in self._iter_candidate_files():
+            # Extra safety: avoid duplicate processing of the same file
+            file_path = file_path.resolve()
+            if file_path in seen_paths:
+                continue
+            seen_paths.add(file_path)
+
             rel_path = file_path.relative_to(self.root_dir)
             language = detect_language_per_file(file_path)
             file_info = {"path": str(rel_path), "language": language or "Unknown"}
@@ -64,7 +74,7 @@ class CodeMetricsAnalyzer:
 
             is_test = self._is_test_file(rel_path, category)
             if category not in ("code", "tests"):
-                # For now this is empty as analysis is only done in code/test files.
+                # Analysis is only done in code/test files.
                 continue
 
             analysis = self._analyze_single_file(file_path, language, is_test)
@@ -136,9 +146,7 @@ class CodeMetricsAnalyzer:
             if (total_comment + total_loc) > 0
             else 0.0
         )
-        test_file_ratio = (
-            num_test_files / (num_code_files or 1)
-        )
+        test_file_ratio = num_test_files / (num_code_files or 1)
 
         overall.update(
             {
@@ -159,9 +167,7 @@ class CodeMetricsAnalyzer:
         for lang, data in per_language.items():
             loc = data["loc"]
             cmt = data["comment_lines"]
-            data["comment_ratio"] = (
-                cmt / (cmt + loc) if (cmt + loc) > 0 else 0.0
-            )
+            data["comment_ratio"] = cmt / (cmt + loc) if (cmt + loc) > 0 else 0.0
             data["avg_functions_per_file"] = (
                 data["functions"] / data["files"] if data["files"] else 0.0
             )
@@ -178,47 +184,30 @@ class CodeMetricsAnalyzer:
     def _iter_candidate_files(self) -> Iterable[Path]:
         """
         Iterate over all regular files under root_dir, pruning ignored directories
-        (e.g., node_modules, Unity build/cache folders) before descending.
+        and files based on ignored_directories.yml via FileCategorizer.
         """
-        # Minimal centralized set for heavy, noisy dirs.
-        # You can also extend this from FileCategorizer if it exposes such config.
-        PRUNED_DIR_NAMES = {
-            "node_modules",
-            ".git",
-            ".idea",
-            ".vscode",
-            "Library",        # Unity cache
-            "Temp",           # Unity temp
-            "Obj",
-            "obj",
-            "Logs",
-            "Build",
-            "build",
-            "dist",
-            "__pycache__",
-        }
-
         root_str = str(self.root_dir)
 
         for root, dirs, files in os.walk(root_str):
             root_path = Path(root)
             rel_root = root_path.relative_to(self.root_dir)
 
-            # Prune dirs *before* walking into them
+            # 1) Prune dirs using FileCategorizer + ignored_directories.yml
             dirs[:] = [
                 d
                 for d in dirs
-                if d not in PRUNED_DIR_NAMES
-                # If your FileCategorizer has an "ignore dir" helper, you can add it here:
-                # and not self.categorizer.is_ignored_dir(str(rel_root / d))
+                if not self.categorizer.is_ignored_dir(rel_root / d)
             ]
 
+            # 2) Yield files that are not ignored by FileCategorizer
             for fname in files:
                 file_path = root_path / fname
                 rel = file_path.relative_to(self.root_dir)
 
                 # Reuse FileCategorizer's ignore logic for files
-                if hasattr(self.categorizer, "_should_ignore") and self.categorizer._should_ignore(str(rel)):
+                if hasattr(self.categorizer, "_should_ignore") and self.categorizer._should_ignore(
+                    str(rel)
+                ):
                     continue
 
                 yield file_path
@@ -299,6 +288,7 @@ class CodeMetricsAnalyzer:
         )
 
     # Very lightweight heuristics.
+
     def _is_comment_line(self, stripped: str, language: Optional[str]) -> bool:
         lang = (language or "").lower()
 
@@ -310,11 +300,13 @@ class CodeMetricsAnalyzer:
             # C-like single-line comment
             return True
 
-        if stripped.startswith("/*") or stripped.startswith("*") or stripped.startswith("*/"):
+        if stripped.startswith("/*") or stripped.startswith("*") or stripped.startswith(
+            "*/"
+        ):
             return True
 
         # Python docstrings as comments
-        if lang == "Python".lower() and (
+        if lang == "python" and (
             stripped.startswith('"""') or stripped.startswith("'''")
         ):
             return True
@@ -349,7 +341,6 @@ class CodeMetricsAnalyzer:
             return True
 
         return False
-
 
     def _looks_like_function_def(self, stripped: str, language: Optional[str]) -> bool:
         lang = (language or "").lower()

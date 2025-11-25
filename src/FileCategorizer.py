@@ -2,6 +2,7 @@ import yaml
 from pathlib import Path
 from collections import Counter
 from typing import List, Dict, Any
+
 import os
 
 CONFIG_DIR = Path(__file__).parent / "config"
@@ -12,66 +13,81 @@ IGNORED_FILE = CONFIG_DIR / "ignored_directories.yml"
 
 
 def load_yaml(path: Path) -> dict:
-    """Helper function for safely loading yaml"""
-    with open(path, "r") as f:
+    """Helper function for safely loading yaml."""
+    with open(path, "r", encoding="utf-8") as f:
         return yaml.safe_load(f)
-    
 
-    """
-    File: FileCategorizer.py
 
-    The FileCategorizer classifies files into categories such as code, documentation, design, and tests.
-    It uses three YAML configuration files (in the config folder) — `languages.yml`, `markup_languages.yml`, and `categories.yml` — 
-    to determine how files should be categorized based on their path, file extension, or detected language.
+"""
+File: FileCategorizer.py
 
-    It is the primary class responsible for categorizing files and computing project-level file metrics.
+The FileCategorizer classifies files into categories such as code, documentation, design, and tests.
+It uses three YAML configuration files (in the config folder) — `languages.yml`, `markup_languages.yml`, and `categories.yml` —
+to determine how files should be categorized based on their path, file extension, or detected language.
 
-    Core functionality:
-    - YAML Loading: Loads mappings of programming and markup languages, as well as file category definitions.
-    - Classification (`classify_file`): Determines the category of a file by checking its path, extension, or language.
-    - Metrics Computation (`compute_metrics`): Classifies a list of files and computes counts and percentages per category.
+It is the primary class responsible for categorizing files and computing project-level file metrics.
 
-    Example output:
-    ```python
-    {
-        "counts": {"code": 50, "docs": 50, "design": 25, "tests": 25},
-        "percentages": {"code": 33.3, "docs": 33.3, "design": 16.67, "tests": 16.67}
-    }"""
+Core functionality:
+- YAML Loading: Loads mappings of programming and markup languages, as well as file category definitions.
+- Classification (`classify_file`): Determines the category of a file by checking its path, extension, or language.
+- Metrics Computation (`compute_metrics`): Classifies a list of files and computes counts and percentages per category.
+"""
+
 
 class FileCategorizer:
-    """Classifies files into categories (code, test, docs, design) using categories.ym, languages.yml, markup_languages.yml"""
+    """Classifies files into categories (code, test, docs, design) using categories.yml, languages.yml, markup_languages.yml."""
 
     def __init__(self):
-        #Loading YAML configs
+        # Loading YAML configs
+        categories_all = load_yaml(CATEGORIES_FILE)
         self.languages_yaml = load_yaml(LANG_FILE)["languages"]
         self.markup_yaml = load_yaml(MARKUP_FILE)["markup_languages"]
-        self.categories_yaml = load_yaml(CATEGORIES_FILE)["categories"]
-        self.no_ext_rules = load_yaml(CATEGORIES_FILE).get("no_extension_rules", {})
+        self.categories_yaml = categories_all["categories"]
+        self.no_ext_rules = categories_all.get("no_extension_rules", {})
 
-        #IGNORED directories/extensions/files loaded:
+        # IGNORED directories/extensions/files loaded:
         ignored_data = load_yaml(IGNORED_FILE)
         self.ignored_dirs = set(ignored_data.get("ignored_dirs", []))
         self.ignored_exts = set(ignored_data.get("ignored_extensions", []))
-        self.ignored_filenames = set(f.lower() for f in ignored_data.get("ignored_filenames", []))
+        self.ignored_filenames = {
+            f.lower() for f in ignored_data.get("ignored_filenames", [])
+        }
 
-        #Building extension -> Language maps
+        # Building extension -> Language maps
         self.language_map = self._build_language_map(self.languages_yaml)
         self.markup_map = self._build_language_map(self.markup_yaml)
 
-        #Extending 'language_source' into real lists
+        # Extending 'language_source' into real lists
         self.categories = self._expand_category_sources(self.categories_yaml)
 
+    # ------------------------------------------------------------------
+    # Ignore helpers
+    # ------------------------------------------------------------------
+
+    def is_ignored_dir(self, rel_path: Path) -> bool:
+        """
+        Public helper used by analyzers to decide if a directory should be pruned.
+
+        Delegates to _should_ignore so all ignore logic (dirs/exts/filenames)
+        stays centralized and YAML-driven.
+        """
+        return self._should_ignore(str(rel_path))
+
+    # ------------------------------------------------------------------
+    # Internal helpers
+    # ------------------------------------------------------------------
+
     def _build_language_map(self, lang_dict: Dict[str, dict]) -> Dict[str, str]:
-        """converts language -> extensions dict into extension-> language"""
-        mapping = {}
+        """Converts language -> extensions dict into extension -> language."""
+        mapping: Dict[str, str] = {}
         for lang, conf in lang_dict.items():
             for ext in conf.get("extensions", []):
                 mapping[ext.lower()] = lang
         return mapping
-    
+
     def _expand_category_sources(self, categories: Dict[str, dict]) -> Dict[str, dict]:
-        """Resolves any 'language_source' references (e.g 'languages', 'markup_languages', 'all')"""
-        expanded = {}
+        """Resolves any 'language_source' references (e.g. 'languages', 'markup_languages', 'all')."""
+        expanded: Dict[str, dict] = {}
         for cat, conf in categories.items():
             conf = conf.copy()
             src = conf.get("language_source")
@@ -81,17 +97,19 @@ class FileCategorizer:
             elif src == "markup_languages":
                 conf["languages"] = list(self.markup_yaml.keys())
             elif src == "all":
-                conf["languages"] = list(self.languages_yaml.keys()) + list(self.markup_yaml.keys())
+                conf["languages"] = list(self.languages_yaml.keys()) + list(
+                    self.markup_yaml.keys()
+                )
 
             expanded[cat] = conf
         return expanded
 
     def _match_path_patterns(self, path: str, patterns: List[str]) -> bool:
-        path = path.lower()
-        return any(p.lower() in path for p in patterns)
-    
+        path_l = path.lower()
+        return any(p.lower() in path_l for p in patterns)
+
     def _should_ignore(self, path: str) -> bool:
-        """Checks if path contains any of the ignored directories or ignored extensions"""
+        """Checks if path contains any of the ignored directories or ignored extensions/filenames."""
         path_obj = Path(path)
         parts = set(path_obj.parts)
         ext = path_obj.suffix.lstrip(".").lower()
@@ -103,9 +121,9 @@ class FileCategorizer:
             return True
         if filename in self.ignored_filenames:
             return True
-        
+
         return False
-    
+
     def _classify_no_extension(self, path: str) -> str:
         """Classify files with no extension based on YAML-defined name patterns."""
         name = Path(path).name.lower()
@@ -123,27 +141,35 @@ class FileCategorizer:
         else:
             return "binary"
 
-    
+    # ------------------------------------------------------------------
+    # Public API
+    # ------------------------------------------------------------------
+
     def classify_file(self, file_info: Dict[str, Any]) -> str:
-        """Determines category based on path, extension, or language
-        file_info format: {'path}: str, 'language': str}
+        """
+        Determines category based on path, extension, or language.
+
+        file_info format: {"path": str, "language": str}
         """
         path = file_info["path"]
 
         if self._should_ignore(path):
             return "ignored"
 
-        ext = Path(path).suffix.lstrip(".").lower()
-        filename = Path(path).name.lower()
+        path_obj = Path(path)
+        ext = path_obj.suffix.lstrip(".").lower()
+        filename = path_obj.name.lower()
 
         # Infer language if missing
         lang = file_info.get("language")
         if not lang or lang == "Unknown":
             lang = self.language_map.get(ext) or self.markup_map.get(ext)
 
-        # Match by YML-defined categories
+        # Match by YAML-defined categories
         for category, conf in self.categories.items():
-            if "path_patterns" in conf and self._match_path_patterns(path, conf["path_patterns"]):
+            if "path_patterns" in conf and self._match_path_patterns(
+                path, conf["path_patterns"]
+            ):
                 return category
             if "languages" in conf and lang in conf["languages"]:
                 return category
@@ -157,16 +183,15 @@ class FileCategorizer:
             return self._classify_no_extension(path)
 
         return "other"
-    
+
     def compute_metrics(self, files: List[Dict[str, Any]]) -> Dict[str, Dict[str, float]]:
-        """This classifies the files and computes the count/percent metrics"""
+        """Classifies the files and computes the count/percent metrics."""
         categories = [self.classify_file(f) for f in files]
         counts = Counter(categories)
         total = sum(counts.values()) or 1
 
         percentages = {
-            cat: round((count / total) * 100, 2)
-            for cat, count in counts.items()
+            cat: round((count / total) * 100, 2) for cat, count in counts.items()
         }
 
         return {"counts": dict(counts), "percentages": percentages}

@@ -40,6 +40,8 @@ class SkillAnalyzer:
             {
               "skills": List[SkillProfileItem],
               "stats": Dict[str, Any],   # project-level metrics used for scoring
+              "dimensions": Dict[str, Any],
+              "resume_suggestions": List[Dict[str, Any]],
             }
         """
         file_analyses = self.metrics_analyzer.analyze()
@@ -121,7 +123,7 @@ class SkillAnalyzer:
 
             skill_name = fa.language
             if skill_name not in TAXONOMY:
-                # Still allow unknown languages, but we treat them as low-priority
+                # Still allow unknown languages, but we treat them as low-priority.
                 pass
 
             evidence.append(
@@ -141,7 +143,17 @@ class SkillAnalyzer:
         Walks text-like dependency/config files and applies DEP_TO_SKILL patterns.
         """
         evidence: List[Evidence] = []
-        text_like_exts = {".txt", ".toml", ".json", ".yaml", ".yml", ".lock", ".ini", ".cfg", ".xml"}
+        text_like_exts = {
+            ".txt",
+            ".toml",
+            ".json",
+            ".yaml",
+            ".yml",
+            ".lock",
+            ".ini",
+            ".cfg",
+            ".xml",
+        }
 
         for path in self.root_dir.rglob("*"):
             if not path.is_file():
@@ -200,7 +212,6 @@ class SkillAnalyzer:
         For each code file, scan its text once and record which snippet patterns matched.
         This avoids re-reading files in _snippet_evidence.
         """
-        # Index by full path for quick lookup
         analyses_by_path: Dict[Path, CodeFileAnalysis] = {
             Path(fa.path): fa for fa in file_analyses
         }
@@ -286,7 +297,7 @@ class SkillAnalyzer:
             reverse=True,
         )
         return profiles
-    
+
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
@@ -358,16 +369,16 @@ class SkillAnalyzer:
             if data.get("loc", 0) >= 500  # arbitrary "non-toy" threshold
         }
         depth_ratio = len(depth_languages) / max(1, len(per_lang))
-        lang_depth_score = min(1.0, 0.5 + depth_ratio * 0.5)  # base 0.5 for having code at all
+        lang_depth_score = min(
+            1.0, 0.5 + depth_ratio * 0.5
+        )  # base 0.5 for having code at all
         lang_depth_level = self._level_from_score(lang_depth_score)
 
         lang_depth_dim = {
             "score": round(lang_depth_score, 2),
             "level": lang_depth_level,
             "raw": {
-                "languages": {
-                    lang: {"loc": loc} for lang, loc in depth_languages.items()
-                },
+                "languages": {lang: {"loc": loc} for lang, loc in depth_languages.items()},
                 "total_loc": total_loc,
             },
         }
