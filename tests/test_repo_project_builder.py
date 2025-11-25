@@ -45,9 +45,8 @@ def _make_folder_tree():
     return root, repo_folder
 
 
-# -------------------------------------------------------------------
-# FIXTURE: build a fake ZIP tree with folder names matching repo folders
-# -------------------------------------------------------------------
+# build a fake ZIP tree with folder names matching repo folders
+
 
 def build_zip_tree():
     """
@@ -72,9 +71,6 @@ def build_zip_tree():
     return root, repoA, repoB
 
 
-# -------------------------------------------------------------------
-# TEST: _find_folder_by_name
-# -------------------------------------------------------------------
 
 def test_find_folder_by_name():
     root, repoA, repoB = build_zip_tree()
@@ -85,9 +81,8 @@ def test_find_folder_by_name():
     assert builder._find_folder_by_name(root, "DoesNotExist") is None
 
 
-# -------------------------------------------------------------------
-# TEST: build a project object when contributions, metadata, languages are mocked
-# -------------------------------------------------------------------
+
+# builds a project object when contributions, metadata, languages are mocked
 
 @patch("src.analyzers.RepoProjectBuilder.detect_language_per_file")
 @patch("src.analyzers.RepoProjectBuilder.analyze_language_share")
@@ -104,7 +99,7 @@ def test_build_single_project(
 
     repo_path = Path("/fake/extract/dir/MyRepo")
 
-    # --- Mock Metadata Extractor ---
+    # Mock Metadata Extractor 
     mock_metadata_extractor = MagicMock()
     mock_metadata_extractor.extract_metadata.return_value = {
         "project_metadata": {
@@ -120,7 +115,7 @@ def test_build_single_project(
     ]
     mock_project_metadata_extractor.return_value = mock_metadata_extractor
 
-    # --- Mock Contribution Analyzer ---
+    # Mock Contribution Analyzer
     mock_contrib = MagicMock()
     mock_contrib.analyze.return_value = {
         "Alice": MagicMock(),
@@ -131,21 +126,19 @@ def test_build_single_project(
     # inject into builder
     builder.contribution_analyzer = mock_contrib
 
-    # --- Mock Language Detection ---
+    # Mock Language Detection
     mock_analyze_language_share.return_value = {"Python": 100.0}
     mock_detect_language_per_file.return_value = "Python"
 
-    # --- ACT ---
+    #ACT
     project = builder._build_single_project(repo_path)
 
-    # --- ASSERT ---
+    # ASSERT
     assert project is not None
     assert project.authors == ["Alice", "Bob"]
 
 
-# -------------------------------------------------------------------
-# TEST: full scan() returns multiple projects
-# -------------------------------------------------------------------
+# testing that full scan() returns multiple projects
 
 @patch("src.analyzers.RepoProjectBuilder.RepoFinder")
 @patch("src.analyzers.RepoProjectBuilder.RepoProjectBuilder._build_single_project")

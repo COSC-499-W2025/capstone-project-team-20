@@ -4,7 +4,6 @@ from datetime import datetime
 class ResumeInsightsGenerator:
     """
     Generates resume bullet points and summaries.
-    Now uses human-readable durations (e.g., '1 month and 12 days').
     """
 
     def __init__(self, metadata, categorized_files, language_share, project, language_list):
@@ -70,7 +69,7 @@ class ResumeInsightsGenerator:
                 f"Produced {doc_files}+ documentation files and implemented {test_files} automated tests, {impact}."
             )
 
-        # Bullet 3 — Duration (human readable)
+        # Bullet 3 — Duration in months/days
         days = self._compute_days()
         duration_text = self.format_duration(days)
         bullets.append(
@@ -147,7 +146,7 @@ class ResumeInsightsGenerator:
         return max((end - start).days, 0)
 
     # formatting for days if less than 1 month
-    # or months and _ days if longer than 1 month
+    # or _ months and _ days if longer than 1 month
     def format_duration(self, days: int) -> str:
         if days < 30:
             return f"{days} days"
