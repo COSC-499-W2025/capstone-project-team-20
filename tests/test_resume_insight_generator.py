@@ -90,8 +90,8 @@ def test_bullet_points_solo_project():
 def test_duration_calculation():
     gen = make_generator(start="2025-01-01", end="2025-02-01")
 
-    months = gen._compute_project_duration()
-    assert months == 1.0     # 31 days → 1.0 months
+    days = gen._compute_days()
+    assert days = 31
 
 
 def test_generate_project_summary():

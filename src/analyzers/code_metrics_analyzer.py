@@ -60,7 +60,7 @@ class CodeMetricsAnalyzer:
                 continue
 
             is_test = self._is_test_file(rel_path, category)
-            if category not in ("code", "tests"):
+            if category not in ("code", "test"):
                 # For now this is empty as analysis is only done in code/test files.
                 continue
 
