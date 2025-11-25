@@ -63,6 +63,10 @@ class RepoProjectBuilder:
         author_stats = self.contribution_analyzer.analyze(str(repo_path))
         authors = list(author_stats.keys())
 
+        if (len(authors)) <=1:
+            if len(folder.subdir) > 1:
+                authors = folder.subdir
+
         # 4. Language share from local repository contents
         language_share = analyze_language_share(str(repo_path))
 
@@ -82,7 +86,12 @@ class RepoProjectBuilder:
             authors=authors,
             author_count=len(authors),
             languages=repo_languages,
+            collaboration_status="collaborative" if len(authors)>1 else "individual"
         )
+
+        proj.metadata = metadata
+        proj.categories = category_summary
+        proj.language_share = language_share
 
         return proj
 
