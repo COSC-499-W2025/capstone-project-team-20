@@ -1,4 +1,5 @@
 import random
+from datetime import datetime
 
 class ResumeInsightsGenerator:
     """
@@ -146,10 +147,19 @@ class ResumeInsightsGenerator:
     # ------------------------------------------------------------
     # Helper: Duration
     # ------------------------------------------------------------
+
     def _compute_project_duration(self):
         start = self.metadata.get("start_date")
         end = self.metadata.get("end_date")
-        if not start or not end:
-            return None
-        months = (end - start).days / 30.0
-        return round(months, 1)
+
+        # Convert to datetime if strings
+        if isinstance(start, str):
+            start = datetime.strptime(start, "%Y-%m-%d")
+        if isinstance(end, str):
+            end = datetime.strptime(end, "%Y-%m-%d")
+
+        days = (end - start).days
+        months = days / 30.0
+
+        return max(months, 0.1)
+

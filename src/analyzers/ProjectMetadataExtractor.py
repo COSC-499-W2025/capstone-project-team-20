@@ -79,13 +79,13 @@ class ProjectMetadataExtractor:
             average_file_size_kb = round((total_size/total_files)/1024, 2) if total_files else 0
 
         summary = {
-            "total_files:": total_files,
-            "total_size_kb:": round(total_size / 1024, 2),
-            "total_size_mb:": round(total_size/ (1024*1024), 2),
-            "average_file_size_kb:": round(average_file_size_kb, 2),
-            "start_date:": earliest.strftime("%Y-%m-%d"),
-            "end_date:": latest.strftime("%Y-%m-%d"),
-            "duration_days:": duration_days
+            "total_files": total_files,
+            "total_size_kb": round(total_size / 1024, 2),
+            "total_size_mb": round(total_size/ (1024*1024), 2),
+            "average_file_size_kb": round(average_file_size_kb, 2),
+            "start_date": earliest.strftime("%Y-%m-%d"),
+            "end_date": latest.strftime("%Y-%m-%d"),
+            "duration_days": duration_days
         }
         return summary
     
