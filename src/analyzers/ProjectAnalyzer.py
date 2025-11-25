@@ -423,7 +423,8 @@ class ProjectAnalyzer:
             return None
 
         extractor = ProjectMetadataExtractor(folder)
-        metadata_full = extractor.extract_metadata()
+        with self.suppress_output():
+            metadata_full = extractor.extract_metadata()
         metadata = metadata_full["project_metadata"]
         categories = metadata_full["category_summary"]
 
@@ -473,11 +474,6 @@ class ProjectAnalyzer:
         print("Project Summary:")
         print(generator.generate_project_summary())
         print()
-
-        print("Tech Stack:")
-        print(generator.generate_tech_stack())
-        print()
-
 
 
     def _find_folder_by_name(self, folder, target_name):
