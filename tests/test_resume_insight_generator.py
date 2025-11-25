@@ -91,7 +91,7 @@ def test_duration_calculation():
     gen = make_generator(start="2025-01-01", end="2025-02-01")
 
     days = gen._compute_days()
-    assert days = 31
+    assert days == 31
 
 
 def test_generate_project_summary():
@@ -109,3 +109,43 @@ def test_tech_stack_output():
     gen = make_generator(languages=("JavaScript", 80.0))
     tech = gen.generate_tech_stack()
     assert tech == "Tech Stack: JavaScript"
+
+def test_test_files_not_counted_as_code():
+    """
+    Ensure test files do NOT count toward code totals
+    and appear only in the `test` category.
+    """
+    gen = make_generator(
+        code=5,   # real code files
+        docs=2,
+        tests=7,  # test files
+        config=1,
+        languages=("Python", 100.0),
+        authors=["A"]
+    )
+
+    code, docs, tests, config = gen.get_category_counts()
+
+    # Validate category totals
+    assert code == 5
+    assert tests == 7
+    assert docs == 2
+    assert config == 1
+
+    # Validate project summary reflects correct test count
+    summary = gen.generate_project_summary()
+
+    assert "5 source modules" in summary
+    assert "7 automated tests" in summary
+    assert "2 documentation files" in summary
+
+    with patch("random.choice", return_value="Built"):
+        bullets = gen.generate_resume_bullet_points()
+
+    bullet_text = "\n".join(bullets)
+
+    assert "5" in bullet_text
+    assert "7" in bullet_text
+
+    assert "12" not in bullet_text
+

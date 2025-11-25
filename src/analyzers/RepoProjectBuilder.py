@@ -102,7 +102,7 @@ class RepoProjectBuilder:
         Recursively search ZIP tree (ProjectFolder nodes)
         to find a folder whose name matches the repo.
         """
-        if folder.name == target_name:
+        if folder.name.lower() == target_name.lower():
             return folder
 
         for sub in folder.subdir:
