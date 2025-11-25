@@ -361,10 +361,12 @@ class ProjectAnalyzer:
         """
         Extracts multiple Git repos from the ZIP, builds Projects, and prints
         resume insights (bullet points, summary, tech stack).
+        Allows selecting another repo after each insights generation.
         """
         print("\nGenerating Resume Insights...\n")
 
         temp_dir = extract_zip(self.zip_path)
+        self.cached_extract_dir = temp_dir
 
         try:
             repo_paths = self.repo_finder.find_repos(temp_dir)
@@ -372,17 +374,28 @@ class ProjectAnalyzer:
                 print("No Git repositories found.")
                 return
 
-            selected_indices = self._select_repos(repo_paths)
+            while True:
+                # --- REPO SELECTION MENU ---
+                selected_indices = self._select_repos(repo_paths)
 
-            for idx in selected_indices:
-                project = self._build_project(repo_paths[idx])
-                if project is None:
-                    continue
+                if not selected_indices:
+                    # User chose "Return to menu"
+                    break
 
-                self._print_resume_insights(project)
+                for idx in selected_indices:
+                    project = self._build_project(repo_paths[idx])
+                    if project:
+                        self._print_resume_insights(project)
+
+                # After finishing ONE repo, offer to choose another
+                again = input("\nGenerate insights for another repository? (y/n): ").strip().lower()
+                if again != "y":
+                    break
 
         finally:
-            shutil.rmtree(temp_dir)
+            shutil.rmtree(temp_dir, ignore_errors=True)
+            self.cached_extract_dir = None
+
 
     def _select_repos(self, repo_paths):
         if len(repo_paths) == 1:
@@ -521,56 +534,62 @@ class ProjectAnalyzer:
 
     def run(self):
         print("Welcome to the Project Analyzer.\n")
-
-        if not self.load_zip():
-            return
-
-        while True:
-            print("""
-                ========================
-                Project Analyzer
-                ========================
-                Choose an option:
-                1. Analyze Git Repository & Contributions
-                2. Extract Metadata & File Statistics
-                3. Categorize Files by Type
-                4. Print Project Folder Structure
-                5. Analyze Languages Detected
-                6. Run All Analyses
-                7. Analyze New Folder
-                8. Change Selected Users
-                9. Generate Resume Insights
-                10. Exit
-                """)
-
-            choice = input ("Selection: ").strip()
-
-            if choice == "1":
-                self.analyze_git_and_contributions()
-            elif choice == "2":
-                self.analyze_metadata()
-            elif choice == "3":
-                self.analyze_categories()
-            elif choice == "4":
-                self.print_tree()
-            elif choice == "5":
-                self.analyze_languages()
-            elif choice == "6":
-                self.run_all()
-            elif choice == "7":
-                self.analyze_new_folder()
-            elif choice == "8":
-                self.change_selected_users()
-            elif choice == "9":
-                self.generate_resume_insights()
-            elif choice == "10":
-                print("Exiting Project Analyzer.")
-                # CLEAN UP TEMP DIR ON EXIT
-                if hasattr(self, "cached_extract_dir") and self.cached_extract_dir:
-                    try:
-                        shutil.rmtree(self.cached_extract_dir, ignore_errors=True)
-                    except Exception:
-                        pass
+        
+        try:
+            if not self.load_zip():
                 return
-            else:
-                print("Invalid input. Try again.\n")
+
+            while True:
+                print("""
+                    ========================
+                    Project Analyzer
+                    ========================
+                    Choose an option:
+                    1. Analyze Git Repository & Contributions
+                    2. Extract Metadata & File Statistics
+                    3. Categorize Files by Type
+                    4. Print Project Folder Structure
+                    5. Analyze Languages Detected
+                    6. Run All Analyses
+                    7. Analyze New Folder
+                    8. Change Selected Users
+                    9. Generate Resume Insights
+                    10. Exit
+                    """)
+
+                choice = input ("Selection: ").strip()
+
+                if choice == "1":
+                    self.analyze_git_and_contributions()
+                elif choice == "2":
+                    self.analyze_metadata()
+                elif choice == "3":
+                    self.analyze_categories()
+                elif choice == "4":
+                    self.print_tree()
+                elif choice == "5":
+                    self.analyze_languages()
+                elif choice == "6":
+                    self.run_all()
+                elif choice == "7":
+                    self.analyze_new_folder()
+                elif choice == "8":
+                    self.change_selected_users()
+                elif choice == "9":
+                    self.generate_resume_insights()
+                elif choice == "10":
+                    print("Exiting Project Analyzer.")
+                    # CLEAN UP TEMP DIR ON EXIT
+                    if hasattr(self, "cached_extract_dir") and self.cached_extract_dir:
+                        try:
+                            shutil.rmtree(self.cached_extract_dir, ignore_errors=True)
+                            self.cached_extract_dir = None
+                        except Exception:
+                            pass
+                    return
+                else:
+                    print("Invalid input. Try again.\n")
+        finally:
+            if hasattr(self, "cached_extract_dir") and self.cached_extract_dir:
+                shutil.rmtree(self.cached_extract_dir, ignore_errors=True)
+                self.cached_extract_dir = None
