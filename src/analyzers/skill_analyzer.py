@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict, Iterable, List
+from typing import Any, Dict, Iterable, List, Callable, Tuple
 
 import os
 
@@ -73,6 +73,57 @@ class SkillAnalyzer:
                 continue
 
             yield pattern, skill
+
+    def _iter_config_hints(
+        self, raw_hints: Iterable[Any]
+    ) -> Iterable[Tuple[Callable[[str], bool], str, str]]:
+        """
+        Normalize KNOWN_CONFIG_HINTS into (checker, skill, source_kind) tuples.
+
+        Supports:
+          - Tuples: (pattern, skill) or (pattern, skill, source_kind)
+          - Dicts: {"pattern": ..., "skill": ..., "source_kind": "..."}
+          - Objects with .matches(name), .skill, .source_kind
+        """
+        for item in raw_hints:
+            pattern = None
+            skill = None
+            source_kind = "config_hint"
+
+            if isinstance(item, tuple):
+                if len(item) >= 2:
+                    pattern, skill = item[0], item[1]
+                if len(item) >= 3:
+                    source_kind = item[2]
+            elif isinstance(item, dict):
+                pattern = item.get("pattern")
+                skill = item.get("skill")
+                source_kind = item.get("source_kind", source_kind)
+            else:
+                # object with .matches, .skill, .source_kind
+                if hasattr(item, "matches") and hasattr(item, "skill"):
+                    def checker(name: str, h=item) -> bool:
+                        return h.matches(name)
+
+                    skill = getattr(item, "skill")
+                    source_kind = getattr(item, "source_kind", source_kind)
+                    yield checker, skill, source_kind
+                    continue
+
+            if pattern is None or skill is None:
+                continue
+
+            # Build checker from pattern
+            if hasattr(pattern, "search"):
+                def checker(name: str, p=pattern) -> bool:
+                    return bool(p.search(name))
+            else:
+                pat_str = str(pattern).lower()
+
+                def checker(name: str, s=pat_str) -> bool:
+                    return s in name.lower()
+
+            yield checker, skill, source_kind
 
     # ------------------------------------------------------------------
     # Public entry point
@@ -148,7 +199,6 @@ class SkillAnalyzer:
                 if isinstance(entry, dict):
                     skill_name = entry.get("canonical_name") or entry.get("name") or lang
                 else:
-                    # if dict maps to a plain string
                     skill_name = str(entry) if entry is not None else lang
             else:
                 # TAXONOMY is a set or something non-dict; just use the language name
@@ -219,11 +269,8 @@ class SkillAnalyzer:
 
             rel_name = path.name
 
-            for hint in KNOWN_CONFIG_HINTS:
-                if hint.matches(rel_name):
-                    skill = hint.skill
-                    source_kind = hint.source_kind
-
+            for checker, skill, source_kind in self._iter_config_hints(KNOWN_CONFIG_HINTS):
+                if checker(rel_name):
                     evidence.append(
                         Evidence(
                             skill=skill,
