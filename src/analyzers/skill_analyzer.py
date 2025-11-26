@@ -5,7 +5,7 @@ from typing import Any, Dict, Iterable, List, Callable, Tuple
 
 import os
 
-from src.ZipParser import IGNORED_DIRS, IGNORED_EXTS, IGNORED_FILES
+from src.FileCategorizer import FileCategorizer
 
 from .skill_models import Evidence, SkillProfileItem, TAXONOMY
 from .skill_patterns import DEP_TO_SKILL, SNIPPET_PATTERNS, KNOWN_CONFIG_HINTS
@@ -22,30 +22,39 @@ class SkillAnalyzer:
         self.root_dir = Path(root_dir)
         self.metrics_analyzer = CodeMetricsAnalyzer(self.root_dir)
         self.prof_estimator = ProficiencyEstimator()
+        # Reuse the same config-driven ignore behaviour as CodeMetricsAnalyzer
+        self.categorizer = FileCategorizer()
 
     # ------------------------------------------------------------------
     # Internal helpers for walking the project tree with ignores
     # ------------------------------------------------------------------
 
     def _iter_project_files(self) -> Iterable[Path]:
+        """
+        Walk the project tree, pruning ignored directories and files based on
+        FileCategorizer's configuration (including ignored_directories.yml).
+        """
         root_str = str(self.root_dir)
 
         for root, dirs, files in os.walk(root_str):
             root_path = Path(root)
+            rel_root = root_path.relative_to(self.root_dir)
 
-            # 1) Prune directories using IGNORED_DIRS
-            dirs[:] = [d for d in dirs if d not in IGNORED_DIRS]
+            # 1) Prune directories using FileCategorizer + ignored_directories.yml
+            dirs[:] = [
+                d
+                for d in dirs
+                if not self.categorizer.is_ignored_dir(rel_root / d)
+            ]
 
-            # 2) Yield files that are not filtered by extension/filename
+            # 2) Yield files that are not ignored by FileCategorizer
             for fname in files:
                 file_path = root_path / fname
                 rel = file_path.relative_to(self.root_dir)
-                ext = rel.suffix.lstrip(".").lower()
-                filename = rel.name.lower()
 
-                if ext in IGNORED_EXTS:
-                    continue
-                if filename in IGNORED_FILES:
+                if hasattr(self.categorizer, "_should_ignore") and self.categorizer._should_ignore(
+                    str(rel)
+                ):
                     continue
 
                 yield file_path
@@ -144,6 +153,7 @@ class SkillAnalyzer:
         skills = self._build_skill_profiles(evidence, stats)
         dimensions = self._compute_dimensions(stats)
 
+        # Placeholder for future resume/portfolio bullets built directly here
         resume_suggestions: List[Dict[str, Any]] = []
 
         return {
