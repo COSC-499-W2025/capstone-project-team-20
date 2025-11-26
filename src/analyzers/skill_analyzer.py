@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Set
+from typing import Any, Dict, Iterable, List
 
 import os
 
@@ -16,15 +16,6 @@ from .code_metrics_analyzer import CodeMetricsAnalyzer, CodeFileAnalysis
 class SkillAnalyzer:
     """
     High-level skill analysis for a single extracted project directory.
-
-    Responsibilities:
-    - Run CodeMetricsAnalyzer to compute per-file metrics
-    - Extract Evidence objects from:
-      - languages used (via file extensions / language detection),
-      - dependencies (requirements.txt, package.json, pom.xml, etc.),
-      - config file conventions (Dockerfile, next.config.js, etc.),
-      - snippet patterns in code (import lines, includes, etc.).
-    - Aggregate Evidence into SkillProfileItem objects with proficiency scores.
     """
 
     def __init__(self, root_dir: Path) -> None:
@@ -37,12 +28,6 @@ class SkillAnalyzer:
     # ------------------------------------------------------------------
 
     def _iter_project_files(self) -> Iterable[Path]:
-        """
-        Iterate over regular files under root_dir while respecting
-        ignored_directories.yml via the shared IGNORED_* sets loaded in ZipParser.
-        This is used for dependency and config evidence so we don't accidentally
-        scan things like node_modules, .venv, build artefacts, etc.
-        """
         root_str = str(self.root_dir)
 
         for root, dirs, files in os.walk(root_str):
@@ -65,22 +50,35 @@ class SkillAnalyzer:
 
                 yield file_path
 
+    def _iter_pattern_pairs(self, raw_patterns: Iterable[Any]) -> Iterable[tuple[Any, str]]:
+        """
+        Normalize whatever structure DEP_TO_SKILL / SNIPPET_PATTERNS use into
+        (pattern, skill) pairs.
+        """
+        for item in raw_patterns:
+            pattern = None
+            skill = None
+
+            if isinstance(item, tuple):
+                if len(item) >= 2:
+                    pattern, skill = item[0], item[1]
+            elif isinstance(item, dict):
+                pattern = item.get("pattern")
+                skill = item.get("skill")
+            else:
+                pattern = getattr(item, "pattern", None)
+                skill = getattr(item, "skill", None)
+
+            if pattern is None or skill is None:
+                continue
+
+            yield pattern, skill
+
     # ------------------------------------------------------------------
     # Public entry point
     # ------------------------------------------------------------------
 
     def analyze(self) -> Dict[str, Any]:
-        """
-        Perform full skill analysis.
-
-        Returns:
-            {
-              "skills": List[SkillProfileItem],
-              "stats": Dict[str, Any],   # project-level metrics used for scoring
-              "dimensions": Dict[str, Any],
-              "resume_suggestions": List[Dict[str, Any]],
-            }
-        """
         file_analyses = self.metrics_analyzer.analyze()
         stats = self._build_stats(file_analyses)
 
@@ -95,7 +93,6 @@ class SkillAnalyzer:
         skills = self._build_skill_profiles(evidence, stats)
         dimensions = self._compute_dimensions(stats)
 
-        # placeholder for future fully-formed bullets
         resume_suggestions: List[Dict[str, Any]] = []
 
         return {
@@ -110,19 +107,14 @@ class SkillAnalyzer:
     # ------------------------------------------------------------------
 
     def _build_stats(self, file_analyses: List[CodeFileAnalysis]) -> Dict[str, Any]:
-        """
-        Produce a stats dict for ProficiencyEstimator from code metrics.
-        """
         summary = self.metrics_analyzer.summarize(file_analyses)
         overall = summary.get("overall", {})
         per_lang = summary.get("per_language", {})
 
-        stats: Dict[str, Any] = {
+        return {
             "overall": overall,
             "per_language": per_lang,
         }
-
-        return stats
 
     # ------------------------------------------------------------------
     # Evidence extractors
@@ -131,12 +123,8 @@ class SkillAnalyzer:
     def _language_evidence(
         self, file_analyses: List[CodeFileAnalysis]
     ) -> List[Evidence]:
-        """
-        Produce Evidence from detected languages (per CodeMetricsAnalyzer).
-        """
         evidence: List[Evidence] = []
 
-        # Count LOC per language for rough weighting
         loc_per_lang: Dict[str, int] = {}
         for fa in file_analyses:
             lang = fa.language
@@ -149,10 +137,22 @@ class SkillAnalyzer:
 
         max_loc = max(loc_per_lang.values()) or 1
 
+        # TAXONOMY might be a dict or a set; tests clearly have it as a set.
+        is_tax_dict = isinstance(TAXONOMY, dict)
+
         for lang, loc in loc_per_lang.items():
             rel_weight = loc / max_loc
-            # Map language to taxonomy skill name if defined
-            skill_name = TAXONOMY.get(lang, {}).get("canonical_name", lang)
+
+            if is_tax_dict:
+                entry = TAXONOMY.get(lang) or TAXONOMY.get(lang.lower())
+                if isinstance(entry, dict):
+                    skill_name = entry.get("canonical_name") or entry.get("name") or lang
+                else:
+                    # if dict maps to a plain string
+                    skill_name = str(entry) if entry is not None else lang
+            else:
+                # TAXONOMY is a set or something non-dict; just use the language name
+                skill_name = lang
 
             evidence.append(
                 Evidence(
@@ -167,9 +167,6 @@ class SkillAnalyzer:
         return evidence
 
     def _dependency_evidence(self) -> List[Evidence]:
-        """
-        Walks text-like dependency/config files and applies DEP_TO_SKILL patterns.
-        """
         evidence: List[Evidence] = []
         text_like_exts = {
             ".txt",
@@ -195,13 +192,17 @@ class SkillAnalyzer:
             except OSError:
                 continue
 
-            for pattern, skill in DEP_TO_SKILL:
-                if pattern.search(text):
+            for pattern, skill in self._iter_pattern_pairs(DEP_TO_SKILL):
+                if hasattr(pattern, "search"):
+                    match = pattern.search(text)
+                else:
+                    match = pattern in text
+                if match:
                     evidence.append(
                         Evidence(
                             skill=skill,
                             source="dependency",
-                            raw=pattern.pattern,
+                            raw=getattr(pattern, "pattern", str(pattern)),
                             file_path=str(path.relative_to(self.root_dir)),
                             weight=0.7,
                         )
@@ -210,9 +211,6 @@ class SkillAnalyzer:
         return evidence
 
     def _config_evidence(self) -> List[Evidence]:
-        """
-        Evidence from config-file naming conventions (e.g., next.config.js, Dockerfile).
-        """
         evidence: List[Evidence] = []
 
         for path in self._iter_project_files():
@@ -239,27 +237,23 @@ class SkillAnalyzer:
         return evidence
 
     def _extract_snippet_skills(self, file_analyses: List[CodeFileAnalysis]) -> None:
-        """
-        For each code file, scan its text once and record which snippet patterns matched.
-        This avoids re-reading files in _snippet_evidence.
-        """
         for fa in file_analyses:
             try:
                 text = fa.path.read_text(encoding="utf-8", errors="ignore")
             except OSError:
                 continue
 
-            for pattern, skill in SNIPPET_PATTERNS:
-                matches = len(pattern.findall(text))
+            for pattern, skill in self._iter_pattern_pairs(SNIPPET_PATTERNS):
+                if hasattr(pattern, "findall"):
+                    matches = len(pattern.findall(text))
+                else:
+                    matches = text.count(str(pattern))
                 if matches > 0:
                     fa.snippet_matches[skill] = (
                         fa.snippet_matches.get(skill, 0) + matches
                     )
 
     def _snippet_evidence(self, file_analyses: List[CodeFileAnalysis]) -> List[Evidence]:
-        """
-        Turn snippet pattern matches into Evidence objects.
-        """
         evidence: List[Evidence] = []
 
         for fa in file_analyses:
@@ -284,7 +278,6 @@ class SkillAnalyzer:
     def _build_skill_profiles(
         self, evidence_list: List[Evidence], stats: Dict[str, Any]
     ) -> List[SkillProfileItem]:
-        # Group evidence by skill
         by_skill: Dict[str, List[Evidence]] = {}
         for ev in evidence_list:
             by_skill.setdefault(ev.skill, []).append(ev)
@@ -294,7 +287,7 @@ class SkillAnalyzer:
         for skill, evs in by_skill.items():
             proficiency = self.prof_estimator.estimate(skill, evs, stats)
             confidence = min(
-                1.0, 0.3 + 0.1 * len(evs) + 0.1 * proficiency  # simple heuristic
+                1.0, 0.3 + 0.1 * len(evs) + 0.1 * proficiency
             )
 
             profiles.append(
@@ -306,7 +299,6 @@ class SkillAnalyzer:
                 )
             )
 
-        # Sort more relevant skills first
         profiles.sort(key=lambda s: (s.proficiency, s.confidence), reverse=True)
         return profiles
 
@@ -315,46 +307,54 @@ class SkillAnalyzer:
     # ------------------------------------------------------------------
 
     def _compute_dimensions(self, stats: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
-        """
-        Computes coarse-grained dimensions (testing discipline, documentation habits,
-        modularity, language depth) from stats.
-        """
-        overall = stats.get("overall", {})
-        per_lang = stats.get("per_language", {})
+        overall = stats.get("overall", {}) or {}
+        per_lang = stats.get("per_language", {}) or {}
 
         # Testing discipline: ratio of test files to total files
-        total_files = overall.get("file_count", 0) or 1
-        total_test_files = sum(
-            lang_stats.get("test_file_count", 0) for lang_stats in per_lang.values()
-        )
+        total_files = overall.get("total_files", overall.get("file_count", 0)) or 1
+
+        total_test_files = 0
+        if isinstance(per_lang, dict):
+            for lang_stats in per_lang.values():
+                if isinstance(lang_stats, dict):
+                    total_test_files += int(lang_stats.get("test_file_count", 0))
+
         testing_score = total_test_files / total_files
 
-        # Documentation habits: placeholder for now (could use comment density)
-        doc_score = 0.5
+        # Documentation habits: use comment_ratio from overall if available
+        doc_score = float(overall.get("comment_ratio", 0.5))
 
         # Modularity: inverse of max function length, clamped
         max_func = overall.get("max_function_length", 0)
         modularity_score = 1.0 / (1.0 + max_func / 50.0) if max_func else 0.5
 
         # Language depth: number of languages with significant LOC
-        lang_depth_score = min(1.0, len(per_lang) / 4.0)
+        lang_count = len(per_lang) if isinstance(per_lang, dict) else 0
+        lang_depth_score = min(1.0, lang_count / 4.0)
 
         return {
             "testing_discipline": {
                 "score": testing_score,
                 "level": self._level_from_score(testing_score),
+                "raw": {
+                    "total_files": total_files,
+                    "total_test_files": total_test_files,
+                },
             },
             "documentation_habits": {
                 "score": doc_score,
                 "level": self._level_from_score(doc_score),
+                "raw": {},
             },
             "modularity": {
                 "score": modularity_score,
                 "level": self._level_from_score(modularity_score),
+                "raw": {"max_function_length": max_func},
             },
             "language_depth": {
                 "score": lang_depth_score,
                 "level": self._level_from_score(lang_depth_score),
+                "raw": {"language_count": lang_count},
             },
         }
 
