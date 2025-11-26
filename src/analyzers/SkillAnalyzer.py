@@ -3,6 +3,10 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Set
 
+import os
+
+from src.ZipParser import IGNORED_DIRS, IGNORED_EXTS, IGNORED_FILES
+
 from .skill_models import Evidence, SkillProfileItem, TAXONOMY
 from .skill_patterns import DEP_TO_SKILL, SNIPPET_PATTERNS, KNOWN_CONFIG_HINTS
 from .skill_proficiency import ProficiencyEstimator
@@ -27,6 +31,39 @@ class SkillAnalyzer:
         self.root_dir = Path(root_dir)
         self.metrics_analyzer = CodeMetricsAnalyzer(self.root_dir)
         self.prof_estimator = ProficiencyEstimator()
+
+    # ------------------------------------------------------------------
+    # Internal helpers for walking the project tree with ignores
+    # ------------------------------------------------------------------
+
+    def _iter_project_files(self) -> Iterable[Path]:
+        """
+        Iterate over regular files under root_dir while respecting
+        ignored_directories.yml via the shared IGNORED_* sets loaded in ZipParser.
+        This is used for dependency and config evidence so we don't accidentally
+        scan things like node_modules, .venv, build artefacts, etc.
+        """
+        root_str = str(self.root_dir)
+
+        for root, dirs, files in os.walk(root_str):
+            root_path = Path(root)
+
+            # 1) Prune directories using IGNORED_DIRS
+            dirs[:] = [d for d in dirs if d not in IGNORED_DIRS]
+
+            # 2) Yield files that are not filtered by extension/filename
+            for fname in files:
+                file_path = root_path / fname
+                rel = file_path.relative_to(self.root_dir)
+                ext = rel.suffix.lstrip(".").lower()
+                filename = rel.name.lower()
+
+                if ext in IGNORED_EXTS:
+                    continue
+                if filename in IGNORED_FILES:
+                    continue
+
+                yield file_path
 
     # ------------------------------------------------------------------
     # Public entry point
@@ -85,54 +122,45 @@ class SkillAnalyzer:
             "per_language": per_lang,
         }
 
-        # Provide a Python-specific section if Python files exist
-        py_key = None
-        for lang_name in per_lang.keys():
-            if lang_name and lang_name.lower().startswith("python"):
-                py_key = lang_name
-                break
-
-        if py_key:
-            py_data = per_lang[py_key]
-            stats["python"] = {
-                "files": py_data.get("files", 0),
-                "loc": py_data.get("loc", 0),
-                "functions": py_data.get("functions", 0),
-                "comment_ratio": py_data.get("comment_ratio", 0.0),
-                "avg_functions_per_file": py_data.get("avg_functions_per_file", 0.0),
-            }
-
-        # Could add similar language-specific blocks for JS/TS, C++, etc. later
         return stats
 
     # ------------------------------------------------------------------
-    # Evidence extraction
+    # Evidence extractors
     # ------------------------------------------------------------------
 
     def _language_evidence(
-        self, file_analyses: Iterable[CodeFileAnalysis]
+        self, file_analyses: List[CodeFileAnalysis]
     ) -> List[Evidence]:
         """
-        Evidence derived from file extensions / detected languages.
+        Produce Evidence from detected languages (per CodeMetricsAnalyzer).
         """
         evidence: List[Evidence] = []
 
+        # Count LOC per language for rough weighting
+        loc_per_lang: Dict[str, int] = {}
         for fa in file_analyses:
-            if not fa.language:
+            lang = fa.language
+            if not lang:
                 continue
+            loc_per_lang[lang] = loc_per_lang.get(lang, 0) + fa.total_lines
 
-            skill_name = fa.language
-            if skill_name not in TAXONOMY:
-                # Still allow unknown languages, but we treat them as low-priority.
-                pass
+        if not loc_per_lang:
+            return evidence
+
+        max_loc = max(loc_per_lang.values()) or 1
+
+        for lang, loc in loc_per_lang.items():
+            rel_weight = loc / max_loc
+            # Map language to taxonomy skill name if defined
+            skill_name = TAXONOMY.get(lang, {}).get("canonical_name", lang)
 
             evidence.append(
                 Evidence(
                     skill=skill_name,
                     source="language_usage",
                     raw=skill_name,
-                    file_path=str(fa.path.relative_to(self.root_dir)),
-                    weight=0.5,
+                    file_path="*",
+                    weight=0.4 + 0.4 * rel_weight,
                 )
             )
 
@@ -155,7 +183,7 @@ class SkillAnalyzer:
             ".xml",
         }
 
-        for path in self.root_dir.rglob("*"):
+        for path in self._iter_project_files():
             if not path.is_file():
                 continue
 
@@ -187,14 +215,17 @@ class SkillAnalyzer:
         """
         evidence: List[Evidence] = []
 
-        for path in self.root_dir.rglob("*"):
+        for path in self._iter_project_files():
             if not path.is_file():
                 continue
 
             rel_name = path.name
 
-            for pattern, skill, source_kind in KNOWN_CONFIG_HINTS:
-                if pattern.match(rel_name):
+            for hint in KNOWN_CONFIG_HINTS:
+                if hint.matches(rel_name):
+                    skill = hint.skill
+                    source_kind = hint.source_kind
+
                     evidence.append(
                         Evidence(
                             skill=skill,
@@ -212,182 +243,119 @@ class SkillAnalyzer:
         For each code file, scan its text once and record which snippet patterns matched.
         This avoids re-reading files in _snippet_evidence.
         """
-        analyses_by_path: Dict[Path, CodeFileAnalysis] = {
-            Path(fa.path): fa for fa in file_analyses
-        }
-
         for fa in file_analyses:
-            full_path = fa.path
             try:
-                text = full_path.read_text(encoding="utf-8", errors="ignore")
+                text = fa.path.read_text(encoding="utf-8", errors="ignore")
             except OSError:
                 continue
 
-            matched_skills: Set[str] = set()
-            for pattern, skill, source_kind in SNIPPET_PATTERNS:
-                if pattern.search(text):
-                    matched_skills.add(skill)
+            for pattern, skill in SNIPPET_PATTERNS:
+                matches = len(pattern.findall(text))
+                if matches > 0:
+                    fa.snippet_matches[skill] = (
+                        fa.snippet_matches.get(skill, 0) + matches
+                    )
 
-            fa.snippet_skills.extend(sorted(matched_skills))
-
-    def _snippet_evidence(
-        self, file_analyses: Iterable[CodeFileAnalysis]
-    ) -> List[Evidence]:
+    def _snippet_evidence(self, file_analyses: List[CodeFileAnalysis]) -> List[Evidence]:
         """
-        Turn snippet_skills on each file into Evidence entries.
+        Turn snippet pattern matches into Evidence objects.
         """
         evidence: List[Evidence] = []
-        for fa in file_analyses:
-            if not fa.snippet_skills:
-                continue
 
-            rel_path = str(fa.path.relative_to(self.root_dir))
-            for skill in fa.snippet_skills:
+        for fa in file_analyses:
+            for skill, count in fa.snippet_matches.items():
+                weight = min(1.0, 0.3 + 0.1 * count)
                 evidence.append(
                     Evidence(
                         skill=skill,
                         source="snippet_pattern",
-                        raw=f"snippet in {rel_path}",
-                        file_path=rel_path,
-                        weight=0.6,
+                        raw=f"{skill} x{count}",
+                        file_path=str(fa.path.relative_to(self.root_dir)),
+                        weight=weight,
                     )
                 )
 
         return evidence
 
     # ------------------------------------------------------------------
-    # Building SkillProfileItem objects
+    # Aggregation into SkillProfileItems
     # ------------------------------------------------------------------
 
     def _build_skill_profiles(
-        self, evidence: List[Evidence], stats: Dict[str, Any]
+        self, evidence_list: List[Evidence], stats: Dict[str, Any]
     ) -> List[SkillProfileItem]:
-        """
-        Aggregate Evidence into SkillProfileItem objects and compute proficiency.
-        """
         # Group evidence by skill
         by_skill: Dict[str, List[Evidence]] = {}
-        for e in evidence:
-            by_skill.setdefault(e.skill, []).append(e)
+        for ev in evidence_list:
+            by_skill.setdefault(ev.skill, []).append(ev)
 
         profiles: List[SkillProfileItem] = []
 
-        for skill, ev_list in by_skill.items():
-            if not skill:
-                continue
-
-            score = self.prof_estimator.estimate(skill, ev_list, stats)
-
-            # Simple confidence heuristic:
-            distinct_sources = len({e.source for e in ev_list})
-            confidence = min(0.99, 0.4 + 0.15 * distinct_sources)
+        for skill, evs in by_skill.items():
+            proficiency = self.prof_estimator.estimate(skill, evs, stats)
+            confidence = min(
+                1.0, 0.3 + 0.1 * len(evs) + 0.1 * proficiency  # simple heuristic
+            )
 
             profiles.append(
                 SkillProfileItem(
                     skill=skill,
-                    proficiency=score,
+                    proficiency=proficiency,
                     confidence=confidence,
-                    evidence=ev_list,
+                    evidence=evs,
                 )
             )
 
-        # Sort for nicer display / downstream use
-        profiles.sort(
-            key=lambda p: (p.proficiency, p.confidence, len(p.evidence)),
-            reverse=True,
-        )
+        # Sort more relevant skills first
+        profiles.sort(key=lambda s: (s.proficiency, s.confidence), reverse=True)
         return profiles
 
     # ------------------------------------------------------------------
-    # Internal helpers
+    # Dimensions (meta-skills)
     # ------------------------------------------------------------------
 
-    def _compute_dimensions(self, stats: Dict[str, Any]) -> Dict[str, Any]:
+    def _compute_dimensions(self, stats: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
+        """
+        Computes coarse-grained dimensions (testing discipline, documentation habits,
+        modularity, language depth) from stats.
+        """
         overall = stats.get("overall", {})
         per_lang = stats.get("per_language", {})
 
-        # --- Testing discipline ---
-        test_ratio = overall.get("test_file_ratio", 0.0)
-        test_score = min(1.0, test_ratio / 0.4)  # 0.4+ tests/code ~= strong
-        testing_level = self._level_from_score(test_score)
+        # Testing discipline: ratio of test files to total files
+        total_files = overall.get("file_count", 0) or 1
+        total_test_files = sum(
+            lang_stats.get("test_file_count", 0) for lang_stats in per_lang.values()
+        )
+        testing_score = total_test_files / total_files
 
-        testing_dim = {
-            "score": round(test_score, 2),
-            "level": testing_level,
-            "raw": {
-                "test_file_ratio": test_ratio,
-                "num_test_files": overall.get("num_test_files", 0),
-                "num_code_files": overall.get("num_code_files", 0),
-            },
-        }
+        # Documentation habits: placeholder for now (could use comment density)
+        doc_score = 0.5
 
-        # --- Documentation habits ---
-        comment_ratio = overall.get("comment_ratio", 0.0)
-        # e.g. 0.05 is minimal, 0.2+ is solid
-        doc_score = min(1.0, comment_ratio / 0.2)
-        doc_level = self._level_from_score(doc_score)
+        # Modularity: inverse of max function length, clamped
+        max_func = overall.get("max_function_length", 0)
+        modularity_score = 1.0 / (1.0 + max_func / 50.0) if max_func else 0.5
 
-        doc_dim = {
-            "score": round(doc_score, 2),
-            "level": doc_level,
-            "raw": {
-                "comment_ratio": comment_ratio,
-            },
-        }
-
-        # --- Modularity ---
-        avg_funcs = overall.get("avg_functions_per_file", 0.0)
-        max_func_len = overall.get("max_function_length", 0)
-
-        # heuristic: more functions and shorter max function is better
-        modularity_score = 0.0
-        if avg_funcs >= 3:
-            modularity_score += 0.5
-        if max_func_len <= 50:
-            modularity_score += 0.5
-        elif max_func_len <= 100:
-            modularity_score += 0.25
-
-        modularity_score = min(1.0, modularity_score)
-        modularity_level = self._level_from_score(modularity_score)
-
-        modularity_dim = {
-            "score": round(modularity_score, 2),
-            "level": modularity_level,
-            "raw": {
-                "avg_functions_per_file": avg_funcs,
-                "max_function_length": max_func_len,
-            },
-        }
-
-        # --- Language depth ---
-        total_loc = sum(lang_stats.get("loc", 0) for lang_stats in per_lang.values())
-        # A simple proxy: fraction of languages above a LOC threshold
-        depth_languages = {
-            lang: data["loc"]
-            for lang, data in per_lang.items()
-            if data.get("loc", 0) >= 500  # arbitrary "non-toy" threshold
-        }
-        depth_ratio = len(depth_languages) / max(1, len(per_lang))
-        lang_depth_score = min(
-            1.0, 0.5 + depth_ratio * 0.5
-        )  # base 0.5 for having code at all
-        lang_depth_level = self._level_from_score(lang_depth_score)
-
-        lang_depth_dim = {
-            "score": round(lang_depth_score, 2),
-            "level": lang_depth_level,
-            "raw": {
-                "languages": {lang: {"loc": loc} for lang, loc in depth_languages.items()},
-                "total_loc": total_loc,
-            },
-        }
+        # Language depth: number of languages with significant LOC
+        lang_depth_score = min(1.0, len(per_lang) / 4.0)
 
         return {
-            "testing_discipline": testing_dim,
-            "documentation_habits": doc_dim,
-            "modularity": modularity_dim,
-            "language_depth": lang_depth_dim,
+            "testing_discipline": {
+                "score": testing_score,
+                "level": self._level_from_score(testing_score),
+            },
+            "documentation_habits": {
+                "score": doc_score,
+                "level": self._level_from_score(doc_score),
+            },
+            "modularity": {
+                "score": modularity_score,
+                "level": self._level_from_score(modularity_score),
+            },
+            "language_depth": {
+                "score": lang_depth_score,
+                "level": self._level_from_score(lang_depth_score),
+            },
         }
 
     def _level_from_score(self, score: float) -> str:

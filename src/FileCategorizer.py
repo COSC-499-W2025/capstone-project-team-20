@@ -5,11 +5,12 @@ from typing import List, Dict, Any
 
 import os, re
 
+from src.ZipParser import IGNORED_DIRS, IGNORED_EXTS, IGNORED_FILES
+
 CONFIG_DIR = Path(__file__).parent / "config"
 LANG_FILE = CONFIG_DIR / "languages.yml"
 MARKUP_FILE = CONFIG_DIR / "markup_languages.yml"
 CATEGORIES_FILE = CONFIG_DIR / "categories.yml"
-IGNORED_FILE = CONFIG_DIR / "ignored_directories.yml"
 
 
 def load_yaml(path: Path) -> dict:
@@ -35,7 +36,9 @@ Core functionality:
 
 
 class FileCategorizer:
-    """Classifies files into categories (code, test, docs, design) using categories.yml, languages.yml, markup_languages.yml."""
+    """Classifies files into categories (code, test, docs, design) using
+    categories.yml, languages.yml, and markup_languages.yml.
+    """
 
     def __init__(self):
         # Loading YAML configs
@@ -45,14 +48,9 @@ class FileCategorizer:
         self.categories_yaml = categories_all["categories"]
         self.no_ext_rules = categories_all.get("no_extension_rules", {})
 
-        # IGNORED directories/extensions/files loaded:
-        ignored_data = load_yaml(IGNORED_FILE)
-        self.ignored_dirs = set(ignored_data.get("ignored_dirs", []))
-        self.ignored_exts = set(ignored_data.get("ignored_extensions", []))
-        self.ignored_filenames = {
-            f.lower() for f in ignored_data.get("ignored_filenames", [])
-        }
-
+        # IGNORED directories/extensions/files loaded via shared ZipParser config.
+        # We don't load ignored_directories.yml here to avoid duplication; instead
+        # we import the IGNORED_* sets from src.ZipParser.
         # Building extension -> Language maps
         self.language_map = self._build_language_map(self.languages_yaml)
         self.markup_map = self._build_language_map(self.markup_yaml)
@@ -62,7 +60,7 @@ class FileCategorizer:
 
     # ------------------------------------------------------------------
     # Ignore helpers
-    # ------------------------------------------------------------------
+    # ----------------------------------------------------------------------
 
     def is_ignored_dir(self, rel_path: Path) -> bool:
         """
@@ -115,11 +113,11 @@ class FileCategorizer:
         ext = path_obj.suffix.lstrip(".").lower()
         filename = path_obj.name.lower()
 
-        if not self.ignored_dirs.isdisjoint(parts):
+        if not IGNORED_DIRS.isdisjoint(parts):
             return True
-        if ext in self.ignored_exts:
+        if ext in IGNORED_EXTS:
             return True
-        if filename in self.ignored_filenames:
+        if filename in IGNORED_FILES:
             return True
 
         return False
@@ -135,43 +133,86 @@ class FileCategorizer:
         if len(name) < 20:
             return "docs"
         # Medium-length lowercase names → probably scripts/configs
-        elif len(name) < 40 and name.islower():
+        if name.islower() and len(name) < 50:
             return "config"
-        # Otherwise treat as binary/artifact
-        else:
-            return "binary"
-        
+        return "other"
+
     def _split_camel(self, name: str) -> List[str]:
-        return re.sub('([a-z])([A-Z])', r'\1 \2', name).lower().split()
+        """Split camelCase / PascalCase into component words."""
+        return re.findall(r"[A-Z]?[a-z]+|[A-Z]+(?=[A-Z]|$)", name)
 
     # ------------------------------------------------------------------
-    # Public API
+    # Public classification API
     # ------------------------------------------------------------------
 
     def classify_file(self, file_info: Dict[str, Any]) -> str:
         """
-        Determines category based on path, extension, or language.
+        Classify a file into one of the configured categories.
 
-        file_info format: {"path": str, "language": str}
+        file_info:
+          {
+            "path": "relative/path/to/file.ext",
+            "language": "Python" | "JavaScript" | ...
+          }
         """
-        path = file_info["path"]
+        path = file_info.get("path", "")
+        lang = (file_info.get("language") or "").strip()
+        ext = Path(path).suffix.lower().lstrip(".")
 
+        # First, ignore if it matches ignored dirs/exts/filenames
         if self._should_ignore(path):
             return "ignored"
 
-        path_obj = Path(path)
-        ext = path_obj.suffix.lstrip(".").lower()
-        filename = path_obj.name.lower()
+        # No extension? Use name-based rules.
+        if not ext:
+            return self._classify_no_extension(path)
 
-        # Infer language if missing
-        lang = file_info.get("language")
-        if not lang or lang == "Unknown":
-            lang = self.language_map.get(ext) or self.markup_map.get(ext)
+        # Explicit test classification heuristics
+        test_cat = self._classify_test_like(path, lang, ext)
+        if test_cat == "test":
+            return "test"
 
-        # Match by YAML-defined categories
+        # Match by YML-defined categories
+        for category, conf in self.categories.items():
+            if "path_patterns" in conf and self._match_path_patterns(
+                path, conf["path_patterns"]
+            ):
+                return category
+            if "languages" in conf and lang in conf["languages"]:
+                return category
+            if "extensions" in conf and ext in [e.lower() for e in conf["extensions"]]:
+                return category
 
-        # Split filename on non-alphanumeric characters to isolate words
-        name_parts = re.split(r'[^a-zA-Z0-9]+', filename)
+        # Fallback heuristics
+        lower_path = path.lower()
+        if any(x in lower_path for x in ("readme", "docs/", "documentation")):
+            return "docs"
+        if any(x in lower_path for x in ("design", "uml", "diagram")):
+            return "design"
+
+        return "code" if lang else "other"
+
+    def _classify_test_like(self, path: str, lang: str, ext: str) -> str:
+        """
+        Heuristics for test files, based on filename patterns and language.
+
+        Examples:
+          - tests/ or test/ directories
+          - filenames containing test, spec, fixture
+        """
+        path_l = path.lower()
+        filename = Path(path).name.lower()
+
+        # Directory based
+        if "/tests/" in path_l or "/test/" in path_l:
+            return "test"
+
+        # For JS / TS: __tests__ folders
+        if "__tests__" in path_l:
+            return "test"
+
+        # Name-based patterns
+        name_parts = re.split(r"[^a-zA-Z0-9]+", filename)
         camel_parts = self._split_camel(Path(path).stem)
         all_parts = set(name_parts + camel_parts)
 
@@ -191,28 +232,15 @@ class FileCategorizer:
         if ".test." in filename or ".spec." in filename or ".fixture." in filename:
             return "test"
 
-
-        # Match by YML-defined categories
-        for category, conf in self.categories.items():
-            if "path_patterns" in conf and self._match_path_patterns(
-                path, conf["path_patterns"]
-            ):
-                return category
-            if "languages" in conf and lang in conf["languages"]:
-                return category
-            if "extensions" in conf and ext in [e.lower() for e in conf["extensions"]]:
-                return category
-            if "filenames" in conf:
-                lowered = filename.lower()
-                for key in conf["filenames"]:
-                    if key.lower() in lowered:
-                        return category
-
-        # Handle files without extensions
-        if not ext:
-            return self._classify_no_extension(path)
+        # 5. For pytest-style tests: test-*.py
+        if lang.lower() == "python" and filename.startswith("test-"):
+            return "test"
 
         return "other"
+
+    # ------------------------------------------------------------------
+    # Metrics API
+    # ------------------------------------------------------------------
 
     def compute_metrics(self, files: List[Dict[str, Any]]) -> Dict[str, Dict[str, float]]:
         """Classifies the files and computes the count/percent metrics."""
