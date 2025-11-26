@@ -49,8 +49,11 @@ class FileCategorizer:
         self.no_ext_rules = categories_all.get("no_extension_rules", {})
 
         # IGNORED directories/extensions/files loaded via shared ZipParser config.
-        # We don't load ignored_directories.yml here to avoid duplication; instead
-        # we import the IGNORED_* sets from src.ZipParser.
+        # Keep attributes for backwards compatibility (e.g. ProjectMetadataExtractor).
+        self.ignored_dirs = IGNORED_DIRS
+        self.ignored_exts = IGNORED_EXTS
+        self.ignored_filenames = {f.lower() for f in IGNORED_FILES}
+
         # Building extension -> Language maps
         self.language_map = self._build_language_map(self.languages_yaml)
         self.markup_map = self._build_language_map(self.markup_yaml)
@@ -60,7 +63,7 @@ class FileCategorizer:
 
     # ------------------------------------------------------------------
     # Ignore helpers
-    # ----------------------------------------------------------------------
+    # ------------------------------------------------------------------
 
     def is_ignored_dir(self, rel_path: Path) -> bool:
         """
@@ -113,11 +116,11 @@ class FileCategorizer:
         ext = path_obj.suffix.lstrip(".").lower()
         filename = path_obj.name.lower()
 
-        if not IGNORED_DIRS.isdisjoint(parts):
+        if not self.ignored_dirs.isdisjoint(parts):
             return True
-        if ext in IGNORED_EXTS:
+        if ext in self.ignored_exts:
             return True
-        if filename in IGNORED_FILES:
+        if filename in self.ignored_filenames:
             return True
 
         return False
@@ -183,14 +186,8 @@ class FileCategorizer:
             if "extensions" in conf and ext in [e.lower() for e in conf["extensions"]]:
                 return category
 
-        # Fallback heuristics
-        lower_path = path.lower()
-        if any(x in lower_path for x in ("readme", "docs/", "documentation")):
-            return "docs"
-        if any(x in lower_path for x in ("design", "uml", "diagram")):
-            return "design"
-
-        return "code" if lang else "other"
+        # Fallback: tests expect unmatched stuff to be "other"
+        return "other"
 
     def _classify_test_like(self, path: str, lang: str, ext: str) -> str:
         """

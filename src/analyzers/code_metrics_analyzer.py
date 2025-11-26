@@ -83,23 +83,60 @@ class CodeMetricsAnalyzer:
     def summarize(self, analyses: List[CodeFileAnalysis]) -> Dict[str, Any]:
         """
         Summarize the per-file analyses into overall stats and per-language stats.
-        """
-        overall = {
-            "file_count": len(analyses),
-            "total_lines_of_code": sum(a.code_lines for a in analyses),
-            "avg_function_length": 0.0,
-            "max_function_length": 0,
-        }
 
+        Tests expect:
+          - overall["total_files"]
+          - overall["num_code_files"]
+          - overall["num_test_files"]
+          - overall["test_file_ratio"]
+          - overall["comment_ratio"]
+          - overall["avg_functions_per_file"]
+        """
+        total_files = len(analyses) or 0
+        total_loc = sum(a.code_lines for a in analyses)
         total_functions = sum(a.function_count for a in analyses)
+        max_func_len_overall = max(
+            (a.max_function_length for a in analyses), default=0
+        )
+
+        # Split code vs test
+        num_code_files = sum(1 for a in analyses if not a.is_test)
+        num_test_files = sum(1 for a in analyses if a.is_test)
+
+        # Comment ratio = comment / (comment + code)
+        total_comment = sum(a.comment_lines for a in analyses)
+        total_code = sum(a.code_lines for a in analyses)
+        denom = total_comment + total_code
+        comment_ratio = (total_comment / denom) if denom > 0 else 0.0
+
+        avg_func_len = 0.0
         if total_functions > 0:
-            overall["avg_function_length"] = (
-                sum(a.max_function_length for a in analyses) / total_functions
+            # simple heuristic: average of per-file max function lengths
+            avg_func_len = sum(a.max_function_length for a in analyses) / max(
+                total_functions, 1
             )
 
-        overall["max_function_length"] = (
-            max((a.max_function_length for a in analyses), default=0)
+        avg_functions_per_file = (
+            total_functions / total_files if total_files > 0 else 0.0
         )
+
+        # Ratio of test files to code files (tests assume denominator = code files)
+        test_file_ratio = (
+            num_test_files / num_code_files if num_code_files > 0 else 0.0
+        )
+
+        overall = {
+            "file_count": total_files,
+            "total_files": total_files,
+            "num_code_files": num_code_files,
+            "num_test_files": num_test_files,
+            "test_file_ratio": test_file_ratio,
+            "total_lines_of_code": total_loc,
+            "avg_function_length": avg_func_len,
+            "max_function_length": max_func_len_overall,
+            "comment_ratio": comment_ratio,
+            "avg_functions_per_file": avg_functions_per_file,
+        }
 
         # Group by language
         per_language: Dict[str, Dict[str, Any]] = {}
