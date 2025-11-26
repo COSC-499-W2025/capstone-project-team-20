@@ -343,9 +343,7 @@ class SkillAnalyzer:
 
         for skill, evs in by_skill.items():
             proficiency = self.prof_estimator.estimate(skill, evs, stats)
-            confidence = min(
-                1.0, 0.3 + 0.1 * len(evs) + 0.1 * proficiency
-            )
+            confidence = round(min(1.0, 0.3 + 0.1 * len(evs) + 0.1 * proficiency), 2)
 
             profiles.append(
                 SkillProfileItem(
