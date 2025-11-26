@@ -66,9 +66,15 @@ class ProjectAnalyzer:
         if (stripped.startswith('"') and stripped.endswith('"')) or \
         (stripped.startswith("'") and stripped.endswith("'")):
             stripped = stripped[1:-1]
-        # Remove shell escape backslashes (e.g., "my\ file" -> "my file")
+
+        # On Windows, treat the input literally (backslashes are part of the path)
+        if os.name == "nt":
+            return Path(os.path.expanduser(stripped))
+
+        # On POSIX shells, allow escaping spaces etc. ("my\ file.zip" -> "my file.zip")
         unescaped = re.sub(r'\\(.)', r'\1', stripped)
         return Path(os.path.expanduser(unescaped))
+
 
     def batch_analyze(self, zipped_repos_dir: str = 'zipped_repos') -> None:
         """
