@@ -33,9 +33,9 @@ jobs:
         pip install pytest
         pip install -r requirements.txt
     
-    - name: Run pytest
+    - name: Run pytest with coverage
       run: |
-        pytest tests/ --verbose
+        pytest tests/ --verbose --cov=src --cov=utils --cov-report=term-missing
     
     - name: Comment test results on PR
       if: failure() && github.event_name == 'pull_request'
