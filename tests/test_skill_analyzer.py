@@ -1,16 +1,13 @@
 from pathlib import Path
 import sys
 
-import pytest
-
-# Ensure src/ is on sys.path (same pattern as your existing tests)
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from analyzers.skill_analyzer import SkillAnalyzer  # type: ignore
-from analyzers.skill_models import SkillProfileItem  # type: ignore
+from src.analyzers.SkillAnalyzer import SkillAnalyzer
+from src.analyzers.skill_models import SkillProfileItem
 
 
 def _write_file(path: Path, contents: str) -> None:
