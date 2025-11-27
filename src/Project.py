@@ -1,11 +1,12 @@
 from __future__ import annotations
 from dataclasses import dataclass, asdict, field
-from typing import List, Literal, Optional
+from typing import List, Literal, Optional, Dict, Any
 from datetime import datetime
 import json
 
 # This helper remains useful for creating default lists.
 list_field = lambda: field(default_factory=list)
+
 
 @dataclass
 class Project:
@@ -28,6 +29,7 @@ class Project:
     frameworks: List[str] = list_field()
     skills_used: List[str] = list_field()
     individual_contributions: List[str] = list_field()
+    author_contributions: List[Dict[str, Any]] = list_field()
     collaboration_status: Literal["individual", "collaborative"] = "individual"
 
     # === New: derived skill/metrics info ===
@@ -66,13 +68,14 @@ class Project:
         """
         proj_dict = asdict(self)
 
-        # Serialize list-based fields to JSON strings.
+        # Serialize list-based and dict-based fields to JSON strings.
         list_fields = [
             "authors",
             "languages",
             "frameworks",
             "skills_used",
             "individual_contributions",
+            "author_contributions",
             "primary_languages",
         ]
         for field_name in list_fields:
@@ -97,13 +100,14 @@ class Project:
         # Create a copy to avoid modifying the original dictionary.
         proj_dict_copy = proj_dict.copy()
 
-        # Deserialize JSON strings back into lists.
+        # Deserialize JSON strings back into lists or list-of-dicts.
         list_fields = [
             "authors",
             "languages",
             "frameworks",
             "skills_used",
             "individual_contributions",
+            "author_contributions",
             "primary_languages",
         ]
         for field_name in list_fields:

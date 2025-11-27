@@ -6,13 +6,13 @@ import datetime
 import contextlib
 import zipfile
 from pathlib import Path
-from typing import Iterable, List, Optional
+from typing import Iterable, List, Optional, Tuple, Dict
 
 from src.ZipParser import parse, toString, extract_zip
 from src.analyzers.ProjectMetadataExtractor import ProjectMetadataExtractor
-from src.analyzers.GitRepoAnalyzer import GitRepoAnalyzer
 from src.FileCategorizer import FileCategorizer
 from src.analyzers.language_detector import detect_language_per_file, analyze_language_share
+from src.analyzers.ContributionAnalyzer import ContributionAnalyzer, ContributionStats
 from utils.RepoFinder import RepoFinder
 from src.ProjectManager import ProjectManager
 from src.Project import Project
@@ -26,17 +26,18 @@ class ProjectAnalyzer:
     """
     Unified interface for analyzing zipped project files.
     Responsibilities:
-    1. Git repo analysis
+    1. Git repo analysis + contribution share
     2. Metadata and file statistics
     3. File categorization
     4. Folder tree printing
     5. Language detection
     6. Run all analyses
     7. Analyze New Folder
-    8. Display Previous Results
+    8. Change Selected Users
     9. Analyze Skills
     10. Generate Resume Insights
-    11. Exit
+    11. Display Previous Results
+    12. Exit
     """
 
     def __init__(self, config_manager: ConfigManager):
@@ -48,7 +49,7 @@ class ProjectAnalyzer:
         self.file_categorizer = FileCategorizer()
         self.repo_finder = RepoFinder()
         self.project_manager = ProjectManager()
-        self.git_analyzer = GitRepoAnalyzer(self.repo_finder, self.project_manager)
+        self.contribution_analyzer = ContributionAnalyzer()
 
         # Caches used primarily for resume insight generation
         self.cached_extract_dir: Optional[Path] = None
@@ -80,24 +81,30 @@ class ProjectAnalyzer:
         if (stripped.startswith('"') and stripped.endswith('"')) or \
            (stripped.startswith("'") and stripped.endswith("'")):
             stripped = stripped[1:-1]
-        # Remove shell escape backslashes (e.g., "my\ file" -> "my file")
+
+        # On Windows, treat the input literally (backslashes are part of the path)
+        if os.name == "nt":
+            return Path(os.path.expanduser(stripped))
+
+        # On POSIX shells, allow escaping spaces etc. ("my\ file.zip" -> "my file.zip")
         unescaped = re.sub(r'\\(.)', r'\1', stripped)
         return Path(os.path.expanduser(unescaped))
 
     def batch_analyze(self, zipped_repos_dir: str = 'zipped_repos') -> None:
         """
-        Loops through all zipped repositories in a directory (`zipped_repos/` by default) and calls run_all(). Called from utils/analyze_repos.py
+        Loops through all zipped repositories in a directory (`zipped_repos/` by default)
+        and calls run_all(). Called from utils/analyze_repos.py
         """
         zipped_repos_path = Path(zipped_repos_dir)
         if not zipped_repos_path.exists():
             print(f"Nothing to analyze - {zipped_repos_dir}/ doesn't exist")
             return
-        
+
         zip_files = list(zipped_repos_path.rglob('*.zip'))
         if not zip_files:
             print(f"No .zip files found in {zipped_repos_dir}/")
             return
-        
+
         print(f"\nBatch analyzing {len(zip_files)} repositories...\n")
         analyzed, failed = 0, 0
 
@@ -199,12 +206,75 @@ class ProjectAnalyzer:
                 print(f"Usernames '{', '.join(new_usernames)}' have been saved.")
                 return new_usernames
 
-        print("No authors found or selected.")
+        print("No authors found or selected. Skipping contribution analysis.")
         return None
 
-    def analyze_git(self):
-        """Analyzes git repositories and handles user selection."""
-        print("\nGit repository Analysis")
+    def _aggregate_stats(
+        self,
+        author_stats: Dict[str, ContributionStats],
+        selected_authors: Optional[List[str]] = None,
+    ) -> ContributionStats:
+        """
+        Aggregates ContributionStats from a dictionary. If selected_authors
+        is provided, it aggregates only for those authors. Otherwise, it
+        aggregates for all authors in the dictionary.
+        """
+        aggregated = ContributionStats()
+        authors_to_aggregate = selected_authors if selected_authors is not None else author_stats.keys()
+
+        for author in authors_to_aggregate:
+            if author in author_stats:
+                stats = author_stats[author]
+                aggregated.lines_added += stats.lines_added
+                aggregated.lines_deleted += stats.lines_deleted
+                aggregated.total_commits += stats.total_commits
+                aggregated.files_touched.update(stats.files_touched)
+                for category, count in stats.contribution_by_type.items():
+                    aggregated.contribution_by_type[category] += count
+        return aggregated
+
+    def _display_contribution_results(
+        self,
+        selected_stats: ContributionStats,
+        total_stats: ContributionStats,
+        usernames: List[str],
+    ):
+        """Formats and prints the aggregated contribution analysis results."""
+
+        header = f"Contribution Share for: {', '.join(usernames)}"
+        print("\n" + "=" * 80)
+        print(f"{header:^80}")
+        print("=" * 80)
+
+        total_lines_edited_project = total_stats.lines_added + total_stats.lines_deleted
+        total_lines_edited_selected = selected_stats.lines_added + selected_stats.lines_deleted
+
+        if total_lines_edited_project > 0:
+            project_share = (total_lines_edited_selected / total_lines_edited_project) * 100
+            print(f"\nCollectively, you contributed {project_share:.2f}% of the total lines edited in the project.")
+        else:
+            print("\nNo line changes were found in the project to calculate contribution share.")
+
+        print("\n--- Combined Statistics for Selected Users ---")
+        print(f"  Total Commits: {selected_stats.total_commits}")
+        print(f"  Files Touched: {len(selected_stats.files_touched)}")
+        print(f"  Lines Added:   {selected_stats.lines_added}")
+        print(f"  Lines Deleted: {selected_stats.lines_deleted}")
+
+        total_lines_by_type = sum(selected_stats.contribution_by_type.values())
+        if total_lines_by_type > 0:
+            print("  Contribution Share by Type:")
+            for type_name, count in selected_stats.contribution_by_type.items():
+                percentage = (count / total_lines_by_type) * 100
+                print(f"    - {type_name.capitalize():<5}: {percentage:6.2f}%")
+        print("\n" + "=" * 80)
+
+    def analyze_git_and_contributions(self):
+        """
+        Orchestrates the Git analysis workflow by running a single comprehensive
+        analysis and then processing the results.
+        """
+        print("\n--- Git Repository & Contribution Analysis ---")
         if not self.zip_path:
             print("No project loaded. Please load a zip file first.\n")
             return
@@ -216,11 +286,26 @@ class ProjectAnalyzer:
 
         temp_dir = extract_zip(str(path_obj))
         try:
-            projects, authors = self.git_analyzer.run_analysis_from_path(temp_dir)
-            self.display_analysis_results(projects)
+            repo_paths = self.repo_finder.find_repos(temp_dir)
+            if not repo_paths:
+                print("No Git repositories found in the provided ZIP.")
+                return
+            repo_path = str(repo_paths[0])
 
-            # Handle username selection and configuration
-            self._get_or_select_usernames(authors)
+            # Step 1: Efficiently get all author names.
+            all_authors_list = self.contribution_analyzer.get_all_authors(repo_path)
+
+            # Step 2: Handle user selection.
+            usernames = self._get_or_select_usernames(all_authors_list)
+
+            if usernames:
+                # Step 3: Run the full analysis only if needed.
+                all_author_stats = self.contribution_analyzer.analyze(repo_path)
+                selected_stats = self._aggregate_stats(all_author_stats, usernames)
+                total_stats = self._aggregate_stats(all_author_stats)
+
+                # Step 4: Display the results.
+                self._display_contribution_results(selected_stats, total_stats, usernames)
         finally:
             shutil.rmtree(temp_dir, ignore_errors=True)
 
@@ -238,11 +323,16 @@ class ProjectAnalyzer:
 
         temp_dir = extract_zip(str(path_obj))
         try:
-            # Get authors from the repository
-            _, authors = self.git_analyzer.run_analysis_from_path(temp_dir)
+            repo_paths = self.repo_finder.find_repos(temp_dir)
+            if not repo_paths:
+                print("No Git repositories found in the provided ZIP.")
+                return
+
+            # Get the current list of authors to present to the user.
+            all_authors_list = self.contribution_analyzer.get_all_authors(str(repo_paths[0]))
 
             print("Please select the new set of usernames you would like to use.")
-            new_usernames = self._prompt_for_usernames(authors)
+            new_usernames = self._prompt_for_usernames(all_authors_list)
 
             if new_usernames:
                 self._config_manager.set("usernames", new_usernames)
@@ -374,17 +464,17 @@ class ProjectAnalyzer:
 
         finally:
             shutil.rmtree(temp_dir, ignore_errors=True)
-    
+
     def display_analysis_results(self, projects: Iterable[Project]) -> None:
         projects_list = list(projects)
         if not projects_list:
             print("\nNo analysis results to display.")
             return
-        
+
         print(f"\n{'='*30}")
         print("      Analysis Results")
         print(f"{'='*30}")
-        
+
         for project in projects_list:
             project.display()
 
@@ -482,7 +572,7 @@ class ProjectAnalyzer:
 
                 # Language detector
                 language_share = analyze_language_share(
-                    Path(self.cached_extract_dir) / proj.name
+                    self.cached_extract_dir / proj.name
                 )
 
                 repo_languages = set()
@@ -546,7 +636,7 @@ class ProjectAnalyzer:
 
     def run_all(self):
         print("Running All Analyzers\n")
-        self.analyze_git()
+        self.analyze_git_and_contributions()
         if self.root_folder:
             self.analyze_metadata()
             self.analyze_categories()
@@ -567,14 +657,14 @@ class ProjectAnalyzer:
                 Project Analyzer
                 ========================
                 Choose an option:
-                1. Analyze Git Repository
+                1. Analyze Git Repository & Contributions
                 2. Extract Metadata & File Statistics
                 3. Categorize Files by Type
                 4. Print Project Folder Structure
                 5. Analyze Languages Detected
                 6. Run All Analyses
                 7. Analyze New Folder
-                8. Display Previous Results
+                8. Change Selected Users
                 9. Analyze Skills
                 10. Generate Resume Insights
                 11. Display Previous Results
@@ -590,7 +680,7 @@ class ProjectAnalyzer:
                         return
 
             if choice == "1":
-                self.analyze_git()
+                self.analyze_git_and_contributions()
             elif choice == "2":
                 self.analyze_metadata()
             elif choice == "3":
