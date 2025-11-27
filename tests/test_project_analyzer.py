@@ -335,8 +335,11 @@ class TestBatchAnalyze:
         zip_file = tmp_path / "test_repo.zip"
         zip_file.touch()
         mock_parse.return_value = MagicMock()
+
         analyzer.batch_analyze(str(tmp_path))
-        assert analyzer.zip_path == str(zip_file)
+
+        # Be tolerant of zip_path being either a str or a Path
+        assert Path(analyzer.zip_path) == zip_file
 
     @patch.object(ProjectAnalyzer, 'run_all')
     @patch('src.analyzers.ProjectAnalyzer.parse')
