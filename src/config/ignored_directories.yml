@@ -77,6 +77,9 @@ ignored_dirs:
   - .teamcity
   - .buildkite
 
+  # macOS
+  - __MACOSX 
+
 ignored_extensions:
   # Compiled / binary files
   - pyc
@@ -129,12 +132,14 @@ ignored_extensions:
 
 ignored_filenames:
   # System and metadata junk
-  - .ds_store
+  - .DS_Store
   - thumbs.db
   - desktop.ini
   - icon\r
   - .spotlight-v100
   - .trashes
+  - ._*
+
 
   # Git internal references and hook samples
   - head

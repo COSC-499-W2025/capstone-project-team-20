@@ -37,10 +37,25 @@ class ProjectManager(StorageManager):
         skills_used TEXT,
         individual_contributions TEXT,
         collaboration_status TEXT,
+        primary_languages TEXT,
+        total_loc INTEGER,
+        comment_ratio REAL,
+        test_file_ratio REAL,
+        avg_functions_per_file REAL,
+        max_function_length INTEGER,
+        testing_discipline_level TEXT,
+        testing_discipline_score REAL,
+        documentation_habits_level TEXT,
+        documentation_habits_score REAL,
+        modularity_level TEXT,
+        modularity_score REAL,
+        language_depth_level TEXT,
+        language_depth_score REAL,
         date_created TEXT,
         last_modified TEXT,
         last_accessed TEXT
         )"""
+
 
     @property
     def table_name(self) -> str:
@@ -58,8 +73,16 @@ class ProjectManager(StorageManager):
         return (
             "id, name, file_path, root_folder, num_files, size_kb, author_count, "
             "authors, languages, frameworks, skills_used, individual_contributions, "
-            "collaboration_status, date_created, last_modified, last_accessed"
+            "collaboration_status, "
+            "primary_languages, total_loc, comment_ratio, test_file_ratio, "
+            "avg_functions_per_file, max_function_length, "
+            "testing_discipline_level, testing_discipline_score, "
+            "documentation_habits_level, documentation_habits_score, "
+            "modularity_level, modularity_score, "
+            "language_depth_level, language_depth_score, "
+            "date_created, last_modified, last_accessed"
         )
+
 
     def set(self, proj: Project) -> None:
         """
