@@ -1,9 +1,6 @@
 from pathlib import Path
 import sys
 
-import pytest
-
-# Ensure src/ is on sys.path (same pattern as your existing tests)
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
 if str(SRC) not in sys.path:
