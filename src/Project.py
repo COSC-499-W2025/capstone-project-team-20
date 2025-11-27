@@ -28,6 +28,9 @@ class Project:
     languages: List[str] = list_field()
     frameworks: List[str] = list_field()
     skills_used: List[str] = list_field()
+    dependencies_list: List[str] = list_field()
+    dependency_files_list: List[str] = list_field()
+    build_tools: List[str] = list_field()
     individual_contributions: List[str] = list_field()
     author_contributions: List[Dict[str, Any]] = list_field()
     collaboration_status: Literal["individual", "collaborative"] = "individual"
@@ -74,9 +77,13 @@ class Project:
             "languages",
             "frameworks",
             "skills_used",
+            "dependencies_list",
+            "dependency_files_list",
+            "build_tools",
             "individual_contributions",
             "author_contributions",
             "primary_languages",
+            "readme_keywords",
         ]
         for field_name in list_fields:
             proj_dict[field_name] = json.dumps(proj_dict[field_name])
@@ -106,9 +113,13 @@ class Project:
             "languages",
             "frameworks",
             "skills_used",
+            "dependencies_list",
+            "dependency_files_list",
+            "build_tools",
             "individual_contributions",
             "author_contributions",
             "primary_languages",
+            "readme_keywords",
         ]
         for field_name in list_fields:
             value = proj_dict_copy.get(field_name)

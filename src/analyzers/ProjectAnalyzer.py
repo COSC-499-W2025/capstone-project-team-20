@@ -426,6 +426,7 @@ class ProjectAnalyzer:
             skills = result.get("skills", [])
             stats = result.get("stats", {})
             dimensions = result.get("dimensions", {})
+            tech_profile = result.get("tech_profile") or {}
 
             if not skills:
                 print("No skills could be inferred from this project.")
@@ -474,8 +475,23 @@ class ProjectAnalyzer:
                 project.language_depth_level = ld.get("level", "")
                 project.language_depth_score = ld.get("score", 0.0)
 
+                # New: tech-profile fields from SkillAnalyzer
+                project.frameworks = tech_profile.get("frameworks", [])
+                project.dependencies_list = tech_profile.get("dependencies_list", [])
+                project.dependency_files_list = tech_profile.get("dependency_files_list", [])
+                project.build_tools = tech_profile.get("build_tools", [])
+
+                project.has_dockerfile = bool(tech_profile.get("has_dockerfile", False))
+                project.has_database = bool(tech_profile.get("has_database", False))
+                project.has_frontend = bool(tech_profile.get("has_frontend", False))
+                project.has_backend = bool(tech_profile.get("has_backend", False))
+                project.has_test_files = bool(tech_profile.get("has_test_files", False))
+                project.has_readme = bool(tech_profile.get("has_readme", False))
+                project.readme_keywords = tech_profile.get("readme_keywords", [])
+
                 # Save back to DB
                 self.project_manager.set(project)
+
 
             # --- Printing / user-facing output ---
             print("\nProject-level code metrics:")

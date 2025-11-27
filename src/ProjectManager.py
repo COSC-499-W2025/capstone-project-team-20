@@ -35,6 +35,9 @@ class ProjectManager(StorageManager):
         languages TEXT,
         frameworks TEXT,
         skills_used TEXT,
+        dependencies_list TEXT,
+        dependency_files_list TEXT,
+        build_tools TEXT,
         individual_contributions TEXT,
         collaboration_status TEXT,
         primary_languages TEXT,
@@ -51,6 +54,13 @@ class ProjectManager(StorageManager):
         modularity_score REAL,
         language_depth_level TEXT,
         language_depth_score REAL,
+        has_dockerfile TEXT,
+        has_database TEXT,
+        has_frontend TEXT,
+        has_backend TEXT,
+        has_test_files TEXT,
+        has_readme TEXT,
+        readme_keywords TEXT,
         date_created TEXT,
         last_modified TEXT,
         last_accessed TEXT
@@ -72,16 +82,20 @@ class ProjectManager(StorageManager):
         """Comma-separated list of column names for project storage."""
         return (
             "id, name, file_path, root_folder, num_files, size_kb, author_count, "
-            "authors, languages, frameworks, skills_used, individual_contributions, "
-            "collaboration_status, "
+            "authors, languages, frameworks, skills_used, "
+            "dependencies_list, dependency_files_list, build_tools, "
+            "individual_contributions, collaboration_status, "
             "primary_languages, total_loc, comment_ratio, test_file_ratio, "
             "avg_functions_per_file, max_function_length, "
-            "testing_discipline_level, testing_discipline_score, "
-            "documentation_habits_level, documentation_habits_score, "
-            "modularity_level, modularity_score, "
-            "language_depth_level, language_depth_score, "
+            'testing_discipline_level, testing_discipline_score, '
+            'documentation_habits_level, documentation_habits_score, '
+            'modularity_level, modularity_score, '
+            'language_depth_level, language_depth_score, '
+            'has_dockerfile, has_database, has_frontend, has_backend, '
+            'has_test_files, has_readme, readme_keywords, '
             "date_created, last_modified, last_accessed"
         )
+
 
 
     def set(self, proj: Project) -> None:
