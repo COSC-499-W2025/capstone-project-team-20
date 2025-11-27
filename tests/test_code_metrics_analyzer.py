@@ -80,6 +80,12 @@ def test_foo():
 def test_code_metrics_comment_and_blank_lines(tmp_path: Path):
     """
     Verify comment_lines, blank_lines, and comment_ratio are computed correctly.
+
+    Current heuristic:
+      - Lines that START with a comment marker (e.g. '#', '//') are counted
+        as pure comment lines.
+      - Lines that contain inline comment markers (e.g. 'x = 1  # comment')
+        are counted as BOTH a code line and a comment line.
     """
     file_path = tmp_path / "script.py"
     _write_file(
@@ -106,15 +112,17 @@ y = 2
     # total_lines includes all lines (code + blanks + comments)
     assert analysis.total_lines > 0
 
-    # We know there are at least 2 standalone comment lines (starting with "#")
-    # and one inline comment (same line as code). The analyzer's heuristic
-    # counts the line as comment if it *starts* with "#", so we expect 2.
-    assert analysis.comment_lines == 2
+    # There are:
+    #   - 2 standalone comment lines (starting with "#")
+    #   - 1 inline comment line ("x = 1  # inline comment")
+    # With the improved heuristic, inline comments are also counted,
+    # so we expect 3 comment lines total.
+    assert analysis.comment_lines == 3
 
     # There should be at least one blank line
     assert analysis.blank_lines >= 1
 
-    # Code lines are the rest (we won't assert the exact number, just that it's > 0)
+    # Code lines are the rest; there should be at least one
     assert analysis.code_lines > 0
 
     overall = summary["overall"]
@@ -163,6 +171,7 @@ def long_function():
     # avg_functions_per_file should be close to 2 for this project
     assert overall["avg_functions_per_file"] == pytest.approx(2.0)
 
+
 def test_ignored_directories_are_pruned(tmp_path: Path):
     """
     Ensure that heavy/ignored directories like node_modules, .venv, and Unity
@@ -184,4 +193,3 @@ def test_ignored_directories_are_pruned(tmp_path: Path):
     assert "src/main.py" in rel_paths
     assert not any("node_modules" in p for p in rel_paths)
     assert not any(".venv" in p for p in rel_paths)
-
