@@ -38,6 +38,8 @@ class SkillAnalyzer:
             {
               "skills": List[SkillProfileItem],
               "stats": Dict[str, Any],   # project-level metrics used for scoring
+              "dimensions": Dict[str, Any],
+              "resume_suggestions": List[Dict[str, Any]],
             }
         """
         file_analyses = self.metrics_analyzer.analyze()
@@ -65,12 +67,12 @@ class SkillAnalyzer:
         }
 
     # ------------------------------------------------------------------
-    # Stats used by ProficiencyEstimator
+    # Stats used by ProficiencyEstimator / dimensions
     # ------------------------------------------------------------------
 
     def _build_stats(self, file_analyses: List[CodeFileAnalysis]) -> Dict[str, Any]:
         """
-        Produce a stats dict for ProficiencyEstimator from code metrics.
+        Produce a stats dict from code metrics.
         """
         summary = self.metrics_analyzer.summarize(file_analyses)
         overall = summary.get("overall", {})
@@ -91,7 +93,7 @@ class SkillAnalyzer:
         if py_key:
             py_data = per_lang[py_key]
             stats["python"] = {
-                "files": py_data.get("files", 0),
+                "files": py_data.get("file_count", 0),
                 "loc": py_data.get("loc", 0),
                 "functions": py_data.get("functions", 0),
                 "comment_ratio": py_data.get("comment_ratio", 0.0),
@@ -139,7 +141,17 @@ class SkillAnalyzer:
         Walks text-like dependency/config files and applies DEP_TO_SKILL patterns.
         """
         evidence: List[Evidence] = []
-        text_like_exts = {".txt", ".toml", ".json", ".yaml", ".yml", ".lock", ".ini", ".cfg", ".xml"}
+        text_like_exts = {
+            ".txt",
+            ".toml",
+            ".json",
+            ".yaml",
+            ".yml",
+            ".lock",
+            ".ini",
+            ".cfg",
+            ".xml",
+        }
 
         for path in self.root_dir.rglob("*"):
             if not path.is_file():
@@ -198,7 +210,7 @@ class SkillAnalyzer:
         For each code file, scan its text once and record which snippet patterns matched.
         This avoids re-reading files in _snippet_evidence.
         """
-        # Index by full path for quick lookup
+        # Index by full path for quick lookup (left here if you later want random access)
         analyses_by_path: Dict[Path, CodeFileAnalysis] = {
             Path(fa.path): fa for fa in file_analyses
         }
@@ -246,7 +258,9 @@ class SkillAnalyzer:
     # Building SkillProfileItem objects
     # ------------------------------------------------------------------
 
-    def _build_skill_profiles(self, evidence: List[Evidence], stats: Dict[str, Any]) -> List[SkillProfileItem]:
+    def _build_skill_profiles(
+        self, evidence: List[Evidence], stats: Dict[str, Any]
+    ) -> List[SkillProfileItem]:
         by_skill: Dict[str, List[Evidence]] = {}
         for e in evidence:
             by_skill.setdefault(e.skill, []).append(e)
@@ -270,7 +284,7 @@ class SkillAnalyzer:
         return profiles
 
     # ------------------------------------------------------------------
-    # Internal helpers
+    # Internal helpers: dimensions
     # ------------------------------------------------------------------
 
     def _compute_dimensions(self, stats: Dict[str, Any]) -> Dict[str, Any]:
@@ -340,7 +354,9 @@ class SkillAnalyzer:
             if data.get("loc", 0) >= 500  # arbitrary "non-toy" threshold
         }
         depth_ratio = len(depth_languages) / max(1, len(per_lang))
-        lang_depth_score = min(1.0, 0.5 + depth_ratio * 0.5)  # base 0.5 for having code at all
+        lang_depth_score = min(
+            1.0, 0.5 + depth_ratio * 0.5
+        )  # base 0.5 for having code at all
         lang_depth_level = self._level_from_score(lang_depth_score)
 
         lang_depth_dim = {

@@ -28,8 +28,12 @@ class CodeFileAnalysis:
 
     function_count: int = 0
     max_function_length: int = 0
+    # Total lines across all function bodies in this file
+    total_function_lines: int = 0
 
+    # Snippet-based skill info (used by SkillAnalyzer)
     snippet_matches: Dict[str, int] = field(default_factory=dict)
+    snippet_skills: List[str] = field(default_factory=list)
 
 
 class CodeMetricsAnalyzer:
@@ -95,6 +99,7 @@ class CodeMetricsAnalyzer:
         total_files = len(analyses) or 0
         total_loc = sum(a.code_lines for a in analyses)
         total_functions = sum(a.function_count for a in analyses)
+        total_function_lines = sum(a.total_function_lines for a in analyses)
         max_func_len_overall = max(
             (a.max_function_length for a in analyses), default=0
         )
@@ -109,12 +114,10 @@ class CodeMetricsAnalyzer:
         denom = total_comment + total_code
         comment_ratio = (total_comment / denom) if denom > 0 else 0.0
 
-        avg_func_len = 0.0
-        if total_functions > 0:
-            # simple heuristic: average of per-file max function lengths
-            avg_func_len = sum(a.max_function_length for a in analyses) / max(
-                total_functions, 1
-            )
+        # Average function length across all functions
+        avg_func_len = (
+            total_function_lines / total_functions if total_functions > 0 else 0.0
+        )
 
         avg_functions_per_file = (
             total_functions / total_files if total_files > 0 else 0.0
@@ -138,24 +141,42 @@ class CodeMetricsAnalyzer:
             "avg_functions_per_file": avg_functions_per_file,
         }
 
-        # Group by language
+        # Group by language, with richer stats
         per_language: Dict[str, Dict[str, Any]] = {}
         for a in analyses:
             lang = a.language or "Unknown"
             if lang not in per_language:
                 per_language[lang] = {
                     "file_count": 0,
-                    "total_lines_of_code": 0,
+                    "loc": 0,
+                    "functions": 0,
+                    "comment_lines": 0,
+                    "code_lines": 0,
                     "test_file_count": 0,
                     "max_function_length": 0,
                 }
             stats = per_language[lang]
             stats["file_count"] += 1
-            stats["total_lines_of_code"] += a.code_lines
+            stats["loc"] += a.code_lines
+            stats["functions"] += a.function_count
+            stats["comment_lines"] += a.comment_lines
+            stats["code_lines"] += a.code_lines
             if a.is_test:
                 stats["test_file_count"] += 1
             stats["max_function_length"] = max(
                 stats["max_function_length"], a.max_function_length
+            )
+
+        # Derived per-language stats
+        for lang, stats in per_language.items():
+            denom = stats["comment_lines"] + stats["code_lines"]
+            stats["comment_ratio"] = (
+                stats["comment_lines"] / denom if denom > 0 else 0.0
+            )
+            stats["avg_functions_per_file"] = (
+                stats["functions"] / stats["file_count"]
+                if stats["file_count"] > 0
+                else 0.0
             )
 
         return {
@@ -190,7 +211,7 @@ class CodeMetricsAnalyzer:
                 file_path = root_path / fname
                 rel = file_path.relative_to(self.root_dir)
 
-                # Reuse FileCategorizer's ignore logic for files
+                # Reuse FileCategorizer's ignore logic for files if present
                 if hasattr(self.categorizer, "_should_ignore") and self.categorizer._should_ignore(
                     str(rel)
                 ):
@@ -213,6 +234,7 @@ class CodeMetricsAnalyzer:
         max_func_len = 0
         current_func_len = 0
         in_function = False
+        total_func_lines = 0
 
         try:
             text = file_path.read_text(encoding="utf-8", errors="ignore")
@@ -228,18 +250,28 @@ class CodeMetricsAnalyzer:
 
         for line in lines:
             stripped = line.strip()
+
             if not stripped:
                 blank += 1
-            elif stripped.startswith("#") or stripped.startswith("//") or stripped.startswith("/*"):
-                comment += 1
             else:
-                code += 1
+                # Crude multi-language comment detection
+                if stripped.startswith("#") or stripped.startswith("//"):
+                    comment += 1
+                elif "/*" in stripped or stripped.endswith("*/") or stripped.startswith("*"):
+                    comment += 1
+                elif "#" in stripped or "//" in stripped:
+                    # Inline comment: code ... # comment / code ... // comment
+                    code += 1
+                    comment += 1
+                else:
+                    code += 1
 
             # Naive function detection
             if self._is_function_start(stripped, language):
                 if in_function:
                     # Close previous function
                     max_func_len = max(max_func_len, current_func_len)
+                    total_func_lines += current_func_len
                 in_function = True
                 current_func_len = 1
                 function_count += 1
@@ -248,6 +280,7 @@ class CodeMetricsAnalyzer:
 
         if in_function:
             max_func_len = max(max_func_len, current_func_len)
+            total_func_lines += current_func_len
 
         return CodeFileAnalysis(
             path=file_path,
@@ -259,14 +292,15 @@ class CodeMetricsAnalyzer:
             blank_lines=blank,
             function_count=function_count,
             max_function_length=max_func_len,
+            total_function_lines=total_func_lines,
         )
 
     def _is_test_file(self, rel_path: Path, category: str) -> bool:
         """Decide if a file should be treated as test code."""
         if category in ("tests", "test"):
             return True
-        lower = str(rel_path).lower()
-        return "/tests/" in lower or "/test/" in lower
+        lower_parts = [p.lower() for p in rel_path.parts]
+        return any(part in ("tests", "test") for part in lower_parts)
 
     def _is_function_start(self, stripped: str, language: Optional[str]) -> bool:
         """
