@@ -1,12 +1,14 @@
+import json
 import os
 import sys
 import re
 import shutil
-import datetime
 import contextlib
 import zipfile
 from pathlib import Path
 from typing import Iterable, List, Optional, Tuple, Dict
+
+from datetime import datetime
 
 from src.ZipParser import parse, toString, extract_zip
 from src.analyzers.ProjectMetadataExtractor import ProjectMetadataExtractor
@@ -55,6 +57,10 @@ class ProjectAnalyzer:
         self.cached_extract_dir: Optional[Path] = None
         self.cached_projects: Optional[Iterable[Project]] = None
 
+    # ------------------------------------------------------------------
+    # Helpers
+    # ------------------------------------------------------------------
+
     @contextlib.contextmanager
     def suppress_output(self):
         """Temporarily suppress stdout and stderr."""
@@ -90,7 +96,11 @@ class ProjectAnalyzer:
         unescaped = re.sub(r'\\(.)', r'\1', stripped)
         return Path(os.path.expanduser(unescaped))
 
-    def batch_analyze(self, zipped_repos_dir: str = 'zipped_repos') -> None:
+    # ------------------------------------------------------------------
+    # Batch & ZIP loading
+    # ------------------------------------------------------------------
+
+    def batch_analyze(self, zipped_repos_dir: str = "zipped_repos") -> None:
         """
         Loops through all zipped repositories in a directory (`zipped_repos/` by default)
         and calls run_all(). Called from utils/analyze_repos.py
@@ -100,7 +110,7 @@ class ProjectAnalyzer:
             print(f"Nothing to analyze - {zipped_repos_dir}/ doesn't exist")
             return
 
-        zip_files = list(zipped_repos_path.rglob('*.zip'))
+        zip_files = list(zipped_repos_path.rglob("*.zip"))
         if not zip_files:
             print(f"No .zip files found in {zipped_repos_dir}/")
             return
@@ -111,12 +121,12 @@ class ProjectAnalyzer:
         for zip_path in zip_files:
             repo_name = zip_path.stem
             try:
-                self.zip_path = str(zip_path)
+                self.zip_path = Path(zip_path)
                 self.root_folder = parse(self.zip_path)
                 self.metadata_extractor = ProjectMetadataExtractor(self.root_folder)
-                print(f"\n{'='*50}")
+                print(f"\n{'=' * 50}")
                 print(f"Analyzing: {repo_name}")
-                print(f"{'='*50}")
+                print(f"{'=' * 50}")
                 self.run_all()
                 analyzed += 1
 
@@ -124,12 +134,12 @@ class ProjectAnalyzer:
                 print(f"❌ {repo_name}: {str(e)[:50]}")
                 failed += 1
 
-        print(f"\n{'='*40}")
+        print(f"\n{'=' * 40}")
         print(f"Analyzed: {analyzed} | Failed: {failed}")
-        print(f"{'='*40}\n")
+        print(f"{'=' * 40}\n")
 
-    def load_zip(self):
-        """Prompts user for ZIP file and parses into folder tree"""
+    def load_zip(self) -> bool:
+        """Prompts user for ZIP file and parses into folder tree."""
         zip_path = self.clean_path(input("Please enter the path to the zipped folder: "))
         while not (os.path.exists(zip_path) and zipfile.is_zipfile(zip_path)):
             zip_path = self.clean_path(input("Invalid path or not a zipped file. Please try again: "))
@@ -145,6 +155,10 @@ class ProjectAnalyzer:
 
         self.metadata_extractor = ProjectMetadataExtractor(self.root_folder)
         return True
+
+    # ------------------------------------------------------------------
+    # Git & contribution analysis
+    # ------------------------------------------------------------------
 
     def _prompt_for_usernames(self, authors: List[str]) -> Optional[List[str]]:
         """
@@ -163,12 +177,12 @@ class ProjectAnalyzer:
         try:
             choice_str = input("Enter your choice(s) (or 'q' to quit): ").strip()
 
-            if choice_str.lower() == 'q':
+            if choice_str.lower() == "q":
                 print("Aborting user selection.")
                 return None
 
             selected_authors = []
-            choices = [c.strip() for c in choice_str.split(',')]
+            choices = [c.strip() for c in choice_str.split(",")]
             for choice in choices:
                 if not choice.isdigit():
                     print(f"Invalid input '{choice}'. Please use numbers only.")
@@ -238,7 +252,7 @@ class ProjectAnalyzer:
         selected_stats: ContributionStats,
         total_stats: ContributionStats,
         usernames: List[str],
-    ):
+    ) -> None:
         """Formats and prints the aggregated contribution analysis results."""
 
         header = f"Contribution Share for: {', '.join(usernames)}"
@@ -269,7 +283,7 @@ class ProjectAnalyzer:
                 print(f"    - {type_name.capitalize():<5}: {percentage:6.2f}%")
         print("\n" + "=" * 80)
 
-    def analyze_git_and_contributions(self):
+    def analyze_git_and_contributions(self) -> None:
         """
         Orchestrates the Git analysis workflow by running a single comprehensive
         analysis and then processing the results.
@@ -309,7 +323,7 @@ class ProjectAnalyzer:
         finally:
             shutil.rmtree(temp_dir, ignore_errors=True)
 
-    def change_selected_users(self):
+    def change_selected_users(self) -> None:
         """Allows the user to change their configured username selection."""
         print("\n--- Change Selected Users ---")
         if not self.zip_path:
@@ -342,11 +356,15 @@ class ProjectAnalyzer:
         finally:
             shutil.rmtree(temp_dir, ignore_errors=True)
 
-    def analyze_metadata(self):
+    # ------------------------------------------------------------------
+    # Metadata, categories, languages
+    # ------------------------------------------------------------------
+
+    def analyze_metadata(self) -> None:
         print("\nMetadata & File Statistics:")
         self.metadata_extractor.extract_metadata()
 
-    def analyze_categories(self):
+    def analyze_categories(self) -> None:
         print("File Categories")
         files = self.metadata_extractor.collect_all_files()
         file_dicts = [
@@ -356,11 +374,11 @@ class ProjectAnalyzer:
         result = self.file_categorizer.compute_metrics(file_dicts)
         print(result)
 
-    def print_tree(self):
+    def print_tree(self) -> None:
         print("Project Folder Structure")
         print(toString(self.root_folder))
 
-    def analyze_languages(self):
+    def analyze_languages(self) -> None:
         print("Language Detection")
         files = self.metadata_extractor.collect_all_files()
         langs = set()
@@ -377,13 +395,17 @@ class ProjectAnalyzer:
         for lang in sorted(langs):
             print(f" - {lang}")
 
-    def analyze_skills(self):
+    # ------------------------------------------------------------------
+    # Skill analysis (CodeMetrics + SkillAnalyzer + persistence)
+    # ------------------------------------------------------------------
+
+    def analyze_skills(self) -> None:
         """
         Run skill analysis on the currently loaded zip project.
 
         This:
         - Extracts the zip to a temporary directory,
-        - Runs SkillAnalyzer (which internally may run CodeMetricsAnalyzer),
+        - Runs SkillAnalyzer (which internally runs CodeMetricsAnalyzer),
         - Prints a human-readable summary of detected skills,
         - Persists key metrics onto the corresponding Project in the DB.
         """
@@ -418,7 +440,7 @@ class ProjectAnalyzer:
 
             if project is not None:
                 # Overall metrics
-                project.total_loc = overall.get("total_loc", 0)
+                project.total_loc = overall.get("total_lines_of_code", 0)
                 project.comment_ratio = overall.get("comment_ratio", 0.0)
                 project.test_file_ratio = overall.get("test_file_ratio", 0.0)
                 project.avg_functions_per_file = overall.get("avg_functions_per_file", 0.0)
@@ -429,10 +451,10 @@ class ProjectAnalyzer:
                     lang
                     for lang, data in sorted(
                         per_lang.items(),
-                        key=lambda kv: kv[1].get("loc", 0),
+                        key=lambda kv: kv[1].get("total_lines_of_code", 0),
                         reverse=True,
                     )
-                    if data.get("loc", 0) >= 100
+                    if data.get("total_lines_of_code", 0) >= 100
                 ]
 
                 # Dimensions
@@ -465,44 +487,58 @@ class ProjectAnalyzer:
         finally:
             shutil.rmtree(temp_dir, ignore_errors=True)
 
+    # ------------------------------------------------------------------
+    # Display stored analysis
+    # ------------------------------------------------------------------
+
     def display_analysis_results(self, projects: Iterable[Project]) -> None:
         projects_list = list(projects)
         if not projects_list:
             print("\nNo analysis results to display.")
             return
 
-        print(f"\n{'='*30}")
+        print(f"\n{'=' * 30}")
         print("      Analysis Results")
-        print(f"{'='*30}")
+        print(f"{'=' * 30}")
 
         for project in projects_list:
             project.display()
 
-    def generate_resume_insights(self):
+    # ------------------------------------------------------------------
+    # Resume Insights (merged behaviour)
+    # ------------------------------------------------------------------
+
+    def generate_resume_insights(self) -> None:
+        """
+        Extract Git repos from the ZIP, then for each selected repo:
+          - match it to the corresponding folder in the ZIP tree,
+          - run ProjectMetadataExtractor,
+          - compute language shares,
+          - generate resume-friendly bullet points and summaries.
+
+        Uses a selection menu similar to main-branch behaviour, but relies on
+        the existing RepoFinder + ProjectMetadataExtractor (bug branch).
+        """
         print("\nGenerating Resume Insights...\n")
 
-        # 0. Cache ONLY Git repo scan results (never metadata)
-        if getattr(self, "cached_projects", None) is not None:
-            projects = self.cached_projects
-        else:
-            if not self.zip_path:
-                print("No project loaded. Please load a zip file first.\n")
-                return
-
-            # Extract ZIP once
-            if getattr(self, "cached_extract_dir", None) is None:
-                self.cached_extract_dir = Path(extract_zip(self.zip_path))
-
-            extract_dir = self.cached_extract_dir
-
-            with self.suppress_output():
-                projects, _authors = self.git_analyzer.run_analysis_from_path(extract_dir)
-
-            self.cached_projects = projects
-
-        if not projects:
-            print("No Git projects found. Cannot generate insights.")
+        if not self.zip_path:
+            print("No project loaded. Please load a zip file first.\n")
             return
+
+        # Extract ZIP once per session and cache the directory
+        if getattr(self, "cached_extract_dir", None) is None:
+            self.cached_extract_dir = Path(extract_zip(self.zip_path))
+
+        extract_dir = self.cached_extract_dir
+
+        # Find Git repositories under the extracted directory
+        repo_paths = self.repo_finder.find_repos(extract_dir)
+        if not repo_paths:
+            print("No Git repositories found.")
+            return
+
+        # Map to simple project-like objects (name + repo path)
+        projects = [Project(name=path.name, file_path=str(path)) for path in repo_paths]
 
         # ---- Project selection loop ----
         while True:
@@ -570,10 +606,8 @@ class ProjectAnalyzer:
                 # Categorization input
                 categorized_files = metadata_full["category_summary"]
 
-                # Language detector
-                language_share = analyze_language_share(
-                    self.cached_extract_dir / proj.name
-                )
+                # Language detector (per repo)
+                language_share = analyze_language_share(extract_dir / proj.name)
 
                 repo_languages = set()
                 for f in files:
@@ -603,8 +637,12 @@ class ProjectAnalyzer:
                 print(summary)
                 print("\n")
 
+    # ------------------------------------------------------------------
+    # Folder helper
+    # ------------------------------------------------------------------
+
     def _find_folder_by_name(self, folder, target_name):
-        """Recursively search the ZIP-parsed tree for a folder that matches a repo name."""
+        """Recursively search the ZIP-parsed tree (ProjectFolder structure) for a folder by name."""
         if folder.name == target_name:
             return folder
 
@@ -615,7 +653,11 @@ class ProjectAnalyzer:
 
         return None
 
-    def analyze_new_folder(self):
+    # ------------------------------------------------------------------
+    # New folder & main menu
+    # ------------------------------------------------------------------
+
+    def analyze_new_folder(self) -> None:
         """Reset caches and load a new ZIP project."""
         if hasattr(self, "cached_extract_dir") and self.cached_extract_dir:
             try:
@@ -634,7 +676,7 @@ class ProjectAnalyzer:
         else:
             print("\nFailed to load new project.\n")
 
-    def run_all(self):
+    def run_all(self) -> None:
         print("Running All Analyzers\n")
         self.analyze_git_and_contributions()
         if self.root_folder:
@@ -645,7 +687,7 @@ class ProjectAnalyzer:
         self.analyze_skills()
         print("\nAnalyses complete.\n")
 
-    def run(self):
+    def run(self) -> None:
         print("Welcome to the Project Analyzer.\n")
 
         if not self.load_zip():
@@ -710,6 +752,7 @@ class ProjectAnalyzer:
                         shutil.rmtree(self.cached_extract_dir, ignore_errors=True)
                     except Exception:
                         pass
+                    self.cached_extract_dir = None
                 return
             else:
                 print("Invalid input. Try again.\n")
