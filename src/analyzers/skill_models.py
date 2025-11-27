@@ -21,10 +21,15 @@ class Evidence:
 @dataclass
 class SkillProfileItem:
     skill: str
-    confidence: float
-    evidence: List[Evidence] = field(default_factory=list)
-    # heuristic proficiency (0..0.98)
-    proficiency: float = 0.0
+    proficiency: float       # 0–1, normalized
+    confidence: float        # 0–1, how sure we are
+    evidence: List[Evidence]
+
+    # Extra resume-friendly fields
+    primary_language: Optional[str] = None
+    total_loc: int = 0
+    project_count: int = 1   # later used when aggregating across projects
+    tags: Set[str] = field(default_factory=set)
 
 
 NON_LANGUAGE_TAXONOMY: Set[str] = {

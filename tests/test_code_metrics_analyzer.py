@@ -162,3 +162,26 @@ def long_function():
     overall = summary["overall"]
     # avg_functions_per_file should be close to 2 for this project
     assert overall["avg_functions_per_file"] == pytest.approx(2.0)
+
+def test_ignored_directories_are_pruned(tmp_path: Path):
+    """
+    Ensure that heavy/ignored directories like node_modules, .venv, and Unity
+    build/cache dirs are not traversed by CodeMetricsAnalyzer.
+    """
+    src_file = tmp_path / "src" / "main.py"
+    _write_file(src_file, "def foo():\n    return 1\n")
+
+    node_file = tmp_path / "node_modules" / "pkg" / "index.js"
+    _write_file(node_file, "console.log('should be ignored');\n")
+
+    venv_file = tmp_path / ".venv" / "lib" / "python" / "site.py"
+    _write_file(venv_file, "# should be ignored\n")
+
+    analyzer = CodeMetricsAnalyzer(tmp_path)
+    analyses = list(analyzer.analyze())
+    rel_paths = {a.path.relative_to(tmp_path).as_posix() for a in analyses}
+
+    assert "src/main.py" in rel_paths
+    assert not any("node_modules" in p for p in rel_paths)
+    assert not any(".venv" in p for p in rel_paths)
+
