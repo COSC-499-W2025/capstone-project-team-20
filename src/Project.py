@@ -147,12 +147,18 @@ class Project:
         if self.authors:
             print(f"  Authors ({self.author_count}): {', '.join(self.authors)}")
         print(f"  Status: {self.collaboration_status}")
+
+        # High-level tech stack
         if self.languages:
             print(f"  Languages: {', '.join(self.languages)}")
+        if self.primary_languages:
+            print(f"  Primary languages (by LOC): {', '.join(self.primary_languages)}")
         if self.frameworks:
             print(f"  Frameworks: {', '.join(self.frameworks)}")
         if self.skills_used:
-            print(f"  Skills: {', '.join(self.skills_used)}")
+            print(f"  Other skills/tools: {', '.join(self.skills_used)}")
+
+        # Basic project stats
         if self.num_files:
             print(f"  Files: {self.num_files}")
         if self.size_kb:
@@ -161,4 +167,40 @@ class Project:
             print(f"  Created: {self.date_created.strftime('%Y-%m-%d')}")
         if self.last_modified:
             print(f"  Modified: {self.last_modified.strftime('%Y-%m-%d')}")
+
+        # Code metrics (populated by Analyze Skills)
+        has_metrics = any([
+            self.total_loc,
+            self.comment_ratio,
+            self.test_file_ratio,
+            self.avg_functions_per_file,
+            self.max_function_length,
+        ])
+        if has_metrics:
+            print("\n  Code metrics:")
+            if self.total_loc:
+                print(f"    - Total LOC: {self.total_loc}")
+            if self.comment_ratio:
+                print(f"    - Comment ratio: {self.comment_ratio:.1%}")
+            if self.test_file_ratio:
+                print(f"    - Test file ratio: {self.test_file_ratio:.1%}")
+            if self.avg_functions_per_file:
+                print(f"    - Avg functions/file: {self.avg_functions_per_file:.2f}")
+            if self.max_function_length:
+                print(f"    - Longest function (lines): {self.max_function_length}")
+
+        # Skill dimensions (high-level “quality” view)
+        dims = [
+            ("Testing discipline", self.testing_discipline_level, self.testing_discipline_score),
+            ("Documentation habits", self.documentation_habits_level, self.documentation_habits_score),
+            ("Modularity", self.modularity_level, self.modularity_score),
+            ("Language depth", self.language_depth_level, self.language_depth_score),
+        ]
+        if any(level for _, level, _ in dims):
+            print("\n  Code quality dimensions:")
+            for label, level, score in dims:
+                if level:
+                    print(f"    - {label}: {level} (score {score:.2f})")
+
         print()
+
