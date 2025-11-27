@@ -22,7 +22,8 @@ class Evidence:
 class SkillProfileItem:
     skill: str
     evidence: List[Evidence]
-
+    proficiency: List[Evidence]
+    confidence: List[Evidence]
     # Extra resume-friendly fields
     primary_language: Optional[str] = None
     total_loc: int = 0

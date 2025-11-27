@@ -66,7 +66,8 @@ class CodeMetricsAnalyzer:
                 continue
             seen_paths.add(file_path)
 
-            rel_path = file_path.relative_to(self.root_dir)
+            rel_path = file_path.resolve().relative_to(self.root_dir.resolve())
+
             language = detect_language_per_file(file_path)
             file_info = {"path": str(rel_path), "language": language or "Unknown"}
 
