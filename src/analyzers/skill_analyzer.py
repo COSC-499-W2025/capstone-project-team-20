@@ -7,6 +7,22 @@ from .code_metrics_analyzer import CodeMetricsAnalyzer, CodeFileAnalysis
 from .skill_models import Evidence, SkillProfileItem, TAXONOMY
 from .skill_patterns import DEP_TO_SKILL, SNIPPET_PATTERNS, KNOWN_CONFIG_HINTS
 
+# Heuristic mapping: which snippet-based skills make sense for which languages.
+# This lets us avoid running JS regexes on Python files, etc.
+LANG_TO_ALLOWED_SNIPPET_SKILLS: Dict[str, Set[str]] = {
+    "python": {"Django", "Flask", "FastAPI", "Python"},
+    "javascript": {"React", "Next.js"},
+    "typescript": {"React", "Next.js"},
+    "js": {"React", "Next.js"},
+    "ts": {"React", "Next.js"},
+    "c++": {"C++", "CMake"},
+    "cpp": {"C++", "CMake"},
+    "c": {"CMake"},
+    "c#": {"C#", "CMake"},
+    "java": {"Java", "CMake"},
+    "rust": {"Rust", "CMake"},
+}
+
 
 class SkillAnalyzer:
     """
@@ -208,13 +224,9 @@ class SkillAnalyzer:
     def _extract_snippet_skills(self, file_analyses: List[CodeFileAnalysis]) -> None:
         """
         For each code file, scan its text once and record which snippet patterns matched.
-        This avoids re-reading files in _snippet_evidence.
+        This avoids re-reading files in _snippet_evidence and also gates patterns
+        by language to keep Analyze Skills fast.
         """
-        # Index by full path for quick lookup (left here if you later want random access)
-        analyses_by_path: Dict[Path, CodeFileAnalysis] = {
-            Path(fa.path): fa for fa in file_analyses
-        }
-
         for fa in file_analyses:
             full_path = fa.path
             try:
@@ -222,12 +234,20 @@ class SkillAnalyzer:
             except OSError:
                 continue
 
+            lang = (fa.language or "").lower()
+            allowed_skills = LANG_TO_ALLOWED_SNIPPET_SKILLS.get(lang)
+
             matched_skills: Set[str] = set()
             for pattern, skill, source_kind in SNIPPET_PATTERNS:
+                # If we have a whitelist for this language, skip skills that don't apply
+                if allowed_skills is not None and skill not in allowed_skills:
+                    continue
                 if pattern.search(text):
                     matched_skills.add(skill)
 
-            fa.snippet_skills.extend(sorted(matched_skills))
+            if matched_skills:
+                fa.snippet_skills.extend(sorted(matched_skills))
+
 
     def _snippet_evidence(
         self, file_analyses: Iterable[CodeFileAnalysis]
