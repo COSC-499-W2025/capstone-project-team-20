@@ -290,29 +290,32 @@ class SkillAnalyzer:
 
         return evidence
 
+    DEPENDENCY_FILES = {
+        "package.json",
+        "package-lock.json",
+        "pnpm-lock.yaml",
+        "yarn.lock",
+        "requirements.txt",
+        "pyproject.toml",
+        "Pipfile",
+        "Pipfile.lock",
+        "environment.yml",
+        "poetry.lock",
+        "pom.xml",
+        "build.gradle",
+        "build.gradle.kts",
+        "go.mod",
+    }
+
     def _dependency_evidence(self) -> List[Evidence]:
-        """
-        Walks text-like dependency/config files and applies DEP_TO_SKILL patterns.
-        """
         evidence: List[Evidence] = []
-        text_like_exts = {
-            ".txt",
-            ".toml",
-            ".json",
-            ".yaml",
-            ".yml",
-            ".lock",
-            ".ini",
-            ".cfg",
-            ".xml",
-        }
 
         for path in self._iter_project_files():
             if not path.is_file():
                 continue
 
-            if path.suffix.lower() not in text_like_exts:
-                continue
+            if path.name not in DEPENDENCY_FILES:
+                continue   # <-- ignore random docs
 
             try:
                 text = path.read_text(encoding="utf-8", errors="ignore")
