@@ -7,6 +7,10 @@ import contextlib
 import zipfile
 from pathlib import Path
 from typing import Iterable, List, Optional, Tuple, Dict
+from src.project_timeline import (
+    get_projects_with_skills_timeline_from_projects,
+    get_skill_timeline_from_projects,
+)
 
 from datetime import datetime
 
@@ -37,7 +41,7 @@ class ProjectAnalyzer:
     7. Analyze New Folder
     8. Change Selected Users
     9. Analyze Skills
-    10. Generate Resume Insights
+    10. Generate Resume
     11. Display Previous Results
     12. Exit
     """
@@ -488,6 +492,32 @@ class ProjectAnalyzer:
             shutil.rmtree(temp_dir, ignore_errors=True)
 
     # ------------------------------------------------------------------
+    # Timeline: Projects & Skills (using stored analysis)
+    # ------------------------------------------------------------------
+
+    def display_project_timeline(self) -> None:
+        """
+        Print a chronological list of projects and the skills exercised
+        in each, based on projects currently stored in the database.
+        """
+        projects = list(self.project_manager.get_all())
+        if not projects:
+            print("\nNo projects found in the database. Run analyses first.")
+            return
+
+        rows = get_projects_with_skills_timeline_from_projects(projects)
+
+        print("\n=== Project Timeline (Chronological) ===")
+        if not rows:
+            print("No projects with valid dates found.")
+            return
+
+        for when, name, skills in rows:
+            skills_str = ", ".join(skills) if skills else "(no skills recorded)"
+            print(f"{when.isoformat()} — {name}: {skills_str}")
+
+
+    # ------------------------------------------------------------------
     # Display stored analysis
     # ------------------------------------------------------------------
 
@@ -710,8 +740,10 @@ class ProjectAnalyzer:
                 9. Analyze Skills
                 10. Generate Resume Insights
                 11. Display Previous Results
-                12. Exit
+                12. Show Project Timeline (Projects & Skills)
+                13. Exit
                   """)
+
 
             choice = input("Selection: ").strip()
 
@@ -745,6 +777,8 @@ class ProjectAnalyzer:
                 projects = self.project_manager.get_all()
                 self.display_analysis_results(projects)
             elif choice == "12":
+                self.display_project_timeline()
+            elif choice == "13":
                 print("Exiting Project Analyzer.")
                 # CLEAN UP TEMP DIR ON EXIT
                 if hasattr(self, "cached_extract_dir") and self.cached_extract_dir:
@@ -753,6 +787,7 @@ class ProjectAnalyzer:
                     except Exception:
                         pass
                     self.cached_extract_dir = None
-                return
+                return 
             else:
                 print("Invalid input. Try again.\n")
+
