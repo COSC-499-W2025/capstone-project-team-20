@@ -1,9 +1,16 @@
 import random
 from datetime import datetime
+from typing import Tuple
 
 class ResumeInsightsGenerator:
     """
     Generates resume bullet points and summaries.
+
+    Called from the `generate_resume_insights()` method in ProjectAnalyzer
+
+    Workflow from that method is:
+        1. generate_resume_bullet_points()
+        2. generator.generate_project_summary()
     """
 
     def __init__(self, metadata, categorized_files, language_share, project, language_list):
@@ -36,7 +43,8 @@ class ResumeInsightsGenerator:
         ]
 
     # Category counts
-    def get_category_counts(self):
+    def get_category_counts(self) -> Tuple[int,int,int,int]:
+        "Returns count of code, doc, test and config files"
         counts = self.categorized_files.get("counts", {})
         code_files = counts.get("code", 0)
         doc_files = counts.get("docs", 0)
@@ -46,6 +54,13 @@ class ResumeInsightsGenerator:
 
     # Resume Bullet Points
     def generate_resume_bullet_points(self) -> list[str]:
+        """Currently generates up to 5 bullet points, 
+        1. Contributions and language use
+        2. Documentation and Testing (if applicable)
+        3. Length of time spent on project 
+        4. Team-based collaboration (if applicable)
+        5. Generation of config files (if applicable)
+        """
         bullets = []
 
         code_files, doc_files, test_files, config_files = self.get_category_counts()
@@ -96,16 +111,19 @@ class ResumeInsightsGenerator:
 
     # Project Summary
     def generate_project_summary(self) -> str:
+        """Generates a project summary (str) detailing tech stack, time spent, 
+        num files, code/doc/test file split, collaboration status (team-based or individual)
+        """
         code_files, doc_files, test_files, config_files = self.get_category_counts()
         total_files = sum(self.categorized_files["counts"].values())
 
         top_langs = ", ".join(self.language_list[:4]) if self.language_list else "multiple languages"
 
         days = self._compute_days()
-        duration_text = f" over {self.format_duration(days)}" if days > 0 else ""
+        duration_text = f" {self.format_duration(days)}" if days > 0 else ""
 
         summary = (
-            f"This software project was built using a tech stack of {top_langs}{duration_text}. "
+            f"This software project was built using a tech stack of {top_langs} over {duration_text}. "
             f"It follows a modular and maintainable architecture and contains over {total_files} files, including "
             f"{code_files} source modules, {test_files} automated tests, and {doc_files} documentation files. "
         )
@@ -161,3 +179,13 @@ class ResumeInsightsGenerator:
             f"{months} month" + ("s" if months > 1 else "")
             + f" and {remaining} days"
         )
+    
+    def display_insights(self, bullets: list[str], summary:str) -> None:
+        "Called from ProjectAnalyzer, iterates through each bullet point and prints them, and then prints the summary"
+        print("Resume Bullet Points:")
+        for b in bullets:
+            print(f" • {b}")
+        print("\nProject Summary:")
+        print(summary)
+        print("\n")
+
