@@ -54,7 +54,8 @@ def _normalized_project_skills(raw_skills: Any) -> List[str]:
 
     Behaviour:
     - Accepts None or any iterable of values.
-    - Values are converted to strings and stripped; empty entries are ignored.
+    - Only string values are kept; non-strings (e.g. numbers) are ignored.
+    - Strings are stripped; empty entries are ignored.
     - Skills are deduplicated *case-insensitively*, but casing from the first
       occurrence is preserved.
     - The returned list is sorted case-insensitively.
@@ -69,9 +70,10 @@ def _normalized_project_skills(raw_skills: Any) -> List[str]:
         iterable = [raw_skills]
 
     for value in iterable:
-        if value is None:
+        if value is None or not isinstance(value, str):
+            # ignore non-strings (e.g. 123) and Nones
             continue
-        s = str(value).strip()
+        s = value.strip()
         if not s:
             continue
         key = s.lower()
@@ -80,6 +82,7 @@ def _normalized_project_skills(raw_skills: Any) -> List[str]:
 
     # Sort by the lowercase key for deterministic ordering
     return [result[k] for k in sorted(result.keys())]
+
 
 
 def build_timeline(projects: Iterable[Dict[str, Any]]) -> List[SkillEvent]:
@@ -114,22 +117,45 @@ def build_timeline(projects: Iterable[Dict[str, Any]]) -> List[SkillEvent]:
     return events
 
 
-def first_use_by_skill(events: Iterable[SkillEvent]) -> Dict[str, date]:
+def first_use_by_skill(
+    projects_or_events: Iterable[Any] | None,
+) -> List[Tuple[date, str]]:
     """
     Return the first date on which each skill appears.
 
-    If a skill appears multiple times across projects, only the earliest date
-    is retained. Skill names are treated as-is (no case folding here) so that
-    the caller controls casing.
+    Accepts either:
+      - an iterable of project dicts (as expected by build_timeline), or
+      - an iterable of SkillEvent objects.
+
+    Returns:
+      A list of (date, skill) tuples, where each skill appears once at its
+      earliest date, sorted by (date, skill).
     """
+    items = list(projects_or_events or [])
+    if not items:
+        return []
+
+    # Decide whether we have raw project dicts or SkillEvent instances
+    first = items[0]
+    if isinstance(first, SkillEvent):
+        events = items  # already SkillEvent objects
+    else:
+        # Treat input as project dicts and build events from them
+        events = build_timeline(items)
+
     first_seen: Dict[str, date] = {}
 
     for ev in events:
+        when = ev.when
         current = first_seen.get(ev.skill)
-        if current is None or ev.when < current:
-            first_seen[ev.skill] = ev.when
+        if current is None or when < current:
+            first_seen[ev.skill] = when
 
-    return first_seen
+    # Convert mapping to a sorted list of (date, skill)
+    rows: List[Tuple[date, str]] = [(when, skill) for skill, when in first_seen.items()]
+    rows.sort(key=lambda r: (r[0], r[1].lower()))
+    return rows
+
 
 
 def projects_chronologically(
