@@ -28,6 +28,23 @@ LANG_TO_ALLOWED_SNIPPET_SKILLS: Dict[str, Set[str]] = {
     "rust": {"Rust", "CMake"},
 }
 
+DEPENDENCY_FILES = {
+        "package.json",
+        "package-lock.json",
+        "pnpm-lock.yaml",
+        "yarn.lock",
+        "requirements.txt",
+        "pyproject.toml",
+        "Pipfile",
+        "Pipfile.lock",
+        "environment.yml",
+        "poetry.lock",
+        "pom.xml",
+        "build.gradle",
+        "build.gradle.kts",
+        "go.mod",
+    }
+
 
 class SkillAnalyzer:
     """
@@ -290,23 +307,7 @@ class SkillAnalyzer:
 
         return evidence
 
-    DEPENDENCY_FILES = {
-        "package.json",
-        "package-lock.json",
-        "pnpm-lock.yaml",
-        "yarn.lock",
-        "requirements.txt",
-        "pyproject.toml",
-        "Pipfile",
-        "Pipfile.lock",
-        "environment.yml",
-        "poetry.lock",
-        "pom.xml",
-        "build.gradle",
-        "build.gradle.kts",
-        "go.mod",
-    }
-
+    
     def _dependency_evidence(self) -> List[Evidence]:
         evidence: List[Evidence] = []
 

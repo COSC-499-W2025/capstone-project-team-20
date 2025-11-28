@@ -10,40 +10,26 @@ from utils.timeline_builder import (
 
 def _skills_for_timeline(project: Project) -> List[str]:
     """
-    Decide which skills are "strong enough" to show in the timeline.
+    Decide which skills to show in the timeline for a given project.
 
-    Strategy:
-      - Start from languages + frameworks + skills_used.
-      - If the project has richer skill profiles (e.g., from SkillAnalyzer),
-        filter by proficiency/confidence.
-      - Otherwise, just dedupe and sort.
+    For now:
+      - Take the union of languages, frameworks, and skills_used.
+      - Deduplicate and sort case-insensitively.
+
+    Later, this can be extended to:
+      - Look at per-skill proficiency/confidence (e.g., from SkillAnalyzer).
+      - Apply thresholds so one-off or low-confidence skills are not shown.
     """
     raw: List[str] = []
+
+    # Safely extend from each sequence if present
     for seq in (project.languages, project.frameworks, project.skills_used):
         if seq:
             raw.extend(seq)
 
-    # If we have detailed skill profiles, prefer those
-    profiles = getattr(project, "skill_profiles", None)
-
-    if isinstance(profiles, dict):
-        strong: set[str] = set()
-        for s in raw:
-            prof = profiles.get(s)
-            if not prof:
-                continue
-
-            # Adjust thresholds as you like
-            if getattr(prof, "proficiency", 0.0) >= 0.4 and getattr(
-                prof, "confidence", 0.0
-            ) >= 0.5:
-                strong.add(s)
-
-        if strong:
-            return sorted(strong, key=str.lower)
-
-    # Fallback: no profile info, just dedupe + sort
-    return sorted({s for s in raw if s}, key=str.lower)
+    # Dedupe + sort; keep only non-empty strings
+    unique = {s for s in raw if s}
+    return sorted(unique, key=str.lower)
 
 def _project_to_timeline_dict(project: Project) -> Optional[Dict[str, Any]]:
     """
@@ -61,15 +47,13 @@ def _project_to_timeline_dict(project: Project) -> Optional[Dict[str, Any]]:
     if when is None:
         return None
 
-    # Treat "skills" as the union of languages, frameworks, and skills_used.
-        skills = _skills_for_timeline(project)
+    skills = _skills_for_timeline(project)
 
     return {
         "name": project.name,
         "date": when,
         "skills": skills,
     }
-
 
 
 def get_skill_timeline_from_projects(
