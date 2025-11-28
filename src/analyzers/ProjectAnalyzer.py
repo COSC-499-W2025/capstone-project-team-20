@@ -22,6 +22,8 @@ from src.analyzers.SkillAnalyzer import SkillAnalyzer
 from src.analyzers.code_metrics_analyzer import CodeMetricsAnalyzer
 from src.generators.ResumeInsightsGenerator import ResumeInsightsGenerator
 from src.ConfigManager import ConfigManager
+from src.ProjectRanker import ProjectRanker
+from src.analyzers.RepoProjectBuilder import RepoProjectBuilder
 
 
 class ProjectAnalyzer:
@@ -155,6 +157,50 @@ class ProjectAnalyzer:
 
         self.metadata_extractor = ProjectMetadataExtractor(self.root_folder)
         return True
+    # ------------------------------------------------------------------
+    # Project Initialization using RepoProjectBuilder
+    # ------------------------------------------------------------------
+
+    def initialize_projects(self) -> List[Project]:
+        """
+        Uses RepoProjectBuilder to find all repos, create Project objects,
+        and saves them to the database. This is the single source of truth
+        for project creation.
+        Returns a list of the created/updated project objects.
+        """
+        print("\n--- Initializing Project Records ---")
+        if not self.zip_path or not self.root_folder:
+            print("No project loaded. Please load a zip file first.\n")
+            return []
+
+        temp_dir = Path(extract_zip(str(self.zip_path)))
+        builder = RepoProjectBuilder(self.root_folder)
+
+        created_projects = []
+        try:
+            projects_from_builder = builder.scan(temp_dir)
+            if not projects_from_builder:
+                print("No Git repositories found to build projects from.")
+                return []
+
+            print(f"Found {len(projects_from_builder)} project(s). Saving initial records...")
+            for proj_new in projects_from_builder:
+                proj_existing = self.project_manager.get_by_name(proj_new.name)
+                if proj_existing:
+                    # If it exists, update it with basic info from the builder
+                    proj_existing.authors = proj_new.authors
+                    proj_existing.author_count = len(proj_new.authors)
+                    self.project_manager.set(proj_existing)
+                    print(f"  - Updated existing project: {proj_existing.name}")
+                    created_projects.append(proj_existing)
+                else:
+                    # Save the newly created project
+                    self.project_manager.set(proj_new)
+                    print(f"  - Created new project record: {proj_new.name} with ID {proj_new.id}")
+                    created_projects.append(proj_new)
+            return created_projects
+        finally:
+            shutil.rmtree(temp_dir, ignore_errors=True)
 
     # ------------------------------------------------------------------
     # Git & contribution analysis
@@ -401,88 +447,71 @@ class ProjectAnalyzer:
 
     def analyze_skills(self) -> None:
         """
-        Run skill analysis on the currently loaded zip project.
-
-        This:
-        - Extracts the zip to a temporary directory,
-        - Runs SkillAnalyzer (which internally runs CodeMetricsAnalyzer),
-        - Prints a human-readable summary of detected skills,
-        - Persists key metrics onto the corresponding Project in the DB.
+        Enriches all projects found in the ZIP with advanced metrics and a resume score.
+        It now relies on initialize_projects to have created the records first.
         """
+
         if not self.zip_path:
-            print("No project loaded. Please load a zip file first.\n")
+            print("No project loaded.\n")
             return
 
-        path_obj = Path(self.zip_path)
-        if not path_obj.exists() or path_obj.suffix.lower() != ".zip":
-            print(f"Error: {path_obj} is not a valid zip file.")
+        print("\n--- Enriching Projects with Skill Analysis & Scoring ---")
+
+        # First, ensure projects are in the database.
+        projects_to_analyze = self.project_manager.get_all()
+        project_list = list(projects_to_analyze)
+
+        if not project_list:
+            print("No projects found in the database. Please run 'Initialize/Re-scan Projects' first.")
             return
 
-        print("\nSkill Analysis (languages, frameworks, tooling):")
-        temp_dir = extract_zip(str(path_obj))
+        temp_dir = Path(extract_zip(str(self.zip_path)))
         try:
-            skill_analyzer = SkillAnalyzer(Path(temp_dir))
-            result = skill_analyzer.analyze()
-            skills = result.get("skills", [])
-            stats = result.get("stats", {})
-            dimensions = result.get("dimensions", {})
+            for project in project_list:
+                print(f"\nAnalyzing skills for: {project.name}...")
 
-            if not skills:
-                print("No skills could be inferred from this project.")
-                return
+                # Each project needs its own analysis
+                # We assume the temp_dir contains all unzipped projects
+                project_source_path = temp_dir / project.name
+                if not project_source_path.exists():
+                    print(f"  - Warning: Source path '{project_source_path}' not found. Skipping.")
+                    continue
 
-            overall = stats.get("overall", {})
-            per_lang = stats.get("per_language", {})
+                skill_analyzer = SkillAnalyzer(project_source_path)
+                result = skill_analyzer.analyze()
+                stats = result.get("stats", {})
+                dimensions = result.get("dimensions", {})
 
-            # Persist metrics into the Project record
-            project_name = Path(self.zip_path).stem
-            project = self.project_manager.get_by_name(project_name)
+                if not stats:
+                    print(f"  - No metrics could be inferred for {project.name}.")
+                    continue
 
-            if project is not None:
-                # Overall metrics
+                overall = stats.get("overall", {})
+                per_lang = stats.get("per_language", {})
+
+                # --- Enrich the existing Project object ---
                 project.total_loc = overall.get("total_lines_of_code", 0)
                 project.comment_ratio = overall.get("comment_ratio", 0.0)
                 project.test_file_ratio = overall.get("test_file_ratio", 0.0)
-                project.avg_functions_per_file = overall.get("avg_functions_per_file", 0.0)
-                project.max_function_length = overall.get("max_function_length", 0)
 
-                # Primary languages by LOC (ignore tiny ones)
-                project.primary_languages = [
-                    lang
-                    for lang, data in sorted(
-                        per_lang.items(),
-                        key=lambda kv: kv[1].get("total_lines_of_code", 0),
-                        reverse=True,
-                    )
-                    if data.get("total_lines_of_code", 0) >= 100
-                ]
-
-                # Dimensions
                 td = dimensions.get("testing_discipline", {})
-                project.testing_discipline_level = td.get("level", "")
                 project.testing_discipline_score = td.get("score", 0.0)
-
                 doc = dimensions.get("documentation_habits", {})
-                project.documentation_habits_level = doc.get("level", "")
                 project.documentation_habits_score = doc.get("score", 0.0)
-
                 mod = dimensions.get("modularity", {})
-                project.modularity_level = mod.get("level", "")
                 project.modularity_score = mod.get("score", 0.0)
-
                 ld = dimensions.get("language_depth", {})
-                project.language_depth_level = ld.get("level", "")
                 project.language_depth_score = ld.get("score", 0.0)
+                project.last_modified = datetime.now()
 
-                # Save back to DB
+                # Calculate the final score
+                ranker = ProjectRanker(project)
+                ranker.calculate_resume_score()
+
+                # --- Save the fully enriched object back to the database ---
                 self.project_manager.set(project)
-
-            # --- Printing / user-facing output ---
-            print("\nProject-level code metrics:")
-            for k, v in overall.items():
-                print(f"  - {k}: {v}")
-
-            # You could also print skill list and dimensions here if desired.
+                print(f"  - Successfully enriched and saved '{project.name}'.")
+                print(f"  - Final Resume Score: {project.resume_score:.2f}")
 
         finally:
             shutil.rmtree(temp_dir, ignore_errors=True)
@@ -537,19 +566,33 @@ class ProjectAnalyzer:
             print("No Git repositories found.")
             return
 
-        # Map to simple project-like objects (name + repo path)
-        projects = [Project(name=path.name, file_path=str(path)) for path in repo_paths]
+        all_projects = []
+        print("Loading analyzed project data from database...")
+        for path in repo_paths:
+            # Use the project manager to get the project by its name
+            project_from_db = self.project_manager.get_by_name(path.name)
+            if project_from_db:
+                all_projects.append(project_from_db)
+            else:
+                # If for some reason it's not in the DB, create a temporary one
+                print(f"  - Warning: Project '{path.name}' not found in DB. Score will be 0.")
+                all_projects.append(Project(name=path.name, file_path=str(path)))
+
+        # Sort projects by resume_score in descending order
+        projects = sorted(all_projects, key=lambda p: p.resume_score, reverse=True)
 
         # ---- Project selection loop ----
         while True:
-            print("\nMultiple Git projects detected:")
+            print("\nGit projects detected (ranked by resume score):")
             projects_list = list(projects)
             for i, proj in enumerate(projects_list, start=1):
-                print(f" {i}. {proj.name}")
+                print(f" {i}. {proj.name} (Score: {proj.resume_score:.2f})")
 
             return_option = len(projects_list) + 1
             print("\nSelect an option:")
             print(" 0. Generate insights for ALL projects")
+            if len(projects_list) >= 3:
+                print(" 3. Generate for Top 3 Projects")
             print(f" {return_option}. Return to Main Menu")
 
             choice = input("Choose a project number: ").strip()
@@ -567,6 +610,8 @@ class ProjectAnalyzer:
 
             if choice == "0":
                 selected = projects_list
+            elif choice == "3" and len(projects_list) >= 3:
+                selected = projects_list[:3]
             else:
                 try:
                     idx = int(choice) - 1
@@ -688,10 +733,14 @@ class ProjectAnalyzer:
         print("\nAnalyses complete.\n")
 
     def run(self) -> None:
+        """The main interactive loop for the Project Analyzer."""
         print("Welcome to the Project Analyzer.\n")
 
         if not self.load_zip():
             return
+
+        # --- FIX: Automatically initialize projects after loading a ZIP ---
+        self.initialize_projects()
 
         while True:
             print("""
@@ -699,6 +748,7 @@ class ProjectAnalyzer:
                 Project Analyzer
                 ========================
                 Choose an option:
+                0. Initialize/Re-scan Projects (Recommended First Step)
                 1. Analyze Git Repository & Contributions
                 2. Extract Metadata & File Statistics
                 3. Categorize Files by Type
@@ -707,7 +757,7 @@ class ProjectAnalyzer:
                 6. Run All Analyses
                 7. Analyze New Folder
                 8. Change Selected Users
-                9. Analyze Skills
+                9. Analyze Skills (Calculates Resume Score)
                 10. Generate Resume Insights
                 11. Display Previous Results
                 12. Exit
@@ -716,12 +766,16 @@ class ProjectAnalyzer:
             choice = input("Selection: ").strip()
 
             # For options that require a loaded ZIP, ensure we have one
-            if choice in {"1", "2", "3", "4", "5", "6", "8", "9", "10"}:
+            if choice in {"0", "1", "2", "3", "4", "5", "6", "8", "9", "10"}:
                 if not self.zip_path:
                     if not self.load_zip():
                         return
+                    # Also initialize projects after a new load
+                    self.initialize_projects()
 
-            if choice == "1":
+            if choice == "0":
+                self.initialize_projects()
+            elif choice == "1":
                 self.analyze_git_and_contributions()
             elif choice == "2":
                 self.analyze_metadata()
@@ -732,9 +786,22 @@ class ProjectAnalyzer:
             elif choice == "5":
                 self.analyze_languages()
             elif choice == "6":
-                self.run_all()
+                # --- FIX: Ensure initialization happens first in run_all ---
+                print("Running All Analyzers\n")
+                if self.initialize_projects():
+                    self.analyze_git_and_contributions()
+                    if self.root_folder:
+                        self.analyze_metadata()
+                        self.analyze_categories()
+                        self.print_tree()
+                        self.analyze_languages()
+                    self.analyze_skills()
+                print("\nAnalyses complete.\n")
             elif choice == "7":
                 self.analyze_new_folder()
+                # --- FIX: Initialize after loading new folder ---
+                if self.zip_path:
+                    self.initialize_projects()
             elif choice == "8":
                 self.change_selected_users()
             elif choice == "9":
