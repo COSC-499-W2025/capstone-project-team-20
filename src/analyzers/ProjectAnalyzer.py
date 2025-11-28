@@ -22,7 +22,7 @@ from src.analyzers.SkillAnalyzer import SkillAnalyzer
 from src.analyzers.code_metrics_analyzer import CodeMetricsAnalyzer
 from src.generators.ResumeInsightsGenerator import ResumeInsightsGenerator
 from src.ConfigManager import ConfigManager
-
+from utils.set_variables_analysis import set_project_analysis_values
 
 class ProjectAnalyzer:
     """
@@ -432,66 +432,18 @@ class ProjectAnalyzer:
                 print("No skills could be inferred from this project.")
                 return
 
-            overall = stats.get("overall", {})
-            per_lang = stats.get("per_language", {})
-
             # Persist metrics into the Project record
             project_name = Path(self.zip_path).stem
             project = self.project_manager.get_by_name(project_name)
 
             if project is not None:
-                # Overall metrics
-                project.total_loc = overall.get("total_lines_of_code", 0)
-                project.comment_ratio = overall.get("comment_ratio", 0.0)
-                project.test_file_ratio = overall.get("test_file_ratio", 0.0)
-                project.avg_functions_per_file = overall.get("avg_functions_per_file", 0.0)
-                project.max_function_length = overall.get("max_function_length", 0)
-
-                # Primary languages by LOC (ignore tiny ones)
-                project.primary_languages = [
-                    lang
-                    for lang, data in sorted(
-                        per_lang.items(),
-                        key=lambda kv: kv[1].get("total_lines_of_code", 0),
-                        reverse=True,
-                    )
-                    if data.get("total_lines_of_code", 0) >= 100
-                ]
-
-                # Dimensions
-                td = dimensions.get("testing_discipline", {})
-                project.testing_discipline_level = td.get("level", "")
-                project.testing_discipline_score = td.get("score", 0.0)
-
-                doc = dimensions.get("documentation_habits", {})
-                project.documentation_habits_level = doc.get("level", "")
-                project.documentation_habits_score = doc.get("score", 0.0)
-
-                mod = dimensions.get("modularity", {})
-                project.modularity_level = mod.get("level", "")
-                project.modularity_score = mod.get("score", 0.0)
-
-                ld = dimensions.get("language_depth", {})
-                project.language_depth_level = ld.get("level", "")
-                project.language_depth_score = ld.get("score", 0.0)
-
-                # New: tech-profile fields from SkillAnalyzer
-                project.frameworks = tech_profile.get("frameworks", [])
-                project.dependencies_list = tech_profile.get("dependencies_list", [])
-                project.dependency_files_list = tech_profile.get("dependency_files_list", [])
-                project.build_tools = tech_profile.get("build_tools", [])
-
-                project.has_dockerfile = bool(tech_profile.get("has_dockerfile", False))
-                project.has_database = bool(tech_profile.get("has_database", False))
-                project.has_frontend = bool(tech_profile.get("has_frontend", False))
-                project.has_backend = bool(tech_profile.get("has_backend", False))
-                project.has_test_files = bool(tech_profile.get("has_test_files", False))
-                project.has_readme = bool(tech_profile.get("has_readme", False))
-                project.readme_keywords = tech_profile.get("readme_keywords", [])
-
-                # Save back to DB
+                set_project_analysis_values(
+                    project=project,
+                    stats=stats,
+                    dimensions=dimensions,
+                    tech_profile=tech_profile,
+                )
                 self.project_manager.set(project)
-
 
             # --- Printing / user-facing output ---
             print("\nProject-level code metrics:")
@@ -502,6 +454,7 @@ class ProjectAnalyzer:
 
         finally:
             shutil.rmtree(temp_dir, ignore_errors=True)
+
 
     # ------------------------------------------------------------------
     # Display stored analysis
