@@ -54,7 +54,7 @@ class RepoProjectBuilder:
 
         # 2. Extract metadata from ZIP tree
         extractor = ProjectMetadataExtractor(folder)
-        metadata_full = extractor.extract_metadata()
+        metadata_full = extractor.extract_metadata(repo_path=str(repo_path))
         metadata = metadata_full["project_metadata"]
         category_summary = metadata_full["category_summary"]
         files = extractor.collect_all_files()

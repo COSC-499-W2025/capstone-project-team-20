@@ -1,15 +1,7 @@
-import json
-import os
-import sys
-import re
-import shutil
-import contextlib
-import zipfile
+import json, signal, os, sys, re, shutil, contextlib, zipfile
 from pathlib import Path
 from typing import Iterable, List, Optional, Tuple, Dict
-
 from datetime import datetime
-
 from src.ZipParser import parse, toString, extract_zip
 from src.analyzers.ProjectMetadataExtractor import ProjectMetadataExtractor
 from src.FileCategorizer import FileCategorizer
@@ -538,7 +530,15 @@ class ProjectAnalyzer:
             return
 
         # Map to simple project-like objects (name + repo path)
-        projects = [Project(name=path.name, file_path=str(path)) for path in repo_paths]
+        projects = []
+        for path in repo_paths:
+            authors = self.contribution_analyzer.get_all_authors(str(path))
+            projects.append(Project(
+                name=path.name,
+                file_path=str(path),
+                authors=authors,
+                author_count=len(authors)
+            ))
 
         # ---- Project selection loop ----
         while True:
@@ -637,6 +637,23 @@ class ProjectAnalyzer:
                 print(summary)
                 print("\n")
 
+    def _cleanup_temp(self):
+        """Delete the extracted ZIP temp folder if it exists."""
+        if getattr(self, "cached_extract_dir", None):
+            try:
+                shutil.rmtree(self.cached_extract_dir, ignore_errors=True)
+                print(f"[Cleanup] Removed temp folder: {self.cached_extract_dir}")
+            except Exception as e:
+                print(f"[Cleanup Error] {e}")
+            self.cached_extract_dir = None
+
+
+    def _signal_cleanup(self, signum, frame):
+        """Handle Ctrl+C cleanly by cleaning temp folder then exiting."""
+        print("\n[Interrupted] Cleaning up temporary files...")
+        self._cleanup_temp()
+        raise SystemExit(0)
+
     # ------------------------------------------------------------------
     # Folder helper
     # ------------------------------------------------------------------
@@ -660,13 +677,8 @@ class ProjectAnalyzer:
     def analyze_new_folder(self) -> None:
         """Reset caches and load a new ZIP project."""
         if hasattr(self, "cached_extract_dir") and self.cached_extract_dir:
-            try:
-                shutil.rmtree(self.cached_extract_dir, ignore_errors=True)
-            except Exception:
-                pass
-            self.cached_extract_dir = None
-
-        self.cached_projects = None
+            self._cleanup_temp()
+            return
 
         print("\nLoading new project...")
         success = self.load_zip()
@@ -689,6 +701,7 @@ class ProjectAnalyzer:
 
     def run(self) -> None:
         print("Welcome to the Project Analyzer.\n")
+        signal.signal(signal.SIGINT, self._signal_cleanup)
 
         if not self.load_zip():
             return
@@ -746,13 +759,7 @@ class ProjectAnalyzer:
                 self.display_analysis_results(projects)
             elif choice == "12":
                 print("Exiting Project Analyzer.")
-                # CLEAN UP TEMP DIR ON EXIT
-                if hasattr(self, "cached_extract_dir") and self.cached_extract_dir:
-                    try:
-                        shutil.rmtree(self.cached_extract_dir, ignore_errors=True)
-                    except Exception:
-                        pass
-                    self.cached_extract_dir = None
+                self._cleanup_temp()
                 return
             else:
                 print("Invalid input. Try again.\n")
