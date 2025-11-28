@@ -28,26 +28,37 @@ class Project:
     languages: List[str] = list_field()
     frameworks: List[str] = list_field()
     skills_used: List[str] = list_field()
+
+    # New: dependency and tooling info
     dependencies_list: List[str] = list_field()
     dependency_files_list: List[str] = list_field()
     build_tools: List[str] = list_field()
+
     individual_contributions: List[str] = list_field()
     author_contributions: List[Dict[str, Any]] = list_field()
     collaboration_status: Literal["individual", "collaborative"] = "individual"
 
     # === New: derived skill/metrics info ===
-    # Primary languages (e.g. top by LOC, subset of `languages`)
     primary_languages: List[str] = list_field()
 
-    # Overall code metrics (from CodeMetricsAnalyzer.summarize()["overall"])
+    # Overall code metrics ...
     total_loc: int = 0
     comment_ratio: float = 0.0
     test_file_ratio: float = 0.0
     avg_functions_per_file: float = 0.0
     max_function_length: int = 0
 
-    # Skill dimensions (from SkillAnalyzer._compute_dimensions)
-    testing_discipline_level: str = ""       # "strong" | "good" | "ok" | "needs_improvement"
+    # Tech-profile flags
+    has_dockerfile: bool = False
+    has_database: bool = False
+    has_frontend: bool = False
+    has_backend: bool = False
+    has_test_files: bool = False
+    has_readme: bool = False
+    readme_keywords: List[str] = list_field()
+
+    # Skill dimensions ...
+    testing_discipline_level: str = ""
     testing_discipline_score: float = 0.0
 
     documentation_habits_level: str = ""
@@ -63,6 +74,7 @@ class Project:
     date_created: Optional[datetime] = None
     last_modified: Optional[datetime] = None
     last_accessed: Optional[datetime] = None
+
 
     def to_dict(self) -> dict:
         """
@@ -86,7 +98,8 @@ class Project:
             "readme_keywords",
         ]
         for field_name in list_fields:
-            proj_dict[field_name] = json.dumps(proj_dict[field_name])
+            # use .get so we don't KeyError if there is any version skew
+            proj_dict[field_name] = json.dumps(proj_dict.get(field_name, []))
 
         # Ensure author_count is consistent with the authors list.
         proj_dict["author_count"] = len(self.authors)
@@ -97,6 +110,7 @@ class Project:
         proj_dict["last_accessed"] = self.last_accessed.isoformat() if self.last_accessed else None
 
         return proj_dict
+
 
     @classmethod
     def from_dict(cls, proj_dict: dict) -> Project:
@@ -124,9 +138,13 @@ class Project:
         for field_name in list_fields:
             value = proj_dict_copy.get(field_name)
             if isinstance(value, str):
-                proj_dict_copy[field_name] = json.loads(value)
+                try:
+                    proj_dict_copy[field_name] = json.loads(value)
+                except json.JSONDecodeError:
+                    proj_dict_copy[field_name] = []
             elif value is None:
                 proj_dict_copy[field_name] = []
+            # otherwise assume it's already a list-like value
 
         # Deserialize ISO 8601 strings back into datetime objects.
         for field_name in ["date_created", "last_modified", "last_accessed"]:
