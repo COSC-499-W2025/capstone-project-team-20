@@ -4,6 +4,7 @@ from src.analyzers.ProjectMetadataExtractor import ProjectMetadataExtractor
 from src.analyzers.ContributionAnalyzer import ContributionAnalyzer
 from src.analyzers.language_detector import analyze_language_share, detect_language_per_file
 from utils.RepoFinder import RepoFinder
+import io, contextlib
 
 
 class RepoProjectBuilder:
@@ -22,6 +23,10 @@ class RepoProjectBuilder:
         self.root_folder = root_folder
         self.repo_finder = RepoFinder()
         self.contribution_analyzer = ContributionAnalyzer()
+
+    def suppress_output(self):
+        """Silence stdout while running noisy extractors."""
+        return contextlib.redirect_stdout(io.StringIO())
 
     # scan for all repos and return List[Project]
     def scan(self, extract_dir: Path):
@@ -54,7 +59,8 @@ class RepoProjectBuilder:
 
         # 2. Extract metadata from ZIP tree
         extractor = ProjectMetadataExtractor(folder)
-        metadata_full = extractor.extract_metadata(repo_path=str(repo_path))
+        with self.suppress_output():
+            metadata_full = extractor.extract_metadata(repo_path=str(repo_path))
         metadata = metadata_full["project_metadata"]
         category_summary = metadata_full["category_summary"]
         files = extractor.collect_all_files()

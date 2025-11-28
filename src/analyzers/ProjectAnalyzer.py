@@ -3,17 +3,19 @@ from pathlib import Path
 from typing import Iterable, List, Optional, Tuple, Dict
 from datetime import datetime
 from src.ZipParser import parse, toString, extract_zip
+from src.analyzers import RepoProjectBuilder
 from src.analyzers.ProjectMetadataExtractor import ProjectMetadataExtractor
 from src.FileCategorizer import FileCategorizer
 from src.analyzers.language_detector import detect_language_per_file, analyze_language_share
 from src.analyzers.ContributionAnalyzer import ContributionAnalyzer, ContributionStats
-from utils.RepoFinder import RepoFinder
+from src.analyzers.RepoProjectBuilder import RepoProjectBuilder
 from src.ProjectManager import ProjectManager
 from src.Project import Project
 from src.analyzers.SkillAnalyzer import SkillAnalyzer
 from src.analyzers.code_metrics_analyzer import CodeMetricsAnalyzer
 from src.generators.ResumeInsightsGenerator import ResumeInsightsGenerator
 from src.ConfigManager import ConfigManager
+from utils.RepoFinder import RepoFinder
 
 
 class ProjectAnalyzer:
@@ -524,21 +526,14 @@ class ProjectAnalyzer:
         extract_dir = self.cached_extract_dir
 
         # Find Git repositories under the extracted directory
-        repo_paths = self.repo_finder.find_repos(extract_dir)
-        if not repo_paths:
+        # ---- Use RepoProjectBuilder to fully build Project objects ----
+        builder = RepoProjectBuilder(self.root_folder)
+        projects = builder.scan(extract_dir)
+
+        if not projects:
             print("No Git repositories found.")
             return
 
-        # Map to simple project-like objects (name + repo path)
-        projects = []
-        for path in repo_paths:
-            authors = self.contribution_analyzer.get_all_authors(str(path))
-            projects.append(Project(
-                name=path.name,
-                file_path=str(path),
-                authors=authors,
-                author_count=len(authors)
-            ))
 
         # ---- Project selection loop ----
         while True:
