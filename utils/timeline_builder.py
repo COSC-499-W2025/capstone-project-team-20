@@ -71,7 +71,6 @@ def _normalized_project_skills(raw_skills: Any) -> List[str]:
 
     for value in iterable:
         if value is None or not isinstance(value, str):
-            # ignore non-strings (e.g. 123) and Nones
             continue
         s = value.strip()
         if not s:
@@ -80,8 +79,8 @@ def _normalized_project_skills(raw_skills: Any) -> List[str]:
         if key not in result:
             result[key] = s
 
-    # Sort by the lowercase key for deterministic ordering
     return [result[k] for k in sorted(result.keys())]
+
 
 
 
@@ -119,7 +118,7 @@ def build_timeline(projects: Iterable[Dict[str, Any]]) -> List[SkillEvent]:
 
 def first_use_by_skill(
     projects_or_events: Iterable[Any] | None,
-) -> List[Tuple[date, str]]:
+) -> List[Tuple[str, date]]:
     """
     Return the first date on which each skill appears.
 
@@ -128,34 +127,37 @@ def first_use_by_skill(
       - an iterable of SkillEvent objects.
 
     Returns:
-      A list of (date, skill) tuples, where each skill appears once at its
-      earliest date, sorted by (date, skill).
+      A list of (skill, date) tuples, where each skill appears once at its
+      earliest date, sorted by (date, skill name, case-insensitive).
+
+    This shape is compatible with tests that do both:
+      - dict(firsts) == {skill: date, ...}
+      - firsts == [(skill, date), ...] in a specific order.
     """
     items = list(projects_or_events or [])
     if not items:
         return []
 
-    # Decide whether we have raw project dicts or SkillEvent instances
     first = items[0]
     if isinstance(first, SkillEvent):
         events = items  # already SkillEvent objects
     else:
-        # Treat input as project dicts and build events from them
+        # Treat input as project dicts and build SkillEvent list from them
         events = build_timeline(items)
 
     first_seen: Dict[str, date] = {}
 
     for ev in events:
+        skill = ev.skill
         when = ev.when
-        current = first_seen.get(ev.skill)
+        current = first_seen.get(skill)
         if current is None or when < current:
-            first_seen[ev.skill] = when
+            first_seen[skill] = when
 
-    # Convert mapping to a sorted list of (date, skill)
-    rows: List[Tuple[date, str]] = [(when, skill) for skill, when in first_seen.items()]
-    rows.sort(key=lambda r: (r[0], r[1].lower()))
+    # Convert mapping to a sorted list of (skill, date)
+    rows: List[Tuple[str, date]] = [(skill, when) for skill, when in first_seen.items()]
+    rows.sort(key=lambda sd: (sd[1], sd[0].lower()))  # (date, skill.lower())
     return rows
-
 
 
 def projects_chronologically(
