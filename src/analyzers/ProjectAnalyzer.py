@@ -491,7 +491,7 @@ class ProjectAnalyzer:
     # Display stored analysis
     # ------------------------------------------------------------------
 
-    def display_analysis_results(self, projects: Iterable[Project]) -> None:
+    def display_analysis_results(self, projects: Iterable[Project]) -> None: #generate_bullet_points and generate_project_summary
         projects_list = list(projects)
         if not projects_list:
             print("\nNo analysis results to display.")
@@ -618,7 +618,7 @@ class ProjectAnalyzer:
                 repo_languages = sorted(repo_languages)
 
                 # Generate resume insights
-                generator = ResumeInsightsGenerator(
+                resume_insights_generator = ResumeInsightsGenerator(
                     metadata=metadata,
                     categorized_files=categorized_files,
                     language_share=language_share,
@@ -626,16 +626,15 @@ class ProjectAnalyzer:
                     project=proj,
                 )
 
-                bullets = generator.generate_resume_bullet_points()
-                summary = generator.generate_project_summary()
+                bullets = resume_insights_generator.generate_resume_bullet_points()
+                summary = resume_insights_generator.generate_project_summary()
 
-                print("Resume Bullet Points:")
-                for b in bullets:
-                    print(f" • {b}")
+                # Store resume insights in ProjectManager
+                self.project_manager.set(bullets)
+                self.project_manager.set(summary)
 
-                print("\nProject Summary:")
-                print(summary)
-                print("\n")
+                # Print resume insights to console
+                resume_insights_generator.display_insights(bullets,summary)
 
     # ------------------------------------------------------------------
     # Folder helper
