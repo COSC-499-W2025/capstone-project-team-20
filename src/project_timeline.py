@@ -12,24 +12,20 @@ def _skills_for_timeline(project: Project) -> List[str]:
     """
     Decide which skills to show in the timeline for a given project.
 
-    For now:
-      - Take the union of languages, frameworks, and skills_used.
-      - Deduplicate and sort case-insensitively.
-
-    Later, this can be extended to:
-      - Look at per-skill proficiency/confidence (e.g., from SkillAnalyzer).
-      - Apply thresholds so one-off or low-confidence skills are not shown.
+    For now, we only use languages, which are the most reliable signal.
+    Later, we can add frameworks/other skills once their detection is
+    less noisy.
     """
     raw: List[str] = []
 
-    # Safely extend from each sequence if present
-    for seq in (project.languages, project.frameworks, project.skills_used):
-        if seq:
-            raw.extend(seq)
+    # Only use languages for the timeline to avoid phantom tools
+    if project.languages:
+        raw.extend(project.languages)
 
     # Dedupe + sort; keep only non-empty strings
     unique = {s for s in raw if s}
     return sorted(unique, key=str.lower)
+
 
 def _project_to_timeline_dict(project: Project) -> Optional[Dict[str, Any]]:
     """
