@@ -82,4 +82,8 @@ def test_fun_facts_and_aggregate():
 
     projects = [P(badges), P(["solo_runner"])]
     totals = aggregate_badges(projects)
-    assert totals["solo_runner"] == 2
+
+    # With author_count=3, the first project gets "team_effort", not "solo_runner"
+    assert totals["solo_runner"] == 1
+    assert totals["team_effort"] == 1
+
