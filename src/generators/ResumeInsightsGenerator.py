@@ -179,8 +179,8 @@ class ResumeInsightsGenerator:
             f"{months} month" + ("s" if months > 1 else "")
             + f" and {remaining} days"
         )
-    
-    def display_insights(self, bullets: list[str], summary:str) -> None:
+    @staticmethod
+    def display_insights(bullets: list[str], summary:str) -> None:
         "Called from ProjectAnalyzer, iterates through each bullet point and prints them, and then prints the summary"
         print("Resume Bullet Points:")
         for b in bullets:
