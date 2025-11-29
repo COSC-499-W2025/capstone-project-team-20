@@ -491,7 +491,7 @@ class ProjectAnalyzer:
     # Display stored analysis
     # ------------------------------------------------------------------
 
-    def display_analysis_results(self, projects: Iterable[Project]) -> None:
+    def display_analysis_results(self, projects: Iterable[Project]) -> None: #generate_bullet_points and generate_project_summary
         projects_list = list(projects)
         if not projects_list:
             print("\nNo analysis results to display.")
@@ -531,7 +531,7 @@ class ProjectAnalyzer:
 
         extract_dir = self.cached_extract_dir
 
-        # Find Git repositories under the extracted directory
+        # Find Git repositories under the extracted directory 
         repo_paths = self.repo_finder.find_repos(extract_dir)
         if not repo_paths:
             print("No Git repositories found.")
@@ -618,7 +618,7 @@ class ProjectAnalyzer:
                 repo_languages = sorted(repo_languages)
 
                 # Generate resume insights
-                generator = ResumeInsightsGenerator(
+                resume_insights_generator = ResumeInsightsGenerator(
                     metadata=metadata,
                     categorized_files=categorized_files,
                     language_share=language_share,
@@ -626,16 +626,15 @@ class ProjectAnalyzer:
                     project=proj,
                 )
 
-                bullets = generator.generate_resume_bullet_points()
-                summary = generator.generate_project_summary()
+                bullets = resume_insights_generator.generate_resume_bullet_points()
+                summary = resume_insights_generator.generate_project_summary()
 
-                print("Resume Bullet Points:")
-                for b in bullets:
-                    print(f" • {b}")
+                # Store resume insights in ProjectManager
+                self.project_manager.set(bullets)
+                self.project_manager.set(summary)
 
-                print("\nProject Summary:")
-                print(summary)
-                print("\n")
+                # Print resume insights to console
+                resume_insights_generator.display_insights(bullets,summary)
 
     # ------------------------------------------------------------------
     # Folder helper
@@ -686,6 +685,40 @@ class ProjectAnalyzer:
             self.analyze_languages()
         self.analyze_skills()
         print("\nAnalyses complete.\n")
+    
+    def retrieve_previous_insights(self, projects: Iterable[Project]) -> Dict[str, Tuple[List[str], str]]:
+        """Retrieves previous insights for all stored projects. 
+        Returns as a dict with the project name as the key and the insights as the value."""
+        projects_list = list(projects)
+        results = {}
+        for project in projects_list:
+            bullets = project.bullets or []
+            summary = project.summary or ""
+            results[project.name] = (bullets, summary)
+        return results
+    
+    def print_previous_insights(self, insights_dict: Dict[str, Tuple[List[str], str]]) -> None:
+        """Takes the dict returned by `retrieve_previous_insights` and passes them into `display_insights` method provided by ResumeInsightsGenerator"""
+        if not insights_dict:
+            print("\nNo previous insights to display.")
+            return
+        for key, (bullets, summary) in insights_dict.items():
+            print("\n==============================")
+            print(f" Resume Insights for: {key}")
+            print("==============================\n")
+            ResumeInsightsGenerator.display_insights(bullets,summary)
+
+    def delete_previous_insights(self, projects: Iterable[Project]) -> None:
+        projects_list = list(projects)
+        if not projects_list:
+            print("\nNo previous insights to delete.")
+            return
+        for project in projects_list:
+            project.bullets = []
+            project.summary = ""
+            self.project_manager.set(project)
+        print("Project insights have been deleted.")
+        return
 
     def run(self) -> None:
         print("Welcome to the Project Analyzer.\n")
@@ -709,8 +742,10 @@ class ProjectAnalyzer:
                 8. Change Selected Users
                 9. Analyze Skills
                 10. Generate Resume Insights
-                11. Display Previous Results
-                12. Exit
+                11. Retrieve Previous Resume Insights
+                12. Delete Previous Resume Insights
+                29. Display Previous Results
+                30. Exit
                   """)
 
             choice = input("Selection: ").strip()
@@ -743,8 +778,15 @@ class ProjectAnalyzer:
                 self.generate_resume_insights()
             elif choice == "11":
                 projects = self.project_manager.get_all()
-                self.display_analysis_results(projects)
+                insights_dict = self.retrieve_previous_insights(projects)
+                self.print_previous_insights(insights_dict)
             elif choice == "12":
+                projects = self.project_manager.get_all()
+                self.delete_previous_insights(projects)
+            elif choice == "29":
+                projects = self.project_manager.get_all()
+                self.display_analysis_results(projects)
+            elif choice == "30":
                 print("Exiting Project Analyzer.")
                 # CLEAN UP TEMP DIR ON EXIT
                 if hasattr(self, "cached_extract_dir") and self.cached_extract_dir:
