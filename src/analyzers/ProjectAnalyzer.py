@@ -7,6 +7,16 @@ import contextlib
 import zipfile
 from pathlib import Path
 from typing import Iterable, List, Optional, Tuple, Dict
+from src.project_timeline import (
+    get_projects_with_skills_timeline_from_projects,
+    get_skill_timeline_from_projects,
+)
+from src.analyzers.badge_engine import (
+    ProjectAnalyticsSnapshot,
+    assign_badges,
+    build_fun_facts,
+    aggregate_badges,
+)
 
 from datetime import datetime
 
@@ -37,7 +47,7 @@ class ProjectAnalyzer:
     7. Analyze New Folder
     8. Change Selected Users
     9. Analyze Skills
-    10. Generate Resume Insights
+    10. Generate Resume
     11. Display Previous Results
     12. Exit
     """
@@ -304,6 +314,7 @@ class ProjectAnalyzer:
             if not repo_paths:
                 print("No Git repositories found in the provided ZIP.")
                 return
+
             repo_path = str(repo_paths[0])
 
             # Step 1: Efficiently get all author names.
@@ -318,10 +329,13 @@ class ProjectAnalyzer:
                 selected_stats = self._aggregate_stats(all_author_stats, usernames)
                 total_stats = self._aggregate_stats(all_author_stats)
 
-                # Step 4: Display the results.
+                # Step 4: Display the results (no DB persistence here).
                 self._display_contribution_results(selected_stats, total_stats, usernames)
         finally:
             shutil.rmtree(temp_dir, ignore_errors=True)
+
+
+
 
     def change_selected_users(self) -> None:
         """Allows the user to change their configured username selection."""
@@ -406,8 +420,9 @@ class ProjectAnalyzer:
         This:
         - Extracts the zip to a temporary directory,
         - Runs SkillAnalyzer (which internally runs CodeMetricsAnalyzer),
-        - Prints a human-readable summary of detected skills,
-        - Persists key metrics onto the corresponding Project in the DB.
+        - Prints a human-readable summary of detected skills and metrics.
+
+        It does NOT persist anything to the database; storage is left to callers.
         """
         if not self.zip_path:
             print("No project loaded. Please load a zip file first.\n")
@@ -424,68 +439,216 @@ class ProjectAnalyzer:
             skill_analyzer = SkillAnalyzer(Path(temp_dir))
             result = skill_analyzer.analyze()
             skills = result.get("skills", [])
-            stats = result.get("stats", {})
-            dimensions = result.get("dimensions", {})
+            stats = result.get("stats", {}) or {}
+            dimensions = result.get("dimensions", {}) or {}
 
             if not skills:
                 print("No skills could be inferred from this project.")
                 return
 
-            overall = stats.get("overall", {})
-            per_lang = stats.get("per_language", {})
+            overall = stats.get("overall", {}) or {}
+            per_lang = stats.get("per_language", {}) or {}
 
-            # Persist metrics into the Project record
-            project_name = Path(self.zip_path).stem
-            project = self.project_manager.get_by_name(project_name)
-
-            if project is not None:
-                # Overall metrics
-                project.total_loc = overall.get("total_lines_of_code", 0)
-                project.comment_ratio = overall.get("comment_ratio", 0.0)
-                project.test_file_ratio = overall.get("test_file_ratio", 0.0)
-                project.avg_functions_per_file = overall.get("avg_functions_per_file", 0.0)
-                project.max_function_length = overall.get("max_function_length", 0)
-
-                # Primary languages by LOC (ignore tiny ones)
-                project.primary_languages = [
-                    lang
-                    for lang, data in sorted(
-                        per_lang.items(),
-                        key=lambda kv: kv[1].get("total_lines_of_code", 0),
-                        reverse=True,
-                    )
-                    if data.get("total_lines_of_code", 0) >= 100
-                ]
-
-                # Dimensions
-                td = dimensions.get("testing_discipline", {})
-                project.testing_discipline_level = td.get("level", "")
-                project.testing_discipline_score = td.get("score", 0.0)
-
-                doc = dimensions.get("documentation_habits", {})
-                project.documentation_habits_level = doc.get("level", "")
-                project.documentation_habits_score = doc.get("score", 0.0)
-
-                mod = dimensions.get("modularity", {})
-                project.modularity_level = mod.get("level", "")
-                project.modularity_score = mod.get("score", 0.0)
-
-                ld = dimensions.get("language_depth", {})
-                project.language_depth_level = ld.get("level", "")
-                project.language_depth_score = ld.get("score", 0.0)
-
-                # Save back to DB
-                self.project_manager.set(project)
-
-            # --- Printing / user-facing output ---
+            # --- Human-readable output ---
             print("\nProject-level code metrics:")
             for k, v in overall.items():
                 print(f"  - {k}: {v}")
 
-            # You could also print skill list and dimensions here if desired.
+            print("\nPer-language metrics:")
+            for lang, data in per_lang.items():
+                loc = data.get("total_lines_of_code", 0)
+                print(f"  - {lang}: {loc} LOC")
+
+            print("\nDimensions:")
+            for dim_name, dim_data in dimensions.items():
+                level = dim_data.get("level", "")
+                score = dim_data.get("score", 0.0)
+                print(f"  - {dim_name}: level={level}, score={score}")
+
+            # Summarize detected skills
+            skill_names: List[str] = []
+            for item in skills:
+                name = None
+                if isinstance(item, dict):
+                    name = item.get("skill") or item.get("name")
+                else:
+                    name = getattr(item, "skill", None) or getattr(item, "name", None)
+                if not name:
+                    name = str(item)
+                name = name.strip()
+                if name:
+                    skill_names.append(name)
+
+            # Deduplicate while preserving order
+            seen = set()
+            deduped_skill_names: List[str] = []
+            for s in skill_names:
+                if s not in seen:
+                    seen.add(s)
+                    deduped_skill_names.append(s)
+
+            print("\nDetected languages:")
+            for lang in sorted(per_lang.keys()):
+                print(f"  - {lang}")
+
+            print("\nDetected skills:")
+            for s in deduped_skill_names:
+                print(f"  - {s}")
+
+            print("\nTotal skills detected:", len(deduped_skill_names))
 
         finally:
             shutil.rmtree(temp_dir, ignore_errors=True)
+
+
+
+    # ------------------------------------------------------------------
+    # Timeline: Projects & Skills (using stored analysis)
+    # ------------------------------------------------------------------
+
+    def display_project_timeline(self) -> None:
+        """
+        Print a chronological list of projects and the skills exercised
+        in each, based on projects currently stored in the database.
+        """
+        projects = list(self.project_manager.get_all())
+        if not projects:
+            print("\nNo projects found in the database. Run analyses first.")
+            return
+
+        rows = get_projects_with_skills_timeline_from_projects(projects)
+
+        print("\n=== Project Timeline (Chronological) ===")
+        if not rows:
+            print("No projects with valid dates found.")
+            return
+
+        for when, name, skills in rows:
+            skills_str = ", ".join(skills) if skills else "(no skills recorded)"
+            print(f"{when.isoformat()} — {name}: {skills_str}")
+
+    # ------------------------------------------------------------------
+    # Badge analysis (stateless, no DB schema changes)
+    # ------------------------------------------------------------------
+
+    def analyze_badges(self) -> None:
+        """
+        Compute and display badges for the currently loaded project.
+
+        Uses:
+        - Metadata & category summary (ProjectMetadataExtractor)
+        - Language share (analyze_language_share)
+        - Skills (SkillAnalyzer)
+        - Configured usernames (ConfigManager) for author_count / collaboration_status
+
+        Badges + fun facts are printed; DB schema is not modified.
+        """
+        if not self.zip_path:
+            print("No project loaded. Please load a zip file first.\n")
+            return
+
+        path_obj = Path(self.zip_path)
+        if not path_obj.exists() or path_obj.suffix.lower() != ".zip":
+            print(f"Error: {path_obj} is not a valid zip file.")
+            return
+
+        print("\n=== BADGE ANALYSIS ===")
+
+        # 1) Metadata & category summary
+        meta_payload = self.metadata_extractor.extract_metadata() or {}
+        project_meta = meta_payload.get("project_metadata") or {}
+        category_summary = meta_payload.get("category_summary") or {}
+
+        def _to_int(value, default: int = 0) -> int:
+            try:
+                return int(value)
+            except (TypeError, ValueError):
+                return default
+
+        def _to_float(value, default: float = 0.0) -> float:
+            try:
+                return float(value)
+            except (TypeError, ValueError):
+                return default
+
+        total_files = _to_int(project_meta.get("total_files"))
+        total_size_kb = _to_float(project_meta.get("total_size_kb"))
+        total_size_mb = _to_float(project_meta.get("total_size_mb"))
+        duration_days = _to_int(project_meta.get("duration_days"))
+
+        # 2) Languages + skills from extracted repo
+        languages: Dict[str, float] = {}
+        skills: Set[str] = set()
+
+        temp_dir = extract_zip(str(path_obj))
+        try:
+            languages = analyze_language_share(temp_dir) or {}
+
+            # Reuse SkillAnalyzer to infer skills
+            skill_analyzer = SkillAnalyzer(Path(temp_dir))
+            result = skill_analyzer.analyze()
+            skill_items = result.get("skills", []) or []
+
+            for item in skill_items:
+                name = None
+                if isinstance(item, dict):
+                    name = item.get("skill") or item.get("name")
+                else:
+                    name = getattr(item, "skill", None) or getattr(item, "name", None)
+                if name:
+                    skills.add(str(name))
+        finally:
+            shutil.rmtree(temp_dir, ignore_errors=True)
+
+        # 3) Author / collaboration info from config
+        usernames = self._config_manager.get("usernames") or []
+        author_count = len(usernames) or 1
+        collaboration_status = "individual" if author_count <= 1 else "collaborative"
+
+        project_name = getattr(self.root_folder, "name", None) or "project"
+
+        snapshot = ProjectAnalyticsSnapshot(
+            name=project_name,
+            total_files=total_files,
+            total_size_kb=total_size_kb,
+            total_size_mb=total_size_mb,
+            duration_days=duration_days,
+            category_summary=category_summary,
+            languages=languages,
+            skills=skills,
+            author_count=author_count,
+            collaboration_status=collaboration_status,
+        )
+
+        badge_ids = assign_badges(snapshot)
+        fun_facts = build_fun_facts(snapshot, badge_ids)
+
+        # Attach badges to an in-memory Project object if you have one
+        # (no DB schema changes required).
+        project_name_for_db = Path(self.zip_path).stem
+        project = self.project_manager.get_by_name(project_name_for_db)
+        if project is not None:
+            # Even if Project dataclass doesn’t declare "badges", Python will
+            # still let us attach a runtime attribute.
+            if not hasattr(project, "badges"):
+                project.badges = []  # type: ignore[attr-defined]
+            project.badges = badge_ids  # type: ignore[attr-defined]
+
+        # 4) Print badges & fun facts
+        if badge_ids:
+            print("Badges:")
+            for b in badge_ids:
+                print(f"  - {b}")
+        else:
+            print("No badges assigned for this project.")
+
+        if fun_facts:
+            print("\nFun facts:")
+            for fact in fun_facts:
+                print(f"  • {fact}")
+
+        print()
+
 
     # ------------------------------------------------------------------
     # Display stored analysis
@@ -685,6 +848,7 @@ class ProjectAnalyzer:
             self.print_tree()
             self.analyze_languages()
         self.analyze_skills()
+        self.analyze_badges()
         print("\nAnalyses complete.\n")
 
     def run(self) -> None:
@@ -710,8 +874,10 @@ class ProjectAnalyzer:
                 9. Analyze Skills
                 10. Generate Resume Insights
                 11. Display Previous Results
-                12. Exit
+                12. Show Project Timeline (Projects & Skills)
+                13. Exit
                   """)
+
 
             choice = input("Selection: ").strip()
 
@@ -745,6 +911,8 @@ class ProjectAnalyzer:
                 projects = self.project_manager.get_all()
                 self.display_analysis_results(projects)
             elif choice == "12":
+                self.display_project_timeline()
+            elif choice == "13":
                 print("Exiting Project Analyzer.")
                 # CLEAN UP TEMP DIR ON EXIT
                 if hasattr(self, "cached_extract_dir") and self.cached_extract_dir:
@@ -753,6 +921,7 @@ class ProjectAnalyzer:
                     except Exception:
                         pass
                     self.cached_extract_dir = None
-                return
+                return 
             else:
                 print("Invalid input. Try again.\n")
+
