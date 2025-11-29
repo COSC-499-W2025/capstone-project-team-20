@@ -311,7 +311,7 @@ class ProjectAnalyzer:
 
         if total_lines_edited_project > 0:
             project_share = (total_lines_edited_selected / total_lines_edited_project) * 100
-            print(f"\nCollectively, you contributed {project_share:.2f}% of the total lines edited in the project.")
+            print(f"\nCollectively, you built {project_share:.2f}% of the codebase for this project.")
         else:
             print("\nNo line changes were found in the project to calculate contribution share.")
 
@@ -363,6 +363,20 @@ class ProjectAnalyzer:
                 all_author_stats = self.contribution_analyzer.analyze(repo_path)
                 selected_stats = self._aggregate_stats(all_author_stats, usernames)
                 total_stats = self._aggregate_stats(all_author_stats)
+
+                project_name = Path(self.zip_path).stem
+                project = self.project_manager.get_by_name(project_name)
+
+                if project:
+                    # Use the new helper method in ContributionAnalyzer
+                    project.individual_contributions = self.contribution_analyzer.calculate_share(
+                        selected_stats, total_stats
+                    )
+                    # Save the updated project back to the database
+                    self.project_manager.set(project)
+                    print(f"  - Updated individual contributions for '{project.name}'.")
+                else:
+                    print(f"  - Warning: Project '{project_name}' not found in DB. Cannot save contribution stats.")
 
                 # Step 4: Display the results.
                 self._display_contribution_results(selected_stats, total_stats, usernames)
