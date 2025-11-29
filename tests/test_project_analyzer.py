@@ -482,5 +482,3 @@ class TestBatchAnalyze:
         captured = capsys.readouterr()
         assert "Analyzed: 1" in captured.out
         assert "Failed: 1" in captured.out
-
-    

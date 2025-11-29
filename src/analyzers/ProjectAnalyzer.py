@@ -145,7 +145,6 @@ class ProjectAnalyzer:
             zip_path = self.clean_path(input("Invalid path or not a zipped file. Please try again: "))
 
         self.zip_path = zip_path
-        self.most_recent_project_name = Path(self.zip_path).stem # sets the name of the most recently analyzed project for usage elsewhere
         print("Parsing ZIP structure...")
         try:
             self.root_folder = parse(zip_path)
