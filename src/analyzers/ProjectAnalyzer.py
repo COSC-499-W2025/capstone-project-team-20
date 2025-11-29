@@ -395,7 +395,7 @@ class ProjectAnalyzer:
         for lang in sorted(langs):
             print(f" - {lang}")
 
-    # ------------------------------------------------------------------
+        # ------------------------------------------------------------------
     # Skill analysis (CodeMetrics + SkillAnalyzer + persistence)
     # ------------------------------------------------------------------
 
@@ -406,7 +406,7 @@ class ProjectAnalyzer:
         This:
         - Extracts the zip to a temporary directory,
         - Runs SkillAnalyzer (which internally runs CodeMetricsAnalyzer),
-        - Prints a human-readable summary of detected skills,
+        - Prints a human-readable summary of detected skills & tech profile,
         - Persists key metrics onto the corresponding Project in the DB.
         """
         if not self.zip_path:
@@ -423,14 +423,18 @@ class ProjectAnalyzer:
         try:
             skill_analyzer = SkillAnalyzer(Path(temp_dir))
             result = skill_analyzer.analyze()
-            skills = result.get("skills", [])
-            stats = result.get("stats", {})
-            dimensions = result.get("dimensions", {})
+
+            skills = result.get("skills") or []
+            stats = result.get("stats") or {}
+            dimensions = result.get("dimensions") or {}
             tech_profile = result.get("tech_profile") or {}
 
-            if not skills:
+            if not skills and not stats:
                 print("No skills could be inferred from this project.")
                 return
+
+            # Safely pull overall metrics for printing
+            overall = stats.get("overall") or {}
 
             # Persist metrics into the Project record
             project_name = Path(self.zip_path).stem
@@ -446,11 +450,58 @@ class ProjectAnalyzer:
                 self.project_manager.set(project)
 
             # --- Printing / user-facing output ---
-            print("\nProject-level code metrics:")
-            for k, v in overall.items():
-                print(f"  - {k}: {v}")
 
-            # You could also print skill list and dimensions here if desired.
+            # 1) Code metrics
+            print("\nProject-level code metrics:")
+            if not overall:
+                print("  (no metrics available)")
+            else:
+                for k, v in overall.items():
+                    print(f"  - {k}: {v}")
+
+            # 2) Frameworks / tooling / tech profile
+            frameworks = tech_profile.get("frameworks") or []
+            build_tools = tech_profile.get("build_tools") or []
+            dep_files = tech_profile.get("dependency_files_list") or []
+            dep_names = tech_profile.get("dependencies_list") or []
+
+            print("\nFrameworks detected:")
+            if frameworks:
+                for fw in frameworks:
+                    print(f"  - {fw}")
+            else:
+                print("  (none detected)")
+
+            print("\nBuild tools detected:")
+            if build_tools:
+                for bt in build_tools:
+                    print(f"  - {bt}")
+            else:
+                print("  (none detected)")
+
+            if dep_files:
+                print("\nDependency files:")
+                for df in dep_files:
+                    print(f"  - {df}")
+
+            if dep_names:
+                # Keep this short – it can get long on big projects
+                print("\nDependencies (pattern matches):")
+                for name in dep_names:
+                    print(f"  - {name}")
+
+            # 3) High-level booleans
+            print("\nProject characteristics:")
+            print(f"  - has_dockerfile: {tech_profile.get('has_dockerfile', False)}")
+            print(f"  - has_database:   {tech_profile.get('has_database', False)}")
+            print(f"  - has_frontend:   {tech_profile.get('has_frontend', False)}")
+            print(f"  - has_backend:    {tech_profile.get('has_backend', False)}")
+            print(f"  - has_test_files: {tech_profile.get('has_test_files', False)}")
+            print(f"  - has_readme:     {tech_profile.get('has_readme', False)}")
+
+            readme_keywords = tech_profile.get("readme_keywords") or []
+            if readme_keywords:
+                print(f"  - readme_keywords: {', '.join(readme_keywords)}")
 
         finally:
             shutil.rmtree(temp_dir, ignore_errors=True)
