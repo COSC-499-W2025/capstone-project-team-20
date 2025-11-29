@@ -7,7 +7,7 @@ import os
 
 from src.FileCategorizer import FileCategorizer
 
-from .skill_models import Evidence, SkillProfileItem, TAXONOMY
+from .skill_models import Evidence, SkillProfileItem, TAXONOMY, KNOWN_FRAMEWORKS
 from .skill_patterns import DEP_TO_SKILL, SNIPPET_PATTERNS, KNOWN_CONFIG_HINTS
 from .skill_proficiency import ProficiencyEstimator
 from .code_metrics_analyzer import CodeMetricsAnalyzer, CodeFileAnalysis
@@ -26,6 +26,59 @@ LANG_TO_ALLOWED_SNIPPET_SKILLS: Dict[str, Set[str]] = {
     "c#": {"C#", "CMake"},
     "java": {"Java", "CMake"},
     "rust": {"Rust", "CMake"},
+}
+
+# Simple helpers for tech-profile classification.
+BUILD_TOOL_SKILLS: Set[str] = {
+    "Maven",
+    "Gradle",
+    "Webpack",
+    "Vite",
+    "Rollup",
+    "Parcel",
+    "CMake",
+    "Make",
+}
+
+FRONTEND_FRAMEWORKS: Set[str] = {
+    "React",
+    "Next.js",
+    "Angular",
+    "Vue",
+    "Svelte",
+}
+
+BACKEND_FRAMEWORKS: Set[str] = {
+    "Django",
+    "Flask",
+    "FastAPI",
+    "Spring",
+    "ASP.NET",
+    "Node.js",
+    "Express",
+}
+
+DB_KEYWORDS: Set[str] = {
+    "postgres",
+    "postgresql",
+    "mysql",
+    "mariadb",
+    "sqlite",
+    "mongodb",
+    "mongo",
+    "redis",
+    "prisma",
+    "typeorm",
+    "hibernate",
+    "sequelize",
+}
+
+README_KEYWORDS_WHITELIST: Set[str] = {
+    "installation", "install", "setup",
+    "usage", "use", "run",
+    "testing", "tests", "test",
+    "contributing", "contribution",
+    "license", "roadmap",
 }
 
 
@@ -173,6 +226,7 @@ class SkillAnalyzer:
               "stats": Dict[str, Any],   # project-level metrics used for scoring
               "dimensions": Dict[str, Any],
               "resume_suggestions": List[Dict[str, Any]],
+              "tech_profile": Dict[str, Any],  # new: frameworks/deps/flags
             }
         """
         file_analyses = self.metrics_analyzer.analyze()
@@ -188,6 +242,7 @@ class SkillAnalyzer:
 
         skills = self._build_skill_profiles(evidence, stats)
         dimensions = self._compute_dimensions(stats)
+        tech_profile = self._compute_tech_profile(evidence, stats, skills)
 
         # placeholder for future fully-formed bullets
         resume_suggestions: List[Dict[str, Any]] = []
@@ -197,7 +252,130 @@ class SkillAnalyzer:
             "stats": stats,
             "dimensions": dimensions,
             "resume_suggestions": resume_suggestions,
+            "tech_profile": tech_profile,
         }
+
+
+    @staticmethod
+    def _normalize_str_list(items: Iterable[str]) -> List[str]:
+        """Return a deterministic, deduplicated string list."""
+        return sorted({str(i) for i in items if i})
+
+    def _analyze_readme(self) -> Tuple[bool, List[str]]:
+        """
+        Look for a top-level README* file and extract a few coarse keywords.
+        Cheap + side-effect free; can be refined later.
+        """
+        readme_path: Optional[Path] = None
+        try:
+            for candidate in self.root_dir.iterdir():
+                if candidate.is_file() and candidate.name.lower().startswith("readme"):
+                    readme_path = candidate
+                    break
+        except FileNotFoundError:
+            return False, []
+
+        if not readme_path or not readme_path.exists():
+            return False, []
+
+        try:
+            text = readme_path.read_text(encoding="utf-8", errors="ignore")
+        except OSError:
+            return True, []
+
+        tokens = {
+            t.strip(".,:;()[]{}\"'").lower()
+            for t in text.split()
+        }
+        keywords = sorted(t for t in tokens if t in README_KEYWORDS_WHITELIST)
+        return True, keywords
+
+    def _compute_tech_profile(
+        self,
+        evidence: List[Evidence],
+        stats: Dict[str, Any],
+        skills: List[SkillProfileItem],
+    ) -> Dict[str, Any]:
+        """
+        Aggregate frameworks, dependencies, and high-level booleans
+        from existing evidence + stats into a tech-profile dict.
+
+        This is intentionally shallow and cheap; it just reshapes
+        data we already have.
+        """
+        overall = stats.get("overall", {}) or {}
+
+        # Collect skill names (canonical) once.
+        skill_names = {
+            (item.skill or "").strip()
+            for item in skills
+            if getattr(item, "skill", None)
+        }
+
+        # Frameworks are any skills that intersect our known framework set.
+        frameworks = {
+            name for name in skill_names
+            if name in KNOWN_FRAMEWORKS
+        }
+
+        # Build tools from a small curated list.
+        build_tools = {
+            name for name in skill_names
+            if name in BUILD_TOOL_SKILLS
+        }
+
+        # Dependencies and dependency files from Evidence (source == "dependency").
+        dep_names: set[str] = set()
+        dep_files: set[str] = set()
+        for ev in evidence:
+            if ev.source == "dependency":
+                if ev.raw:
+                    dep_names.add(ev.raw)
+                if ev.file_path:
+                    dep_files.add(ev.file_path)
+
+        # Dockerfile / Docker presence
+        has_dockerfile = False
+        for ev in evidence:
+            if ev.file_path and "dockerfile" in ev.file_path.lower():
+                has_dockerfile = True
+                break
+            if "docker" in (ev.skill or "").lower():
+                has_dockerfile = True
+                break
+
+        # Database use: look for DB keywords in detected skills.
+        lower_skills = [s.lower() for s in skill_names]
+        has_database = any(
+            any(db_kw in s for db_kw in DB_KEYWORDS)
+            for s in lower_skills
+        )
+
+        # Frontend / backend flags based on frameworks.
+        has_frontend = any(f in FRONTEND_FRAMEWORKS for f in frameworks)
+        has_backend = any(f in BACKEND_FRAMEWORKS for f in frameworks)
+
+        # Test files from overall stats.
+        num_test_files = int(overall.get("num_test_files", 0) or 0)
+        has_test_files = num_test_files > 0
+
+        # README keywords
+        has_readme, readme_keywords = self._analyze_readme()
+
+        return {
+            "frameworks": self._normalize_str_list(frameworks),
+            "dependencies_list": self._normalize_str_list(dep_names),
+            "dependency_files_list": self._normalize_str_list(dep_files),
+            "build_tools": self._normalize_str_list(build_tools),
+            "has_dockerfile": has_dockerfile,
+            "has_database": has_database,
+            "has_frontend": has_frontend,
+            "has_backend": has_backend,
+            "has_test_files": has_test_files,
+            "has_readme": has_readme,
+            "readme_keywords": readme_keywords,
+        }
+
 
     # ------------------------------------------------------------------
     # Stats used by ProficiencyEstimator / dimensions
