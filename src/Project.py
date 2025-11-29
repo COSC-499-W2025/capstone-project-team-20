@@ -45,7 +45,7 @@ class Project:
         # Ensure author_count is consistent with the authors list.
         proj_dict["author_count"] = len(self.authors)
 
-        # Serialize list-based fields to JSON strings.
+        # Serialize list-based fields to JSON strings (includes badges).
         for field_name in [
             "authors",
             "languages",
@@ -53,7 +53,8 @@ class Project:
             "skills_used",
             "individual_contributions",
             "badges",
-        ]: proj_dict[field_name] = json.dumps(proj_dict[field_name])
+        ]:
+            proj_dict[field_name] = json.dumps(proj_dict[field_name])
 
         # Serialize datetime objects to ISO 8601 format strings.
         proj_dict["date_created"] = self.date_created.isoformat() if self.date_created else None
@@ -86,14 +87,14 @@ class Project:
             else:
                 proj_dict_copy[field_name] = None
 
-        # Deserialize JSON strings back into lists.
+        # Deserialize JSON strings back into lists (including badges).
         for field_name in [
             "authors",
             "languages",
             "frameworks",
             "skills_used",
             "individual_contributions",
-            "badges",                      # <-- NEW
+            "badges",
         ]:
             value = proj_dict_copy.get(field_name)
             if isinstance(value, str):

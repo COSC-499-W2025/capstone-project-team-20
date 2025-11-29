@@ -47,13 +47,12 @@ class ProjectAnalyzer:
 
         self.folder_analyzer = FolderSkillAnalyzer()
 
-    
     def _print_project(self, project: Project) -> None:
-            print(f"Project: {project.name}")
-            print("-" * (len(project.name) + 9))
-            print(f"  - Authors ({project.author_count}): {', '.join(project.authors)}")
-            print(f"  - Status: {project.collaboration_status}\n")
-            # Will display other variables from Project classes in the future
+        print(f"Project: {project.name}")
+        print("-" * (len(project.name) + 9))
+        print(f"  - Authors ({project.author_count}): {', '.join(project.authors)}")
+        print(f"  - Status: {project.collaboration_status}\n")
+        # Will display other variables from Project classes in the future
 
     def load_zip(self):
         """Prompts user for ZIP file and parses into folder tree"""
@@ -70,7 +69,7 @@ class ProjectAnalyzer:
         except Exception as e:
             print(f"Error while parsing: {e}")
             return False
-        
+
         self.metadata_extractor = ProjectMetadataExtractor(self.root_folder)
         return True
 
@@ -90,7 +89,6 @@ class ProjectAnalyzer:
         # Optional: print summarized results here if desired
         return projects or []
 
-
     def analyze_metadata(self):
         print("\nMetadata & File Statistics:")
         self.metadata_extractor.extract_metadata()
@@ -99,7 +97,7 @@ class ProjectAnalyzer:
         print("File Categories")
         files = self.metadata_extractor.collect_all_files()
         file_dicts = [
-            {"path":f.file_name, "language": getattr(f, "language", "Unknown")}
+            {"path": f.file_name, "language": getattr(f, "language", "Unknown")}
             for f in files
         ]
         result = self.file_categorizer.compute_metrics(file_dicts)
@@ -122,10 +120,10 @@ class ProjectAnalyzer:
         if not langs:
             print("No languages detected")
             return
-        
+
         for lang in sorted(langs):
             print(f" - {lang}")
-    
+
     def display_analysis_results(self, projects: Iterable[Project]) -> None:
         """
         Prints the analysis results for a list of Project objects.
@@ -139,124 +137,122 @@ class ProjectAnalyzer:
         except StopIteration:
             print("\nNo analysis results to display.")
             return
-        print("\n" + "="*30)
+
+        print("\n" + "=" * 30)
         print("      Analysis Results")
-        print("="*30 + "\n")
+        print("=" * 30 + "\n")
         self._print_project(first_project)
 
         for project in projects_iter:
             self._print_project(project)
 
+    def run_all(self):
+        print("Running All Analyzers\n")
 
-        def run_all(self):
-            print("Running All Analyzers\n")
+        # 1) Git analysis – gives us Project objects with authors / collab info
+        projects = self.analyze_git()
+        current_project: Project | None = projects[0] if projects else None
 
-            # 1) Git analysis – gives us Project objects with authors / collab info
-            projects = self.analyze_git()
-            current_project: Project | None = projects[0] if projects else None
+        # 2) Metadata & category summary
+        print("\nMetadata & File Statistics:")
+        meta_payload = self.metadata_extractor.extract_metadata() or {}
+        project_meta: Dict[str, Any] = meta_payload.get("project_metadata") or {}
+        category_summary: Dict[str, Dict[str, Any]] = meta_payload.get("category_summary") or {}
 
-            # 2) Metadata & category summary
-            print("\nMetadata & File Statistics:")
-            meta_payload = self.metadata_extractor.extract_metadata() or {}
-            project_meta: Dict[str, Any] = meta_payload.get("project_metadata") or {}
-            category_summary: Dict[str, Dict[str, Any]] = meta_payload.get("category_summary") or {}
+        total_files = int(project_meta.get("total_files:", 0))
+        total_size_kb = float(project_meta.get("total_size_kb:", 0.0))
+        total_size_mb = float(project_meta.get("total_size_mb:", 0.0))
+        duration_days = int(project_meta.get("duration_days:", 0))
 
-            total_files = int(project_meta.get("total_files:", 0))
-            total_size_kb = float(project_meta.get("total_size_kb:", 0.0))
-            total_size_mb = float(project_meta.get("total_size_mb:", 0.0))
-            duration_days = int(project_meta.get("duration_days:", 0))
+        # 3) Language share + skills (filesystem-based, using the extracted zip)
+        languages: Dict[str, float] = {}
+        skills: Set[str] = set()
 
-            # 3) Language share + skills (filesystem-based, using the extracted zip)
-            languages: Dict[str, float] = {}
-            skills: Set[str] = set()
+        if self.zip_path:
+            path_obj = Path(self.zip_path)
+            if path_obj.exists() and path_obj.suffix.lower() == ".zip":
+                temp_dir = extract_zip(str(path_obj))
+                try:
+                    # language share
+                    languages = analyze_language_share(temp_dir) or {}
 
-            if self.zip_path:
-                path_obj = Path(self.zip_path)
-                if path_obj.exists() and path_obj.suffix.lower() == ".zip":
-                    temp_dir = extract_zip(str(path_obj))
-                    try:
-                        # language share
-                        languages = analyze_language_share(temp_dir)
+                    # skills via FolderSkillAnalyzer (top skills per folder)
+                    self.folder_analyzer.analysis_results.clear()
+                    self.folder_analyzer.analyze_folder(temp_dir)
+                    for result in self.folder_analyzer.get_analysis_results():
+                        for s in result["analysis_data"]["skills"]:
+                            skills.add(s["skill"])
+                finally:
+                    shutil.rmtree(temp_dir, ignore_errors=True)
 
-                        # skills via FolderSkillAnalyzer (top skills per folder)
-                        self.folder_analyzer.analysis_results.clear()
-                        self.folder_analyzer.analyze_folder(temp_dir)
-                        for result in self.folder_analyzer.get_analysis_results():
-                            for s in result["analysis_data"]["skills"]:
-                                skills.add(s["skill"])
-                    finally:
-                        shutil.rmtree(temp_dir, ignore_errors=True)
+        # 4) Author / collaboration info
+        author_count = current_project.author_count if current_project else 1
+        collaboration_status = (
+            current_project.collaboration_status if current_project else "individual"
+        )
 
-            # 4) Author / collaboration info
-            author_count = current_project.author_count if current_project else 1
-            collaboration_status = (
-                current_project.collaboration_status if current_project else "individual"
-            )
+        project_name = (
+            current_project.name
+            if current_project
+            else (getattr(self.root_folder, "name", None) or "project")
+        )
 
-            project_name = (
-                current_project.name
-                if current_project
-                else (getattr(self.root_folder, "name", None) or "project")
-            )
+        snapshot = ProjectAnalyticsSnapshot(
+            name=project_name,
+            total_files=total_files,
+            total_size_kb=total_size_kb,
+            total_size_mb=total_size_mb,
+            duration_days=duration_days,
+            category_summary=category_summary,
+            languages=languages,
+            skills=skills,
+            author_count=author_count,
+            collaboration_status=collaboration_status,
+        )
 
-            snapshot = ProjectAnalyticsSnapshot(
-                name=project_name,
-                total_files=total_files,
-                total_size_kb=total_size_kb,
-                total_size_mb=total_size_mb,
-                duration_days=duration_days,
-                category_summary=category_summary,
-                languages=languages,
-                skills=skills,
-                author_count=author_count,
-                collaboration_status=collaboration_status,
-            )
+        badge_ids = assign_badges(snapshot)
+        fun_facts = build_fun_facts(snapshot, badge_ids)
 
-            badge_ids = assign_badges(snapshot)
-            fun_facts = build_fun_facts(snapshot, badge_ids)
+        # 5) Persist badges (and optionally languages/skills) on the Project record
+        if current_project:
+            current_project.badges = badge_ids
+            current_project.languages = sorted(languages.keys())
+            current_project.skills_used = sorted(skills)
+            current_project.update_author_count()
+            self.project_manager.set(current_project)
 
-            # 5) Persist badges (and optionally languages/skills) on the Project record
-            if current_project:
-                current_project.badges = badge_ids
-                current_project.languages = sorted(languages.keys())
-                current_project.skills_used = sorted(skills)
-                current_project.update_author_count()
-                self.project_manager.set(current_project)
+        # 6) Display project-level badges & fun facts
+        print("\n=== BADGES FOR THIS PROJECT ===")
+        if badge_ids:
+            for b in badge_ids:
+                print(f"  - {b}")
+        else:
+            print("  (no badges assigned)")
 
-            # 6) Display project-level badges & fun facts
-            print("\n=== BADGES FOR THIS PROJECT ===")
-            if badge_ids:
-                for b in badge_ids:
-                    print(f"  - {b}")
-            else:
-                print("  (no badges assigned)")
+        print("\n=== FUN FACTS ===")
+        if fun_facts:
+            for f in fun_facts:
+                print(f"  • {f}")
+        else:
+            print("  (no fun facts generated)")
 
-            print("\n=== FUN FACTS ===")
-            if fun_facts:
-                for f in fun_facts:
-                    print(f"  • {f}")
-            else:
-                print("  (no fun facts generated)")
+        # 7) Existing analytics for this project
+        self.analyze_categories()
+        self.print_tree()
+        self.analyze_languages()
 
-            # 7) Existing analytics for this project
-            self.analyze_categories()
-            self.print_tree()
-            self.analyze_languages()
+        # 8) Portfolio-level badge summary across all projects (user profile view)
+        all_projects = self.project_manager.get_all()
+        badge_totals = aggregate_badges(all_projects)
 
-            # 8) Portfolio-level badge summary across all projects (user profile view)
-            all_projects = self.project_manager.get_all()
-            badge_totals = aggregate_badges(all_projects)
+        print("\n=== BADGE SUMMARY ACROSS ALL PROJECTS ===")
+        if badge_totals:
+            for badge_id, count in badge_totals.items():
+                print(f"  - {badge_id}: {count} project(s)")
+        else:
+            print("  (no badges recorded yet)")
 
-            print("\n=== BADGE SUMMARY ACROSS ALL PROJECTS ===")
-            if badge_totals:
-                for badge_id, count in badge_totals.items():
-                    print(f"  - {badge_id}: {count} project(s)")
-            else:
-                print("  (no badges recorded yet)")
-
-            print("\nAnalyses complete.\n")
-
-
+        print("\nAnalyses complete.\n")
 
     def run(self):
         while True:
@@ -276,13 +272,12 @@ class ProjectAnalyzer:
                 9. Exit
                   """)
 
-    
-            choice = input ("Selection: ").strip()
+            choice = input("Selection: ").strip()
 
             if choice in {"1", "2", "3", "4", "5", "6", "7"}:
                 if not self.zip_path:
                     if not self.load_zip():
-                        return 
+                        return
 
             if choice == "1":
                 self.analyze_git()
@@ -297,7 +292,7 @@ class ProjectAnalyzer:
             elif choice == "6":
                 self.run_all()
             elif choice == "7":
-                print ("\nLoading new project...")
+                print("\nLoading new project...")
                 if self.load_zip():
                     print("New project loaded successfully\n")
                 else:
@@ -310,7 +305,3 @@ class ProjectAnalyzer:
                 return
             else:
                 print("Invalid input. Try again.\n")
-
-
-
-    
