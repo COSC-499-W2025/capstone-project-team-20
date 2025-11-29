@@ -7,6 +7,10 @@ import contextlib
 import zipfile
 from pathlib import Path
 from typing import Iterable, List, Optional, Tuple, Dict
+from src.project_timeline import (
+    get_projects_with_skills_timeline_from_projects,
+    get_skill_timeline_from_projects,
+)
 
 from datetime import datetime
 
@@ -37,7 +41,7 @@ class ProjectAnalyzer:
     7. Analyze New Folder
     8. Change Selected Users
     9. Analyze Skills
-    10. Generate Resume Insights
+    10. Generate Resume
     11. Display Previous Results
     12. Exit
     """
@@ -304,6 +308,7 @@ class ProjectAnalyzer:
             if not repo_paths:
                 print("No Git repositories found in the provided ZIP.")
                 return
+
             repo_path = str(repo_paths[0])
 
             # Step 1: Efficiently get all author names.
@@ -320,8 +325,48 @@ class ProjectAnalyzer:
 
                 # Step 4: Display the results.
                 self._display_contribution_results(selected_stats, total_stats, usernames)
+
+                # Step 5: Persist authors & contributions into the Project row
+                try:
+                    project = self._get_or_create_project_record()
+                except RuntimeError:
+                    project = None
+
+                if project is not None:
+                    # All authors seen in the repo
+                    project.authors = sorted(set(all_authors_list))
+                    project.author_count = len(project.authors)
+
+                    # Simple collaboration heuristic
+                    project.collaboration_status = (
+                        "solo" if project.author_count <= 1 else "team"
+                    )
+
+                    # Per-author contributions snapshot
+                    contributions: List[Dict[str, Any]] = []
+                    for author, stats in all_author_stats.items():
+                        contributions.append(
+                            {
+                                "author": author,
+                                "lines_added": stats.lines_added,
+                                "lines_deleted": stats.lines_deleted,
+                                "total_commits": stats.total_commits,
+                                "files_touched": sorted(stats.files_touched),
+                                "contribution_by_type": dict(stats.contribution_by_type),
+                            }
+                        )
+
+                    # Store in individual_contributions (and author_contributions if present)
+                    project.individual_contributions = contributions
+                    if hasattr(project, "author_contributions"):
+                        project.author_contributions = contributions
+
+                    project.last_accessed = datetime.now()
+                    self.project_manager.set(project)
         finally:
             shutil.rmtree(temp_dir, ignore_errors=True)
+
+
 
     def change_selected_users(self) -> None:
         """Allows the user to change their configured username selection."""
@@ -362,7 +407,53 @@ class ProjectAnalyzer:
 
     def analyze_metadata(self) -> None:
         print("\nMetadata & File Statistics:")
-        self.metadata_extractor.extract_metadata()
+        metadata_full = self.metadata_extractor.extract_metadata()
+
+        # Try to pull structured metadata from the extractor
+        project_meta = metadata_full.get("project_metadata", {}) or {}
+
+        # Update the Project row with what we know here
+        try:
+            project = self._get_or_create_project_record()
+        except RuntimeError:
+            # No zip loaded; nothing to persist
+            return
+
+        # Authors (list or comma-separated string)
+        authors = project_meta.get("authors")
+        if isinstance(authors, list):
+            project.authors = authors
+        elif isinstance(authors, str):
+            parts = [a.strip() for a in authors.split(",") if a.strip()]
+            project.authors = parts
+
+        if project.authors:
+            project.author_count = len(project.authors)
+
+        # Collaboration status if extractor infers it
+        collab_status = project_meta.get("collaboration_status")
+        if isinstance(collab_status, str):
+            project.collaboration_status = collab_status
+
+        # Basic size metrics from metadata if present
+        if "num_files" in project_meta:
+            try:
+                project.num_files = int(project_meta["num_files"])
+            except (TypeError, ValueError):
+                pass
+
+        if "size_kb" in project_meta:
+            try:
+                project.size_kb = int(project_meta["size_kb"])
+            except (TypeError, ValueError):
+                pass
+
+        # Touch last_accessed
+        project.last_accessed = datetime.now()
+
+        # Persist to DB
+        self.project_manager.set(project)
+
 
     def analyze_categories(self) -> None:
         print("File Categories")
@@ -396,6 +487,120 @@ class ProjectAnalyzer:
             print(f" - {lang}")
 
     # ------------------------------------------------------------------
+    # Project persistence helpers
+    # ------------------------------------------------------------------
+
+    def _get_or_create_project_record(self) -> Project:
+        """
+        Fetch the Project row for the currently loaded ZIP, or create an
+        in-memory Project with baseline information (paths, counts, dates).
+
+        The caller is responsible for calling self.project_manager.set(project)
+        after updating any additional fields.
+        """
+        if not self.zip_path:
+            raise RuntimeError("No zip_path set; cannot create Project record.")
+
+        project_name = Path(self.zip_path).stem
+        project = self.project_manager.get_by_name(project_name)
+
+        if project is not None:
+            return project
+
+        # New project record: fill baseline info
+        num_files = 0
+        if self.root_folder and self.metadata_extractor:
+            try:
+                num_files = len(self.metadata_extractor.collect_all_files())
+            except Exception:
+                num_files = 0
+
+        size_kb = 0
+        try:
+            size_kb = int(self.zip_path.stat().st_size / 1024)
+        except Exception:
+            pass
+
+        # Use filesystem timestamps as a reasonable proxy for dates
+        try:
+            stat = self.zip_path.stat()
+            created_dt = datetime.fromtimestamp(stat.st_ctime)
+            modified_dt = datetime.fromtimestamp(stat.st_mtime)
+        except Exception:
+            created_dt = None
+            modified_dt = None
+
+        project = Project(
+            name=project_name,
+            file_path=str(self.zip_path),
+            root_folder=str(self.root_folder or ""),
+            num_files=num_files,
+            size_kb=size_kb,
+            date_created=created_dt,
+            last_modified=modified_dt,
+            last_accessed=datetime.now(),
+        )
+
+        return project
+
+    # ------------------------------------------------------------------
+    # Project persistence helpers
+    # ------------------------------------------------------------------
+
+    def _get_or_create_project_record(self) -> Project:
+        """
+        Fetch the Project row for the currently loaded ZIP, or create an
+        in-memory Project with baseline information (paths, counts, dates).
+
+        The caller is responsible for calling self.project_manager.set(project)
+        after updating any additional fields.
+        """
+        if not self.zip_path:
+            raise RuntimeError("No zip_path set; cannot create Project record.")
+
+        project_name = Path(self.zip_path).stem
+        project = self.project_manager.get_by_name(project_name)
+
+        if project is not None:
+            return project
+
+        # New project record: fill baseline info
+        num_files = 0
+        if self.root_folder and self.metadata_extractor:
+            try:
+                num_files = len(self.metadata_extractor.collect_all_files())
+            except Exception:
+                num_files = 0
+
+        size_kb = 0
+        try:
+            size_kb = int(self.zip_path.stat().st_size / 1024)
+        except Exception:
+            pass
+
+        # Use filesystem timestamps as a reasonable proxy for dates
+        try:
+            stat = self.zip_path.stat()
+            created_dt = datetime.fromtimestamp(stat.st_ctime)
+            modified_dt = datetime.fromtimestamp(stat.st_mtime)
+        except Exception:
+            created_dt = None
+            modified_dt = None
+
+        project = Project(
+            name=project_name,
+            file_path=str(self.zip_path),
+            root_folder=str(self.root_folder or ""),
+            num_files=num_files,
+            size_kb=size_kb,
+            date_created=created_dt,
+            last_modified=modified_dt,
+            last_accessed=datetime.now(),
+        )
+
+        return project
+
+    # ------------------------------------------------------------------
     # Skill analysis (CodeMetrics + SkillAnalyzer + persistence)
     # ------------------------------------------------------------------
 
@@ -407,7 +612,8 @@ class ProjectAnalyzer:
         - Extracts the zip to a temporary directory,
         - Runs SkillAnalyzer (which internally runs CodeMetricsAnalyzer),
         - Prints a human-readable summary of detected skills,
-        - Persists key metrics onto the corresponding Project in the DB.
+        - Persists key metrics and skill info onto the corresponding Project
+          in the DB (creating it if needed).
         """
         if not self.zip_path:
             print("No project loaded. Please load a zip file first.\n")
@@ -424,68 +630,129 @@ class ProjectAnalyzer:
             skill_analyzer = SkillAnalyzer(Path(temp_dir))
             result = skill_analyzer.analyze()
             skills = result.get("skills", [])
-            stats = result.get("stats", {})
-            dimensions = result.get("dimensions", {})
+            stats = result.get("stats", {}) or {}
+            dimensions = result.get("dimensions", {}) or {}
 
             if not skills:
                 print("No skills could be inferred from this project.")
                 return
 
-            overall = stats.get("overall", {})
-            per_lang = stats.get("per_language", {})
+            overall = stats.get("overall", {}) or {}
+            per_lang = stats.get("per_language", {}) or {}
 
-            # Persist metrics into the Project record
-            project_name = Path(self.zip_path).stem
-            project = self.project_manager.get_by_name(project_name)
+            # --- Build simple skill name list from SkillAnalyzer output ---
+            skill_names: List[str] = []
+            for item in skills:
+                name = None
+                if isinstance(item, dict):
+                    name = item.get("skill") or item.get("name")
+                else:
+                    # Try common attribute names; fall back to str(...)
+                    name = getattr(item, "skill", None) or getattr(item, "name", None)
+                if not name:
+                    name = str(item)
+                name = name.strip()
+                if name:
+                    skill_names.append(name)
 
-            if project is not None:
-                # Overall metrics
-                project.total_loc = overall.get("total_lines_of_code", 0)
-                project.comment_ratio = overall.get("comment_ratio", 0.0)
-                project.test_file_ratio = overall.get("test_file_ratio", 0.0)
-                project.avg_functions_per_file = overall.get("avg_functions_per_file", 0.0)
-                project.max_function_length = overall.get("max_function_length", 0)
+            # Deduplicate while preserving order
+            seen = set()
+            deduped_skill_names: List[str] = []
+            for s in skill_names:
+                if s not in seen:
+                    seen.add(s)
+                    deduped_skill_names.append(s)
 
-                # Primary languages by LOC (ignore tiny ones)
-                project.primary_languages = [
-                    lang
-                    for lang, data in sorted(
-                        per_lang.items(),
-                        key=lambda kv: kv[1].get("total_lines_of_code", 0),
-                        reverse=True,
-                    )
-                    if data.get("total_lines_of_code", 0) >= 100
-                ]
+            # --- Fetch or create the Project record ---
+            project = self._get_or_create_project_record()
 
-                # Dimensions
-                td = dimensions.get("testing_discipline", {})
-                project.testing_discipline_level = td.get("level", "")
-                project.testing_discipline_score = td.get("score", 0.0)
+            # Languages: just take keys from per-language stats
+            project.languages = sorted(per_lang.keys())
 
-                doc = dimensions.get("documentation_habits", {})
-                project.documentation_habits_level = doc.get("level", "")
-                project.documentation_habits_score = doc.get("score", 0.0)
+            # Skills used: all skills detected by SkillAnalyzer
+            project.skills_used = deduped_skill_names
 
-                mod = dimensions.get("modularity", {})
-                project.modularity_level = mod.get("level", "")
-                project.modularity_score = mod.get("score", 0.0)
+            # Overall metrics
+            project.total_loc = overall.get("total_lines_of_code", 0)
+            project.comment_ratio = overall.get("comment_ratio", 0.0)
+            project.test_file_ratio = overall.get("test_file_ratio", 0.0)
+            project.avg_functions_per_file = overall.get("avg_functions_per_file", 0.0)
+            project.max_function_length = overall.get("max_function_length", 0)
 
-                ld = dimensions.get("language_depth", {})
-                project.language_depth_level = ld.get("level", "")
-                project.language_depth_score = ld.get("score", 0.0)
+            # Primary languages by LOC (ignore tiny ones)
+            project.primary_languages = [
+                lang
+                for lang, data in sorted(
+                    per_lang.items(),
+                    key=lambda kv: kv[1].get("total_lines_of_code", 0),
+                    reverse=True,
+                )
+                if data.get("total_lines_of_code", 0) >= 100
+            ]
 
-                # Save back to DB
-                self.project_manager.set(project)
+            # Dimensions
+            td = dimensions.get("testing_discipline", {}) or {}
+            project.testing_discipline_level = td.get("level", "")
+            project.testing_discipline_score = td.get("score", 0.0)
+
+            doc = dimensions.get("documentation_habits", {}) or {}
+            project.documentation_habits_level = doc.get("level", "")
+            project.documentation_habits_score = doc.get("score", 0.0)
+
+            mod = dimensions.get("modularity", {}) or {}
+            project.modularity_level = mod.get("level", "")
+            project.modularity_score = mod.get("score", 0.0)
+
+            ld = dimensions.get("language_depth", {}) or {}
+            project.language_depth_level = ld.get("level", "")
+            project.language_depth_score = ld.get("score", 0.0)
+
+            # Update access timestamp
+            project.last_accessed = datetime.now()
+
+            # Save back to DB (create or update)
+            self.project_manager.set(project)
 
             # --- Printing / user-facing output ---
             print("\nProject-level code metrics:")
             for k, v in overall.items():
                 print(f"  - {k}: {v}")
 
-            # You could also print skill list and dimensions here if desired.
+            print("\nDetected languages:")
+            for lang in project.languages:
+                print(f"  - {lang}")
+
+            print("\nNumber of detected skills:", len(project.skills_used))
 
         finally:
             shutil.rmtree(temp_dir, ignore_errors=True)
+
+
+    # ------------------------------------------------------------------
+    # Timeline: Projects & Skills (using stored analysis)
+    # ------------------------------------------------------------------
+
+    def display_project_timeline(self) -> None:
+        """
+        Print a chronological list of projects and the skills exercised
+        in each, based on projects currently stored in the database.
+        """
+        projects = list(self.project_manager.get_all())
+        if not projects:
+            print("\nNo projects found in the database. Run analyses first.")
+            return
+
+        rows = get_projects_with_skills_timeline_from_projects(projects)
+
+        print("\n=== Project Timeline (Chronological) ===")
+        if not rows:
+            print("No projects with valid dates found.")
+            return
+
+        for when, name, skills in rows:
+            skills_str = ", ".join(skills) if skills else "(no skills recorded)"
+            print(f"{when.isoformat()} — {name}: {skills_str}")
+
 
     # ------------------------------------------------------------------
     # Display stored analysis
@@ -710,8 +977,10 @@ class ProjectAnalyzer:
                 9. Analyze Skills
                 10. Generate Resume Insights
                 11. Display Previous Results
-                12. Exit
+                12. Show Project Timeline (Projects & Skills)
+                13. Exit
                   """)
+
 
             choice = input("Selection: ").strip()
 
@@ -745,6 +1014,8 @@ class ProjectAnalyzer:
                 projects = self.project_manager.get_all()
                 self.display_analysis_results(projects)
             elif choice == "12":
+                self.display_project_timeline()
+            elif choice == "13":
                 print("Exiting Project Analyzer.")
                 # CLEAN UP TEMP DIR ON EXIT
                 if hasattr(self, "cached_extract_dir") and self.cached_extract_dir:
@@ -753,6 +1024,7 @@ class ProjectAnalyzer:
                     except Exception:
                         pass
                     self.cached_extract_dir = None
-                return
+                return 
             else:
                 print("Invalid input. Try again.\n")
+
