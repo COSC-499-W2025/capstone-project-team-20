@@ -27,6 +27,7 @@ from src.analyzers.code_metrics_analyzer import CodeMetricsAnalyzer
 from src.generators.ResumeInsightsGenerator import ResumeInsightsGenerator
 from src.ConfigManager import ConfigManager
 
+MIN_DISPLAY_CONFIDENCE = 0.5  # only show skills with at least this confidence
 
 class ProjectAnalyzer:
     """
@@ -423,7 +424,7 @@ class ProjectAnalyzer:
             return
 
         path_obj = Path(self.zip_path)
-        if not path_obj.exists() or path_obj.suffix.lower() != ".zip":
+        if not path_obj.exists() or not zipfile.is_zipfile(path_obj):
             print(f"Error: {path_obj} is not a valid zip file.")
             return
 
@@ -432,7 +433,8 @@ class ProjectAnalyzer:
         try:
             skill_analyzer = SkillAnalyzer(Path(temp_dir))
             result = skill_analyzer.analyze()
-            skills = result.get("skills", [])
+
+            skills = result.get("skills", []) or []
             stats = result.get("stats", {}) or {}
             dimensions = result.get("dimensions", {}) or {}
 
@@ -440,18 +442,19 @@ class ProjectAnalyzer:
                 print("No skills could be inferred from this project.")
                 return
 
+            # --- Basic metrics -------------------------------------------------
             overall = stats.get("overall", {}) or {}
             per_lang = stats.get("per_language", {}) or {}
 
-            # --- Human-readable output ---
             print("\nProject-level code metrics:")
             for k, v in overall.items():
                 print(f"  - {k}: {v}")
 
             print("\nPer-language metrics:")
             for lang, data in per_lang.items():
-                loc = data.get("total_lines_of_code", 0)
-                print(f"  - {lang}: {loc} LOC")
+                print(f"  - {lang}:")
+                for k, v in data.items():
+                    print(f"      {k}: {v}")
 
             print("\nDimensions:")
             for dim_name, dim_data in dimensions.items():
@@ -459,42 +462,66 @@ class ProjectAnalyzer:
                 score = dim_data.get("score", 0.0)
                 print(f"  - {dim_name}: level={level}, score={score}")
 
-            # Summarize detected skills
-            skill_names: List[str] = []
+            # --- Filtered summary: languages + skills -------------------------
+            #
+            # 1) Languages: hide "Unknown"
+            display_langs = [
+                lang
+                for lang in sorted(per_lang.keys())
+                if str(lang).strip().lower() != "unknown"
+            ]
+
+            # 2) Skills: only show those with sufficient confidence
+            filtered_skills = []
             for item in skills:
-                name = None
+                # skills can be SkillProfileItem instances or dicts
                 if isinstance(item, dict):
                     name = item.get("skill") or item.get("name")
+                    conf = item.get("confidence", None)
                 else:
                     name = getattr(item, "skill", None) or getattr(item, "name", None)
-                if not name:
-                    name = str(item)
-                name = name.strip()
-                if name:
-                    skill_names.append(name)
+                    conf = getattr(item, "confidence", None)
 
-            # Deduplicate while preserving order
+                if not name:
+                    continue
+
+                # Default confidence to 1.0 if missing, but usually it's a float [0, 1].
+                if conf is None:
+                    conf = 1.0
+
+                if conf < MIN_DISPLAY_CONFIDENCE:
+                    continue
+
+                filtered_skills.append((name.strip(), conf))
+
+            # Deduplicate skills while preserving order (by name, case-insensitive)
             seen = set()
             deduped_skill_names: List[str] = []
-            for s in skill_names:
-                if s not in seen:
-                    seen.add(s)
-                    deduped_skill_names.append(s)
+            for name, _conf in filtered_skills:
+                key = name.lower()
+                if key not in seen:
+                    seen.add(key)
+                    deduped_skill_names.append(name)
 
+            # --- Output --------------------------------------------------------
             print("\nDetected languages:")
-            for lang in sorted(per_lang.keys()):
-                print(f"  - {lang}")
+            if display_langs:
+                for lang in display_langs:
+                    print(f"  - {lang}")
+            else:
+                print("  (no reliable languages detected)")
 
-            print("\nDetected skills:")
-            for s in deduped_skill_names:
-                print(f"  - {s}")
+            print("\nDetected skills (filtered by confidence):")
+            if deduped_skill_names:
+                for s in deduped_skill_names:
+                    print(f"  - {s}")
+            else:
+                print("  (no high-confidence skills detected)")
 
-            print("\nTotal skills detected:", len(deduped_skill_names))
+            print("\nTotal skills detected (after filtering):", len(deduped_skill_names))
 
         finally:
             shutil.rmtree(temp_dir, ignore_errors=True)
-
-
 
     # ------------------------------------------------------------------
     # Timeline: Projects & Skills (using stored analysis)
@@ -504,12 +531,17 @@ class ProjectAnalyzer:
         """
         Print a chronological list of projects and the skills exercised
         in each, based on projects currently stored in the database.
+
+        Also prints a per-skill first-use timeline, so you can see when
+        each skill first appeared and in which project.
         """
         projects = list(self.project_manager.get_all())
         if not projects:
             print("\nNo projects found in the database. Run analyses first.")
             return
 
+        # 1) Project-centric view: when each project happened, and what skills
+        #    were exercised in it.
         rows = get_projects_with_skills_timeline_from_projects(projects)
 
         print("\n=== Project Timeline (Chronological) ===")
@@ -520,6 +552,32 @@ class ProjectAnalyzer:
         for when, name, skills in rows:
             skills_str = ", ".join(skills) if skills else "(no skills recorded)"
             print(f"{when.isoformat()} — {name}: {skills_str}")
+
+        # 2) Skill-centric view: first time we see each skill, with date +
+        #    project name. Uses the same underlying SkillEvent stream.
+        events = get_skill_timeline_from_projects(projects)
+        if not events:
+            return
+
+        print("\n=== Skill First-Use Timeline ===")
+
+        first_seen: dict[str, Any] = {}
+        for ev in events:
+            key = ev.skill.lower()
+            # events are already chronological, so the first time we see a skill
+            # is its earliest use.
+            if key not in first_seen:
+                first_seen[key] = ev
+
+        ordered = sorted(
+            first_seen.values(),
+            key=lambda ev: (ev.when, ev.skill.lower()),
+        )
+
+        for ev in ordered:
+            project_name = ev.project or "(unknown project)"
+            print(f"{ev.when.isoformat()} — {ev.skill} (first seen in {project_name})")
+
 
 
     # ------------------------------------------------------------------
