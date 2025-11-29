@@ -11,6 +11,12 @@ from src.project_timeline import (
     get_projects_with_skills_timeline_from_projects,
     get_skill_timeline_from_projects,
 )
+from src.analyzers.badge_engine import (
+    ProjectAnalyticsSnapshot,
+    assign_badges,
+    build_fun_facts,
+    aggregate_badges,
+)
 
 from datetime import datetime
 
@@ -521,6 +527,128 @@ class ProjectAnalyzer:
             skills_str = ", ".join(skills) if skills else "(no skills recorded)"
             print(f"{when.isoformat()} — {name}: {skills_str}")
 
+    # ------------------------------------------------------------------
+    # Badge analysis (stateless, no DB schema changes)
+    # ------------------------------------------------------------------
+
+    def analyze_badges(self) -> None:
+        """
+        Compute and display badges for the currently loaded project.
+
+        Uses:
+        - Metadata & category summary (ProjectMetadataExtractor)
+        - Language share (analyze_language_share)
+        - Skills (SkillAnalyzer)
+        - Configured usernames (ConfigManager) for author_count / collaboration_status
+
+        Badges + fun facts are printed; DB schema is not modified.
+        """
+        if not self.zip_path:
+            print("No project loaded. Please load a zip file first.\n")
+            return
+
+        path_obj = Path(self.zip_path)
+        if not path_obj.exists() or path_obj.suffix.lower() != ".zip":
+            print(f"Error: {path_obj} is not a valid zip file.")
+            return
+
+        print("\n=== BADGE ANALYSIS ===")
+
+        # 1) Metadata & category summary
+        meta_payload = self.metadata_extractor.extract_metadata() or {}
+        project_meta = meta_payload.get("project_metadata") or {}
+        category_summary = meta_payload.get("category_summary") or {}
+
+        def _to_int(value, default: int = 0) -> int:
+            try:
+                return int(value)
+            except (TypeError, ValueError):
+                return default
+
+        def _to_float(value, default: float = 0.0) -> float:
+            try:
+                return float(value)
+            except (TypeError, ValueError):
+                return default
+
+        total_files = _to_int(project_meta.get("total_files"))
+        total_size_kb = _to_float(project_meta.get("total_size_kb"))
+        total_size_mb = _to_float(project_meta.get("total_size_mb"))
+        duration_days = _to_int(project_meta.get("duration_days"))
+
+        # 2) Languages + skills from extracted repo
+        languages: Dict[str, float] = {}
+        skills: Set[str] = set()
+
+        temp_dir = extract_zip(str(path_obj))
+        try:
+            languages = analyze_language_share(temp_dir) or {}
+
+            # Reuse SkillAnalyzer to infer skills
+            skill_analyzer = SkillAnalyzer(Path(temp_dir))
+            result = skill_analyzer.analyze()
+            skill_items = result.get("skills", []) or []
+
+            for item in skill_items:
+                name = None
+                if isinstance(item, dict):
+                    name = item.get("skill") or item.get("name")
+                else:
+                    name = getattr(item, "skill", None) or getattr(item, "name", None)
+                if name:
+                    skills.add(str(name))
+        finally:
+            shutil.rmtree(temp_dir, ignore_errors=True)
+
+        # 3) Author / collaboration info from config
+        usernames = self._config_manager.get("usernames") or []
+        author_count = len(usernames) or 1
+        collaboration_status = "individual" if author_count <= 1 else "collaborative"
+
+        project_name = getattr(self.root_folder, "name", None) or "project"
+
+        snapshot = ProjectAnalyticsSnapshot(
+            name=project_name,
+            total_files=total_files,
+            total_size_kb=total_size_kb,
+            total_size_mb=total_size_mb,
+            duration_days=duration_days,
+            category_summary=category_summary,
+            languages=languages,
+            skills=skills,
+            author_count=author_count,
+            collaboration_status=collaboration_status,
+        )
+
+        badge_ids = assign_badges(snapshot)
+        fun_facts = build_fun_facts(snapshot, badge_ids)
+
+        # Attach badges to an in-memory Project object if you have one
+        # (no DB schema changes required).
+        project_name_for_db = Path(self.zip_path).stem
+        project = self.project_manager.get_by_name(project_name_for_db)
+        if project is not None:
+            # Even if Project dataclass doesn’t declare "badges", Python will
+            # still let us attach a runtime attribute.
+            if not hasattr(project, "badges"):
+                project.badges = []  # type: ignore[attr-defined]
+            project.badges = badge_ids  # type: ignore[attr-defined]
+
+        # 4) Print badges & fun facts
+        if badge_ids:
+            print("Badges:")
+            for b in badge_ids:
+                print(f"  - {b}")
+        else:
+            print("No badges assigned for this project.")
+
+        if fun_facts:
+            print("\nFun facts:")
+            for fact in fun_facts:
+                print(f"  • {fact}")
+
+        print()
+
 
     # ------------------------------------------------------------------
     # Display stored analysis
@@ -720,6 +848,7 @@ class ProjectAnalyzer:
             self.print_tree()
             self.analyze_languages()
         self.analyze_skills()
+        self.analyze_badges()
         print("\nAnalyses complete.\n")
 
     def run(self) -> None:
