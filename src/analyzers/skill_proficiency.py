@@ -47,12 +47,12 @@ class ProficiencyEstimator:
             # testing: share of test files among python files
             test_ratio = _clip01(test_files / max(1, files))
 
-            proficiency = (
+            proficiency = round((
                 0.40 * usage_depth +
                 0.25 * typing_ratio +
                 0.20 * doc_ratio +
                 0.15 * test_ratio
-            )
+            ),2)
             if any(e.skill == "PyTest" for e in evidence):
                 proficiency = min(proficiency + 0.05, 0.98)
             return proficiency

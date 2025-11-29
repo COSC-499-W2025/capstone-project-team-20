@@ -1,5 +1,6 @@
 from src.ConsentManager import ConsentManager
 from src.analyzers.ProjectAnalyzer import ProjectAnalyzer
+from src.ConfigManager import ConfigManager
 
 def main():
     """
@@ -7,17 +8,15 @@ def main():
     Git analysis workflow.
     """
     consent = ConsentManager()
-
-    # Reset for testing if needed, uncomment two lines below
-    # from src.ConfigManager import ConfigManager
-    # ConfigManager().delete("user_consent")
+    config_manager = ConfigManager()
 
     while True:
         if consent.require_consent():
             break
         print("Consent is required to run the program. Please try again.\n")
-    
-    analyzer = ProjectAnalyzer()
+
+    # Pass the config_manager instance to the analyzer
+    analyzer = ProjectAnalyzer(config_manager=config_manager)
     analyzer.run()
 
 if __name__ == "__main__":

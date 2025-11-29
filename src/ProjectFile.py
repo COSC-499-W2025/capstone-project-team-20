@@ -31,6 +31,8 @@ class ProjectFile:
     def __init__(self, file: ZipInfo, parent_folder: Optional[object]) -> None:
         if file.is_dir():
             raise ValueError("ProjectFile requires a file entry (got a directory).")
+        
+        self.full_path = file.filename #Full path inside ZIP!
 
         # Base name from ZIP-internal path (always uses '/')
         name = file.filename.split("/")[-1]

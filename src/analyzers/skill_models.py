@@ -12,7 +12,7 @@ from .language_detector import LANGUAGE_MAP  # maps ext (no dot) -> language
 @dataclass
 class Evidence:
     skill: str
-    source: str         # "file_extension" | "dependency" | "import_statement" | "build_tool" | ...
+    source: str         # "language_usage" | "dependency" | "snippet_pattern" | "build_tool" | ...
     raw: str            # matched token (dep name, line, filename)
     file_path: Optional[str] = None
     weight: float = 0.5
@@ -21,12 +21,17 @@ class Evidence:
 @dataclass
 class SkillProfileItem:
     skill: str
-    confidence: float
-    evidence: List[Evidence] = field(default_factory=list)
-    # heuristic proficiency (0..0.98)
-    proficiency: float = 0.0
+    evidence: List[Evidence]
+    proficiency: List[Evidence]
+    confidence: List[Evidence]
+    # Extra resume-friendly fields
+    primary_language: Optional[str] = None
+    total_loc: int = 0
+    project_count: int = 1   # later used when aggregating across projects
+    tags: Set[str] = field(default_factory=set)
 
 
+# Skills that are not pure languages (frameworks, tools, etc.)
 NON_LANGUAGE_TAXONOMY: Set[str] = {
     # Frameworks / runtimes
     "Node.js", "React", "Next.js", "Angular", "Vue", "Svelte",
@@ -48,6 +53,14 @@ NON_LANGUAGE_TAXONOMY: Set[str] = {
     # Testing/Other
     "Playwright", "Cypress", "Selenium", "Vitest",
     "REST", "GraphQL", "gRPC", "CI/CD",
+}
+
+# Subset of NON_LANGUAGE_TAXONOMY that we treat as “frameworks”
+KNOWN_FRAMEWORKS: Set[str] = {
+    "React", "Next.js", "Angular", "Vue", "Svelte",
+    "Django", "Flask", "FastAPI", "Spring", "ASP.NET",
+    "Node.js", "Express",
+    "Unity", "Unreal Engine",
 }
 
 
