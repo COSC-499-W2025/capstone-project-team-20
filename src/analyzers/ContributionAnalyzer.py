@@ -81,3 +81,19 @@ class ContributionAnalyzer:
                 stats.contribution_by_type[category] += lines_changed
 
         return author_stats
+
+    def calculate_share(self, selected_stats: ContributionStats, total_stats: ContributionStats) -> List[str]:
+        """
+        Given stats for a selected user and the total project, calculates the
+        contribution share and returns a formatted list of strings.
+        """
+        total_lines_edited_project = total_stats.lines_added + total_stats.lines_deleted
+        total_lines_edited_selected = selected_stats.lines_added + selected_stats.lines_deleted
+        project_share = (total_lines_edited_selected / total_lines_edited_project) * 100 if total_lines_edited_project > 0 else 0
+
+        return [
+            f"Total Commits: {selected_stats.total_commits}",
+            f"Lines Added: {selected_stats.lines_added}",
+            f"Lines Deleted: {selected_stats.lines_deleted}",
+            f"Contribution Share: {project_share:.2f}%"
+        ]
