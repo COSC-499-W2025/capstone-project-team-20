@@ -4,9 +4,10 @@ from typing import Any, Dict, Generator, Optional
 from src.StorageManager import StorageManager
 from src.Project import Project
 
+
 class ProjectManager(StorageManager):
     """Manages storage and retrieval of Project objects in the database."""
-    def __init__(self, db_path="projects.db") -> None:
+    def __init__(self, db_path: str = "projects.db") -> None:
         super().__init__(db_path)
 
     def _retrieve_id(self, cursor: sqlite3.Cursor, row: Dict[str, Any]) -> None:
@@ -39,6 +40,20 @@ class ProjectManager(StorageManager):
         badges TEXT,
         individual_contributions TEXT,
         collaboration_status TEXT,
+        primary_languages TEXT,
+        total_loc INTEGER,
+        comment_ratio REAL,
+        test_file_ratio REAL,
+        avg_functions_per_file REAL,
+        max_function_length INTEGER,
+        testing_discipline_level TEXT,
+        testing_discipline_score REAL,
+        documentation_habits_level TEXT,
+        documentation_habits_score REAL,
+        modularity_level TEXT,
+        modularity_score REAL,
+        language_depth_level TEXT,
+        language_depth_score REAL,
         date_created TEXT,
         last_modified TEXT,
         last_accessed TEXT
@@ -56,13 +71,30 @@ class ProjectManager(StorageManager):
 
     @property
     def columns(self) -> str:
-        """Comma-separated list of column names for project storage."""
+        """
+        Comma-separated list of column names for project storage.
+
+        This is the unified, conflict-free version that includes:
+        - badges (from feature/skill-badges)
+        - all metrics / dimensions (from main)
+        """
         return (
             "id, name, file_path, root_folder, num_files, size_kb, author_count, "
             "authors, languages, frameworks, skills_used, badges, "
             "individual_contributions, collaboration_status, "
+            "primary_languages, total_loc, comment_ratio, test_file_ratio, "
+            "avg_functions_per_file, max_function_length, "
+            "testing_discipline_level, testing_discipline_score, "
+            "documentation_habits_level, documentation_habits_score, "
+            "modularity_level, modularity_score, "
+            "language_depth_level, language_depth_score, "
             "date_created, last_modified, last_accessed"
         )
+
+    @property
+    def columns_list(self) -> list[str]:
+        """Convenience list version of columns."""
+        return [c.strip() for c in self.columns.split(",")]
 
     def set(self, proj: Project) -> None:
         """

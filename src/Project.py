@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, asdict, field
 from datetime import datetime
-from typing import List, Literal, Optional
+from typing import List, Literal, Optional, Dict, Any
 import json
 
 # Helper for list defaults
@@ -14,9 +14,8 @@ class Project:
     """
     Represents an analyzed project.
 
-    This version:
-    - Supports badges.
-    - Supports code-metrics / skill dimensions used by analyze_skills().
+    - Supports badges
+    - Supports code-metrics / skill dimensions (analyze_skills)
     - Serializes list fields as JSON strings for DB storage.
     """
 
@@ -29,21 +28,28 @@ class Project:
 
     author_count: int = 0
     authors: List[str] = list_field()
+
+    # High-level tech stack
     languages: List[str] = list_field()
     frameworks: List[str] = list_field()
     skills_used: List[str] = list_field()
     badges: List[str] = list_field()
     individual_contributions: List[str] = list_field()
+    author_contributions: List[Dict[str, Any]] = list_field()
     collaboration_status: Literal["individual", "collaborative"] = "individual"
 
-    # Metrics / skill dimensions (from main branch)
+    # Derived skill / metrics info
+    # Primary languages (e.g. top by LOC, subset of `languages`)
     primary_languages: List[str] = list_field()
+
+    # Overall code metrics
     total_loc: int = 0
     comment_ratio: float = 0.0
     test_file_ratio: float = 0.0
     avg_functions_per_file: float = 0.0
     max_function_length: int = 0
 
+    # Skill dimensions
     testing_discipline_level: str = ""
     testing_discipline_score: float = 0.0
 
@@ -56,6 +62,7 @@ class Project:
     language_depth_level: str = ""
     language_depth_score: float = 0.0
 
+    # Timestamps
     date_created: Optional[datetime] = None
     last_modified: Optional[datetime] = None
     last_accessed: Optional[datetime] = None
@@ -73,7 +80,7 @@ class Project:
         """
         proj_dict = asdict(self)
 
-        # Ensure author_count matches authors list
+        # Keep author_count in sync with authors list
         proj_dict["author_count"] = len(self.authors)
 
         list_fields = [
@@ -83,12 +90,13 @@ class Project:
             "skills_used",
             "badges",
             "individual_contributions",
+            "author_contributions",
             "primary_languages",
         ]
 
         for field_name in list_fields:
             value = proj_dict.get(field_name, [])
-            # Single JSON dump (no double-encoding)
+            # Single JSON dump (avoid double-encoding)
             proj_dict[field_name] = json.dumps(value)
 
         # Datetime -> ISO string
@@ -108,6 +116,7 @@ class Project:
 
         - JSON strings for list fields are decoded back to Python lists.
         - Datetime strings are parsed back into datetime objects.
+        - Handles legacy double-encoded JSON safely.
         """
         proj_dict_copy = dict(proj_dict)
 
@@ -118,6 +127,7 @@ class Project:
             "skills_used",
             "badges",
             "individual_contributions",
+            "author_contributions",
             "primary_languages",
         ]
 
@@ -126,17 +136,19 @@ class Project:
             if isinstance(value, str):
                 try:
                     decoded = json.loads(value)
-                    # If old data double-encoded, json.loads may still return a string
-                    proj_dict_copy[field_name] = (
-                        json.loads(decoded)
-                        if isinstance(decoded, str)
-                        else decoded
-                    )
+                    # If old data was double-encoded, decoded may still be a string
+                    if isinstance(decoded, str):
+                        try:
+                            decoded2 = json.loads(decoded)
+                            decoded = decoded2
+                        except json.JSONDecodeError:
+                            pass
+                    proj_dict_copy[field_name] = decoded
                 except json.JSONDecodeError:
                     proj_dict_copy[field_name] = []
             elif value is None:
                 proj_dict_copy[field_name] = []
-            # if already a list, leave as-is
+            # if already a list, leave it as-is
 
         # Datetime fields
         for field_name in ["date_created", "last_modified", "last_accessed"]:

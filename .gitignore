@@ -52,3 +52,7 @@ coverage.xml
 *.whl
 dist/
 build/
+
+# Test-repo specific directories
+cloned_repos/
+zipped_repos/
