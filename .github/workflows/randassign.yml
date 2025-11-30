@@ -16,7 +16,7 @@ jobs:
           script: |
             
             // all usernames
-            const usernames = ["branden6","dylanstephenalexander","kaanspgl","mr-sban","mewlic"];
+            usernames = ["branden6","dylanstephenalexander","kaanspgl","mr-sban","mewlic"];
 
             // by shuffling we can avoid it being biased during ties
             function shuffle(arr) {
