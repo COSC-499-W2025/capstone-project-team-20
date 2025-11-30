@@ -71,7 +71,6 @@ class Project:
         # Serialize list-based and dict-based fields to JSON strings.
         list_fields = [
             "authors",
-            "author_contributions",
             "languages",
             "frameworks",
             "skills_used",
@@ -105,7 +104,6 @@ class Project:
         # Deserialize JSON strings back into lists or list-of-dicts.
         list_fields = [
             "authors",
-            "author_contributions",
             "languages",
             "frameworks",
             "skills_used",
