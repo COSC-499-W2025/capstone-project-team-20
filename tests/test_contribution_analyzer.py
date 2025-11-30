@@ -164,3 +164,32 @@ def test_contribution_stats_empty():
     assert stats.total_commits == 0
     assert len(stats.files_touched) == 0
     assert stats.contribution_by_type == {"code": 0, "docs": 0, "test": 0}
+
+def test_calculate_share_formats_correctly(analyzer):
+    """
+    Unit test to ensure the new `calculate_share` method
+    correctly calculates percentages and formats the output strings.
+    """
+    # Mock stats for a selected user and the total project
+    selected_stats = ContributionStats(
+        total_commits=10,
+        lines_added=100,
+        lines_deleted=50
+    )
+    total_stats = ContributionStats(
+        total_commits=50,
+        lines_added=800,
+        lines_deleted=200
+    )
+
+    # Expected calculation: (100 + 50) / (800 + 200) = 150 / 1000 = 15%
+    expected_output = [
+        "Total Commits: 10",
+        "Lines Added: 100",
+        "Lines Deleted: 50",
+        "Contribution Share: 15.00%"
+    ]
+
+    result = analyzer.calculate_share(selected_stats, total_stats)
+
+    assert result == expected_output
