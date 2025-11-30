@@ -20,7 +20,7 @@ class Project:
     root_folder: str = ""
     num_files: int = 0
     size_kb: int = 0
-
+    categories: Dict[str, Any] = field(default_factory=dict)
     author_count: int = 0
     authors: List[str] = list_field()
 
@@ -71,12 +71,14 @@ class Project:
         # Serialize list-based and dict-based fields to JSON strings.
         list_fields = [
             "authors",
+            "author_contributions",
             "languages",
             "frameworks",
             "skills_used",
             "individual_contributions",
             "author_contributions",
             "primary_languages",
+            "categories"
         ]
         for field_name in list_fields:
             proj_dict[field_name] = json.dumps(proj_dict[field_name])
@@ -103,12 +105,14 @@ class Project:
         # Deserialize JSON strings back into lists or list-of-dicts.
         list_fields = [
             "authors",
+            "author_contributions",
             "languages",
             "frameworks",
             "skills_used",
             "individual_contributions",
             "author_contributions",
             "primary_languages",
+            "categories"
         ]
         for field_name in list_fields:
             value = proj_dict_copy.get(field_name)
