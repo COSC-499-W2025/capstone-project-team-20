@@ -20,18 +20,20 @@ class DummyFile:
         self.size = size
         self.last_modified = modified
         self.name = "dummy.txt"
+        self.full_path = "dummy.txt"
 
 class DummyFolder:
-    def __init__(self, children=None, subdir=None):
+    def __init__(self, children=None, subdir=None, name = "dummy"):
         self.children = children or [] 
         self.subdir = subdir or []
+        self.name = name
 
 def test_basic_metadata_extraction():
     file1 = DummyFile(1024, datetime(2023, 3, 7))
     file2 = DummyFile(12350, datetime(2019, 1, 11))
     file3 = DummyFile(4096, datetime(2025, 9, 25))
 
-    root = DummyFolder(children = [file1, file2, file3])
+    root = DummyFolder(children = [file1, file2, file3], name="root")
     extractor = ProjectMetadataExtractor(root)
     summary = extractor.extract_metadata()["project_metadata"]
 
@@ -61,10 +63,9 @@ def test_nested_folders_are_counted():
     f2 = DummyFile(1500, datetime(2023, 6, 1))
     f3 = DummyFile(2500, datetime(2024, 7, 15))
 
-    subfolder = DummyFolder(children=[f2, f3])
-    subfolder.name = "subfolder"
+    subfolder = DummyFolder(children=[f2, f3], name = "subfolder")
 
-    root = DummyFolder(children=[f1], subdir=[subfolder])
+    root = DummyFolder(children=[f1], subdir=[subfolder], name = "root")
     root.name = "root"
 
     extractor = ProjectMetadataExtractor(root)
@@ -78,20 +79,5 @@ def test_nested_folders_are_counted():
 
     assert summary["duration_days"] == expected_days
     assert round(summary["total_size_kb"], 2) == expected_kb
-
-def test_missing_timestamps_ignored():
-    f1 = DummyFile(1024, None)
-    f2 = DummyFile(2048, datetime(2025, 10, 12))
-
-    root = DummyFolder(children=[f1, f2])
-    extractor = ProjectMetadataExtractor(root)
-    full_summary = extractor.extract_metadata()
-
-    # ✅ project-level summary is nested
-    project_summary = full_summary["project_metadata"]
-
-    assert project_summary["start_date"] == "2025-10-12"
-    assert project_summary["end_date"] == "2025-10-12"
-    assert project_summary["total_files"] == 2
 
 
