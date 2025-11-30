@@ -66,20 +66,27 @@ def test_project_to_dict_and_from_dict(sample_project):
     assert p2.author_count == len(sample_project.authors)
 
 def test_project_author_contributions_serialization():
-    """Test that author_contributions field is properly serialized"""
+    """Test that author_contributions is preserved correctly in to_dict"""
     contrib_data = [
         {"author": "Alice", "lines": 100, "commits": 5},
         {"author": "Bob", "lines": 50, "commits": 3}
     ]
+
     project = Project(
         name="TestProject",
         authors=["Alice", "Bob"],
         author_contributions=contrib_data
     )
+
     d = project.to_dict()
+
+    # Should be stored as a JSON string
     assert isinstance(d["author_contributions"], str)
-    loaded = json.loads(d["author_contributions"])
-    assert loaded == contrib_data
+
+    # After loading, should match the original Python list
+    assert json.loads(d["author_contributions"]) == contrib_data
+
+
 
 def test_project_author_contributions_deserialization():
     """Test that author_contributions is properly reconstructed"""

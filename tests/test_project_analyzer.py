@@ -139,19 +139,41 @@ def test_get_or_select_usernames_user_quits(analyzer, mock_config_manager):
     assert result is None
     mock_config_manager.set.assert_not_called()
 
-# Existing tests updated for new constructor
 def test_analyze_metadata_calls_metadata_extractor(analyzer):
     analyzer.metadata_extractor = MagicMock()
+    analyzer.metadata_extractor.extract_metadata.return_value = {
+        "project_metadata": {
+            "total_files": 5,
+            "total_size_kb": 100,
+            "start_date": "2025-01-01T00:00:00",
+            "end_date": "2025-01-02T00:00:00",
+        }
+    }
+    analyzer.project_manager = MagicMock()
+    analyzer.zip_path = "fake.zip" 
+
     analyzer.analyze_metadata()
+
     analyzer.metadata_extractor.extract_metadata.assert_called_once()
+
 
 def test_analyze_categories_calls_file_categorizer(analyzer):
     analyzer.metadata_extractor = MagicMock()
     analyzer.file_categorizer = MagicMock()
+    analyzer.project_manager = MagicMock()
+
+    analyzer.zip_path = "fake.zip"
+    analyzer.root_folder = MagicMock()
+    analyzer.root_folder.name = "fakefolder"
+
     fake_file = MagicMock()
     fake_file.file_name = "a.py"
+
     analyzer.metadata_extractor.collect_all_files.return_value = [fake_file]
+    analyzer.file_categorizer.compute_metrics.return_value = {"dummy": True}
+
     analyzer.analyze_categories()
+
     analyzer.file_categorizer.compute_metrics.assert_called_once()
 
 def test_print_tree_calls_toString(analyzer, capsys):
@@ -164,12 +186,22 @@ def test_print_tree_calls_toString(analyzer, capsys):
 def test_analyze_languages_filters_unknown(analyzer, capsys):
     fake_file = MagicMock()
     fake_file.file_name = "a.py"
+
     analyzer.metadata_extractor = MagicMock()
     analyzer.metadata_extractor.collect_all_files.return_value = [fake_file]
-    with patch("src.analyzers.language_detector.detect_language_per_file", return_value="Python"):
+
+    # REQUIRED for load_or_create_project()
+    analyzer.zip_path = "fake.zip"
+    analyzer.root_folder = MagicMock()
+    analyzer.root_folder.name = "fakefolder"
+
+    with patch("src.analyzers.language_detector.detect_language_per_file",
+               return_value="Python"):
         analyzer.analyze_languages()
+
     out = capsys.readouterr().out
     assert "Python" in out
+
 
 # Tests for contribution analysis integration (from PR #209)
 def test_aggregate_stats_single_author(analyzer):
