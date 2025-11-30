@@ -1,0 +1,89 @@
+name: randassign
+
+on:
+  pull_request:
+    types: [opened, reopened]
+
+jobs:
+  choose-reviewers:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Pick reviewers
+        id: pick
+        uses: actions/github-script@v7
+        with:
+          script: |
+            
+            // all usernames
+            const usernames = ["branden6","dylanstephenalexander","kaanspgl","mr-sban","mewlic"];
+
+            // by shuffling we can avoid it being biased during ties
+            function shuffle(arr) {
+              for (let i = arr.length - 1; i > 0; i--) 
+              {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+              }
+              return arr;
+            }
+
+            usernames = shuffle(usernames);            
+
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const author = context.payload.pull_request.user.login;
+
+            // Filter out the PR author
+            const availableReviewers = usernames.filter(
+              u => u.toLowerCase() !== author.toLowerCase()
+            );
+
+            // get open PRs
+            const { data: openPRs } = await github.rest.pulls.list({
+              owner,
+              repo,
+              state: "open",
+              per_page: 100
+            });
+
+            // count open PRs assigned for each user
+            const counts = {};
+            availableReviewers.forEach(u => counts[u] = 0);
+
+            for (const pr of openPRs) {
+              const reviewers = pr.requested_reviewers.map(r => r.login.toLowerCase());
+              for (const user of availableReviewers) {
+                if (reviewers.includes(user.toLowerCase())) {
+                  counts[user] += 1;
+                }
+              }
+            }
+
+            // order users by least amount of open PRs assigned
+            const sorted = availableReviewers
+              .map(user => ({ user, count: counts[user] }))
+              .sort((a, b) => a.count - b.count);
+
+            // Choose the top 2 with fewest assignments
+            const chosen = sorted.slice(0, 2).map(x => x.user);
+
+            core.setOutput("reviewers", JSON.stringify(chosen));
+            console.log("PR Author:", author);
+            console.log("Reviewer loads:", counts);
+            console.log("Chosen reviewers:", chosen);
+
+      - name: Assign to PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const reviewers = JSON.parse("${{ steps.pick.outputs.reviewers }}");
+
+            await github.rest.pulls.requestReviewers({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.payload.pull_request.number,
+              reviewers
+            });
+
+            console.log("Assigned reviewers:", reviewers);
