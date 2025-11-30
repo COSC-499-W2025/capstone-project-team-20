@@ -332,6 +332,8 @@ class ProjectAnalyzer:
                 project = self.load_or_create_project()
                 project.authors = all_authors_list
                 project.author_count = len(all_authors_list)
+                collaboration_status = "collaborative" if len(all_authors_list) > 1 else "individual"
+                project.collaboration_status = collaboration_status
 
                 project.author_contributions = [
                     {
@@ -342,9 +344,7 @@ class ProjectAnalyzer:
                         "files_touched": list(stats.files_touched),
                         "contribution_by_type": stats.contribution_by_type
                     }
-                    for author, stats in all_author_stats.items(
-                        "collaborative" if len(all_authors_list) > 1 else "individual"
-                    )
+                    for author, stats in all_author_stats.items()
                 ]
                 self.project_manager.set(project)
 
@@ -774,7 +774,7 @@ class ProjectAnalyzer:
 
     def run_all(self) -> None:
         print("Running All Analyzers\n")
-        self.analyze_git_and_contributions()
+        self.analyze_git_and_contributions() # 'analyze_git_and_contributions()' is responsible for creating Project objects
         if self.root_folder:
             self.analyze_metadata()
             self.analyze_categories()
