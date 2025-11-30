@@ -155,3 +155,25 @@ The second PR expanded the project data model by introducing new derived metrics
 The third PR wired these changes into the Project Analyzer CLI, ensuring that skill analysis now populates the database cleanly, updates existing entries through upsert logic, and supports viewing historical results. This creates a unified pipeline from ZIP → analysis → metrics → database → display.
 
 Beyond my own PRs, I reviewed multiple teammate submissions to ensure compatibility with the new modular Skill Analyzer architecture, with special focus on DB consistency, serialization correctness, and cross-module integration. I also attended Friday’s milestone alignment meeting, where we finalized what analytics components must be stable for the Milestone 1 demo and coordinated division of tasks for the upcoming sprint.
+
+### Week 13
+
+Log Checkbox:
+
+![week 13 log](imagesForKaanLogs/week_13_log.png)
+
+### Weekly Goals
+
+This week, I focused on expanding and stabilizing several major analytical features across the Skill Analyzer ecosystem—specifically the badge analysis system, the skill chronology pipeline, and the project chronology extraction improvements. These updates significantly advance our goal of making the analytics interpretable, educational, and fully integrated for the Milestone 1 demo.
+
+The first major deliverable was implementing the Badge Feature. I built a rules-based badge assignment system that derives awards directly from the project’s analytics snapshot, using metrics such as language distribution, test ratio, comment density, file structure depth, and collaboration indicators. I also added badge aggregation logic to support comparisons across multiple projects, and made sure it integrates cleanly into the CLI outputs. This gives students motivational, achievement-style feedback grounded in real code quality signals.
+
+The second focus was refining the Skill Analysis output to better represent what students actually used and learned in each project. I improved the categorization of languages, frameworks, and tools, cleaned up noisy detections, and integrated this with the new badge system so both features support each other. These refinements make the analytics more accurate, readable, and aligned with the educational goals of the platform.
+
+Alongside that work, I implemented and stabilized the Skill Chronology feature. This involved ensuring that skills are now ordered using actual commit dates, creating a much more realistic timeline of when skills were acquired across a student’s development history. I also updated the Skill Analyzer's output formatting so the chronology displays skill names with their associated dates clearly.
+
+Parallel to this, I improved the Project Chronology to ensure that projects are sorted and displayed based on the earliest meaningful commit timestamps rather than file metadata. This gives the overall developer timeline a far more accurate narrative and supports downstream features like learning progress visualization.
+
+We also had a highly productive meeting on Friday, where we finalized our presentation content and aligned on the final requirements for Milestone 1. As part of team collaboration, I reviewed several PRs from teammates to ensure compatibility with the new badge logic, chronology systems, and updated Skill Analyzer architecture.
+
+Overall, the week significantly strengthened both the backend analytics and the cohesion between features, pushing us much closer to a stable, presentation-ready milestone.
