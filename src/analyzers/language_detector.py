@@ -33,9 +33,13 @@ Current Limitations:
 
 CONFIG_DIR = Path(__file__).parent.parent / "config"
 LANGUAGES_FILE = CONFIG_DIR / "languages.yml"
+IGNORED_DIRS_FILE = CONFIG_DIR / "ignored_directories.yml"
 
 with open(LANGUAGES_FILE, "r") as f:
     LANGUAGES_YAML = yaml.safe_load(f)
+
+with open(IGNORED_DIRS_FILE, "r") as f:
+    IGNORED_DIRS_YAML = yaml.safe_load(f)
 
 # LANGUAGES is a dict of dicts. key = language names, values = dict of each category languages store
 #  e.g. {"Python": {"extensions": ["py", "pyw"]}, "Java": {"extensions": ["java", "jsp", "class", "jar"]}}
@@ -49,14 +53,11 @@ for language, category in LANGUAGES.items():
     for extension in category.get("extensions", []):
         LANGUAGE_MAP[extension.lower()] = language
 
-IGNORED_DIRS = {
-    'node_modules', 'vendor', 'bower_components',
-    'build', 'dist', 'target', 'out', 'bin',
-    '__pycache__', '.venv', 'venv', 'env',
-    'coverage', '.pytest_cache', '.gradle',
-    'packages', 'libs', 'dependencies',
-    '.next', '.nuxt', '.cache'
-}
+# ignored_directories is split 3-ways into directories, extensions and filenames
+
+IGNORED_DIRS = set(IGNORED_DIRS_YAML.get("ignored_dirs", []))
+IGNORED_EXTENSIONS = set(ext.lower() for ext in IGNORED_DIRS_YAML.get("ignored_extensions", []))
+IGNORED_FILENAMES = set(name.lower() for name in IGNORED_DIRS_YAML.get("ignored_filenames", []))
 
 def analyze_language_share(root_dir: str) -> Dict[str, float]:
     """Return a dict where:
@@ -80,14 +81,33 @@ def filter_files(path: Path) -> List[Path]:
     """Return a list of files to analyze, ignoring hidden files and specified directories."""
     relevant_files = []
     all_files = [f for f in path.rglob("*") if f.is_file()]
+
     for file in all_files:
-        if any(part in IGNORED_DIRS for part in file.parts):
+        filename = file.name.lower()
+        extension = file.suffix.lstrip(".").lower()
+
+        # 1. Ignore hidden files
+        if filename.startswith("."):
             continue
-        if file.name.startswith("."):
+
+        # 2. Only process known-language extensions
+        if extension not in LANGUAGE_MAP:
             continue
-        if file.suffix.lstrip(".").lower() not in LANGUAGE_MAP:
+
+        # 3. Ignore extensions
+        if extension in IGNORED_EXTENSIONS:
             continue
+
+        # 4. Ignore filenames
+        if filename in IGNORED_FILENAMES:
+            continue
+
+         # 5. Ignore directories
+        if any(part.lower() in IGNORED_DIRS for part in file.parts):
+            continue
+
         relevant_files.append(file)
+
     return relevant_files
 
 def aggregate_loc_by_language(files: List[Path]) -> Dict[str, int]:
