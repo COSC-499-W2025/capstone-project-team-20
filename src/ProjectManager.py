@@ -33,6 +33,7 @@ class ProjectManager(StorageManager):
         author_count INTEGER,
         authors TEXT,
         languages TEXT,
+        language_share TEXT,
         frameworks TEXT,
         skills_used TEXT,
         individual_contributions TEXT,
@@ -72,7 +73,7 @@ class ProjectManager(StorageManager):
         """Comma-separated list of column names for project storage."""
         return (
             "id, name, file_path, root_folder, num_files, size_kb, author_count, "
-            "authors, languages, frameworks, skills_used, individual_contributions, "
+            "authors, languages, language_share, frameworks, skills_used, individual_contributions, "
             "collaboration_status, "
             "primary_languages, total_loc, comment_ratio, test_file_ratio, "
             "avg_functions_per_file, max_function_length, "

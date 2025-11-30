@@ -26,15 +26,12 @@ class Project:
 
     # High-level tech stack
     languages: List[str] = list_field()
+    language_share: Dict[str, float]
     frameworks: List[str] = list_field()
     skills_used: List[str] = list_field()
     individual_contributions: List[str] = list_field()
     author_contributions: List[Dict[str, Any]] = list_field()
     collaboration_status: Literal["individual", "collaborative"] = "individual"
-
-    # === New: derived skill/metrics info ===
-    # Primary languages (e.g. top by LOC, subset of `languages`)
-    primary_languages: List[str] = list_field()
 
     # Overall code metrics (from CodeMetricsAnalyzer.summarize()["overall"])
     total_loc: int = 0
@@ -72,6 +69,7 @@ class Project:
         list_fields = [
             "authors",
             "languages",
+            "language_share",
             "frameworks",
             "skills_used",
             "individual_contributions",
@@ -104,6 +102,7 @@ class Project:
         list_fields = [
             "authors",
             "languages",
+            "language_share",
             "frameworks",
             "skills_used",
             "individual_contributions",
