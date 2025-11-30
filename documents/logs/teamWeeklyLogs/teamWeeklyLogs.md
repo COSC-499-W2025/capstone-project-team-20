@@ -296,3 +296,36 @@ Issue [COSC-499-W2025/capstone-project-team-20#146](https://github.com/COSC-499-
 **Test Report:**
 
 [Week 12 Test Report](teamWeeklyLogsImages/week_12_test_report.png)
+
+
+
+### Week 13 (November 24th - November 30th)
+
+**Work Performed:**
+- Branden Kennedy (42474551): 
+
+- Necmi Kaan Sapoglu (17014796): 
+
+- Lex Nash (84668540): 
+
+- Dylan Alexander (16394025): Implemented mechanism for the display, storage, retrieval, and deletion of generated resume insights in order to satisfy 2 of the 20 requirements for milestone 1. Wrote a CI Github Actions script that automatically runs our pytest suite on every pull request. Reviewed numerous pull requests by the team (10 at the time of writing).
+
+- Sven Annist (42486720): 
+
+**Features included in the project plan for this milestone are:**
+- 
+
+**Continuing tasks from last week and plan for the next week:**
+
+
+**Burnup chart:**
+
+
+**Table View of Completed Tasks on Project Board:**
+
+
+**Table View of In-Progress Tasks on Project Board:**
+
+
+**Test Report:**
+
