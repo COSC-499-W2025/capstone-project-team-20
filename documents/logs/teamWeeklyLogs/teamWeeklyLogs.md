@@ -296,3 +296,38 @@ Issue [COSC-499-W2025/capstone-project-team-20#146](https://github.com/COSC-499-
 **Test Report:**
 
 [Week 12 Test Report](teamWeeklyLogsImages/week_12_test_report.png)
+
+
+### Week 13 (November 24th - November 30th)
+
+**Work Performed:**
+- Branden Kennedy (42474551):
+
+- Necmi Kaan Sapoglu (17014796): Delivered multiple major PRs advancing the analytics pipeline for Milestone 1. Implemented the new Badge Analysis system with rules-based badge assignment and project-level badge aggregation. Refined the Skill Analyzer output for clearer, more accurate skill detection and alignment with badge metrics. Completed the Skill Chronology feature using commit-based timestamps and improved the Project Chronology so projects are ordered by actual commit history rather than file metadata. Integrated all updates into the CLI and ensured compatibility across modules. Reviewed teammate PRs for consistency with the revised architecture, and participated in Friday’s highly productive meeting to finalize the milestone presentation and sync upcoming sprint tasks.
+
+- Lex Nash (84668540): 
+
+- Dylan Alexander (16394025):
+
+- Sven Annist (42486720): 
+
+**Features included in the project plan for this milestone are:**
+
+
+**Continuing tasks from last week and plan for the next week:**
+
+**Burnup chart:**
+
+[Week 13 burnup chart]()
+
+**Table View of Completed Tasks on Project Board:**
+
+[Week 13 completed tasks]()
+
+**Table View of In-Progress Tasks on Project Board:**
+
+[Week 13 In-Progress tasks]()
+
+**Test Report:**
+
+[Week 13 Test Report]()
