@@ -1,7 +1,11 @@
 name: randassign
 
+permissions:
+  pull-requests: write
+  contents: read
+
 on:
-  pull_request:
+  pull_request_target:
     types: [opened, reopened]
 
 jobs:
