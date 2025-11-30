@@ -307,7 +307,7 @@ Issue [COSC-499-W2025/capstone-project-team-20#146](https://github.com/COSC-499-
 
 - Lex Nash (84668540): 
 
-- Dylan Alexander (16394025):
+- Dylan Alexander (16394025): Implemented mechanisms for the display, storage, retrieval, and deletion of generated resume insights to satisfy 2 of the 20 requirements for Milestone 1. Developed a CI GitHub Actions workflow that automatically runs our pytest suite on every pull request. Reviewed numerous pull requests (10 at the time of writing) to help the team merge the large backlog into main in time for the presentation.
 
 - Sven Annist (42486720): 
 
