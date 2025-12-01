@@ -150,3 +150,65 @@ Encountered merge conflicts when integrating test suites due to concurrent devel
 
 ### Looking Ahead:
 With the core contribution analysis infrastructure now established, next week's focus will shift toward finalizing the user-facing output report and implementing export functionality to address Issue #199. I also plan to tackle **Issue #151** by expanding the application's input handling to accept direct file and folder paths in addition to ZIP archives, improving the development and testing workflow. Following these user experience enhancements, I intend to explore more sophisticated contribution visualization options and consider implementing the multi-repository analysis capabilities outlined in Issue #214.
+
+# Week 13: Nov 24 - Dec 01
+
+### Tasks worked on:
+![Svens Tasks for W13](./imagesForSvenLogs/w13.png)
+
+- Implemented project ranking and resume scoring pipeline:
+  - Added `ProjectRanker` to compute a `resume_score` from quality dimensions, project scale, collaboration and recency.
+  - Extended the `Project` model to persist `resume_score` and updated `Project.display()` to show the formatted score.
+- Refactored `ProjectAnalyzer` to support multi-repo ZIPs and per-repo enrichment:
+  - Added `initialize_projects` (uses `RepoProjectBuilder`) to discover repos and create/update `Project` records.
+  - Refactored `analyze_skills` to iterate projects extracted from a ZIP, run `SkillAnalyzer` per project, enrich `Project` objects with metrics, calculate `resume_score` via `ProjectRanker`, and persist results.
+  - Improved orchestration (`run_all` / menu) so projects can be initialized then analyzed in a single flow.
+  - Added a “Summarize Top 3 Projects” option to the Generate Resume Insights flow (menu option inside option 10).
+- Contribution workflow fixes:
+  - Added `calculate_share` to `ContributionAnalyzer` and updated `analyze_git_and_contributions` orchestration so selected user contribution stats are calculated, formatted, and persisted to `Project.individual_contributions`.
+  - Ensured `ProjectAnalyzer` calls the analyzer and persists `individual_contributions` to the DB.
+- Storage & persistence:
+  - Updated `ProjectManager` schema and `set()` logic to include `resume_score` and to reliably upsert `Project` rows; fixed id handling after insert/update.
+- SkillAnalyzer improvements:
+  - Fixed several dimension calculations (test ratio usage, modularity handling for zero/max function length, language depth calculations) for more robust metrics consumed by the ranker.
+- Tests and QA:
+  - Added / updated unit and integration tests to cover the above changes (ProjectRanker tests, ContributionAnalyzer `calculate_share` test, updates to `Project` and `ProjectManager` tests, updated `ProjectAnalyzer` tests).
+  - Resolved multiple test failures introduced by the refactor; test suite runs locally after fixes.
+- Non-code work:
+  - Prepared and refined slides for the Milestone 1 presentation.
+
+---
+
+## Weekly Goals Recap
+
+This week I focused on maturing the analysis pipeline so a `.zip` containing multiple git repositories can be discovered, analyzed, scored, and presented as ranked resume insights. The main objective was to provide a concrete, recruiter-friendly metric (`resume_score`) and ensure that user contribution data (`individual_contributions`) is persisted so resume summaries accurately reflect individual impact.
+
+I also prepared and refined my Milestone 1 presentation slides.
+
+## PRs I reviewed this week
+- https://github.com/COSC-499-W2025/capstone-project-team-20/pull/255
+- https://github.com/COSC-499-W2025/capstone-project-team-20/pull/246
+- https://github.com/COSC-499-W2025/capstone-project-team-20/pull/242
+- https://github.com/COSC-499-W2025/capstone-project-team-20/pull/236
+- https://github.com/COSC-499-W2025/capstone-project-team-20/pull/235
+
+## PRs I opened this week
+- https://github.com/COSC-499-W2025/capstone-project-team-20/pull/253
+
+## New issue(s) I filed
+- https://github.com/COSC-499-W2025/capstone-project-team-20/issues/258
+
+## Problems Encountered
+- Initial test regressions after the refactor because several tests assumed the old orchestration; I iteratively adapted tests and tightened mocks for filesystem/zip interactions to keep the suite deterministic.
+- Small surprises around `Path`/zip existence checks in tests required additional mocking in a few places.
+- Need to be mindful of DB schema differences: `resume_score` was added and existing databases will require either migration or a fresh DB for a smooth upgrade.
+
+## Looking Ahead
+- Finalize documentation and update README with the recommended workflow:
+  1. Initialize / Re-scan Projects
+  2. Analyze Skills
+  3. Generate Resume Insights (optionally "Top 3")
+- Implement a small DB migration helper or document migration steps so existing users do not encounter schema conflicts.
+- Add an optional auto-enrich flag for Generate Resume Insights so users can choose to auto-run analysis when generating insights (UX decision: auto-run vs explicit).
+- Explore visualization/export (Issue #199) to allow exporting summarized resume bullets and metrics for top projects.
+- Continue finalizing Milestone 1 slides and prepare presenter notes.
