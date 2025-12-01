@@ -6,7 +6,12 @@ import shutil
 import contextlib
 import zipfile
 from pathlib import Path
-from typing import Iterable, List, Optional, Tuple, Dict
+from typing import Iterable, List, Optional, Tuple, Dict, Any
+
+from src.project_timeline import (
+    get_projects_with_skills_timeline_from_projects,
+    get_skill_timeline_from_projects,
+)
 
 from datetime import datetime
 
@@ -25,6 +30,7 @@ from src.ConfigManager import ConfigManager
 from src.ProjectRanker import ProjectRanker
 from src.analyzers.RepoProjectBuilder import RepoProjectBuilder
 
+MIN_DISPLAY_CONFIDENCE = 0.5  # only show skills with at least this confidence
 
 class ProjectAnalyzer:
     """
@@ -39,7 +45,7 @@ class ProjectAnalyzer:
     7. Analyze New Folder
     8. Change Selected Users
     9. Analyze Skills
-    10. Generate Resume Insights
+    10. Generate Resume
     11. Display Previous Results
     12. Exit
     """
@@ -350,6 +356,7 @@ class ProjectAnalyzer:
             if not repo_paths:
                 print("No Git repositories found in the provided ZIP.")
                 return
+
             repo_path = str(repo_paths[0])
 
             # Step 1: Efficiently get all author names.
@@ -382,6 +389,9 @@ class ProjectAnalyzer:
                 self._display_contribution_results(selected_stats, total_stats, usernames)
         finally:
             shutil.rmtree(temp_dir, ignore_errors=True)
+
+
+
 
     def change_selected_users(self) -> None:
         """Allows the user to change their configured username selection."""
@@ -461,10 +471,15 @@ class ProjectAnalyzer:
 
     def analyze_skills(self) -> None:
         """
-        Enriches all projects found in the ZIP with advanced metrics and a resume score.
-        It now relies on initialize_projects to have created the records first.
-        """
+        Run skill analysis on all projects in the database.
 
+        This:
+        - Extracts the zip to a temporary directory,
+        - Runs SkillAnalyzer for each project (which internally runs CodeMetricsAnalyzer),
+        - Enriches project objects with metrics and scores,
+        - Persists the enriched projects to the database,
+        - Prints a human-readable summary of detected skills and metrics for each project.
+        """
         if not self.zip_path:
             print("No project loaded.\n")
             return
@@ -477,6 +492,10 @@ class ProjectAnalyzer:
 
         if not project_list:
             print("No projects found in the database. Please run 'Initialize/Re-scan Projects' first.")
+            return
+
+        if not self.zip_path.exists() or not zipfile.is_zipfile(self.zip_path):
+            print(f"Error: {self.zip_path} is not a valid zip file.")
             return
 
         temp_dir = Path(extract_zip(str(self.zip_path)))
@@ -493,6 +512,8 @@ class ProjectAnalyzer:
 
                 skill_analyzer = SkillAnalyzer(project_source_path)
                 result = skill_analyzer.analyze()
+
+                skills = result.get("skills", []) or []
                 stats = result.get("stats", {})
                 dimensions = result.get("dimensions", {})
 
@@ -527,8 +548,117 @@ class ProjectAnalyzer:
                 print(f"  - Successfully enriched and saved '{project.name}'.")
                 print(f"  - Final Resume Score: {project.resume_score:.2f}")
 
+                # --- Display detailed analysis results from feature branch ---
+                print("\n  Project-level code metrics:")
+                for k, v in overall.items():
+                    print(f"    - {k}: {v}")
+
+                print("\n  Per-language metrics:")
+                for lang, data in per_lang.items():
+                    print(f"    - {lang}:")
+                    for k_lang, v_lang in data.items():
+                        print(f"        {k_lang}: {v_lang}")
+
+                print("\n  Dimensions:")
+                for dim_name, dim_data in dimensions.items():
+                    level = dim_data.get("level", "")
+                    score = dim_data.get("score", 0.0)
+                    print(f"    - {dim_name}: level={level}, score={score:.2f}")
+
+                # Filter and display skills
+                filtered_skills = []
+                for item in skills:
+                    if isinstance(item, dict):
+                        name = item.get("skill") or item.get("name")
+                        conf = item.get("confidence", 1.0)
+                    else:
+                        name = getattr(item, "skill", None) or getattr(item, "name", None)
+                        conf = getattr(item, "confidence", 1.0)
+
+                    if name and conf >= MIN_DISPLAY_CONFIDENCE:
+                        filtered_skills.append((name.strip(), conf))
+
+                seen = set()
+                deduped_skill_names: List[str] = []
+                for name, _ in filtered_skills:
+                    if name.lower() not in seen:
+                        seen.add(name.lower())
+                        deduped_skill_names.append(name)
+
+                print("\n  Detected languages:")
+                display_langs = [lang for lang in sorted(per_lang.keys()) if str(lang).lower() != "unknown"]
+                if display_langs:
+                    for lang in display_langs:
+                        print(f"    - {lang}")
+                else:
+                    print("    (no reliable languages detected)")
+
+                print("\n  Detected skills (filtered by confidence):")
+                if deduped_skill_names:
+                    for s in deduped_skill_names:
+                        print(f"    - {s}")
+                else:
+                    print("    (no high-confidence skills detected)")
+
         finally:
             shutil.rmtree(temp_dir, ignore_errors=True)
+
+    # ------------------------------------------------------------------
+    # Timeline: Projects & Skills (using stored analysis)
+    # ------------------------------------------------------------------
+
+    def display_project_timeline(self) -> None:
+        """
+        Print a chronological list of projects and the skills exercised
+        in each, based on projects currently stored in the database.
+
+        Also prints a per-skill first-use timeline, so you can see when
+        each skill first appeared and in which project.
+        """
+        projects = list(self.project_manager.get_all())
+        if not projects:
+            print("\nNo projects found in the database. Run analyses first.")
+            return
+
+        # 1) Project-centric view: when each project happened, and what skills
+        #    were exercised in it.
+        rows = get_projects_with_skills_timeline_from_projects(projects)
+
+        print("\n=== Project Timeline (Chronological) ===")
+        if not rows:
+            print("No projects with valid dates found.")
+            return
+
+        for when, name, skills in rows:
+            skills_str = ", ".join(skills) if skills else "(no skills recorded)"
+            print(f"{when.isoformat()} — {name}: {skills_str}")
+
+        # 2) Skill-centric view: first time we see each skill, with date +
+        #    project name. Uses the same underlying SkillEvent stream.
+        events = get_skill_timeline_from_projects(projects)
+        if not events:
+            return
+
+        print("\n=== Skill First-Use Timeline ===")
+
+        first_seen: dict[str, Any] = {}
+        for ev in events:
+            key = ev.skill.lower()
+            # events are already chronological, so the first time we see a skill
+            # is its earliest use.
+            if key not in first_seen:
+                first_seen[key] = ev
+
+        ordered = sorted(
+            first_seen.values(),
+            key=lambda ev: (ev.when, ev.skill.lower()),
+        )
+
+        for ev in ordered:
+            project_name = ev.project or "(unknown project)"
+            print(f"{ev.when.isoformat()} — {ev.skill} (first seen in {project_name})")
+
+
 
     # ------------------------------------------------------------------
     # Display stored analysis
@@ -774,8 +904,10 @@ class ProjectAnalyzer:
                 9. Analyze Skills (Calculates Resume Score)
                 10. Generate Resume Insights
                 11. Display Previous Results
-                12. Exit
+                12. Show Project Timeline (Projects & Skills)
+                13. Exit
                   """)
+
 
             choice = input("Selection: ").strip()
 
@@ -826,6 +958,8 @@ class ProjectAnalyzer:
                 projects = self.project_manager.get_all()
                 self.display_analysis_results(projects)
             elif choice == "12":
+                self.display_project_timeline()
+            elif choice == "13":
                 print("Exiting Project Analyzer.")
                 # CLEAN UP TEMP DIR ON EXIT
                 if hasattr(self, "cached_extract_dir") and self.cached_extract_dir:
