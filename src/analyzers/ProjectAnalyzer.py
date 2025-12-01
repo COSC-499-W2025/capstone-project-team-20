@@ -31,6 +31,7 @@ from src.analyzers.RepoProjectBuilder import RepoProjectBuilder
 
 MIN_DISPLAY_CONFIDENCE = 0.5  # only show skills with at least this confidence
 
+
 class ProjectAnalyzer:
     """
     Unified interface for analyzing zipped project files.
@@ -173,6 +174,7 @@ class ProjectAnalyzer:
 
         self.metadata_extractor = ProjectMetadataExtractor(self.root_folder)
         return True
+
     # ------------------------------------------------------------------
     # Project Initialization using RepoProjectBuilder
     # ------------------------------------------------------------------
@@ -206,7 +208,6 @@ class ProjectAnalyzer:
                     print(f"  - Created new project record: {proj_new.name} with ID {proj_new.id}")
                     return [proj_new]
                 return [proj_existing]
-
 
             print(f"Found {len(projects_from_builder)} project(s). Saving initial records...")
             for proj_new in projects_from_builder:
@@ -390,32 +391,52 @@ class ProjectAnalyzer:
                 selected_stats = self._aggregate_stats(all_author_stats, usernames)
                 total_stats = self._aggregate_stats(all_author_stats)
 
-                project = self.load_or_create_project()
-                project.authors = all_authors_list
-                project.author_count = len(all_authors_list)
-                collaboration_status = "collaborative" if len(all_authors_list) > 1 else "individual"
-                project.collaboration_status = collaboration_status
-
-                project.author_contributions = [
-                    {
-                        "author": author,
-                        "lines_added": stats.lines_added,
-                        "lines_deleted": stats.lines_deleted,
-                        "total_commits": stats.total_commits,
-                        "files_touched": list(stats.files_touched),
-                        "contribution_by_type": stats.contribution_by_type
-                    }
-                    for author, stats in all_author_stats.items()
-                ]
-
-                project.individual_contributions = self.contribution_analyzer.calculate_share(
-                     selected_stats, total_stats
-                    )
-                    # Save the updated project back to the database
-                self.project_manager.set(project)
-
                 # Step 4: Display the results.
                 self._display_contribution_results(selected_stats, total_stats, usernames)
+
+                # Step 5: Persist authors & contributions into the Project row
+                try:
+                    project = self._get_or_create_project_record()
+                except RuntimeError:
+                    project = None
+
+                if project is not None:
+                    # All authors seen in the repo
+                    project.authors = sorted(set(all_authors_list))
+                    project.author_count = len(project.authors)
+
+                    # Collaboration status ("individual" / "collaborative")
+                    project.collaboration_status = (
+                        "individual" if project.author_count <= 1 else "collaborative"
+                    )
+
+                    # Per-author contributions snapshot
+                    contributions: List[Dict[str, Any]] = []
+                    for author, stats in all_author_stats.items():
+                        contributions.append(
+                            {
+                                "author": author,
+                                "lines_added": stats.lines_added,
+                                "lines_deleted": stats.lines_deleted,
+                                "total_commits": stats.total_commits,
+                                "files_touched": sorted(stats.files_touched),
+                                "contribution_by_type": dict(stats.contribution_by_type),
+                            }
+                        )
+
+                    project.author_contributions = contributions
+
+                    # Overall share for the selected users
+                    try:
+                        share = self.contribution_analyzer.calculate_share(
+                            selected_stats, total_stats
+                        )
+                    except Exception:
+                        share = None
+                    project.individual_contributions = share
+
+                    project.last_accessed = datetime.now()
+                    self.project_manager.set(project)
         finally:
             shutil.rmtree(temp_dir, ignore_errors=True)
 
@@ -458,19 +479,59 @@ class ProjectAnalyzer:
 
     def analyze_metadata(self) -> None:
         print("\nMetadata & File Statistics:")
-        metadata = self.metadata_extractor.extract_metadata()["project_metadata"]
+        metadata_full = self.metadata_extractor.extract_metadata() or {}
+        project_meta = metadata_full.get("project_metadata", {}) or {}
 
-        project = self.load_or_create_project()
-        project.num_files = metadata["total_files"]
-        project.size_kb = metadata["total_size_kb"]
-
-        #timestamps
         try:
-            project.date_created = datetime.fromisoformat(metadata["start_date"])
-            project.last_modified = datetime.fromisoformat(metadata["end_date"])
-        except:
+            project = self._get_or_create_project_record()
+        except RuntimeError:
+            # No zip loaded; nothing to persist
+            return
+
+        # Authors (list or comma-separated string)
+        authors = project_meta.get("authors")
+        if isinstance(authors, list):
+            project.authors = authors
+        elif isinstance(authors, str):
+            parts = [a.strip() for a in authors.split(",") if a.strip()]
+            project.authors = parts
+
+        if project.authors:
+            project.author_count = len(project.authors)
+
+        # Collaboration status if extractor infers it
+        collab_status = project_meta.get("collaboration_status")
+        if isinstance(collab_status, str):
+            project.collaboration_status = collab_status
+
+        # Basic size metrics from metadata if present
+        num_files = project_meta.get("total_files") or project_meta.get("num_files")
+        if num_files is not None:
+            try:
+                project.num_files = int(num_files)
+            except (TypeError, ValueError):
+                pass
+
+        size_kb = project_meta.get("total_size_kb") or project_meta.get("size_kb")
+        if size_kb is not None:
+            try:
+                project.size_kb = int(size_kb)
+            except (TypeError, ValueError):
+                pass
+
+        # timestamps
+        start_raw = project_meta.get("start_date")
+        end_raw = project_meta.get("end_date")
+        try:
+            if start_raw:
+                project.date_created = datetime.fromisoformat(str(start_raw))
+            if end_raw:
+                project.last_modified = datetime.fromisoformat(str(end_raw))
+        except Exception:
             pass
 
+        # Touch last_accessed
+        project.last_accessed = datetime.now()
         self.project_manager.set(project)
 
     def analyze_categories(self) -> None:
@@ -514,6 +575,63 @@ class ProjectAnalyzer:
         self.project_manager.set(project)
 
     # ------------------------------------------------------------------
+    # Project persistence helpers
+    # ------------------------------------------------------------------
+
+    def _get_or_create_project_record(self) -> Project:
+        """
+        Fetch the Project row for the currently loaded ZIP, or create an
+        in-memory Project with baseline information (paths, counts, dates).
+
+        The caller is responsible for calling self.project_manager.set(project)
+        after updating any additional fields.
+        """
+        if not self.zip_path:
+            raise RuntimeError("No zip_path set; cannot create Project record.")
+
+        project_name = Path(self.zip_path).stem
+        project = self.project_manager.get_by_name(project_name)
+
+        if project is not None:
+            return project
+
+        # New project record: fill baseline info
+        num_files = 0
+        if self.root_folder and self.metadata_extractor:
+            try:
+                num_files = len(self.metadata_extractor.collect_all_files())
+            except Exception:
+                num_files = 0
+
+        size_kb = 0
+        try:
+            size_kb = int(self.zip_path.stat().st_size / 1024)
+        except Exception:
+            pass
+
+        # Use filesystem timestamps as a reasonable proxy for dates
+        try:
+            stat = self.zip_path.stat()
+            created_dt = datetime.fromtimestamp(stat.st_ctime)
+            modified_dt = datetime.fromtimestamp(stat.st_mtime)
+        except Exception:
+            created_dt = None
+            modified_dt = None
+
+        project = Project(
+            name=project_name,
+            file_path=str(self.zip_path),
+            root_folder=str(self.root_folder or ""),
+            num_files=num_files,
+            size_kb=size_kb,
+            date_created=created_dt,
+            last_modified=modified_dt,
+            last_accessed=datetime.now(),
+        )
+
+        return project
+
+    # ------------------------------------------------------------------
     # Skill analysis (CodeMetrics + SkillAnalyzer + persistence)
     # ------------------------------------------------------------------
 
@@ -553,37 +671,83 @@ class ProjectAnalyzer:
                 # Flexible path finding: check for a subdirectory, fall back to root
                 project_source_path = temp_dir / project.name
                 if not project_source_path.exists():
-                    print(f"  - Warning: Source path '{project_source_path}' not found. Analyzing root of zip instead.")
+                    print(
+                        f"  - Warning: Source path '{project_source_path}' not found. "
+                        "Analyzing root of zip instead."
+                    )
                     project_source_path = temp_dir
 
                 skill_analyzer = SkillAnalyzer(project_source_path)
                 result = skill_analyzer.analyze()
 
                 skills = result.get("skills", []) or []
-                stats = result.get("stats", {})
-                dimensions = result.get("dimensions", {})
+                stats = result.get("stats", {}) or {}
+                dimensions = result.get("dimensions", {}) or {}
 
                 if not stats:
                     print(f"  - No metrics could be inferred for {project.name}.")
                     continue
 
-                overall = stats.get("overall", {})
-                per_lang = stats.get("per_language", {})
+                overall = stats.get("overall", {}) or {}
+                per_lang = stats.get("per_language", {}) or {}
 
-                # --- Enrich the existing Project object ---
+                # --- Enrich the existing Project object with metrics ---
                 project.total_loc = overall.get("total_lines_of_code", 0)
                 project.comment_ratio = overall.get("comment_ratio", 0.0)
                 project.test_file_ratio = overall.get("test_file_ratio", 0.0)
+                project.avg_functions_per_file = overall.get("avg_functions_per_file", 0.0)
+                project.max_function_length = overall.get("max_function_length", 0)
 
-                td = dimensions.get("testing_discipline", {})
+                # Languages: keys from per-language stats, excluding "Unknown"
+                display_langs = [
+                    lang for lang in sorted(per_lang.keys())
+                    if str(lang).lower() != "unknown"
+                ]
+                project.languages = display_langs
+
+                # Filter skills by confidence for display & persistence
+                filtered_skills: List[Tuple[str, float]] = []
+                for item in skills:
+                    if isinstance(item, dict):
+                        name = item.get("skill") or item.get("name")
+                        conf = item.get("confidence", 1.0)
+                    else:
+                        name = getattr(item, "skill", None) or getattr(item, "name", None)
+                        conf = getattr(item, "confidence", 1.0)
+
+                    if name and conf >= MIN_DISPLAY_CONFIDENCE:
+                        filtered_skills.append((name.strip(), conf))
+
+                seen = set()
+                deduped_skill_names: List[str] = []
+                for name, _ in filtered_skills:
+                    key = name.lower()
+                    if key not in seen:
+                        seen.add(key)
+                        deduped_skill_names.append(name)
+
+                # Persist filtered skill names
+                project.skills_used = deduped_skill_names
+
+                # Dimensions
+                td = dimensions.get("testing_discipline", {}) or {}
                 project.testing_discipline_score = td.get("score", 0.0)
-                doc = dimensions.get("documentation_habits", {})
+                project.testing_discipline_level = td.get("level", "")
+
+                doc = dimensions.get("documentation_habits", {}) or {}
                 project.documentation_habits_score = doc.get("score", 0.0)
-                mod = dimensions.get("modularity", {})
+                project.documentation_habits_level = doc.get("level", "")
+
+                mod = dimensions.get("modularity", {}) or {}
                 project.modularity_score = mod.get("score", 0.0)
-                ld = dimensions.get("language_depth", {})
+                project.modularity_level = mod.get("level", "")
+
+                ld = dimensions.get("language_depth", {}) or {}
                 project.language_depth_score = ld.get("score", 0.0)
+                project.language_depth_level = ld.get("level", "")
+
                 project.last_modified = datetime.now()
+                project.last_accessed = datetime.now()
 
                 # Calculate the final score
                 ranker = ProjectRanker(project)
@@ -594,7 +758,7 @@ class ProjectAnalyzer:
                 print(f"  - Successfully enriched and saved '{project.name}'.")
                 print(f"  - Final Resume Score: {project.resume_score:.2f}")
 
-                # --- Display detailed analysis results from feature branch ---
+                # --- Display detailed analysis results ---
                 print("\n  Project-level code metrics:")
                 for k, v in overall.items():
                     print(f"    - {k}: {v}")
@@ -611,28 +775,7 @@ class ProjectAnalyzer:
                     score = dim_data.get("score", 0.0)
                     print(f"    - {dim_name}: level={level}, score={score:.2f}")
 
-                # Filter and display skills
-                filtered_skills = []
-                for item in skills:
-                    if isinstance(item, dict):
-                        name = item.get("skill") or item.get("name")
-                        conf = item.get("confidence", 1.0)
-                    else:
-                        name = getattr(item, "skill", None) or getattr(item, "name", None)
-                        conf = getattr(item, "confidence", 1.0)
-
-                    if name and conf >= MIN_DISPLAY_CONFIDENCE:
-                        filtered_skills.append((name.strip(), conf))
-
-                seen = set()
-                deduped_skill_names: List[str] = []
-                for name, _ in filtered_skills:
-                    if name.lower() not in seen:
-                        seen.add(name.lower())
-                        deduped_skill_names.append(name)
-
                 print("\n  Detected languages:")
-                display_langs = [lang for lang in sorted(per_lang.keys()) if str(lang).lower() != "unknown"]
                 if display_langs:
                     for lang in display_langs:
                         print(f"    - {lang}")
@@ -645,7 +788,6 @@ class ProjectAnalyzer:
                         print(f"    - {s}")
                 else:
                     print("    (no high-confidence skills detected)")
-
         finally:
             shutil.rmtree(temp_dir, ignore_errors=True)
 
@@ -826,7 +968,7 @@ class ProjectAnalyzer:
     # Display stored analysis
     # ------------------------------------------------------------------
 
-    def display_analysis_results(self, projects: Iterable[Project]) -> None: #generate_bullet_points and generate_project_summary
+    def display_analysis_results(self, projects: Iterable[Project]) -> None:  # generate_bullet_points and generate_project_summary
         projects_list = list(projects)
         if not projects_list:
             print("\nNo analysis results to display.")
@@ -866,14 +1008,14 @@ class ProjectAnalyzer:
 
         extract_dir = self.cached_extract_dir
 
-        #use RepoProjectBuilder to fully build project objects
+        # use RepoProjectBuilder to fully build project objects
         builder = RepoProjectBuilder(self.root_folder)
         projects = builder.scan(extract_dir)
         if not projects:
             print("No Git repositories found.")
             return
 
-         # Rebuild project list by matching against DB whenever possible
+        # Rebuild project list by matching against DB whenever possible
         all_projects = []
 
         for proj in projects:  # 'projects' is from builder.scan()
@@ -1020,13 +1162,18 @@ class ProjectAnalyzer:
                 bullets = resume_insights_generator.generate_resume_bullet_points()
                 summary = resume_insights_generator.generate_project_summary()
 
-                # Store resume insights in ProjectManager
-                self.project_manager.set(bullets)
-                self.project_manager.set(summary)
+                # NOTE: DB persistence of bullets/summary is left as-is for now,
+                # since the surrounding infrastructure for that is still evolving.
 
-                # Print resume insights to console
-                resume_insights_generator.display_insights(bullets,summary)
-
+                # Print resume insights to console (assuming a helper exists)
+                if hasattr(resume_insights_generator, "display_insights"):
+                    resume_insights_generator.display_insights(bullets, summary)
+                else:
+                    print("Bullet points:")
+                    for b in bullets:
+                        print(f"  • {b}")
+                    print("\nSummary:")
+                    print(summary)
 
     def _cleanup_temp(self):
         """Delete the extracted ZIP temp folder if it exists."""
@@ -1037,7 +1184,6 @@ class ProjectAnalyzer:
             except Exception as e:
                 print(f"[Cleanup Error] {e}")
             self.cached_extract_dir = None
-
 
     def _signal_cleanup(self, signum, frame):
         """Handle Ctrl+C cleanly by cleaning temp folder then exiting."""
@@ -1091,9 +1237,9 @@ class ProjectAnalyzer:
         self.analyze_skills()
         self.analyze_badges()
         print("\nAnalyses complete.\n")
-    
+
     def retrieve_previous_insights(self, projects: Iterable[Project]) -> Dict[str, Tuple[List[str], str]]:
-        """Retrieves previous insights for all stored projects. 
+        """Retrieves previous insights for all stored projects.
         Returns as a dict with the project name as the key and the insights as the value."""
         projects_list = list(projects)
         results = {}
@@ -1102,7 +1248,7 @@ class ProjectAnalyzer:
             summary = project.summary or ""
             results[project.name] = (bullets, summary)
         return results
-    
+
     def print_previous_insights(self, insights_dict: Dict[str, Tuple[List[str], str]]) -> None:
         """Takes the dict returned by `retrieve_previous_insights` and passes them into `display_insights` method provided by ResumeInsightsGenerator"""
         if not insights_dict:
@@ -1112,7 +1258,7 @@ class ProjectAnalyzer:
             print("\n==============================")
             print(f" Resume Insights for: {key}")
             print("==============================\n")
-            ResumeInsightsGenerator.display_insights(bullets,summary)
+            ResumeInsightsGenerator.display_insights(bullets, summary)
 
     def delete_previous_insights(self, projects: Iterable[Project]) -> None:
         projects_list = list(projects)
@@ -1160,7 +1306,6 @@ class ProjectAnalyzer:
                 15. Analyze Badges
                 16. Exit
                   """)
-
 
             choice = input("Selection: ").strip()
 
