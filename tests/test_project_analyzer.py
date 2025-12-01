@@ -150,7 +150,7 @@ def test_analyze_metadata_calls_metadata_extractor(analyzer):
         }
     }
     analyzer.project_manager = MagicMock()
-    analyzer.zip_path = "fake.zip" 
+    analyzer.zip_path = "fake.zip"
 
     analyzer.analyze_metadata()
 
@@ -305,29 +305,32 @@ def test_change_selected_users_workflow(analyzer, mock_config_manager):
 
 # Tests from main branch for batch analysis and run_all
 def test_run_all_calls_methods(analyzer):
-    # Set a dummy zip_path to avoid TypeError in Path()
+    # Set a dummy zip_path to avoid file system errors
     analyzer.zip_path = "dummy.zip"
     # Set a dummy root_folder to ensure analysis methods are called
     analyzer.root_folder = MagicMock()
-    # Mock the consolidated git/contribution analysis method
+
+    # Mock all methods called by run_all
+    analyzer.initialize_projects = MagicMock(return_value=True)
     analyzer.analyze_git_and_contributions = MagicMock()
     analyzer.analyze_metadata = MagicMock()
     analyzer.analyze_categories = MagicMock()
     analyzer.print_tree = MagicMock()
     analyzer.analyze_languages = MagicMock()
-
     analyzer.analyze_skills = MagicMock()
+    analyzer.analyze_badges = MagicMock()
 
     analyzer.run_all()
 
+    # Assert that all mocked methods were called once
+    analyzer.initialize_projects.assert_called_once()
     analyzer.analyze_git_and_contributions.assert_called_once()
     analyzer.analyze_metadata.assert_called_once()
     analyzer.analyze_categories.assert_called_once()
     analyzer.print_tree.assert_called_once()
     analyzer.analyze_languages.assert_called_once()
-
-    # We also now assert that analyze_skills was called.
     analyzer.analyze_skills.assert_called_once()
+    analyzer.analyze_badges.assert_called_once()
 
 def test_display_analysis_results_prints_projects(analyzer, capsys):
     proj1 = Project(name="Proj1", authors=["Alice"], author_count=1, collaboration_status="COLLABORATIVE")
