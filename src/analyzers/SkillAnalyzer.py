@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Callable, Tuple, Set
+from typing import Any, Dict, Iterable, List, Callable, Tuple, Set, Optional
+
 import os
 
 from src.FileCategorizer import FileCategorizer
@@ -71,6 +72,13 @@ DB_KEYWORDS: Set[str] = {
     "typeorm",
     "hibernate",
     "sequelize",
+}
+
+# Direct DB file extensions (for .db, .sqlite, etc.)
+DB_FILE_SUFFIXES: Set[str] = {
+    ".db",
+    ".sqlite",
+    ".sqlite3",
 }
 
 README_KEYWORDS_WHITELIST: Set[str] = {
@@ -283,12 +291,12 @@ class SkillAnalyzer:
 
     def _analyze_readme(self) -> Tuple[bool, List[str]]:
         """
-        Look for a top-level README* file and extract a few coarse keywords.
-        Cheap + side-effect free; can be refined later.
+        Look for a README* file anywhere in the project (respecting ignored dirs)
+        and extract a few coarse keywords.
         """
         readme_path: Optional[Path] = None
         try:
-            for candidate in self.root_dir.iterdir():
+            for candidate in self._iter_project_files():
                 if candidate.is_file() and candidate.name.lower().startswith("readme"):
                     readme_path = candidate
                     break
@@ -301,6 +309,7 @@ class SkillAnalyzer:
         try:
             text = readme_path.read_text(encoding="utf-8", errors="ignore")
         except OSError:
+            # We know a README exists, but we couldn't read it
             return True, []
 
         tokens = {
@@ -367,6 +376,17 @@ class SkillAnalyzer:
             any(db_kw in s for db_kw in DB_KEYWORDS)
             for s in lower_skills
         )
+
+        # Treat .db / .sqlite / .sqlite3 files as DB evidence.
+        has_database_files = False
+        for path in self._iter_project_files():
+            if not path.is_file():
+                continue
+            if path.suffix.lower() in DB_FILE_SUFFIXES:
+                has_database_files = True
+                break
+
+        has_database = has_database or has_database_files
 
         # Frontend / backend flags based on frameworks.
         has_frontend = any(f in FRONTEND_FRAMEWORKS for f in frameworks)
