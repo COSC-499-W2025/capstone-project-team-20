@@ -140,3 +140,14 @@ def test_unique_name_constraint(cleanup_db, sample_project):
         # Ref: pytest.raises checks that the expected exception was thrown.
         # https://docs.pytest.org/en/7.1.x/reference/reference.html#pytest-raises
         assert "UNIQUE constraint failed: projects.name" in str(excinfo.value)
+
+def test_set_and_get_with_resume_score(cleanup_db, sample_project):
+    """Tests that the resume_score is persisted correctly in the database."""
+    manager = ProjectManager(DB_PATH)
+    sample_project.resume_score = 99.9
+
+    manager.set(sample_project)
+    retrieved = manager.get(sample_project.id)
+
+    assert retrieved is not None
+    assert retrieved.resume_score == 99.9

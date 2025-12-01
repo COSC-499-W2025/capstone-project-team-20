@@ -13,6 +13,11 @@ class Project:
     """
     This class represents a project detected by our system. It is a pure data
     container with no external dependencies or file system interactions.
+    
+    Checklist for adding a variable to this class:
+        1. if that variable is a List or a Dict, it must be added to the list_fields section in to_dict() and from_dict() 
+        2. the display() method must be updated to reflect the addition of this variable
+        3. make the necessary changes for your new variable in ProjectManager.py
     """
     id: Optional[int] = None
     name: str = ""
@@ -20,7 +25,7 @@ class Project:
     root_folder: str = ""
     num_files: int = 0
     size_kb: int = 0
-
+    categories: Dict[str, Any] = field(default_factory=dict)
     author_count: int = 0
     authors: List[str] = list_field()
 
@@ -70,11 +75,16 @@ class Project:
     language_depth_level: str = ""
     language_depth_score: float = 0.0
 
+    # Resume Insights - generated from ResumeInsightsGenerator
+    bullets: List[str] = list_field()
+    summary: str = ""
+    # Scoring for ranking projects against one another
+    resume_score: float = 0.0
+
     # Timestamps
     date_created: Optional[datetime] = None
     last_modified: Optional[datetime] = None
     last_accessed: Optional[datetime] = None
-
 
     def to_dict(self) -> dict:
         """
@@ -83,8 +93,8 @@ class Project:
         """
         proj_dict = asdict(self)
 
-        # Serialize list-based and dict-based fields to JSON strings.
-        list_fields = [
+        # List-/dict-based fields to be JSON-serialized
+        json_fields = [
             "authors",
             "languages",
             "frameworks",
@@ -96,10 +106,16 @@ class Project:
             "author_contributions",
             "primary_languages",
             "readme_keywords",
+            "bullets",
+            "categories",
         ]
-        for field_name in list_fields:
-            # use .get so we don't KeyError if there is any version skew
-            proj_dict[field_name] = json.dumps(proj_dict.get(field_name, []))
+        for field_name in json_fields:
+            value = proj_dict.get(field_name)
+            if field_name == "categories":
+                default = {}
+            else:
+                default = []
+            proj_dict[field_name] = json.dumps(value if value is not None else default)
 
         # Ensure author_count is consistent with the authors list.
         proj_dict["author_count"] = len(self.authors)
@@ -111,18 +127,15 @@ class Project:
 
         return proj_dict
 
-
     @classmethod
-    def from_dict(cls, proj_dict: dict) -> Project:
+    def from_dict(cls, proj_dict: dict) -> "Project":
         """
         Reconstructs a Project object from a dictionary, typically from a database record.
         This method deserializes JSON strings back into their original Python types.
         """
-        # Create a copy to avoid modifying the original dictionary.
         proj_dict_copy = proj_dict.copy()
 
-        # Deserialize JSON strings back into lists or list-of-dicts.
-        list_fields = [
+        json_fields = [
             "authors",
             "languages",
             "frameworks",
@@ -134,23 +147,27 @@ class Project:
             "author_contributions",
             "primary_languages",
             "readme_keywords",
+            "bullets",
+            "categories",
         ]
-        for field_name in list_fields:
+        for field_name in json_fields:
             value = proj_dict_copy.get(field_name)
             if isinstance(value, str):
                 try:
                     proj_dict_copy[field_name] = json.loads(value)
                 except json.JSONDecodeError:
-                    proj_dict_copy[field_name] = []
+                    proj_dict_copy[field_name] = {} if field_name == "categories" else []
             elif value is None:
-                proj_dict_copy[field_name] = []
-            # otherwise assume it's already a list-like value
+                proj_dict_copy[field_name] = {} if field_name == "categories" else []
 
         # Deserialize ISO 8601 strings back into datetime objects.
         for field_name in ["date_created", "last_modified", "last_accessed"]:
             value = proj_dict_copy.get(field_name)
             if isinstance(value, str):
-                proj_dict_copy[field_name] = datetime.fromisoformat(value)
+                try:
+                    proj_dict_copy[field_name] = datetime.fromisoformat(value)
+                except ValueError:
+                    proj_dict_copy[field_name] = None
             else:
                 proj_dict_copy[field_name] = None
 
@@ -169,7 +186,7 @@ class Project:
     def display(self) -> None:
         """Print the project details to the console."""
         print(f"\n{'='*50}")
-        print(f"  📁 {self.name}")
+        print(f"  📁 {self.name}  (Resume Score: {self.resume_score:.2f})")
         print(f"{'='*50}")
         if self.file_path:
             print(f"  Path: {self.file_path}")
@@ -230,6 +247,10 @@ class Project:
             for label, level, score in dims:
                 if level:
                     print(f"    - {label}: {level} (score {score:.2f})")
+        if self.bullets:
+            for b in self.bullets:
+                print(f" • {b}")
+        if self.summary:
+            print(self.summary)
 
         print()
-

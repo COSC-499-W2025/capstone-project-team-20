@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Callable, Tuple, Set
-
 import os
 
 from src.FileCategorizer import FileCategorizer
@@ -11,6 +10,7 @@ from .skill_models import Evidence, SkillProfileItem, TAXONOMY, KNOWN_FRAMEWORKS
 from .skill_patterns import DEP_TO_SKILL, SNIPPET_PATTERNS, KNOWN_CONFIG_HINTS
 from .skill_proficiency import ProficiencyEstimator
 from .code_metrics_analyzer import CodeMetricsAnalyzer, CodeFileAnalysis
+
 
 # Heuristic mapping: which snippet-based skills make sense for which languages.
 # This lets us avoid running JS regexes on Python files, etc.
@@ -81,6 +81,23 @@ README_KEYWORDS_WHITELIST: Set[str] = {
     "license", "roadmap",
 }
 
+DEPENDENCY_FILES: Set[str] = {
+    "package.json",
+    "package-lock.json",
+    "pnpm-lock.yaml",
+    "yarn.lock",
+    "requirements.txt",
+    "pyproject.toml",
+    "Pipfile",
+    "Pipfile.lock",
+    "environment.yml",
+    "poetry.lock",
+    "pom.xml",
+    "build.gradle",
+    "build.gradle.kts",
+    "go.mod",
+}
+
 
 class SkillAnalyzer:
     """
@@ -137,7 +154,7 @@ class SkillAnalyzer:
 
                 yield file_path
 
-    def _iter_pattern_pairs(self, raw_patterns: Iterable[Any]) -> Iterable[tuple[Any, str]]:
+    def _iter_pattern_pairs(self, raw_patterns: Iterable[Any]) -> Iterable[Tuple[Any, str]]:
         """
         Normalize whatever structure DEP_TO_SKILL / SNIPPET_PATTERNS use into
         (pattern, skill) pairs.
@@ -226,7 +243,7 @@ class SkillAnalyzer:
               "stats": Dict[str, Any],   # project-level metrics used for scoring
               "dimensions": Dict[str, Any],
               "resume_suggestions": List[Dict[str, Any]],
-              "tech_profile": Dict[str, Any],  # new: frameworks/deps/flags
+              "tech_profile": Dict[str, Any],  # frameworks/deps/flags
             }
         """
         file_analyses = self.metrics_analyzer.analyze()
@@ -255,6 +272,9 @@ class SkillAnalyzer:
             "tech_profile": tech_profile,
         }
 
+    # ------------------------------------------------------------------
+    # Utility helpers
+    # ------------------------------------------------------------------
 
     @staticmethod
     def _normalize_str_list(items: Iterable[str]) -> List[str]:
@@ -299,9 +319,6 @@ class SkillAnalyzer:
         """
         Aggregate frameworks, dependencies, and high-level booleans
         from existing evidence + stats into a tech-profile dict.
-
-        This is intentionally shallow and cheap; it just reshapes
-        data we already have.
         """
         overall = stats.get("overall", {}) or {}
 
@@ -375,7 +392,6 @@ class SkillAnalyzer:
             "has_readme": has_readme,
             "readme_keywords": readme_keywords,
         }
-
 
     # ------------------------------------------------------------------
     # Stats used by ProficiencyEstimator / dimensions
@@ -469,28 +485,15 @@ class SkillAnalyzer:
         return evidence
 
     def _dependency_evidence(self) -> List[Evidence]:
-        """
-        Walks text-like dependency/config files and applies DEP_TO_SKILL patterns.
-        """
+        """Evidence from dependency files (requirements.txt, package.json, etc.)."""
         evidence: List[Evidence] = []
-        text_like_exts = {
-            ".txt",
-            ".toml",
-            ".json",
-            ".yaml",
-            ".yml",
-            ".lock",
-            ".ini",
-            ".cfg",
-            ".xml",
-        }
 
         for path in self._iter_project_files():
             if not path.is_file():
                 continue
 
-            if path.suffix.lower() not in text_like_exts:
-                continue
+            if path.name not in DEPENDENCY_FILES:
+                continue   # ignore random docs
 
             try:
                 text = path.read_text(encoding="utf-8", errors="ignore")
@@ -546,41 +549,35 @@ class SkillAnalyzer:
         For each code file, scan its text once and record which snippet patterns matched.
         This avoids re-reading files in _snippet_evidence and also gates patterns
         by language to keep Analyze Skills fast.
-        
-        Uses language gating from LANG_TO_ALLOWED_SNIPPET_SKILLS to avoid running
-        JS regexes on Python files, etc.
         """
         for fa in file_analyses:
             full_path = fa.path
-            
             if not isinstance(full_path, Path):
                 full_path = Path(full_path)
+
             try:
                 text = full_path.read_text(encoding="utf-8", errors="ignore")
             except OSError:
                 continue
+
             lang = (fa.language or "").lower()
-            allowed_skills = LANG_TO_ALLOWED_SNIPPET_SKILLS.get(lang, [])
+            allowed_skills = LANG_TO_ALLOWED_SNIPPET_SKILLS.get(lang, set())
 
             if not allowed_skills:
                 continue
 
-            for skill in allowed_skills:
             # Count matches per skill
-                for pattern, skill in self._iter_pattern_pairs(SNIPPET_PATTERNS):
-                    # If we have a whitelist for this language, skip skills that don't apply
-                    if allowed_skills is not None and skill not in allowed_skills:
-                        continue
-                    
-                    if hasattr(pattern, "findall"):
-                        matches = len(pattern.findall(text))
-                    else:
-                        matches = text.count(str(pattern))
-                    
-                    if matches > 0:
-                        fa.snippet_matches[skill] = (
-                            fa.snippet_matches.get(skill, 0) + matches
-                        )
+            for pattern, skill in self._iter_pattern_pairs(SNIPPET_PATTERNS):
+                if allowed_skills and skill not in allowed_skills:
+                    continue
+
+                if hasattr(pattern, "findall"):
+                    matches = len(pattern.findall(text))
+                else:
+                    matches = text.count(str(pattern))
+
+                if matches > 0:
+                    fa.snippet_matches[skill] = fa.snippet_matches.get(skill, 0) + matches
 
             # Also populate snippet_skills list for backward compatibility
             if fa.snippet_matches:
@@ -594,7 +591,7 @@ class SkillAnalyzer:
         Weight increases with match count.
         """
         evidence: List[Evidence] = []
-        
+
         for fa in file_analyses:
             if not fa.snippet_matches:
                 continue
@@ -635,11 +632,11 @@ class SkillAnalyzer:
         for skill, ev_list in by_skill.items():
             if not skill:
                 continue
-            
+
             # Estimate proficiency using ProficiencyEstimator
             proficiency = self.prof_estimator.estimate(skill, ev_list, stats)
             confidence = round(min(1.0, 0.3 + 0.1 * len(ev_list) + 0.1 * proficiency), 2)
-            
+
             profiles.append(
                 SkillProfileItem(
                     skill=skill,
@@ -668,19 +665,7 @@ class SkillAnalyzer:
         per_lang = stats.get("per_language", {}) or {}
 
         # --- Testing discipline ---
-        total_files = overall.get("total_files", overall.get("file_count", 0)) or 1
-        total_test_files = 0
-        
-        if isinstance(per_lang, dict):
-            for lang_stats in per_lang.values():
-                if isinstance(lang_stats, dict):
-                    total_test_files += int(lang_stats.get("test_file_count", 0))
-        
-        # Also check for test_file_ratio in overall if available (from skill_analyzer.py)
-        test_ratio = overall.get("test_file_ratio")
-        if test_ratio is None:
-            test_ratio = total_test_files / total_files if total_files > 0 else 0.0
-        
+        test_ratio = overall.get("test_file_ratio", 0.0)
         test_score = min(1.0, test_ratio / 0.4)  # 0.4+ tests/code ~= strong
         testing_level = self._level_from_score(test_score)
 
@@ -689,10 +674,9 @@ class SkillAnalyzer:
             "level": testing_level,
             "raw": {
                 "test_file_ratio": test_ratio,
-                "num_test_files": total_test_files,
-                "num_code_files": overall.get("num_code_files", total_files),
-                "total_files": total_files,
-                "total_test_files": total_test_files,
+                "num_test_files": overall.get("num_test_files", 0),
+                "num_code_files": overall.get("num_code_files", 0),
+                "total_files": overall.get("file_count", 0),
             },
         }
 
@@ -718,9 +702,9 @@ class SkillAnalyzer:
         modularity_score = 0.0
         if avg_funcs >= 3:
             modularity_score += 0.5
-        if max_func_len <= 50:
+        if max_func_len > 0 and max_func_len <= 50:
             modularity_score += 0.5
-        elif max_func_len <= 100:
+        elif max_func_len > 0 and max_func_len <= 100:
             modularity_score += 0.25
 
         modularity_score = min(1.0, modularity_score)
@@ -736,17 +720,17 @@ class SkillAnalyzer:
         }
 
         # --- Language depth ---
-        total_loc = sum(lang_stats.get("loc", 0) for lang_stats in per_lang.values() if isinstance(lang_stats, dict))
-        # A simple proxy: fraction of languages above a LOC threshold
+        total_loc = overall.get("total_lines_of_code", 0)
+        lang_count = len(per_lang) if isinstance(per_lang, dict) else 0
+
         depth_languages = {
             lang: data["loc"]
             for lang, data in per_lang.items()
-            if isinstance(data, dict) and data.get("loc", 0) >= 500  # arbitrary "non-toy" threshold
+            if isinstance(data, dict) and data.get("loc", 0) >= 500
         }
-        
-        lang_count = len(per_lang) if isinstance(per_lang, dict) else 0
+
         depth_ratio = len(depth_languages) / max(1, lang_count) if lang_count > 0 else 0.0
-        
+
         lang_depth_score = min(
             1.0, 0.5 + depth_ratio * 0.5
         )  # base 0.5 for having code at all
@@ -764,12 +748,14 @@ class SkillAnalyzer:
             },
         }
 
-        return {
+        dimensions = {
             "testing_discipline": testing_dim,
             "documentation_habits": doc_dim,
             "modularity": modularity_dim,
             "language_depth": lang_depth_dim,
         }
+
+        return dimensions
 
     def _level_from_score(self, score: float) -> str:
         """Convert numeric score to human-readable level."""
