@@ -25,7 +25,7 @@ class Project:
     root_folder: str = ""
     num_files: int = 0
     size_kb: int = 0
-
+    categories: Dict[str, Any] = field(default_factory=dict)
     author_count: int = 0
     authors: List[str] = list_field()
 
@@ -64,6 +64,8 @@ class Project:
     # Resume Insights - generated from ResumeInsightsGenerator
     bullets: List[str] = list_field()
     summary: str = ""
+    # Scoring for ranking projects against one another
+    resume_score: float = 0.0
 
     # Timestamps
     date_created: Optional[datetime] = None
@@ -87,6 +89,7 @@ class Project:
             "author_contributions",
             "primary_languages",
             "bullets"
+            "categories"
         ]
         for field_name in list_fields:
             proj_dict[field_name] = json.dumps(proj_dict[field_name])
@@ -120,6 +123,7 @@ class Project:
             "author_contributions",
             "primary_languages",
             "bullets"
+            "categories"
         ]
         for field_name in list_fields:
             value = proj_dict_copy.get(field_name)
@@ -151,7 +155,7 @@ class Project:
     def display(self) -> None:
         """Print the project details to the console."""
         print(f"\n{'='*50}")
-        print(f"  📁 {self.name}")
+        print(f"  📁 {self.name}  (Resume Score: {self.resume_score:.2f})")
         print(f"{'='*50}")
         if self.file_path:
             print(f"  Path: {self.file_path}")
@@ -219,4 +223,3 @@ class Project:
             print(self.summary)
 
         print()
-

@@ -368,13 +368,13 @@ class SkillAnalyzer:
         For each code file, scan its text once and record which snippet patterns matched.
         This avoids re-reading files in _snippet_evidence and also gates patterns
         by language to keep Analyze Skills fast.
-        
+
         Uses language gating from LANG_TO_ALLOWED_SNIPPET_SKILLS to avoid running
         JS regexes on Python files, etc.
         """
         for fa in file_analyses:
             full_path = fa.path
-            
+
             if not isinstance(full_path, Path):
                 full_path = Path(full_path)
             try:
@@ -393,12 +393,12 @@ class SkillAnalyzer:
                     # If we have a whitelist for this language, skip skills that don't apply
                     if allowed_skills is not None and skill not in allowed_skills:
                         continue
-                    
+
                     if hasattr(pattern, "findall"):
                         matches = len(pattern.findall(text))
                     else:
                         matches = text.count(str(pattern))
-                    
+
                     if matches > 0:
                         fa.snippet_matches[skill] = (
                             fa.snippet_matches.get(skill, 0) + matches
@@ -416,7 +416,7 @@ class SkillAnalyzer:
         Weight increases with match count.
         """
         evidence: List[Evidence] = []
-        
+
         for fa in file_analyses:
             if not fa.snippet_matches:
                 continue
@@ -457,11 +457,11 @@ class SkillAnalyzer:
         for skill, ev_list in by_skill.items():
             if not skill:
                 continue
-            
+
             # Estimate proficiency using ProficiencyEstimator
             proficiency = self.prof_estimator.estimate(skill, ev_list, stats)
             confidence = round(min(1.0, 0.3 + 0.1 * len(ev_list) + 0.1 * proficiency), 2)
-            
+
             profiles.append(
                 SkillProfileItem(
                     skill=skill,
@@ -490,19 +490,8 @@ class SkillAnalyzer:
         per_lang = stats.get("per_language", {}) or {}
 
         # --- Testing discipline ---
-        total_files = overall.get("total_files", overall.get("file_count", 0)) or 1
-        total_test_files = 0
-        
-        if isinstance(per_lang, dict):
-            for lang_stats in per_lang.values():
-                if isinstance(lang_stats, dict):
-                    total_test_files += int(lang_stats.get("test_file_count", 0))
-        
-        # Also check for test_file_ratio in overall if available (from skill_analyzer.py)
-        test_ratio = overall.get("test_file_ratio")
-        if test_ratio is None:
-            test_ratio = total_test_files / total_files if total_files > 0 else 0.0
-        
+        # FIX: Directly use the 'test_file_ratio' from the overall stats, which is pre-calculated.
+        test_ratio = overall.get("test_file_ratio", 0.0)
         test_score = min(1.0, test_ratio / 0.4)  # 0.4+ tests/code ~= strong
         testing_level = self._level_from_score(test_score)
 
@@ -511,10 +500,10 @@ class SkillAnalyzer:
             "level": testing_level,
             "raw": {
                 "test_file_ratio": test_ratio,
-                "num_test_files": total_test_files,
-                "num_code_files": overall.get("num_code_files", total_files),
-                "total_files": total_files,
-                "total_test_files": total_test_files,
+                # FIX: Use the correct keys from overall stats
+                "num_test_files": overall.get("num_test_files", 0),
+                "num_code_files": overall.get("num_code_files", 0),
+                "total_files": overall.get("file_count", 0),
             },
         }
 
@@ -540,9 +529,9 @@ class SkillAnalyzer:
         modularity_score = 0.0
         if avg_funcs >= 3:
             modularity_score += 0.5
-        if max_func_len <= 50:
+        if max_func_len > 0 and max_func_len <= 50: # FIX: Added check for > 0
             modularity_score += 0.5
-        elif max_func_len <= 100:
+        elif max_func_len > 0 and max_func_len <= 100: # FIX: Added check for > 0
             modularity_score += 0.25
 
         modularity_score = min(1.0, modularity_score)
@@ -558,17 +547,19 @@ class SkillAnalyzer:
         }
 
         # --- Language depth ---
-        total_loc = sum(lang_stats.get("loc", 0) for lang_stats in per_lang.values() if isinstance(lang_stats, dict))
+        # FIX: Correctly calculate total_loc and language count
+        total_loc = overall.get("total_lines_of_code", 0)
+        lang_count = len(per_lang) if isinstance(per_lang, dict) else 0
+
         # A simple proxy: fraction of languages above a LOC threshold
         depth_languages = {
             lang: data["loc"]
             for lang, data in per_lang.items()
             if isinstance(data, dict) and data.get("loc", 0) >= 500  # arbitrary "non-toy" threshold
         }
-        
-        lang_count = len(per_lang) if isinstance(per_lang, dict) else 0
+
         depth_ratio = len(depth_languages) / max(1, lang_count) if lang_count > 0 else 0.0
-        
+
         lang_depth_score = min(
             1.0, 0.5 + depth_ratio * 0.5
         )  # base 0.5 for having code at all
@@ -586,12 +577,14 @@ class SkillAnalyzer:
             },
         }
 
-        return {
+        dimensions = {
             "testing_discipline": testing_dim,
             "documentation_habits": doc_dim,
             "modularity": modularity_dim,
             "language_depth": lang_depth_dim,
         }
+
+        return dimensions
 
     def _level_from_score(self, score: float) -> str:
         """Convert numeric score to human-readable level."""
