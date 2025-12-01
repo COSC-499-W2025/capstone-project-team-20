@@ -7,6 +7,11 @@ from src.project_timeline import (
     get_projects_with_skills_timeline_from_projects,
     get_skill_timeline_from_projects,
 )
+from src.analyzers.badge_engine import (
+    ProjectAnalyticsSnapshot,
+    assign_badges,
+    build_fun_facts,
+)
 
 from datetime import datetime
 
@@ -19,7 +24,6 @@ from utils.RepoFinder import RepoFinder
 from src.ProjectManager import ProjectManager
 from src.Project import Project
 from src.analyzers.SkillAnalyzer import SkillAnalyzer
-from src.analyzers.code_metrics_analyzer import CodeMetricsAnalyzer
 from src.generators.ResumeInsightsGenerator import ResumeInsightsGenerator
 from src.ConfigManager import ConfigManager
 from src.ProjectRanker import ProjectRanker
@@ -193,7 +197,16 @@ class ProjectAnalyzer:
             projects_from_builder = builder.scan(temp_dir)
             if not projects_from_builder:
                 print("No Git repositories found to build projects from.")
-                return []
+                # If no repos found, treat the whole zip as one project
+                project_name = self.zip_path.stem
+                proj_existing = self.project_manager.get_by_name(project_name)
+                if not proj_existing:
+                    proj_new = Project(name=project_name, file_path=str(temp_dir))
+                    self.project_manager.set(proj_new)
+                    print(f"  - Created new project record: {proj_new.name} with ID {proj_new.id}")
+                    return [proj_new]
+                return [proj_existing]
+
 
             print(f"Found {len(projects_from_builder)} project(s). Saving initial records...")
             for proj_new in projects_from_builder:
@@ -406,9 +419,6 @@ class ProjectAnalyzer:
         finally:
             shutil.rmtree(temp_dir, ignore_errors=True)
 
-
-
-
     def change_selected_users(self) -> None:
         """Allows the user to change their configured username selection."""
         print("\n--- Change Selected Users ---")
@@ -524,7 +534,6 @@ class ProjectAnalyzer:
 
         print("\n--- Enriching Projects with Skill Analysis & Scoring ---")
 
-        # First, ensure projects are in the database.
         projects_to_analyze = self.project_manager.get_all()
         project_list = list(projects_to_analyze)
 
@@ -541,12 +550,11 @@ class ProjectAnalyzer:
             for project in project_list:
                 print(f"\nAnalyzing skills for: {project.name}...")
 
-                # Each project needs its own analysis
-                # We assume the temp_dir contains all unzipped projects
+                # Flexible path finding: check for a subdirectory, fall back to root
                 project_source_path = temp_dir / project.name
                 if not project_source_path.exists():
-                    print(f"  - Warning: Source path '{project_source_path}' not found. Skipping.")
-                    continue
+                    print(f"  - Warning: Source path '{project_source_path}' not found. Analyzing root of zip instead.")
+                    project_source_path = temp_dir
 
                 skill_analyzer = SkillAnalyzer(project_source_path)
                 result = skill_analyzer.analyze()
@@ -696,7 +704,123 @@ class ProjectAnalyzer:
             project_name = ev.project or "(unknown project)"
             print(f"{ev.when.isoformat()} — {ev.skill} (first seen in {project_name})")
 
+    # ------------------------------------------------------------------
+    # Badge analysis (stateless, no DB schema changes)
+    # ------------------------------------------------------------------
 
+    def analyze_badges(self) -> None:
+        """
+        Compute and display badges for the currently loaded project.
+
+        Uses:
+        - Metadata & category summary (ProjectMetadataExtractor)
+        - Language share (analyze_language_share)
+        - Skills (SkillAnalyzer)
+        - Configured usernames (ConfigManager) for author_count / collaboration_status
+
+        Badges + fun facts are printed; DB schema is not modified.
+        """
+        if not self.zip_path:
+            print("No project loaded. Please load a zip file first.\n")
+            return
+
+        path_obj = Path(self.zip_path)
+        if not path_obj.exists() or not zipfile.is_zipfile(path_obj):
+            print(f"Error: {path_obj} is not a valid zip file.")
+            return
+
+        print("\n=== BADGE ANALYSIS ===")
+
+        # 1) Metadata & category summary
+        with self.suppress_output():
+            meta_payload = self.metadata_extractor.extract_metadata() or {}
+        project_meta = meta_payload.get("project_metadata") or {}
+        category_summary = meta_payload.get("category_summary") or {}
+
+        def _to_int(value, default: int = 0) -> int:
+            try:
+                return int(value)
+            except (TypeError, ValueError):
+                return default
+
+        def _to_float(value, default: float = 0.0) -> float:
+            try:
+                return float(value)
+            except (TypeError, ValueError):
+                return default
+
+        total_files = _to_int(project_meta.get("total_files"))
+        total_size_kb = _to_float(project_meta.get("total_size_kb"))
+        total_size_mb = _to_float(project_meta.get("total_size_mb"))
+        duration_days = _to_int(project_meta.get("duration_days"))
+
+        # 2) Languages + skills from extracted repo
+        languages: Dict[str, float] = {}
+        skills: set[str] = set()
+
+        temp_dir = extract_zip(str(path_obj))
+        try:
+            languages = analyze_language_share(temp_dir) or {}
+
+            # Reuse SkillAnalyzer to infer skills
+            skill_analyzer = SkillAnalyzer(Path(temp_dir))
+            result = skill_analyzer.analyze()
+            skill_items = result.get("skills", []) or []
+
+            for item in skill_items:
+                name = None
+                if isinstance(item, dict):
+                    name = item.get("skill") or item.get("name")
+                else:
+                    name = getattr(item, "skill", None) or getattr(item, "name", None)
+                if name:
+                    skills.add(str(name))
+        finally:
+            shutil.rmtree(temp_dir, ignore_errors=True)
+
+        # 3) Author / collaboration info from config
+        usernames = self._config_manager.get("usernames") or []
+        author_count = len(usernames) or 1
+        collaboration_status = "individual" if author_count <= 1 else "collaborative"
+
+        project_name = self.zip_path.stem
+
+        snapshot = ProjectAnalyticsSnapshot(
+            name=project_name,
+            total_files=total_files,
+            total_size_kb=total_size_kb,
+            total_size_mb=total_size_mb,
+            duration_days=duration_days,
+            category_summary=category_summary,
+            languages=languages,
+            skills=skills,
+            author_count=author_count,
+            collaboration_status=collaboration_status,
+        )
+
+        badge_ids = assign_badges(snapshot)
+        fun_facts = build_fun_facts(snapshot, badge_ids)
+
+        project = self.project_manager.get_by_name(project_name)
+        if project is not None:
+            if not hasattr(project, "badges"):
+                project.badges = []
+            project.badges = badge_ids
+
+        # 4) Print badges & fun facts
+        if badge_ids:
+            print("Badges:")
+            for b in badge_ids:
+                print(f"  - {b}")
+        else:
+            print("No badges assigned for this project.")
+
+        if fun_facts:
+            print("\nFun facts:")
+            for fact in fun_facts:
+                print(f"  • {fact}")
+
+        print()
 
     # ------------------------------------------------------------------
     # Display stored analysis
@@ -957,13 +1081,15 @@ class ProjectAnalyzer:
 
     def run_all(self) -> None:
         print("Running All Analyzers\n")
-        self.analyze_git_and_contributions() # 'analyze_git_and_contributions()' is responsible for creating Project objects
+        self.initialize_projects()
+        self.analyze_git_and_contributions()
         if self.root_folder:
             self.analyze_metadata()
             self.analyze_categories()
             self.print_tree()
             self.analyze_languages()
         self.analyze_skills()
+        self.analyze_badges()
         print("\nAnalyses complete.\n")
     
     def retrieve_previous_insights(self, projects: Iterable[Project]) -> Dict[str, Tuple[List[str], str]]:
@@ -1008,7 +1134,6 @@ class ProjectAnalyzer:
         if not self.load_zip():
             return
 
-        # --- FIX: Automatically initialize projects after loading a ZIP ---
         self.initialize_projects()
 
         while True:
@@ -1032,18 +1157,17 @@ class ProjectAnalyzer:
                 12. Delete Previous Resume Insights
                 13. Display Previous Results
                 14. Show Project Timeline (Projects & Skills)
-                15. Exit
+                15. Analyze Badges
+                16. Exit
                   """)
 
 
             choice = input("Selection: ").strip()
 
-            # For options that require a loaded ZIP, ensure we have one
-            if choice in {"0", "1", "2", "3", "4", "5", "6", "8", "9", "10"}:
+            if choice in {"0", "1", "2", "3", "4", "5", "6", "8", "9", "10", "13"}:
                 if not self.zip_path:
                     if not self.load_zip():
                         return
-                    # Also initialize projects after a new load
                     self.initialize_projects()
 
             if choice == "0":
@@ -1059,20 +1183,9 @@ class ProjectAnalyzer:
             elif choice == "5":
                 self.analyze_languages()
             elif choice == "6":
-                # --- FIX: Ensure initialization happens first in run_all ---
-                print("Running All Analyzers\n")
-                if self.initialize_projects():
-                    self.analyze_git_and_contributions()
-                    if self.root_folder:
-                        self.analyze_metadata()
-                        self.analyze_categories()
-                        self.print_tree()
-                        self.analyze_languages()
-                    self.analyze_skills()
-                print("\nAnalyses complete.\n")
+                self.run_all()
             elif choice == "7":
                 self.analyze_new_folder()
-                # --- FIX: Initialize after loading new folder ---
                 if self.zip_path:
                     self.initialize_projects()
             elif choice == "8":
@@ -1094,6 +1207,8 @@ class ProjectAnalyzer:
             elif choice == "14":
                 self.display_project_timeline()
             elif choice == "15":
+                self.analyze_badges()
+            elif choice == "16":
                 print("Exiting Project Analyzer.")
                 # CLEAN UP TEMP DIR ON EXIT
                 self._cleanup_temp()

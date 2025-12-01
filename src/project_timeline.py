@@ -1,7 +1,7 @@
 from datetime import date
 from typing import Any, Dict, Iterable, List, Tuple, Optional
 
-from git import Repo  # NEW: only used here, for commit-based dates
+from git import Repo
 
 from src.Project import Project
 from utils.timeline_builder import (
