@@ -309,7 +309,7 @@ Issue [COSC-499-W2025/capstone-project-team-20#146](https://github.com/COSC-499-
 
 - Dylan Alexander (16394025): Implemented mechanisms for the display, storage, retrieval, and deletion of generated resume insights to satisfy 2 of the 20 requirements for Milestone 1. Developed a CI GitHub Actions workflow that automatically runs our pytest suite on every pull request. Reviewed numerous pull requests (10 at the time of writing) to help the team merge the large backlog into main in time for the presentation.
 
-- Sven Annist (42486720): 
+- Sven Annist (42486720): Implemented multi-repo ranking and resume scoring in **PR #253**: added `ProjectRanker` and `resume_score`, refactored `ProjectAnalyzer` to initialize per-repo projects and enrich them (including a "Summarize Top 3 Projects" option), persisted individual contribution summaries via `ContributionAnalyzer.calculate_share`, updated `ProjectManager` upsert/schema handling, added tests, and filed **Issue #258**. Reviewed PRs **#255**, **#246**, **#242**, **#236**, **#235** and continued Milestone 1 slide prep.
 
 **Features included in the project plan for this milestone are:**
 
