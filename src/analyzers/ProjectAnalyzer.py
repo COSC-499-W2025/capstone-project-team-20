@@ -555,7 +555,8 @@ class ProjectAnalyzer:
         print("\n=== BADGE ANALYSIS ===")
 
         # 1) Metadata & category summary
-        meta_payload = self.metadata_extractor.extract_metadata() or {}
+        with self.suppress_output():
+            meta_payload = self.metadata_extractor.extract_metadata() or {}
         project_meta = meta_payload.get("project_metadata") or {}
         category_summary = meta_payload.get("category_summary") or {}
 
