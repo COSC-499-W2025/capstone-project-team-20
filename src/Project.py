@@ -88,7 +88,7 @@ class Project:
             "individual_contributions",
             "author_contributions",
             "primary_languages",
-            "bullets"
+            "bullets",
             "categories"
         ]
         for field_name in list_fields:
@@ -122,7 +122,7 @@ class Project:
             "individual_contributions",
             "author_contributions",
             "primary_languages",
-            "bullets"
+            "bullets",
             "categories"
         ]
         for field_name in list_fields:
