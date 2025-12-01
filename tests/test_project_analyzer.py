@@ -284,6 +284,8 @@ def test_run_all_calls_methods(analyzer):
     analyzer.print_tree = MagicMock()
     analyzer.analyze_languages = MagicMock()
 
+    analyzer.analyze_skills = MagicMock()
+
     analyzer.run_all()
 
     analyzer.analyze_git_and_contributions.assert_called_once()
@@ -291,6 +293,9 @@ def test_run_all_calls_methods(analyzer):
     analyzer.analyze_categories.assert_called_once()
     analyzer.print_tree.assert_called_once()
     analyzer.analyze_languages.assert_called_once()
+
+    # We also now assert that analyze_skills was called.
+    analyzer.analyze_skills.assert_called_once()
 
 def test_display_analysis_results_prints_projects(analyzer, capsys):
     proj1 = Project(name="Proj1", authors=["Alice"], author_count=1, collaboration_status="COLLABORATIVE")
