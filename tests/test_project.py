@@ -66,20 +66,27 @@ def test_project_to_dict_and_from_dict(sample_project):
     assert p2.author_count == len(sample_project.authors)
 
 def test_project_author_contributions_serialization():
-    """Test that author_contributions field is properly serialized"""
+    """Test that author_contributions is preserved correctly in to_dict"""
     contrib_data = [
         {"author": "Alice", "lines": 100, "commits": 5},
         {"author": "Bob", "lines": 50, "commits": 3}
     ]
+
     project = Project(
         name="TestProject",
         authors=["Alice", "Bob"],
         author_contributions=contrib_data
     )
+
     d = project.to_dict()
+
+    # Should be stored as a JSON string
     assert isinstance(d["author_contributions"], str)
-    loaded = json.loads(d["author_contributions"])
-    assert loaded == contrib_data
+
+    # After loading, should match the original Python list
+    assert json.loads(d["author_contributions"]) == contrib_data
+
+
 
 def test_project_author_contributions_deserialization():
     """Test that author_contributions is properly reconstructed"""
@@ -115,3 +122,22 @@ def test_project_roundtrip_with_author_contributions(sample_project):
     d = sample_project.to_dict()
     reconstructed = Project.from_dict(d)
     assert reconstructed.author_contributions == sample_project.author_contributions
+def test_project_resume_score_serialization(sample_project):
+    """Tests that the resume_score is correctly handled in to_dict/from_dict."""
+    sample_project.resume_score = 75.5
+
+    d = sample_project.to_dict()
+    reconstructed = Project.from_dict(d)
+
+    assert "resume_score" in d
+    assert d["resume_score"] == 75.5
+    assert reconstructed.resume_score == 75.5
+
+def test_project_display_shows_resume_score(sample_project, capsys):
+    """Tests that the display method includes the formatted resume score."""
+    sample_project.resume_score = 88.123
+
+    sample_project.display()
+    captured = capsys.readouterr()
+
+    assert "(Resume Score: 88.12)" in captured.out

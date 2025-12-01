@@ -13,6 +13,11 @@ class Project:
     """
     This class represents a project detected by our system. It is a pure data
     container with no external dependencies or file system interactions.
+    
+    Checklist for adding a variable to this class:
+        1. if that variable is a List or a Dict, it must be added to the list_fields section in to_dict() and from_dict() 
+        2. the display() method must be updated to reflect the addition of this variable
+        3. make the necessary changes for your new variable in ProjectManager.py
     """
     id: Optional[int] = None
     name: str = ""
@@ -20,7 +25,7 @@ class Project:
     root_folder: str = ""
     num_files: int = 0
     size_kb: int = 0
-
+    categories: Dict[str, Any] = field(default_factory=dict)
     author_count: int = 0
     authors: List[str] = list_field()
 
@@ -56,6 +61,12 @@ class Project:
     language_depth_level: str = ""
     language_depth_score: float = 0.0
 
+    # Resume Insights - generated from ResumeInsightsGenerator
+    bullets: List[str] = list_field()
+    summary: str = ""
+    # Scoring for ranking projects against one another
+    resume_score: float = 0.0
+
     # Timestamps
     date_created: Optional[datetime] = None
     last_modified: Optional[datetime] = None
@@ -68,7 +79,7 @@ class Project:
         """
         proj_dict = asdict(self)
 
-        # Serialize list-based and dict-based fields to JSON strings.
+        # Declare all list-based and dict-based fields that must be serialized to JSON strings.
         list_fields = [
             "authors",
             "languages",
@@ -77,6 +88,8 @@ class Project:
             "individual_contributions",
             "author_contributions",
             "primary_languages",
+            "bullets",
+            "categories"
         ]
         for field_name in list_fields:
             proj_dict[field_name] = json.dumps(proj_dict[field_name])
@@ -100,7 +113,7 @@ class Project:
         # Create a copy to avoid modifying the original dictionary.
         proj_dict_copy = proj_dict.copy()
 
-        # Deserialize JSON strings back into lists or list-of-dicts.
+        # Declare all list-based and dict-based fields that must be de-serialized from JSON strings.
         list_fields = [
             "authors",
             "languages",
@@ -109,6 +122,8 @@ class Project:
             "individual_contributions",
             "author_contributions",
             "primary_languages",
+            "bullets",
+            "categories"
         ]
         for field_name in list_fields:
             value = proj_dict_copy.get(field_name)
@@ -140,7 +155,7 @@ class Project:
     def display(self) -> None:
         """Print the project details to the console."""
         print(f"\n{'='*50}")
-        print(f"  📁 {self.name}")
+        print(f"  📁 {self.name}  (Resume Score: {self.resume_score:.2f})")
         print(f"{'='*50}")
         if self.file_path:
             print(f"  Path: {self.file_path}")
@@ -201,6 +216,10 @@ class Project:
             for label, level, score in dims:
                 if level:
                     print(f"    - {label}: {level} (score {score:.2f})")
+        if self.bullets:
+            for b in self.bullets:
+                print(f" • {b}")
+        if self.summary:
+            print(self.summary)
 
         print()
-

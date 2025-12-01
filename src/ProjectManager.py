@@ -1,11 +1,18 @@
-import sqlite3
-import json
+import sqlite3, json
 from typing import Any, Dict, Generator, Optional
 from src.StorageManager import StorageManager
 from src.Project import Project
 
 class ProjectManager(StorageManager):
-    """Manages storage and retrieval of Project objects in the database."""
+    """Manages storage and retrieval of Project objects in the database.
+
+    Checklist for adding a variable to this class:
+        1. First ensure you've made the necessary changes for your new variable in Project.py
+        2. Add variable to `create_table_query` method
+        3. Add variable to `columns` method
+        2. the display() method must be updated to reflect the addition of this variable
+        3. make neccesary changes in ProjectManager (instructions for that are in ProjectManager)
+    """
     def __init__(self, db_path="projects.db") -> None:
         super().__init__(db_path)
 
@@ -21,8 +28,7 @@ class ProjectManager(StorageManager):
     def create_table_query(self) -> str:
         """
         Returns the SQL query to create the projects table.
-        A UNIQUE constraint is added to the 'name' column to prevent duplicate
-        project entries and enable reliable upserts.
+        This version includes the 'resume_score' column.
         """
         return """CREATE TABLE IF NOT EXISTS projects (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -33,11 +39,13 @@ class ProjectManager(StorageManager):
         size_kb INTEGER,
         author_count INTEGER,
         authors TEXT,
+        author_contributions TEXT,
         languages TEXT,
         frameworks TEXT,
         skills_used TEXT,
         individual_contributions TEXT,
         collaboration_status TEXT,
+        categories TEXT,
         primary_languages TEXT,
         total_loc INTEGER,
         comment_ratio REAL,
@@ -52,6 +60,9 @@ class ProjectManager(StorageManager):
         modularity_score REAL,
         language_depth_level TEXT,
         language_depth_score REAL,
+        bullets TEXT,
+        summary TEXT,
+        resume_score REAL,
         date_created TEXT,
         last_modified TEXT,
         last_accessed TEXT
@@ -70,17 +81,23 @@ class ProjectManager(StorageManager):
 
     @property
     def columns(self) -> str:
-        """Comma-separated list of column names for project storage."""
+        """
+        Comma-separated list of column names for project storage.
+        This version includes the 'resume_score' column.
+        """
         return (
             "id, name, file_path, root_folder, num_files, size_kb, author_count, "
             "authors, languages, frameworks, skills_used, individual_contributions, "
             "collaboration_status, "
+            "authors, author_contributions, languages, frameworks, skills_used, "
+            "individual_contributions, collaboration_status, categories, "
             "primary_languages, total_loc, comment_ratio, test_file_ratio, "
             "avg_functions_per_file, max_function_length, "
             "testing_discipline_level, testing_discipline_score, "
             "documentation_habits_level, documentation_habits_score, "
             "modularity_level, modularity_score, "
-            "language_depth_level, language_depth_score, "
+            "bullets, summary, "
+            "language_depth_level, language_depth_score, resume_score, "
             "date_created, last_modified, last_accessed"
         )
 
@@ -88,17 +105,12 @@ class ProjectManager(StorageManager):
     def set(self, proj: Project) -> None:
         """
         Store a Project in the database.
-
-        Upserts (Update/Insert) a Project in the database using INSERT OR REPLACE.
-        If a project with the same 'name' exists, it will be replaced.
-        If the project object has an ID, that ID is used for the replacement.
+        This version is corrected to handle both new and existing Project objects
+        by reliably converting the object to a dictionary and then serializing its fields.
         """
         project_dict = proj.to_dict()
 
-        # We now use the full column list for the upsert operation.
-        # This allows replacing a row while preserving its original ID if provided.
         columns_to_set = self.columns_list
-        # If the project ID is None, we exclude it to allow auto-increment to work.
         if proj.id is None:
             columns_to_set = [c for c in columns_to_set if c != self.primary_key]
 
@@ -108,19 +120,19 @@ class ProjectManager(StorageManager):
             placeholders = ", ".join("?" for _ in columns_to_set)
 
             values = [project_dict.get(col) for col in columns_to_set]
-            serialized_values = [
-                json.dumps(v) if isinstance(v, (dict, list, bool)) else v
-                for v in values
-            ]
 
-            # The "INSERT OR REPLACE" statement is the core of the upsert logic.
-            # Ref: https://www.sqlite.org/lang_insert.html
             query = f"INSERT OR REPLACE INTO {self.table_name} ({cols_str}) VALUES ({placeholders})"
-            cursor.execute(query, serialized_values)
 
-            # Ensure the project object has the correct ID after the operation.
-            self._retrieve_id(cursor, project_dict)
-            proj.id = project_dict["id"]
+            try:
+                cursor.execute(query, values)
+            except sqlite3.Error as e:
+                print(f"[ERROR] Database error during .set(): {e}")
+                print(f"  - Query: {query}")
+                print(f"  - Values: {values}")
+                raise
+
+            if proj.id is None:
+                proj.id = cursor.lastrowid
 
     def get(self, id: int) -> Optional[Project]:
         """Retrieve a Project from the database by its primary key."""
