@@ -194,3 +194,21 @@ Did some reviews and such as well.
 
 Issues closed:
 - Issue [COSC-499-W2025/capstone-project-team-20#219](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/219)
+
+## Week 13
+**Types of Tasks Worked On**
+![Week 13 Tasks](imagesForLexLogs/week_13_lexlog.png)
+
+**Recap of Goals**
+Once again ended up working on something i completely was not expecting to work on, but it became clear that many last minute changes and features to the analysis portion of our project were going to continue to happen for the rest of the week and my efforts would be best spent on something that wouldnt risk further merge conflicts. Due to this, and a suggestion that was made during this week's team meeting, i decided to work on something else.
+
+During the team meeting a suggestion was brought up to develop a github workflow to automatically assign reviewers to pull requests upon their creation in alignment with some of the rules we established in our team contract. I had never worked with workflows before and had no idea how they worked or how they were programmed but since I was the only one without a clear plan for my week and I enjoy challenging myself to learn new things I decided I would take on the Issue.
+
+It was quite challenging, as it incorperates several different kinds of syntax from multiple different programming languages I had not yet interacted with, so it was hard to find comprehensive documentation. But I believe I have managed to program it correctly. I am just hoping I dont run into any issues with permissions and the like. It was sort of impossible to test it before merging, all I could do was see if it compiled when i submitted the PR, which took a few bug fixes before it no longer threw an error. Now that its merged we just have to wait and see if it works once a new pull request comes in.
+
+Reviewed a few PRs this week as usual, but hopefully from now on everyone will have an equal-ish amount of PRs to review.
+
+I'm looking forward to cleaning up the project output before the video demo!
+
+Issues closed:
+- Issue [COSC-499-W2025/capstone-project-team-20#244](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/244)
