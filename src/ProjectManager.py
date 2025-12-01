@@ -4,7 +4,15 @@ from src.StorageManager import StorageManager
 from src.Project import Project
 
 class ProjectManager(StorageManager):
-    """Manages storage and retrieval of Project objects in the database."""
+    """Manages storage and retrieval of Project objects in the database.
+
+    Checklist for adding a variable to this class:
+        1. First ensure you've made the necessary changes for your new variable in Project.py
+        2. Add variable to `create_table_query` method
+        3. Add variable to `columns` method
+        2. the display() method must be updated to reflect the addition of this variable
+        3. make neccesary changes in ProjectManager (instructions for that are in ProjectManager)
+    """
     def __init__(self, db_path="projects.db") -> None:
         super().__init__(db_path)
 
@@ -52,6 +60,8 @@ class ProjectManager(StorageManager):
         modularity_score REAL,
         language_depth_level TEXT,
         language_depth_score REAL,
+        bullets TEXT,
+        summary TEXT,
         resume_score REAL,
         date_created TEXT,
         last_modified TEXT,
@@ -86,6 +96,7 @@ class ProjectManager(StorageManager):
             "testing_discipline_level, testing_discipline_score, "
             "documentation_habits_level, documentation_habits_score, "
             "modularity_level, modularity_score, "
+            "bullets, summary, "
             "language_depth_level, language_depth_score, resume_score, "
             "date_created, last_modified, last_accessed"
         )

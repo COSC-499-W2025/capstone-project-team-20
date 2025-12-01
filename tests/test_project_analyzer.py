@@ -5,6 +5,7 @@ from src.Project import Project
 from pathlib import Path
 import shutil
 from src.analyzers.ContributionAnalyzer import ContributionStats
+from src.generators.ResumeInsightsGenerator import ResumeInsightsGenerator
 import pytest
 
 # Fixtures
@@ -347,6 +348,117 @@ def test_display_analysis_results_empty(analyzer, capsys):
     out = capsys.readouterr().out
     assert "No analysis results to display" in out
 
+def test_retrieve_previous_insights_returns_correct_structure(analyzer):
+        """Test that retrieve_previous_insights returns dict with correct structure"""
+        proj1 = Project(name="Proj1")
+        proj1.bullets = ["Bullet 1", "Bullet 2"]
+        proj1.summary = "Summary 1"
+        
+        proj2 = Project(name="Proj2")
+        proj2.bullets = ["Bullet A"]
+        proj2.summary = "Summary 2"
+        
+        result = analyzer.retrieve_previous_insights([proj1, proj2])
+        
+        assert isinstance(result, dict)
+        assert "Proj1" in result
+        assert "Proj2" in result
+        assert result["Proj1"] == (["Bullet 1", "Bullet 2"], "Summary 1")
+        assert result["Proj2"] == (["Bullet A"], "Summary 2")
+
+def test_retrieve_previous_insights_empty_list_returns_empty_dict(analyzer):
+    """Test that retrieve_previous_insights returns empty dict for empty list"""
+    result = analyzer.retrieve_previous_insights([])
+    assert result == {}
+    assert isinstance(result, dict)
+    
+def test_retrieve_previous_insights_handles_none_values(analyzer):
+    """Test that retrieve_previous_insights handles None bullets/summary"""
+    proj = Project(name="TestProj")
+    proj.bullets = None
+    proj.summary = None
+    result = analyzer.retrieve_previous_insights([proj])
+    assert result["TestProj"] == ([], "")
+
+def test_retrieve_previous_insights_mixed_data(analyzer):
+    """Test with mix of empty and populated insights"""
+    proj1 = Project(name="EmptyProj")
+    proj1.bullets = []
+    proj1.summary = ""
+    proj2 = Project(name="FullProj")
+    proj2.bullets = ["Point 1"]
+    proj2.summary = "Summary text"
+    result = analyzer.retrieve_previous_insights([proj1, proj2])
+    assert result["EmptyProj"] == ([], "")
+    assert result["FullProj"] == (["Point 1"], "Summary text")
+
+def test_print_previous_insights_empty_dict(analyzer, capsys):
+    """Test that print_previous_insights handles empty dict"""
+    analyzer.print_previous_insights({})
+    captured = capsys.readouterr()
+    assert "No previous insights to display" in captured.out
+    
+def test_print_previous_insights_prints_headers(analyzer, capsys):
+    """Test that print_previous_insights prints project headers"""
+    insights = {"TestProj": (["Bullet"], "Summary")}
+    with patch.object(ResumeInsightsGenerator, 'display_insights'):
+        analyzer.print_previous_insights(insights)
+        captured = capsys.readouterr()
+        assert "Resume Insights for: TestProj" in captured.out
+        assert "=" * 30 in captured.out
+    
+def test_print_previous_insights_calls_display_insights(analyzer):
+    """Test that print_previous_insights calls ResumeInsightsGenerator.display_insights"""
+    insights = {"Proj1": (["Bullet 1"], "Summary 1"),"Proj2": (["Bullet 2"], "Summary 2")}
+    with patch.object(ResumeInsightsGenerator, 'display_insights') as mock_display:
+        analyzer.print_previous_insights(insights)
+        assert mock_display.call_count == 2
+        mock_display.assert_any_call(["Bullet 1"], "Summary 1")
+        mock_display.assert_any_call(["Bullet 2"], "Summary 2")
+
+def test_print_previous_insights_single_project(analyzer):
+    """Test printing insights for single project"""
+    insights = {"SingleProj": (["Point 1", "Point 2"], "A summary")}
+    with patch.object(ResumeInsightsGenerator, 'display_insights') as mock_display:
+        analyzer.print_previous_insights(insights)
+        mock_display.assert_called_once_with(["Point 1", "Point 2"], "A summary")
+
+def test_delete_previous_insights_clears_and_persists(analyzer):
+    """Test that delete_previous_insights clears data and calls set()"""
+    proj1 = Project(name="Proj1")
+    proj1.bullets = ["Bullet 1", "Bullet 2"]
+    proj1.summary = "Summary 1"
+    proj2 = Project(name="Proj2")
+    proj2.bullets = ["Bullet A"]
+    proj2.summary = "Summary 2"
+    analyzer.project_manager.set = MagicMock()
+    projects = [proj1, proj2]
+    analyzer.delete_previous_insights(projects)
+    assert proj1.bullets == []
+    assert proj1.summary == ""
+    assert proj2.bullets == []
+    assert proj2.summary == ""
+    assert analyzer.project_manager.set.call_count == 2
+
+def test_delete_previous_insights_empty_list(analyzer, capsys):
+    """Test that delete_previous_insights handles empty project list"""
+    analyzer.project_manager.set = MagicMock()
+    analyzer.delete_previous_insights([])
+    captured = capsys.readouterr()
+    assert "No previous insights to delete" in captured.out
+    analyzer.project_manager.set.assert_not_called()
+    
+def test_delete_previous_insights_already_empty(analyzer):
+    """Test deletion on projects that already have no insights"""
+    proj = Project(name="EmptyProj")
+    proj.bullets = []
+    proj.summary = ""
+    analyzer.project_manager.set = MagicMock()
+    analyzer.delete_previous_insights([proj])
+    assert proj.bullets == []
+    assert proj.summary == ""
+    analyzer.project_manager.set.assert_called_once()
+    
 
 class TestBatchAnalyze:
     def test_exits_early_when_directory_missing(self, analyzer, tmp_path: Path, capsys):

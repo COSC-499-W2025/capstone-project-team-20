@@ -826,7 +826,7 @@ class ProjectAnalyzer:
     # Display stored analysis
     # ------------------------------------------------------------------
 
-    def display_analysis_results(self, projects: Iterable[Project]) -> None:
+    def display_analysis_results(self, projects: Iterable[Project]) -> None: #generate_bullet_points and generate_project_summary
         projects_list = list(projects)
         if not projects_list:
             print("\nNo analysis results to display.")
@@ -1009,7 +1009,7 @@ class ProjectAnalyzer:
                 self.project_manager.set(stored)
 
                 # Generate insights
-                generator = ResumeInsightsGenerator(
+                resume_insights_generator = ResumeInsightsGenerator(
                     metadata=metadata,
                     categorized_files=categorized_files,
                     language_share=language_share,
@@ -1017,16 +1017,15 @@ class ProjectAnalyzer:
                     project=proj,
                 )
 
-                bullets = generator.generate_resume_bullet_points()
-                summary = generator.generate_project_summary()
+                bullets = resume_insights_generator.generate_resume_bullet_points()
+                summary = resume_insights_generator.generate_project_summary()
 
-                print("Resume Bullet Points:")
-                for b in bullets:
-                    print(f" • {b}")
+                # Store resume insights in ProjectManager
+                self.project_manager.set(bullets)
+                self.project_manager.set(summary)
 
-                print("\nProject Summary:")
-                print(summary)
-                print("\n")
+                # Print resume insights to console
+                resume_insights_generator.display_insights(bullets,summary)
 
 
     def _cleanup_temp(self):
@@ -1092,6 +1091,40 @@ class ProjectAnalyzer:
         self.analyze_skills()
         self.analyze_badges()
         print("\nAnalyses complete.\n")
+    
+    def retrieve_previous_insights(self, projects: Iterable[Project]) -> Dict[str, Tuple[List[str], str]]:
+        """Retrieves previous insights for all stored projects. 
+        Returns as a dict with the project name as the key and the insights as the value."""
+        projects_list = list(projects)
+        results = {}
+        for project in projects_list:
+            bullets = project.bullets or []
+            summary = project.summary or ""
+            results[project.name] = (bullets, summary)
+        return results
+    
+    def print_previous_insights(self, insights_dict: Dict[str, Tuple[List[str], str]]) -> None:
+        """Takes the dict returned by `retrieve_previous_insights` and passes them into `display_insights` method provided by ResumeInsightsGenerator"""
+        if not insights_dict:
+            print("\nNo previous insights to display.")
+            return
+        for key, (bullets, summary) in insights_dict.items():
+            print("\n==============================")
+            print(f" Resume Insights for: {key}")
+            print("==============================\n")
+            ResumeInsightsGenerator.display_insights(bullets,summary)
+
+    def delete_previous_insights(self, projects: Iterable[Project]) -> None:
+        projects_list = list(projects)
+        if not projects_list:
+            print("\nNo previous insights to delete.")
+            return
+        for project in projects_list:
+            project.bullets = []
+            project.summary = ""
+            self.project_manager.set(project)
+        print("Project insights have been deleted.")
+        return
 
     def run(self) -> None:
         """The main interactive loop for the Project Analyzer."""
@@ -1120,10 +1153,12 @@ class ProjectAnalyzer:
                 8. Change Selected Users
                 9. Analyze Skills (Calculates Resume Score)
                 10. Generate Resume Insights
-                11. Display Previous Results
-                12. Show Project Timeline (Projects & Skills)
-                13. Analyze Badges
-                14. Exit
+                11. Retrieve Previous Resume Insights
+                12. Delete Previous Resume Insights
+                13. Display Previous Results
+                14. Show Project Timeline (Projects & Skills)
+                15. Analyze Badges
+                16. Exit
                   """)
 
 
@@ -1161,12 +1196,19 @@ class ProjectAnalyzer:
                 self.generate_resume_insights()
             elif choice == "11":
                 projects = self.project_manager.get_all()
-                self.display_analysis_results(projects)
+                insights_dict = self.retrieve_previous_insights(projects)
+                self.print_previous_insights(insights_dict)
             elif choice == "12":
-                self.display_project_timeline()
+                projects = self.project_manager.get_all()
+                self.delete_previous_insights(projects)
             elif choice == "13":
-                self.analyze_badges()
+                projects = self.project_manager.get_all()
+                self.display_analysis_results(projects)
             elif choice == "14":
+                self.display_project_timeline()
+            elif choice == "15":
+                self.analyze_badges()
+            elif choice == "16":
                 print("Exiting Project Analyzer.")
                 # CLEAN UP TEMP DIR ON EXIT
                 self._cleanup_temp()
