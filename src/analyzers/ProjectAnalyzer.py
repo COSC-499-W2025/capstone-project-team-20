@@ -83,6 +83,17 @@ class ProjectAnalyzer:
                 sys.stdout = old_stdout
                 sys.stderr = old_stderr
 
+    def load_or_create_project(self):
+        name = Path(self.zip_path).stem
+        project = self.project_manager.get_by_name(name)
+        if project is None:
+            project = Project(
+                name=name,
+                file_path=str(self.zip_path),
+                root_folder=str(self.root_folder.name if self.root_folder else "")
+            )
+        return project
+
     def _print_project(self, project: Project) -> None:
         print(f"Project: {project.name}")
         print("-" * (len(project.name) + 9))
@@ -371,19 +382,29 @@ class ProjectAnalyzer:
                 selected_stats = self._aggregate_stats(all_author_stats, usernames)
                 total_stats = self._aggregate_stats(all_author_stats)
 
-                project_name = Path(self.zip_path).stem
-                project = self.project_manager.get_by_name(project_name)
+                project = self.load_or_create_project()
+                project.authors = all_authors_list
+                project.author_count = len(all_authors_list)
+                collaboration_status = "collaborative" if len(all_authors_list) > 1 else "individual"
+                project.collaboration_status = collaboration_status
 
-                if project:
-                    # Use the new helper method in ContributionAnalyzer
-                    project.individual_contributions = self.contribution_analyzer.calculate_share(
-                        selected_stats, total_stats
+                project.author_contributions = [
+                    {
+                        "author": author,
+                        "lines_added": stats.lines_added,
+                        "lines_deleted": stats.lines_deleted,
+                        "total_commits": stats.total_commits,
+                        "files_touched": list(stats.files_touched),
+                        "contribution_by_type": stats.contribution_by_type
+                    }
+                    for author, stats in all_author_stats.items()
+                ]
+
+                project.individual_contributions = self.contribution_analyzer.calculate_share(
+                     selected_stats, total_stats
                     )
                     # Save the updated project back to the database
-                    self.project_manager.set(project)
-                    print(f"  - Updated individual contributions for '{project.name}'.")
-                else:
-                    print(f"  - Warning: Project '{project_name}' not found in DB. Cannot save contribution stats.")
+                self.project_manager.set(project)
 
                 # Step 4: Display the results.
                 self._display_contribution_results(selected_stats, total_stats, usernames)
@@ -432,7 +453,20 @@ class ProjectAnalyzer:
 
     def analyze_metadata(self) -> None:
         print("\nMetadata & File Statistics:")
-        self.metadata_extractor.extract_metadata()
+        metadata = self.metadata_extractor.extract_metadata()["project_metadata"]
+
+        project = self.load_or_create_project()
+        project.num_files = metadata["total_files"]
+        project.size_kb = metadata["total_size_kb"]
+
+        #timestamps
+        try:
+            project.date_created = datetime.fromisoformat(metadata["start_date"])
+            project.last_modified = datetime.fromisoformat(metadata["end_date"])
+        except:
+            pass
+
+        self.project_manager.set(project)
 
     def analyze_categories(self) -> None:
         print("File Categories")
@@ -442,6 +476,11 @@ class ProjectAnalyzer:
             for f in files
         ]
         result = self.file_categorizer.compute_metrics(file_dicts)
+
+        project = self.load_or_create_project()
+        project.categories = result
+        self.project_manager.set(project)
+
         print(result)
 
     def print_tree(self) -> None:
@@ -464,6 +503,10 @@ class ProjectAnalyzer:
 
         for lang in sorted(langs):
             print(f" - {lang}")
+
+        project = self.load_or_create_project()
+        project.languages = sorted(list(langs))
+        self.project_manager.set(project)
 
     # ------------------------------------------------------------------
     # Skill analysis (CodeMetrics + SkillAnalyzer + persistence)
@@ -684,13 +727,13 @@ class ProjectAnalyzer:
     def generate_resume_insights(self) -> None:
         """
         Extract Git repos from the ZIP, then for each selected repo:
-          - match it to the corresponding folder in the ZIP tree,
-          - run ProjectMetadataExtractor,
-          - compute language shares,
-          - generate resume-friendly bullet points and summaries.
+        - match it to the corresponding folder in the ZIP tree,
+        - run ProjectMetadataExtractor,
+        - compute language shares,
+        - generate resume-friendly bullet points and summaries.
 
-        Uses a selection menu similar to main-branch behaviour, but relies on
-        the existing RepoFinder + ProjectMetadataExtractor (bug branch).
+        Uses a selection menu similar to main-branch behaviour,
+        but relies on the existing RepoFinder + ProjectMetadataExtractor (bug branch).
         """
         print("\nGenerating Resume Insights...\n")
 
@@ -729,10 +772,12 @@ class ProjectAnalyzer:
         while True:
             print("\nGit projects detected (ranked by resume score):")
             projects_list = list(projects)
+
             for i, proj in enumerate(projects_list, start=1):
                 print(f" {i}. {proj.name} (Score: {proj.resume_score:.2f})")
 
             return_option = len(projects_list) + 1
+
             print("\nSelect an option:")
             print(" 0. Generate insights for ALL projects")
             if len(projects_list) >= 3:
@@ -741,17 +786,21 @@ class ProjectAnalyzer:
 
             choice = input("Choose a project number: ").strip()
 
+            # Return to main menu
             if choice == str(return_option):
                 print("\nReturning to main menu...\n")
+
                 # CLEAN UP TEMP EXTRACT DIR
                 if hasattr(self, "cached_extract_dir") and self.cached_extract_dir:
                     try:
                         shutil.rmtree(self.cached_extract_dir, ignore_errors=True)
                     except Exception:
                         pass
-                    self.cached_extract_dir = None
+
+                self.cached_extract_dir = None
                 return
 
+            # Generate for ALL
             if choice == "0":
                 selected = projects_list
             elif choice == "3" and len(projects_list) >= 3:
@@ -767,37 +816,41 @@ class ProjectAnalyzer:
                     print("Invalid input.\n")
                     continue
 
-            # ---- Analyze each selected repo using ZIP folder tree ----
+            # ---- Process each selected repo ----
             for proj in selected:
                 print("\n==============================")
                 print(f" Resume Insights for: {proj.name}")
                 print("==============================\n")
 
-                # Determine correct folder for this project
+                # Determine correct folder in ZIP tree
                 if len(projects_list) == 1:
-                    # Solo repo → use entire ZIP content
                     folder = self.root_folder
                 else:
-                    # Multi-repo ZIP → find the subfolder that matches the repo
                     folder = self._find_folder_by_name(self.root_folder, proj.name)
 
-                    if folder is None:
-                        print(f"[ERROR] Could not locate the folder for repo '{proj.name}' inside the ZIP.")
-                        print("Skipping this project to avoid incorrect global counts.\n")
-                        continue
+                if folder is None:
+                    print(f"[ERROR] Could not locate folder for repo '{proj.name}' inside the ZIP.")
+                    print("Skipping this project.\n")
+                    continue
 
+                # Metadata extraction (silenced)
                 extractor = ProjectMetadataExtractor(folder)
                 with self.suppress_output():
                     metadata_full = extractor.extract_metadata()
-                metadata = metadata_full["project_metadata"]
+
+                metadata = metadata_full.get("project_metadata", {})
+                categorized_files = metadata_full.get(
+                    "category_summary",
+                    {"counts": {}, "percentages": {}}
+                )
+
+                # File collection
                 files = extractor.collect_all_files()
 
-                # Categorization input
-                categorized_files = metadata_full["category_summary"]
-
-                # Language detector (per repo)
+                # Language share (per directory)
                 language_share = analyze_language_share(extract_dir / proj.name)
 
+                # Language list (per-file detection)
                 repo_languages = set()
                 for f in files:
                     lang = detect_language_per_file(Path(f.file_name))
@@ -806,7 +859,38 @@ class ProjectAnalyzer:
 
                 repo_languages = sorted(repo_languages)
 
-                # Generate resume insights
+                # Load or create DB record
+                stored = self.project_manager.get_by_name(proj.name)
+                if stored is None:
+                    stored = Project(
+                        name=proj.name,
+                        file_path=str(extract_dir / proj.name),
+                        root_folder=proj.name,
+                    )
+
+                # Store metadata
+                stored.num_files = metadata.get("total_files", 0)
+                stored.size_kb = metadata.get("total_size_kb", 0)
+
+                # Dates
+                try:
+                    start = metadata.get("start_date")
+                    end = metadata.get("end_date")
+
+                    stored.date_created = datetime.fromisoformat(start) if start else None
+                    stored.last_modified = datetime.fromisoformat(end) if end else None
+                except Exception:
+                    stored.date_created = None
+                    stored.last_modified = None
+
+                # Store categories + languages
+                stored.categories = categorized_files.get("counts", {})
+                stored.languages = repo_languages
+
+                # Save the update
+                self.project_manager.set(stored)
+
+                # Generate insights
                 generator = ResumeInsightsGenerator(
                     metadata=metadata,
                     categorized_files=categorized_files,
@@ -867,7 +951,7 @@ class ProjectAnalyzer:
 
     def run_all(self) -> None:
         print("Running All Analyzers\n")
-        self.analyze_git_and_contributions()
+        self.analyze_git_and_contributions() # 'analyze_git_and_contributions()' is responsible for creating Project objects
         if self.root_folder:
             self.analyze_metadata()
             self.analyze_categories()

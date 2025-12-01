@@ -1,5 +1,4 @@
-import sqlite3
-import json
+import sqlite3, json
 from typing import Any, Dict, Generator, Optional
 from src.StorageManager import StorageManager
 from src.Project import Project
@@ -32,11 +31,13 @@ class ProjectManager(StorageManager):
         size_kb INTEGER,
         author_count INTEGER,
         authors TEXT,
+        author_contributions TEXT,
         languages TEXT,
         frameworks TEXT,
         skills_used TEXT,
         individual_contributions TEXT,
         collaboration_status TEXT,
+        categories TEXT,
         primary_languages TEXT,
         total_loc INTEGER,
         comment_ratio REAL,
@@ -78,6 +79,8 @@ class ProjectManager(StorageManager):
             "id, name, file_path, root_folder, num_files, size_kb, author_count, "
             "authors, languages, frameworks, skills_used, individual_contributions, "
             "collaboration_status, "
+            "authors, author_contributions, languages, frameworks, skills_used, "
+            "individual_contributions, collaboration_status, categories, "
             "primary_languages, total_loc, comment_ratio, test_file_ratio, "
             "avg_functions_per_file, max_function_length, "
             "testing_discipline_level, testing_discipline_score, "
