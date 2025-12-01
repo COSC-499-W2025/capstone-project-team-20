@@ -159,3 +159,21 @@ This week, it was difficult to get my PR out early, as there was many hours of d
 Next week, I will be going further into the resume insight generation and expanding/refactoring what I have done this week. As of right now, the git repository analyzer is still very slow so, time permitting, i will be working on refactoring that to improve efficiency as well. Mainly focusing on our outputs for presenting our demo!
 
 
+### **Week 13: November 24th - November 30th**
+
+**Tasks worked on:**
+
+![Week 13 log](imagesForBrandenLogs/week_13_log_ss.png)
+
+**Weekly Goals Recap:**
+
+This week, I started by refactoring the ProjectMetadataExtractor and FileCategorizer to improve the accuracy, consistency, and output quality for the ResumeInsightsGenerator. I improved the metadata extraction flow to ensure category/metadata summaries are structured consistently. Also improving the handling of file collection and timestamp/size aggregation. The FileCategorizer received an update to classification rules, and a fix for innaccurate category assignments. The ResumeInsightsGenerator is also now aligned with thes updates, referencing all correct counts and categories. After this was done, I worked on full project storage to the database. Now, all project metadata is stored into the database. This allows ResumeInsightsGenerator and "Display Previous Results" to reuse cached results, improving efficiency. There is also faster repeated analyses for large ZIP archives and consistency between the analyzers and stored database objects now. I needed to expand our Project.py schema to support category counts, author_contributions, commit metadata, language lists, file categories, timestamps, and project status. Now, the ProjectAnalyzer writes all extracted metadata to the database, and ensures categories, language shares, author stats, and timestamps are saved.
+
+Issues closed: 
+Issue [COSC-499-W2025/capstone-project-team-20#252](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/252)
+Issue [COSC-499-W2025/capstone-project-team-20#229](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/229)
+Issue [COSC-499-W2025/capstone-project-team-20#239](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/239)
+
+I was overall very happy with the progress we made this week, and we had our most productive team meeting yet! We finished our team contract and got on the same page about where our project analyzer is and exactly what else we need to do to get it to where we want it to be for this milestone. I dont have any regrets for this week or any wishes for what I could have improved on, I feel the week went exceedingly well (especially considering it was a 40 hour work week for me too!). Very happy overall with the progress.
+
+Next week, I will ensure we have all basic criteria met for Milestone 1, with extra implementations as well! This week will be about finalizing our whole milestone and focusing on presenting the work on Wednesday and submitting our video submission for Friday. The main focus will just be finalizing that weve met all criteria for it, and exceeded with other features!
