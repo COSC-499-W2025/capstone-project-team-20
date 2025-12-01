@@ -4,13 +4,19 @@ from typing import Tuple
 
 class ResumeInsightsGenerator:
     """
-    Generates resume bullet points and summaries.
+
+    Generates resume bullet points and summaries using normalized
+    category counts provided by FileCategorizer (VIA ProjectMetadataExtractor)
+
+    This class does NOT categorize anything itself - all categorization
+    is handled upstream by the YAML-driven FileCategorizer
 
     Called from the `generate_resume_insights()` method in ProjectAnalyzer
 
     Workflow from that method is:
         1. generate_resume_bullet_points()
         2. generator.generate_project_summary()
+
     """
 
     def __init__(self, metadata, categorized_files, language_share, project, language_list):
@@ -115,7 +121,7 @@ class ResumeInsightsGenerator:
         num files, code/doc/test file split, collaboration status (team-based or individual)
         """
         code_files, doc_files, test_files, config_files = self.get_category_counts()
-        total_files = sum(self.categorized_files["counts"].values())
+        total_files = sum(self.categorized_files.get("counts", {}).values())
 
         top_langs = ", ".join(self.language_list[:4]) if self.language_list else "multiple languages"
 
@@ -131,7 +137,7 @@ class ResumeInsightsGenerator:
         team_size = getattr(self.project, "author_count", 1)
         if team_size > 1:
             summary += (
-                f"Built collaboratively by a team of {team_size} contributors, the codebase "
+                f"Built collaboratively by a team of {team_size} developers, the codebase "
                 "follows Git-based workflows, iterative development, and shared ownership."
             )
         else:
@@ -144,11 +150,10 @@ class ResumeInsightsGenerator:
 
 
     def generate_tech_stack(self) -> str:
-        langs_sorted = list(self.language_share.keys())
-        if not langs_sorted:
+        if not self.language_share:
             return "Tech Stack: Languages could not be detected"
 
-        primary = ", ".join(langs_sorted[:6])
+        primary = ", ".join(list(self.language_share.keys())[:6])
         return f"Tech Stack: {primary}"
 
     # Helper: Compute days

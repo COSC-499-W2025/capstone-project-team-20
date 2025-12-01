@@ -1,10 +1,5 @@
-import json
-import os
-import sys
-import re
-import shutil
-import contextlib
-import zipfile
+import signal
+import json, os, sys, re, shutil, contextlib, zipfile
 from pathlib import Path
 from typing import Iterable, List, Optional, Tuple, Dict, Any
 
@@ -747,25 +742,24 @@ class ProjectAnalyzer:
 
         extract_dir = self.cached_extract_dir
 
-        # Find Git repositories under the extracted directory 
-        repo_paths = self.repo_finder.find_repos(extract_dir)
-        if not repo_paths:
+        #use RepoProjectBuilder to fully build project objects
+        builder = RepoProjectBuilder(self.root_folder)
+        projects = builder.scan(extract_dir)
+        if not projects:
             print("No Git repositories found.")
             return
 
+         # Rebuild project list by matching against DB whenever possible
         all_projects = []
-        print("Loading analyzed project data from database...")
-        for path in repo_paths:
-            # Use the project manager to get the project by its name
-            project_from_db = self.project_manager.get_by_name(path.name)
+
+        for proj in projects:  # 'projects' is from builder.scan()
+            project_from_db = self.project_manager.get_by_name(proj.name)
             if project_from_db:
                 all_projects.append(project_from_db)
             else:
-                # If for some reason it's not in the DB, create a temporary one
-                print(f"  - Warning: Project '{path.name}' not found in DB. Score will be 0.")
-                all_projects.append(Project(name=path.name, file_path=str(path)))
+                all_projects.append(proj)  # fall back to scanned project
 
-        # Sort projects by resume_score in descending order
+        # Sort by existing resume_score (DB values or default 0)
         projects = sorted(all_projects, key=lambda p: p.resume_score, reverse=True)
 
         # ---- Project selection loop ----
@@ -909,6 +903,24 @@ class ProjectAnalyzer:
                 # Print resume insights to console
                 resume_insights_generator.display_insights(bullets,summary)
 
+
+    def _cleanup_temp(self):
+        """Delete the extracted ZIP temp folder if it exists."""
+        if getattr(self, "cached_extract_dir", None):
+            try:
+                shutil.rmtree(self.cached_extract_dir, ignore_errors=True)
+                print(f"[Cleanup] Removed temp folder: {self.cached_extract_dir}")
+            except Exception as e:
+                print(f"[Cleanup Error] {e}")
+            self.cached_extract_dir = None
+
+
+    def _signal_cleanup(self, signum, frame):
+        """Handle Ctrl+C cleanly by cleaning temp folder then exiting."""
+        print("\n[Interrupted] Cleaning up temporary files...")
+        self._cleanup_temp()
+        raise SystemExit(0)
+
     # ------------------------------------------------------------------
     # Folder helper
     # ------------------------------------------------------------------
@@ -932,13 +944,8 @@ class ProjectAnalyzer:
     def analyze_new_folder(self) -> None:
         """Reset caches and load a new ZIP project."""
         if hasattr(self, "cached_extract_dir") and self.cached_extract_dir:
-            try:
-                shutil.rmtree(self.cached_extract_dir, ignore_errors=True)
-            except Exception:
-                pass
-            self.cached_extract_dir = None
-
-        self.cached_projects = None
+            self._cleanup_temp()
+            return
 
         print("\nLoading new project...")
         success = self.load_zip()
@@ -996,6 +1003,7 @@ class ProjectAnalyzer:
     def run(self) -> None:
         """The main interactive loop for the Project Analyzer."""
         print("Welcome to the Project Analyzer.\n")
+        signal.signal(signal.SIGINT, self._cleanup_temp)
 
         if not self.load_zip():
             return
@@ -1088,12 +1096,7 @@ class ProjectAnalyzer:
             elif choice == "15":
                 print("Exiting Project Analyzer.")
                 # CLEAN UP TEMP DIR ON EXIT
-                if hasattr(self, "cached_extract_dir") and self.cached_extract_dir:
-                    try:
-                        shutil.rmtree(self.cached_extract_dir, ignore_errors=True)
-                    except Exception:
-                        pass
-                    self.cached_extract_dir = None
+                self._cleanup_temp()
                 return
             else:
                 print("Invalid input. Try again.\n")
