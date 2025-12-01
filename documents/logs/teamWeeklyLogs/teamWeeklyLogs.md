@@ -296,3 +296,38 @@ Issue [COSC-499-W2025/capstone-project-team-20#146](https://github.com/COSC-499-
 **Test Report:**
 
 [Week 12 Test Report](teamWeeklyLogsImages/week_12_test_report.png)
+
+
+### Week 13 (November 24th - November 30th)
+
+**Work Performed:**
+- Branden Kennedy (42474551): Refactored ProjectMetadataExtractor and FileCategorizer to improve accuracy, consistency, and output quality for the ResumeInsightsGenerator. ensured category/metadata summaries are structured consistently. improved handling of file collection and timestamp/size aggregation. FileCategorizer received updates on classification rules and a fix for innaccurate category assignments. ResumeInsightsGenerator is now aligned with these updates. I also worked on full project storage to the database. Now, all projects metadata is stored into the database. this allows the ResumeInsightsGenerator, "Display Previous Results" option, and other classes to use cached results, improving efficiency. Expanded Project.py schema to support category counts, author_contributions, commit metadata, language lists, file categories, timestamps, and project status. Now, the ProjectAnalyzer writes all extracted metadata to the database, and ensures categories, language shares, author stats, and timestamps are saved. I also worked on code review, reviewing multiple PRs, as well as our team's google slides presentation. Participated in Fridays meeting to finalize milestone presentation and the last sprint for milestone 1.
+
+- Necmi Kaan Sapoglu (17014796): Delivered multiple major PRs advancing the analytics pipeline for Milestone 1. Implemented the new Badge Analysis system with rules-based badge assignment and project-level badge aggregation. Refined the Skill Analyzer output for clearer, more accurate skill detection and alignment with badge metrics. Completed the Skill Chronology feature using commit-based timestamps and improved the Project Chronology so projects are ordered by actual commit history rather than file metadata. Integrated all updates into the CLI and ensured compatibility across modules. Reviewed teammate PRs for consistency with the revised architecture, and participated in Friday’s highly productive meeting to finalize the milestone presentation and sync upcoming sprint tasks.
+
+- Lex Nash (84668540): Programmed a github workflow to automatically assign 2 reviewers for each pull request, first it shuffles the list, second it removes the user who submitted the pr from the candidates, third it orders the users from least to greatest amount of (open) pull request reviews currently assigned to, then finally it picks the first two users and assigns them to review the pull request. Has not had the opportunity to be tested as of yet, since you cant exactly test this workflow before merging it, but if all goes well we'll have a very useful feature that should help productivity. Programming this involved learning a lot of new things, but I intended to challenge myself and believe I have done well. I participated in the team meeting and have tasked myself with cleaning up the program's output for the video demo after all the current major features are implemented.
+
+- Dylan Alexander (16394025): Implemented mechanisms for the display, storage, retrieval, and deletion of generated resume insights to satisfy 2 of the 20 requirements for Milestone 1. Developed a CI GitHub Actions workflow that automatically runs our pytest suite on every pull request. Reviewed numerous pull requests (10 at the time of writing) to help the team merge the large backlog into main in time for the presentation.
+
+- Sven Annist (42486720): Implemented multi-repo ranking and resume scoring in **PR #253**: added `ProjectRanker` and `resume_score`, refactored `ProjectAnalyzer` to initialize per-repo projects and enrich them (including a "Summarize Top 3 Projects" option), persisted individual contribution summaries via `ContributionAnalyzer.calculate_share`, updated `ProjectManager` upsert/schema handling, added tests, and filed **Issue #258**. Reviewed PRs **#255**, **#246**, **#242**, **#236**, **#235** and continued Milestone 1 slide prep.
+
+**Features included in the project plan for this milestone are:**
+
+
+**Continuing tasks from last week and plan for the next week:**
+
+**Burnup chart:**
+
+[Week 13 burnup chart](teamWeeklyLogsImages/week_13_burnup_chart.png)
+
+**Table View of Completed Tasks on Project Board:**
+
+[Week 13 completed tasks](teamWeeklyLogsImages/week_13_completed_tasks.png)
+
+**Table View of In-Progress Tasks on Project Board:**
+
+[Week 13 In-Progress tasks](teamWeeklyLogsImages/week_13_in_progress_tasks.png)
+
+**Test Report:**
+
+[Week 13 Test Report](teamWeeklyLogsImages/week_13_test_report.png)
