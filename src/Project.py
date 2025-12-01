@@ -56,6 +56,9 @@ class Project:
     language_depth_level: str = ""
     language_depth_score: float = 0.0
 
+    # Scoring for ranking projects against one another
+    resume_score: float = 0.0
+
     # Timestamps
     date_created: Optional[datetime] = None
     last_modified: Optional[datetime] = None
@@ -142,7 +145,7 @@ class Project:
     def display(self) -> None:
         """Print the project details to the console."""
         print(f"\n{'='*50}")
-        print(f"  📁 {self.name}")
+        print(f"  📁 {self.name}  (Resume Score: {self.resume_score:.2f})")
         print(f"{'='*50}")
         if self.file_path:
             print(f"  Path: {self.file_path}")
@@ -205,4 +208,3 @@ class Project:
                     print(f"    - {label}: {level} (score {score:.2f})")
 
         print()
-

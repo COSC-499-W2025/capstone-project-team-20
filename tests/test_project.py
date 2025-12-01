@@ -122,3 +122,22 @@ def test_project_roundtrip_with_author_contributions(sample_project):
     d = sample_project.to_dict()
     reconstructed = Project.from_dict(d)
     assert reconstructed.author_contributions == sample_project.author_contributions
+def test_project_resume_score_serialization(sample_project):
+    """Tests that the resume_score is correctly handled in to_dict/from_dict."""
+    sample_project.resume_score = 75.5
+
+    d = sample_project.to_dict()
+    reconstructed = Project.from_dict(d)
+
+    assert "resume_score" in d
+    assert d["resume_score"] == 75.5
+    assert reconstructed.resume_score == 75.5
+
+def test_project_display_shows_resume_score(sample_project, capsys):
+    """Tests that the display method includes the formatted resume score."""
+    sample_project.resume_score = 88.123
+
+    sample_project.display()
+    captured = capsys.readouterr()
+
+    assert "(Resume Score: 88.12)" in captured.out
