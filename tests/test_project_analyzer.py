@@ -202,10 +202,12 @@ def test_analyze_languages_filters_unknown(analyzer, capsys, tmp_path):
     # Mock initialize_projects to avoid actual zip extraction
     mock_project = Project(name="fakefolder")
     with patch.object(analyzer, 'initialize_projects', return_value=[mock_project]):
+        
+        with patch.object(analyzer.project_manager, "set", return_value=None):
         # Patch where it's USED, not where it's defined
-        with patch("src.analyzers.ProjectAnalyzer.analyze_language_share", 
-                   return_value={"Python": 100.0}):
-            analyzer.analyze_languages()
+            with patch("src.analyzers.ProjectAnalyzer.analyze_language_share", 
+                       return_value={"Python": 100.0}):
+                analyzer.analyze_languages()
 
     out = capsys.readouterr().out
     assert "Python" in out
