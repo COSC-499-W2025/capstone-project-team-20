@@ -90,20 +90,20 @@ def filter_files(path: Path) -> List[Path]:
         if filename.startswith("."):
             continue
 
-        # 2. Only process known-language extensions
-        if extension not in LANGUAGE_MAP:
+        # 2. Ignore directories
+        if any(part.lower() in IGNORED_DIRS for part in file.parts):
             continue
 
-        # 3. Ignore extensions
-        if extension in IGNORED_EXTENSIONS:
-            continue
-
-        # 4. Ignore filenames
+        # 3. Ignore filenames
         if filename in IGNORED_FILENAMES:
             continue
 
-         # 5. Ignore directories
-        if any(part.lower() in IGNORED_DIRS for part in file.parts):
+        # 4. Ignore extensions
+        if extension in IGNORED_EXTENSIONS:
+            continue
+
+        # 5. Only process known-language extensions
+        if extension not in LANGUAGE_MAP:
             continue
 
         relevant_files.append(file)
