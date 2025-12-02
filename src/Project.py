@@ -158,7 +158,7 @@ class Project:
         print(f"  📁 {self.name}  (Resume Score: {self.resume_score:.2f})")
         print(f"{'='*50}")
         if self.file_path:
-            print(f"  Path: {self.file_path}")
+            print(f"  File Path: {self.file_path}")
         if self.authors:
             print(f"  Authors ({self.author_count}): {', '.join(self.authors)}")
         print(f"  Status: {self.collaboration_status}")

@@ -553,22 +553,29 @@ class ProjectAnalyzer:
         print("Project Folder Structure")
         print(toString(self.root_folder))
 
-    def analyze_languages(self) -> None:
-        print("Language Detection")
-        files = self.metadata_extractor.collect_all_files()
-        langs = set()
+    def analyze_languages(self, projects: Optional[List[Project]]) -> None:
+        "Accepts list of projects as input from self.initialize_projects() if called from run_all(), otherwise, grabs the list of projects itself"
 
-        for f in files:
-            lang = detect_language_per_file(Path(f.file_name))
-            if lang:
-                langs.add(lang)
-
-        if not langs:
-            print("No languages detected")
+        # If projects are not provided by run_all(), grab them
+        if projects is None:
+            projects = self.initialize_projects()
+        if not projects:
+            print("No projects found to analyze.")
             return
+        
+        print("Language Detection")
 
-        for lang in sorted(langs):
-            print(f" - {lang}")
+        for project in projects:
+            # 1. Check validity of root_dir
+            root_dir = Path(project.file_path)
+            if not root_dir.exists():
+                print(f"Project folder does not exist: {root_dir}")
+                continue
+
+            # 2. Run the language detector
+            language_share = analyze_language_share(root_dir)
+        
+        
 
         project = self.load_or_create_project()
         project.languages = sorted(list(langs))
@@ -1227,13 +1234,13 @@ class ProjectAnalyzer:
 
     def run_all(self) -> None:
         print("Running All Analyzers\n")
-        self.initialize_projects()
+        projects = self.initialize_projects()
         self.analyze_git_and_contributions()
         if self.root_folder:
             self.analyze_metadata()
             self.analyze_categories()
             self.print_tree()
-            self.analyze_languages()
+            self.analyze_languages(projects)
         self.analyze_skills()
         self.analyze_badges()
         print("\nAnalyses complete.\n")

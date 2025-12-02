@@ -56,7 +56,7 @@ for language, category in LANGUAGES.items():
 # ignored_directories is split 3-ways into directories, extensions and filenames
 
 IGNORED_DIRS = set(IGNORED_DIRS_YAML.get("ignored_dirs", []))
-IGNORED_EXTENSIONS = set(ext.lower() for ext in IGNORED_DIRS_YAML.get("ignored_extensions", []))
+IGNORED_EXTENSIONS = set(str(ext).lower() for ext in IGNORED_DIRS_YAML.get("ignored_extensions", []))
 IGNORED_FILENAMES = set(name.lower() for name in IGNORED_DIRS_YAML.get("ignored_filenames", []))
 
 def analyze_language_share(root_dir: str) -> Dict[str, float]:

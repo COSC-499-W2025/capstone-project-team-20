@@ -26,9 +26,4 @@ if __name__ == "__main__":
     projList = pm.get_all()
     plist = list(projList)
     for p in plist:
-        print("Backend:" p.has_backend)
-        print(p.has_frontend)
-        print(p.has_readme)
-        print(p.has_dockerfile)
-        print(p.has_test_files)
-        print(p.has_database)
+        p.display()
