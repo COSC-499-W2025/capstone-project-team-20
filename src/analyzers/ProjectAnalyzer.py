@@ -574,12 +574,22 @@ class ProjectAnalyzer:
 
             # 2. Run the language detector
             language_share = analyze_language_share(root_dir)
-        
-        
 
-        project = self.load_or_create_project()
-        project.languages = sorted(list(langs))
-        self.project_manager.set(project)
+            # 2. Store results in the project object
+            project.languages = list(language_share.keys()) # sorted by language usage %, not alphabetically
+            project.language_share = language_share
+            self.project_manager.set(project)
+
+            # 3. Print results
+            if not language_share:
+                print(f"  - No languages detected for project: {project.name}")
+                continue
+
+            print(f"\nProject: {project.name}")
+            print("-" * (len(project.name) + 9))
+            for lang, share in language_share.items():
+                print(f"  - {lang}: {share:.1f}%")
+
 
     # ------------------------------------------------------------------
     # Project persistence helpers

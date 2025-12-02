@@ -10,8 +10,6 @@ class ProjectManager(StorageManager):
         1. First ensure you've made the necessary changes for your new variable in Project.py
         2. Add variable to `create_table_query` method
         3. Add variable to `columns` method
-        2. the display() method must be updated to reflect the addition of this variable
-        3. make neccesary changes in ProjectManager (instructions for that are in ProjectManager)
     """
     def __init__(self, db_path="projects.db") -> None:
         super().__init__(db_path)
@@ -41,12 +39,12 @@ class ProjectManager(StorageManager):
         authors TEXT,
         author_contributions TEXT,
         languages TEXT,
+        language_share TEXT,
         frameworks TEXT,
         skills_used TEXT,
         individual_contributions TEXT,
         collaboration_status TEXT,
         categories TEXT,
-        primary_languages TEXT,
         total_loc INTEGER,
         comment_ratio REAL,
         test_file_ratio REAL,
@@ -87,11 +85,9 @@ class ProjectManager(StorageManager):
         """
         return (
             "id, name, file_path, root_folder, num_files, size_kb, author_count, "
-            "authors, languages, frameworks, skills_used, individual_contributions, "
-            "collaboration_status, "
-            "authors, author_contributions, languages, frameworks, skills_used, "
+            "authors, author_contributions, languages, language_share, frameworks, skills_used, "
             "individual_contributions, collaboration_status, categories, "
-            "primary_languages, total_loc, comment_ratio, test_file_ratio, "
+            "total_loc, comment_ratio, test_file_ratio, "
             "avg_functions_per_file, max_function_length, "
             "testing_discipline_level, testing_discipline_score, "
             "documentation_habits_level, documentation_habits_score, "

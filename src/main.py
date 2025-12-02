@@ -22,8 +22,4 @@ def main():
     analyzer.run()
 
 if __name__ == "__main__":
-    pm = ProjectManager()
-    projList = pm.get_all()
-    plist = list(projList)
-    for p in plist:
-        p.display()
+    main()
