@@ -224,3 +224,9 @@ def test_ignores_node_modules(tmp_path):
     (tmp_path / "main.js").write_text("my\ncode\n")
     result = analyze_language_share(str(tmp_path))
     assert result["JavaScript"] == 100  # Only counted main.js
+
+def test_language_map_is_populated():
+    """Verify LANGUAGE_MAP loaded successfully"""
+    assert len(LANGUAGE_MAP) > 0, "LANGUAGE_MAP is empty - config files not loading!"
+    assert "py" in LANGUAGE_MAP, "Python extension missing from LANGUAGE_MAP"
+    assert LANGUAGE_MAP["py"] == "Python"

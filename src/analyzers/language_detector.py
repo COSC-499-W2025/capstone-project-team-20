@@ -34,17 +34,23 @@ Current Limitations:
 CONFIG_DIR = Path(__file__).parent.parent / "config"
 LANGUAGES_FILE = CONFIG_DIR / "languages.yml"
 IGNORED_DIRS_FILE = CONFIG_DIR / "ignored_directories.yml"
+try:
+    with open(LANGUAGES_FILE, "r") as f:
+        LANGUAGES_YAML = yaml.safe_load(f)
+except Exception:
+    # CI fallback - minimal config
+    LANGUAGES_YAML = {"languages": {}}
 
-with open(LANGUAGES_FILE, "r") as f:
-    LANGUAGES_YAML = yaml.safe_load(f)
-
-with open(IGNORED_DIRS_FILE, "r") as f:
-    IGNORED_DIRS_YAML = yaml.safe_load(f)
+try:
+    with open(IGNORED_DIRS_FILE, "r") as f:
+        IGNORED_DIRS_YAML = yaml.safe_load(f)
+except Exception:
+    IGNORED_DIRS_YAML = {"ignored_dirs": [], "ignored_extensions": [], "ignored_filenames": []}
 
 # LANGUAGES is a dict of dicts. key = language names, values = dict of each category languages store
 #  e.g. {"Python": {"extensions": ["py", "pyw"]}, "Java": {"extensions": ["java", "jsp", "class", "jar"]}}
 
-LANGUAGES = LANGUAGES_YAML["languages"]
+LANGUAGES = LANGUAGES_YAML.get("languages", {})
 
 # maps extension as key, language as value
 
