@@ -1,6 +1,7 @@
 import pytest
 from pathlib import Path
 from unittest.mock import patch
+import yaml
 from src.analyzers.language_detector import (
     analyze_language_share,
     filter_files,
@@ -9,13 +10,6 @@ from src.analyzers.language_detector import (
     detect_language_per_file,
     LANGUAGE_MAP
 )
-
-# Skip all tests if LANGUAGE_MAP failed to load (CI issue)
-pytestmark = pytest.mark.skipif(
-    len(LANGUAGE_MAP) == 0,
-    reason="LANGUAGE_MAP is empty - config files not available in this environment"
-)
-
 
 class TestDetectLanguage:
     """Tests for the detect_language function."""
