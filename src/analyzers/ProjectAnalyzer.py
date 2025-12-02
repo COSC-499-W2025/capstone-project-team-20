@@ -156,6 +156,7 @@ class ProjectAnalyzer:
         print(f"\n{'=' * 40}")
         print(f"Analyzed: {analyzed} | Failed: {failed}")
         print(f"{'=' * 40}\n")
+        self._cleanup_temp()
 
     def load_zip(self) -> bool:
         """Prompts user for ZIP file and parses into folder tree."""
@@ -192,42 +193,39 @@ class ProjectAnalyzer:
             return []
 
         temp_dir = Path(extract_zip(str(self.zip_path)))
+        self.cached_extract_dir = temp_dir
         builder = RepoProjectBuilder(self.root_folder)
 
         created_projects = []
-        try:
-            projects_from_builder = builder.scan(temp_dir)
-            if not projects_from_builder:
-                print("No Git repositories found to build projects from.")
-                # If no repos found, treat the whole zip as one project
-                project_name = self.zip_path.stem
-                proj_existing = self.project_manager.get_by_name(project_name)
-                if not proj_existing:
-                    proj_new = Project(name=project_name, file_path=str(temp_dir))
-                    self.project_manager.set(proj_new)
-                    print(f"  - Created new project record: {proj_new.name} with ID {proj_new.id}")
-                    return [proj_new]
-                return [proj_existing]
+        projects_from_builder = builder.scan(temp_dir)
+        if not projects_from_builder:
+            print("No Git repositories found to build projects from.")
+            # If no repos found, treat the whole zip as one project
+            project_name = self.zip_path.stem
+            proj_existing = self.project_manager.get_by_name(project_name)
+            if not proj_existing:
+                proj_new = Project(name=project_name, file_path=str(temp_dir))
+                self.project_manager.set(proj_new)
+                print(f"  - Created new project record: {proj_new.name} with ID {proj_new.id}")
+                return [proj_new]
+            return [proj_existing]
 
-            print(f"Found {len(projects_from_builder)} project(s). Saving initial records...")
-            for proj_new in projects_from_builder:
-                proj_existing = self.project_manager.get_by_name(proj_new.name)
-                if proj_existing:
-                    # If it exists, update it with basic info from the builder
-                    proj_existing.authors = proj_new.authors
-                    proj_existing.author_count = len(proj_new.authors)
-                    self.project_manager.set(proj_existing)
-                    print(f"  - Updated existing project: {proj_existing.name}")
-                    created_projects.append(proj_existing)
-                else:
-                    # Save the newly created project
-                    self.project_manager.set(proj_new)
-                    print(f"  - Created new project record: {proj_new.name} with ID {proj_new.id}")
-                    created_projects.append(proj_new)
-            return created_projects
-        finally:
-            shutil.rmtree(temp_dir, ignore_errors=True)
-
+        print(f"Found {len(projects_from_builder)} project(s). Saving initial records...")
+        for proj_new in projects_from_builder:
+            proj_existing = self.project_manager.get_by_name(proj_new.name)
+            if proj_existing:
+                # If it exists, update it with basic info from the builder
+                proj_existing.authors = proj_new.authors
+                proj_existing.author_count = len(proj_new.authors)
+                self.project_manager.set(proj_existing)
+                print(f"  - Updated existing project: {proj_existing.name}")
+                created_projects.append(proj_existing)
+            else:
+                # Save the newly created project
+                self.project_manager.set(proj_new)
+                print(f"  - Created new project record: {proj_new.name} with ID {proj_new.id}")
+                created_projects.append(proj_new)
+        return created_projects
     # ------------------------------------------------------------------
     # Git & contribution analysis
     # ------------------------------------------------------------------
@@ -553,7 +551,7 @@ class ProjectAnalyzer:
         print("Project Folder Structure")
         print(toString(self.root_folder))
 
-    def analyze_languages(self, projects: Optional[List[Project]]) -> None:
+    def analyze_languages(self, projects: Optional[List[Project]] = None) -> None:
         "Accepts list of projects as input from self.initialize_projects() if called from run_all(), otherwise, grabs the list of projects itself"
 
         # If projects are not provided by run_all(), grab them
@@ -565,22 +563,32 @@ class ProjectAnalyzer:
         
         print("Language Detection")
 
+        if self.cached_extract_dir is not None:
+            root_dir = self.cached_extract_dir
+        else:
+            if not self.zip_path:
+                print("No project loaded. Cannot extract files for language analysis.")
+                return
+            root_dir = Path(extract_zip(str(self.zip_path)))
+            self.cached_extract_dir = root_dir
+
         for project in projects:
             # 1. Check validity of root_dir
-            root_dir = Path(project.file_path)
-            if not root_dir.exists():
-                print(f"Project folder does not exist: {root_dir}")
-                continue
+                # check for subfolder named after project
+            project_root = root_dir / project.name
+            if not project_root.exists():
+                # fallback to root_dir if project-specific folder not found
+                project_root = root_dir
 
             # 2. Run the language detector
-            language_share = analyze_language_share(root_dir)
+            language_share = analyze_language_share(project_root)
 
-            # 2. Store results in the project object
+            # 3. Store results in the project object
             project.languages = list(language_share.keys()) # sorted by language usage %, not alphabetically
             project.language_share = language_share
             self.project_manager.set(project)
 
-            # 3. Print results
+            # 4. Print results
             if not language_share:
                 print(f"  - No languages detected for project: {project.name}")
                 continue
@@ -791,13 +799,6 @@ class ProjectAnalyzer:
                     level = dim_data.get("level", "")
                     score = dim_data.get("score", 0.0)
                     print(f"    - {dim_name}: level={level}, score={score:.2f}")
-
-                print("\n  Detected languages:")
-                if display_langs:
-                    for lang in display_langs:
-                        print(f"    - {lang}")
-                else:
-                    print("    (no reliable languages detected)")
 
                 print("\n  Detected skills (filtered by confidence):")
                 if deduped_skill_names:
@@ -1253,6 +1254,7 @@ class ProjectAnalyzer:
             self.analyze_languages(projects)
         self.analyze_skills()
         self.analyze_badges()
+        self._cleanup_temp()
         print("\nAnalyses complete.\n")
 
     def retrieve_previous_insights(self, projects: Iterable[Project]) -> Dict[str, Tuple[List[str], str]]:
@@ -1293,11 +1295,6 @@ class ProjectAnalyzer:
         """The main interactive loop for the Project Analyzer."""
         print("Welcome to the Project Analyzer.\n")
         signal.signal(signal.SIGINT, self._cleanup_temp)
-
-        if not self.load_zip():
-            return
-
-        self.initialize_projects()
 
         while True:
             print("""

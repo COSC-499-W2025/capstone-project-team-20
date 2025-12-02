@@ -161,6 +161,8 @@ class Project:
         print(f"{'='*50}")
         if self.file_path:
             print(f"  File Path: {self.file_path}")
+        if self.root_folder:
+            print(f"  File Path: {self.root_folder}")
         if self.authors:
             print(f"  Authors ({self.author_count}): {', '.join(self.authors)}")
         print(f"  Status: {self.collaboration_status}")
