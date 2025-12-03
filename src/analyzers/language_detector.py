@@ -34,6 +34,7 @@ Current Limitations:
 CONFIG_DIR = Path(__file__).parent.parent / "config"
 LANGUAGES_FILE = CONFIG_DIR / "languages.yml"
 IGNORED_DIRS_FILE = CONFIG_DIR / "ignored_directories.yml"
+
 try:
     with open(LANGUAGES_FILE, "r") as f:
         LANGUAGES_YAML = yaml.safe_load(f)
