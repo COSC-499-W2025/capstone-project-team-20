@@ -15,10 +15,28 @@ class Project:
     container with no external dependencies or file system interactions.
     
     Checklist for adding a variable to this class:
-        1. if that variable is a List or a Dict, it must be added to the list_fields section in to_dict() and from_dict() 
+        1. if that variable is a List or a Dict, it must be added to class-level LIST_FIELDS / DICT_FIELDS
         2. the display() method must be updated to reflect the addition of this variable
         3. make the necessary changes for your new variable in ProjectManager.py
     """
+
+    # Declare all list-based and dict-based fields that must be serialized and de-serialized to/from JSON strings.
+
+    LIST_FIELDS = [
+            "authors",
+            "languages",
+            "frameworks",
+            "skills_used",
+            "individual_contributions",
+            "author_contributions",
+            "bullets"
+    ]
+
+    DICT_FIELDS = [
+            "categories",
+            "language_share"
+    ]
+
     id: Optional[int] = None
     name: str = ""
     file_path: str = ""
@@ -31,6 +49,7 @@ class Project:
 
     # High-level tech stack
     languages: List[str] = list_field()
+    language_share: Dict[str, float] = field(default_factory=dict)
     frameworks: List[str] = list_field()
     skills_used: List[str] = list_field()
 
@@ -43,10 +62,7 @@ class Project:
     author_contributions: List[Dict[str, Any]] = list_field()
     collaboration_status: Literal["individual", "collaborative"] = "individual"
 
-    # === New: derived skill/metrics info ===
-    primary_languages: List[str] = list_field()
-
-    # Overall code metrics ...
+    # Overall code metrics (from CodeMetricsAnalyzer.summarize()["overall"])
     total_loc: int = 0
     comment_ratio: float = 0.0
     test_file_ratio: float = 0.0
@@ -93,29 +109,10 @@ class Project:
         """
         proj_dict = asdict(self)
 
-        # List-/dict-based fields to be JSON-serialized
-        json_fields = [
-            "authors",
-            "languages",
-            "frameworks",
-            "skills_used",
-            "dependencies_list",
-            "dependency_files_list",
-            "build_tools",
-            "individual_contributions",
-            "author_contributions",
-            "primary_languages",
-            "readme_keywords",
-            "bullets",
-            "categories",
-        ]
-        for field_name in json_fields:
-            value = proj_dict.get(field_name)
-            if field_name == "categories":
-                default = {}
-            else:
-                default = []
-            proj_dict[field_name] = json.dumps(value if value is not None else default)
+        # Declare all list-based and dict-based fields that must be serialized to JSON strings.
+
+        for field_name in Project.LIST_FIELDS + Project.DICT_FIELDS:
+            proj_dict[field_name] = json.dumps(proj_dict[field_name])
 
         # Ensure author_count is consistent with the authors list.
         proj_dict["author_count"] = len(self.authors)
@@ -135,22 +132,8 @@ class Project:
         """
         proj_dict_copy = proj_dict.copy()
 
-        json_fields = [
-            "authors",
-            "languages",
-            "frameworks",
-            "skills_used",
-            "dependencies_list",
-            "dependency_files_list",
-            "build_tools",
-            "individual_contributions",
-            "author_contributions",
-            "primary_languages",
-            "readme_keywords",
-            "bullets",
-            "categories",
-        ]
-        for field_name in json_fields:
+        #de-serialize lists from JSON strings
+        for field_name in Project.LIST_FIELDS:
             value = proj_dict_copy.get(field_name)
             if isinstance(value, str):
                 try:
@@ -159,6 +142,14 @@ class Project:
                     proj_dict_copy[field_name] = {} if field_name == "categories" else []
             elif value is None:
                 proj_dict_copy[field_name] = {} if field_name == "categories" else []
+
+        #de-serialize dicts from JSON strings
+        for field_name in Project.DICT_FIELDS:
+            value = proj_dict_copy.get(field_name)
+            if isinstance(value, str):
+                proj_dict_copy[field_name] = json.loads(value)
+            elif value is None:
+                proj_dict_copy[field_name] = {}
 
         # Deserialize ISO 8601 strings back into datetime objects.
         for field_name in ["date_created", "last_modified", "last_accessed"]:
@@ -189,7 +180,9 @@ class Project:
         print(f"  📁 {self.name}  (Resume Score: {self.resume_score:.2f})")
         print(f"{'='*50}")
         if self.file_path:
-            print(f"  Path: {self.file_path}")
+            print(f"  File Path: {self.file_path}")
+        if self.root_folder:
+            print(f"  File Path: {self.root_folder}")
         if self.authors:
             print(f"  Authors ({self.author_count}): {', '.join(self.authors)}")
         print(f"  Status: {self.collaboration_status}")
@@ -197,8 +190,11 @@ class Project:
         # High-level tech stack
         if self.languages:
             print(f"  Languages: {', '.join(self.languages)}")
-        if self.primary_languages:
-            print(f"  Primary languages (by LOC): {', '.join(self.primary_languages)}")
+        if self.language_share:
+            print("  Language share:")
+            for lang, share in sorted(self.language_share.items(), key=lambda x: x[0].lower()):
+                print(f"    - {lang}: {share:.1f}%")
+
         if self.frameworks:
             print(f"  Frameworks: {', '.join(self.frameworks)}")
         if self.skills_used:

@@ -184,7 +184,7 @@ def test_print_tree_calls_toString(analyzer, capsys):
     captured = capsys.readouterr()
     assert "TREE_OUTPUT" in captured.out
 
-def test_analyze_languages_filters_unknown(analyzer, capsys):
+def test_analyze_languages_filters_unknown(analyzer, capsys, tmp_path):
     fake_file = MagicMock()
     fake_file.file_name = "a.py"
 
@@ -195,14 +195,22 @@ def test_analyze_languages_filters_unknown(analyzer, capsys):
     analyzer.zip_path = "fake.zip"
     analyzer.root_folder = MagicMock()
     analyzer.root_folder.name = "fakefolder"
+    
+    # Set cached_extract_dir to avoid extraction
+    analyzer.cached_extract_dir = tmp_path
 
-    with patch("src.analyzers.language_detector.detect_language_per_file",
-               return_value="Python"):
-        analyzer.analyze_languages()
+    # Mock initialize_projects to avoid actual zip extraction
+    mock_project = Project(name="fakefolder")
+    with patch.object(analyzer, 'initialize_projects', return_value=[mock_project]):
+        
+        with patch.object(analyzer.project_manager, "set", return_value=None):
+        # Patch where it's USED, not where it's defined
+            with patch("src.analyzers.ProjectAnalyzer.analyze_language_share", 
+                       return_value={"Python": 100.0}):
+                analyzer.analyze_languages()
 
     out = capsys.readouterr().out
     assert "Python" in out
-
 
 # Tests for contribution analysis integration (from PR #209)
 def test_aggregate_stats_single_author(analyzer):
