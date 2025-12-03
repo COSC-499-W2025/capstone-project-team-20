@@ -42,6 +42,7 @@ class ProjectManager(StorageManager):
         authors TEXT,
         author_contributions TEXT,
         languages TEXT,
+        language_share TEXT,
         frameworks TEXT,
         skills_used TEXT,
         dependencies_list TEXT,
@@ -50,7 +51,6 @@ class ProjectManager(StorageManager):
         individual_contributions TEXT,
         collaboration_status TEXT,
         categories TEXT,
-        primary_languages TEXT,
         total_loc INTEGER,
         comment_ratio REAL,
         test_file_ratio REAL,
@@ -100,7 +100,7 @@ class ProjectManager(StorageManager):
             "authors, author_contributions, languages, frameworks, skills_used, "
             "dependencies_list, dependency_files_list, build_tools, "
             "individual_contributions, collaboration_status, categories, "
-            "primary_languages, total_loc, comment_ratio, test_file_ratio, "
+            "total_loc, comment_ratio, test_file_ratio, "
             "avg_functions_per_file, max_function_length, "
             "testing_discipline_level, testing_discipline_score, "
             "documentation_habits_level, documentation_habits_score, "

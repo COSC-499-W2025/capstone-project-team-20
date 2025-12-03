@@ -1,5 +1,7 @@
 import pytest
 from pathlib import Path
+from unittest.mock import patch
+import yaml
 from src.analyzers.language_detector import (
     analyze_language_share,
     filter_files,
@@ -8,7 +10,6 @@ from src.analyzers.language_detector import (
     detect_language_per_file,
     LANGUAGE_MAP
 )
-
 
 class TestDetectLanguage:
     """Tests for the detect_language function."""
@@ -224,3 +225,10 @@ def test_ignores_node_modules(tmp_path):
     (tmp_path / "main.js").write_text("my\ncode\n")
     result = analyze_language_share(str(tmp_path))
     assert result["JavaScript"] == 100  # Only counted main.js
+
+
+def test_language_map_is_populated():
+    """Verify LANGUAGE_MAP loaded successfully - only fails if config broken"""
+    assert len(LANGUAGE_MAP) > 0, "LANGUAGE_MAP is empty - config files not loading!"
+    assert "py" in LANGUAGE_MAP, "Python extension missing from LANGUAGE_MAP"
+    assert LANGUAGE_MAP["py"] == "Python"
