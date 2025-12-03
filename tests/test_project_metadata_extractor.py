@@ -80,4 +80,31 @@ def test_nested_folders_are_counted():
     assert summary["duration_days"] == expected_days
     assert round(summary["total_size_kb"], 2) == expected_kb
 
+def test_print_metadata_summary_outputs_json(capsys):
+    summary = {
+        "project_metadata": {"total_files": 3},
+        "category_summary": {}
+    }
+    ProjectMetadataExtractor.print_metadata_summary(summary)
+
+    out = capsys.readouterr().out
+
+    assert "===== Project metadata summary" in out
+    assert '"total_files": 3' in out
+
+def test_extract_metadata_no_prints(monkeypatch, capsys):
+    # Stub categorizer to avoid real logic
+    mock_file_categorizer(monkeypatch)
+
+    file = DummyFile(1000, datetime(2023, 1, 1))
+    root = DummyFolder(children=[file])
+    extractor = ProjectMetadataExtractor(root)
+
+    summary = extractor.extract_metadata()
+
+    out = capsys.readouterr().out
+    assert out.strip() == ""  # ensure no prints
+    assert summary is not None
+    assert summary["project_metadata"]["total_files"] == 1
+
 
