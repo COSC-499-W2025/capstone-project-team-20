@@ -214,6 +214,54 @@ class Project:
         if self.last_modified:
             print(f"  Modified: {self.last_modified.strftime('%Y-%m-%d')}")
 
+        # Categories (if populated by metadata extractor / CLI)
+        if self.categories:
+            print("\n  Categories:")
+            for key, value in self.categories.items():
+                if isinstance(value, list):
+                    value_str = ", ".join(map(str, value))
+                else:
+                    value_str = str(value)
+                print(f"    - {key}: {value_str}")
+
+        # Tech/profile flags (Docker, DB, frontend/backend, tests, README)
+        tech_flags = []
+        if self.has_dockerfile:
+            tech_flags.append("Dockerfile")
+        if self.has_database:
+            tech_flags.append("Database")
+        if self.has_frontend:
+            tech_flags.append("Frontend")
+        if self.has_backend:
+            tech_flags.append("Backend")
+        if self.has_test_files:
+            tech_flags.append("Tests")
+        if self.has_readme:
+            tech_flags.append("README")
+
+        if tech_flags or self.readme_keywords:
+            print("\n  Tech/profile flags:")
+            if tech_flags:
+                print(f"    - Flags: {', '.join(tech_flags)}")
+            if self.readme_keywords:
+                print(f"    - README keywords: {', '.join(self.readme_keywords)}")
+
+        # Dependencies & tooling
+        has_dep_info = any([self.dependencies_list,
+                            self.dependency_files_list,
+                            self.build_tools])
+        if has_dep_info:
+            print("\n  Dependencies & tooling:")
+            if self.dependencies_list:
+                deps_preview = ", ".join(self.dependencies_list[:8])
+                if len(self.dependencies_list) > 8:
+                    deps_preview += " ..."
+                print(f"    - Dependencies ({len(self.dependencies_list)}): {deps_preview}")
+            if self.dependency_files_list:
+                print(f"    - Dependency files: {', '.join(self.dependency_files_list)}")
+            if self.build_tools:
+                print(f"    - Build tools: {', '.join(self.build_tools)}")
+
         # Code metrics (populated by Analyze Skills)
         has_metrics = any([
             self.total_loc,
@@ -247,10 +295,14 @@ class Project:
             for label, level, score in dims:
                 if level:
                     print(f"    - {label}: {level} (score {score:.2f})")
+
+        # Resume insights
         if self.bullets:
+            print("\n  Resume insights:")
             for b in self.bullets:
-                print(f" • {b}")
+                print(f"    • {b}")
         if self.summary:
-            print(self.summary)
+            print(f"\n  Summary:\n    {self.summary}")
 
         print()
+
