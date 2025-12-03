@@ -42,10 +42,6 @@ class RepoProjectBuilder:
                 projects.append(proj)
 
         return projects
-    
-    def suppress_output(self):
-        """Silence stdout while running noisy extractors."""
-        return contextlib.redirect_stdout(io.StringIO())
 
     # Build a single Project object (metadata + contributions)
     def _build_single_project(self, repo_path: Path) -> Project:
@@ -59,8 +55,7 @@ class RepoProjectBuilder:
 
         # 2. Extract metadata from ZIP tree
         extractor = ProjectMetadataExtractor(folder)
-        with self.suppress_output():
-            metadata_full = extractor.extract_metadata()
+        metadata_full = extractor.extract_metadata()
         metadata = metadata_full["project_metadata"]
         category_summary = metadata_full["category_summary"]
         files = extractor.collect_all_files()
