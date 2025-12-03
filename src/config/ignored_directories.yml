@@ -29,9 +29,6 @@ ignored_dirs:
   - .next
   - .nuxt
   - .cache
-  - .temp
-  - temp
-  - tmp
   - cache
   - logs
   - log

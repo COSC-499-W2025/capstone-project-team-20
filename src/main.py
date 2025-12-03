@@ -1,6 +1,8 @@
 from src.ConsentManager import ConsentManager
 from src.analyzers.ProjectAnalyzer import ProjectAnalyzer
 from src.ConfigManager import ConfigManager
+from src.ProjectManager import ProjectManager
+from src.Project import Project
 
 def main():
     """
