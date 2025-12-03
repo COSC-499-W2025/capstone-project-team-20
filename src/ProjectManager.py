@@ -131,7 +131,13 @@ class ProjectManager(StorageManager):
             cols_str = ", ".join(columns_to_set)
             placeholders = ", ".join("?" for _ in columns_to_set)
 
-            values = [project_dict.get(col) for col in columns_to_set]
+            raw_values = [project_dict.get(col) for col in columns_to_set]
+            values = []
+            for v in raw_values:
+                if isinstance(v, (list, dict)):
+                    values.append(json.dumps(v))
+                else:
+                    values.append(v)
 
             query = f"INSERT OR REPLACE INTO {self.table_name} ({cols_str}) VALUES ({placeholders})"
 
@@ -139,6 +145,7 @@ class ProjectManager(StorageManager):
 
             if proj.id is None:
                 proj.id = cursor.lastrowid
+
 
     def get(self, id: int) -> Optional[Project]:
         """Retrieve a Project from the database by its primary key."""
