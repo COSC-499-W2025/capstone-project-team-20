@@ -180,6 +180,12 @@ class ProjectAnalyzer:
     # Project Initialization using RepoProjectBuilder
     # ------------------------------------------------------------------
 
+    def ensure_cached_dir(self) -> Path:
+        """Make sure the ZIP is extracted and cached, return the path."""
+        if self.cached_extract_dir is None:
+            self.cached_extract_dir = Path(extract_zip(str(self.zip_path)))
+        return self.cached_extract_dir
+
     def initialize_projects(self) -> List[Project]:
         """
         Uses RepoProjectBuilder to find all repos, create Project objects,
@@ -192,8 +198,8 @@ class ProjectAnalyzer:
             print("No project loaded. Please load a zip file first.\n")
             return []
 
-        temp_dir = Path(extract_zip(str(self.zip_path)))
-        self.cached_extract_dir = temp_dir
+        # Ensure we have already cached a temp directory for reuse across ProjectAnalyzer
+        temp_dir = self.ensure_cached_dir()
         builder = RepoProjectBuilder(self.root_folder)
 
         created_projects = []
@@ -367,76 +373,75 @@ class ProjectAnalyzer:
         if not path_obj.exists() or path_obj.suffix.lower() != ".zip":
             print(f"Error: {path_obj} is not a valid zip file.")
             return
+        
+        # temp_dir is passed to repo_finder, not used again in this method
+        temp_dir = self.ensure_cached_dir()
+        # returns a list of Path objects, where each Path points to the root dir of a Git repo
+        repo_paths = self.repo_finder.find_repos(temp_dir)
+        if not repo_paths:
+            print("No Git repositories found in the provided ZIP.")
+            return
 
-        temp_dir = extract_zip(str(path_obj))
-        try:
-            repo_paths = self.repo_finder.find_repos(temp_dir)
-            if not repo_paths:
-                print("No Git repositories found in the provided ZIP.")
-                return
+        repo_path = str(repo_paths[0])
 
-            repo_path = str(repo_paths[0])
+        # Step 1: Efficiently get all author names.
+        all_authors_list = self.contribution_analyzer.get_all_authors(repo_path)
 
-            # Step 1: Efficiently get all author names.
-            all_authors_list = self.contribution_analyzer.get_all_authors(repo_path)
+        # Step 2: Handle user selection.
+        usernames = self._get_or_select_usernames(all_authors_list)
 
-            # Step 2: Handle user selection.
-            usernames = self._get_or_select_usernames(all_authors_list)
+        if usernames:
+            # Step 3: Run the full analysis only if needed.
+            all_author_stats = self.contribution_analyzer.analyze(repo_path)
+            selected_stats = self._aggregate_stats(all_author_stats, usernames)
+            total_stats = self._aggregate_stats(all_author_stats)
 
-            if usernames:
-                # Step 3: Run the full analysis only if needed.
-                all_author_stats = self.contribution_analyzer.analyze(repo_path)
-                selected_stats = self._aggregate_stats(all_author_stats, usernames)
-                total_stats = self._aggregate_stats(all_author_stats)
+            # Step 4: Display the results.
+            self._display_contribution_results(selected_stats, total_stats, usernames)
 
-                # Step 4: Display the results.
-                self._display_contribution_results(selected_stats, total_stats, usernames)
+            # Step 5: Persist authors & contributions into the Project row
+            try:
+                project = self._get_or_create_project_record()
+            except RuntimeError:
+                project = None
 
-                # Step 5: Persist authors & contributions into the Project row
-                try:
-                    project = self._get_or_create_project_record()
-                except RuntimeError:
-                    project = None
+            if project is not None:
+                # All authors seen in the repo
+                project.authors = sorted(set(all_authors_list))
+                project.author_count = len(project.authors)
 
-                if project is not None:
-                    # All authors seen in the repo
-                    project.authors = sorted(set(all_authors_list))
-                    project.author_count = len(project.authors)
+                # Collaboration status ("individual" / "collaborative")
+                project.collaboration_status = (
+                    "individual" if project.author_count <= 1 else "collaborative"
+                )
 
-                    # Collaboration status ("individual" / "collaborative")
-                    project.collaboration_status = (
-                        "individual" if project.author_count <= 1 else "collaborative"
+                # Per-author contributions snapshot
+                contributions: List[Dict[str, Any]] = []
+                for author, stats in all_author_stats.items():
+                    contributions.append(
+                        {
+                            "author": author,
+                            "lines_added": stats.lines_added,
+                            "lines_deleted": stats.lines_deleted,
+                            "total_commits": stats.total_commits,
+                            "files_touched": sorted(stats.files_touched),
+                            "contribution_by_type": dict(stats.contribution_by_type),
+                        }
                     )
 
-                    # Per-author contributions snapshot
-                    contributions: List[Dict[str, Any]] = []
-                    for author, stats in all_author_stats.items():
-                        contributions.append(
-                            {
-                                "author": author,
-                                "lines_added": stats.lines_added,
-                                "lines_deleted": stats.lines_deleted,
-                                "total_commits": stats.total_commits,
-                                "files_touched": sorted(stats.files_touched),
-                                "contribution_by_type": dict(stats.contribution_by_type),
-                            }
-                        )
+                project.author_contributions = contributions
 
-                    project.author_contributions = contributions
+                # Overall share for the selected users
+                try:
+                    share = self.contribution_analyzer.calculate_share(
+                        selected_stats, total_stats
+                    )
+                except Exception:
+                    share = None
+                project.individual_contributions = share
 
-                    # Overall share for the selected users
-                    try:
-                        share = self.contribution_analyzer.calculate_share(
-                            selected_stats, total_stats
-                        )
-                    except Exception:
-                        share = None
-                    project.individual_contributions = share
-
-                    project.last_accessed = datetime.now()
-                    self.project_manager.set(project)
-        finally:
-            shutil.rmtree(temp_dir, ignore_errors=True)
+                project.last_accessed = datetime.now()
+                self.project_manager.set(project)
 
     def change_selected_users(self) -> None:
         """Allows the user to change their configured username selection."""
@@ -449,27 +454,26 @@ class ProjectAnalyzer:
         if not path_obj.exists() or path_obj.suffix.lower() != ".zip":
             print(f"Error: {path_obj} is not a valid zip file.")
             return
+        
+        # temp_dir is passed to repo_finder, not used again in this method
+        temp_dir = self.cached_extract_dir
+        # returns a list of Path objects, where each Path points to the root dir of a Git repo
+        repo_paths = self.repo_finder.find_repos(temp_dir)
+        if not repo_paths:
+            print("No Git repositories found in the provided ZIP.")
+            return
 
-        temp_dir = extract_zip(str(path_obj))
-        try:
-            repo_paths = self.repo_finder.find_repos(temp_dir)
-            if not repo_paths:
-                print("No Git repositories found in the provided ZIP.")
-                return
+        # Get the current list of authors to present to the user.
+        all_authors_list = self.contribution_analyzer.get_all_authors(str(repo_paths[0]))
 
-            # Get the current list of authors to present to the user.
-            all_authors_list = self.contribution_analyzer.get_all_authors(str(repo_paths[0]))
+        print("Please select the new set of usernames you would like to use.")
+        new_usernames = self._prompt_for_usernames(all_authors_list)
 
-            print("Please select the new set of usernames you would like to use.")
-            new_usernames = self._prompt_for_usernames(all_authors_list)
-
-            if new_usernames:
-                self._config_manager.set("usernames", new_usernames)
-                print(f"\nSuccessfully updated selected users to: {', '.join(new_usernames)}")
-            else:
-                print("\nNo changes made to user selection.")
-        finally:
-            shutil.rmtree(temp_dir, ignore_errors=True)
+        if new_usernames:
+            self._config_manager.set("usernames", new_usernames)
+            print(f"\nSuccessfully updated selected users to: {', '.join(new_usernames)}")
+        else:
+            print("\nNo changes made to user selection.")
 
     # ------------------------------------------------------------------
     # Metadata, categories, languages
@@ -563,22 +567,16 @@ class ProjectAnalyzer:
         
         print("Language Detection")
 
-        if self.cached_extract_dir is not None:
-            root_dir = self.cached_extract_dir
-        else:
-            if not self.zip_path:
-                print("No project loaded. Cannot extract files for language analysis.")
-                return
-            root_dir = Path(extract_zip(str(self.zip_path)))
-            self.cached_extract_dir = root_dir
+        # temp_dir is passed to analyze_language_share, not used again in this method
+        temp_dir = self.ensure_cached_dir()
 
         for project in projects:
             # 1. Check validity of root_dir
                 # check for subfolder named after project
-            project_root = root_dir / project.name
+            project_root = temp_dir / project.name
             if not project_root.exists():
                 # fallback to root_dir if project-specific folder not found
-                project_root = root_dir
+                project_root = temp_dir
 
             # 2. Run the language detector
             language_share = analyze_language_share(project_root)
@@ -687,127 +685,124 @@ class ProjectAnalyzer:
         if not self.zip_path.exists() or not zipfile.is_zipfile(self.zip_path):
             print(f"Error: {self.zip_path} is not a valid zip file.")
             return
+        # temp_dir is modified into project_source_path, passed to SkillAnalyzer object, not used again
+        temp_dir = self.ensure_cached_dir()
+        for project in project_list:
+            print(f"\nAnalyzing skills for: {project.name}...")
 
-        temp_dir = Path(extract_zip(str(self.zip_path)))
-        try:
-            for project in project_list:
-                print(f"\nAnalyzing skills for: {project.name}...")
+            # Flexible path finding: check for a subdirectory, fall back to root
+            project_source_path = temp_dir / project.name
+            if not project_source_path.exists():
+                print(
+                    f"  - Warning: Source path '{project_source_path}' not found. "
+                    "Analyzing root of zip instead."
+                )
+                project_source_path = temp_dir
 
-                # Flexible path finding: check for a subdirectory, fall back to root
-                project_source_path = temp_dir / project.name
-                if not project_source_path.exists():
-                    print(
-                        f"  - Warning: Source path '{project_source_path}' not found. "
-                        "Analyzing root of zip instead."
-                    )
-                    project_source_path = temp_dir
+            skill_analyzer = SkillAnalyzer(project_source_path)
+            result = skill_analyzer.analyze()
 
-                skill_analyzer = SkillAnalyzer(project_source_path)
-                result = skill_analyzer.analyze()
+            skills = result.get("skills", []) or []
+            stats = result.get("stats", {}) or {}
+            dimensions = result.get("dimensions", {}) or {}
 
-                skills = result.get("skills", []) or []
-                stats = result.get("stats", {}) or {}
-                dimensions = result.get("dimensions", {}) or {}
+            if not stats:
+                print(f"  - No metrics could be inferred for {project.name}.")
+                continue
 
-                if not stats:
-                    print(f"  - No metrics could be inferred for {project.name}.")
-                    continue
+            overall = stats.get("overall", {}) or {}
+            per_lang = stats.get("per_language", {}) or {}
 
-                overall = stats.get("overall", {}) or {}
-                per_lang = stats.get("per_language", {}) or {}
+            # --- Enrich the existing Project object with metrics ---
+            project.total_loc = overall.get("total_lines_of_code", 0)
+            project.comment_ratio = overall.get("comment_ratio", 0.0)
+            project.test_file_ratio = overall.get("test_file_ratio", 0.0)
+            project.avg_functions_per_file = overall.get("avg_functions_per_file", 0.0)
+            project.max_function_length = overall.get("max_function_length", 0)
 
-                # --- Enrich the existing Project object with metrics ---
-                project.total_loc = overall.get("total_lines_of_code", 0)
-                project.comment_ratio = overall.get("comment_ratio", 0.0)
-                project.test_file_ratio = overall.get("test_file_ratio", 0.0)
-                project.avg_functions_per_file = overall.get("avg_functions_per_file", 0.0)
-                project.max_function_length = overall.get("max_function_length", 0)
+            # Languages: keys from per-language stats, excluding "Unknown"
+            display_langs = [
+                lang for lang in sorted(per_lang.keys())
+                if str(lang).lower() != "unknown"
+            ]
+            project.languages = display_langs
 
-                # Languages: keys from per-language stats, excluding "Unknown"
-                display_langs = [
-                    lang for lang in sorted(per_lang.keys())
-                    if str(lang).lower() != "unknown"
-                ]
-                project.languages = display_langs
-
-                # Filter skills by confidence for display & persistence
-                filtered_skills: List[Tuple[str, float]] = []
-                for item in skills:
-                    if isinstance(item, dict):
-                        name = item.get("skill") or item.get("name")
-                        conf = item.get("confidence", 1.0)
-                    else:
-                        name = getattr(item, "skill", None) or getattr(item, "name", None)
-                        conf = getattr(item, "confidence", 1.0)
-
-                    if name and conf >= MIN_DISPLAY_CONFIDENCE:
-                        filtered_skills.append((name.strip(), conf))
-
-                seen = set()
-                deduped_skill_names: List[str] = []
-                for name, _ in filtered_skills:
-                    key = name.lower()
-                    if key not in seen:
-                        seen.add(key)
-                        deduped_skill_names.append(name)
-
-                # Persist filtered skill names
-                project.skills_used = deduped_skill_names
-
-                # Dimensions
-                td = dimensions.get("testing_discipline", {}) or {}
-                project.testing_discipline_score = td.get("score", 0.0)
-                project.testing_discipline_level = td.get("level", "")
-
-                doc = dimensions.get("documentation_habits", {}) or {}
-                project.documentation_habits_score = doc.get("score", 0.0)
-                project.documentation_habits_level = doc.get("level", "")
-
-                mod = dimensions.get("modularity", {}) or {}
-                project.modularity_score = mod.get("score", 0.0)
-                project.modularity_level = mod.get("level", "")
-
-                ld = dimensions.get("language_depth", {}) or {}
-                project.language_depth_score = ld.get("score", 0.0)
-                project.language_depth_level = ld.get("level", "")
-
-                project.last_modified = datetime.now()
-                project.last_accessed = datetime.now()
-
-                # Calculate the final score
-                ranker = ProjectRanker(project)
-                ranker.calculate_resume_score()
-
-                # --- Save the fully enriched object back to the database ---
-                self.project_manager.set(project)
-                print(f"  - Successfully enriched and saved '{project.name}'.")
-                print(f"  - Final Resume Score: {project.resume_score:.2f}")
-
-                # --- Display detailed analysis results ---
-                print("\n  Project-level code metrics:")
-                for k, v in overall.items():
-                    print(f"    - {k}: {v}")
-
-                print("\n  Per-language metrics:")
-                for lang, data in per_lang.items():
-                    print(f"    - {lang}:")
-                    for k_lang, v_lang in data.items():
-                        print(f"        {k_lang}: {v_lang}")
-
-                print("\n  Dimensions:")
-                for dim_name, dim_data in dimensions.items():
-                    level = dim_data.get("level", "")
-                    score = dim_data.get("score", 0.0)
-                    print(f"    - {dim_name}: level={level}, score={score:.2f}")
-
-                print("\n  Detected skills (filtered by confidence):")
-                if deduped_skill_names:
-                    for s in deduped_skill_names:
-                        print(f"    - {s}")
+            # Filter skills by confidence for display & persistence
+            filtered_skills: List[Tuple[str, float]] = []
+            for item in skills:
+                if isinstance(item, dict):
+                    name = item.get("skill") or item.get("name")
+                    conf = item.get("confidence", 1.0)
                 else:
-                    print("    (no high-confidence skills detected)")
-        finally:
-            shutil.rmtree(temp_dir, ignore_errors=True)
+                    name = getattr(item, "skill", None) or getattr(item, "name", None)
+                    conf = getattr(item, "confidence", 1.0)
+
+                if name and conf >= MIN_DISPLAY_CONFIDENCE:
+                    filtered_skills.append((name.strip(), conf))
+
+            seen = set()
+            deduped_skill_names: List[str] = []
+            for name, _ in filtered_skills:
+                key = name.lower()
+                if key not in seen:
+                    seen.add(key)
+                    deduped_skill_names.append(name)
+
+            # Persist filtered skill names
+            project.skills_used = deduped_skill_names
+
+            # Dimensions
+            td = dimensions.get("testing_discipline", {}) or {}
+            project.testing_discipline_score = td.get("score", 0.0)
+            project.testing_discipline_level = td.get("level", "")
+
+            doc = dimensions.get("documentation_habits", {}) or {}
+            project.documentation_habits_score = doc.get("score", 0.0)
+            project.documentation_habits_level = doc.get("level", "")
+
+            mod = dimensions.get("modularity", {}) or {}
+            project.modularity_score = mod.get("score", 0.0)
+            project.modularity_level = mod.get("level", "")
+
+            ld = dimensions.get("language_depth", {}) or {}
+            project.language_depth_score = ld.get("score", 0.0)
+            project.language_depth_level = ld.get("level", "")
+
+            project.last_modified = datetime.now()
+            project.last_accessed = datetime.now()
+
+            # Calculate the final score
+            ranker = ProjectRanker(project)
+            ranker.calculate_resume_score()
+
+            # --- Save the fully enriched object back to the database ---
+            self.project_manager.set(project)
+            print(f"  - Successfully enriched and saved '{project.name}'.")
+            print(f"  - Final Resume Score: {project.resume_score:.2f}")
+
+            # --- Display detailed analysis results ---
+            print("\n  Project-level code metrics:")
+            for k, v in overall.items():
+                print(f"    - {k}: {v}")
+
+            print("\n  Per-language metrics:")
+            for lang, data in per_lang.items():
+                print(f"    - {lang}:")
+                for k_lang, v_lang in data.items():
+                    print(f"        {k_lang}: {v_lang}")
+
+            print("\n  Dimensions:")
+            for dim_name, dim_data in dimensions.items():
+                level = dim_data.get("level", "")
+                score = dim_data.get("score", 0.0)
+                print(f"    - {dim_name}: level={level}, score={score:.2f}")
+
+            print("\n  Detected skills (filtered by confidence):")
+            if deduped_skill_names:
+                for s in deduped_skill_names:
+                    print(f"    - {s}")
+            else:
+                print("    (no high-confidence skills detected)")
 
     # ------------------------------------------------------------------
     # Timeline: Projects & Skills (using stored analysis)
@@ -1245,6 +1240,7 @@ class ProjectAnalyzer:
 
     def run_all(self) -> None:
         print("Running All Analyzers\n")
+        # cached_dir is set in initialize_projects(), no need to explicitly call
         projects = self.initialize_projects()
         self.analyze_git_and_contributions()
         if self.root_folder:
@@ -1254,6 +1250,7 @@ class ProjectAnalyzer:
             self.analyze_languages(projects)
         self.analyze_skills()
         self.analyze_badges()
+        # cached_dir is cleaned up in _cleanup_temp()
         self._cleanup_temp()
         print("\nAnalyses complete.\n")
 
@@ -1294,6 +1291,7 @@ class ProjectAnalyzer:
     def run(self) -> None:
         """The main interactive loop for the Project Analyzer."""
         print("Welcome to the Project Analyzer.\n")
+        # cleans up cached temp_dir in the case of Ctrl + C (early exit)
         signal.signal(signal.SIGINT, self._cleanup_temp)
 
         while True:
@@ -1302,7 +1300,6 @@ class ProjectAnalyzer:
                 Project Analyzer
                 ========================
                 Choose an option:
-                0. Initialize/Re-scan Projects (Recommended First Step)
                 1. Analyze Git Repository & Contributions
                 2. Extract Metadata & File Statistics
                 3. Categorize Files by Type
@@ -1323,14 +1320,11 @@ class ProjectAnalyzer:
 
             choice = input("Selection: ").strip()
 
-            if choice in {"0", "1", "2", "3", "4", "5", "6", "8", "9", "10", "13"}:
-                if not self.zip_path:
-                    if not self.load_zip():
-                        return
-                    self.initialize_projects()
+            if not self.zip_path:
+                if not self.load_zip():
+                    return
+                self.initialize_projects() 
 
-            if choice == "0":
-                self.initialize_projects()
             elif choice == "1":
                 self.analyze_git_and_contributions()
             elif choice == "2":
@@ -1369,7 +1363,7 @@ class ProjectAnalyzer:
                 self.analyze_badges()
             elif choice == "16":
                 print("Exiting Project Analyzer.")
-                # CLEAN UP TEMP DIR ON EXIT
+                # clean up cached temp_dir on exit
                 self._cleanup_temp()
                 return
             else:
