@@ -138,6 +138,7 @@ class ProjectAnalyzer:
         analyzed, failed = 0, 0
 
         for zip_path in zip_files:
+            self._cleanup_temp() # clear the previous repo's cached directory
             repo_name = zip_path.stem
             try:
                 self.zip_path = Path(zip_path)
