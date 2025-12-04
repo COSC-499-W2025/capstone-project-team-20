@@ -33,22 +33,7 @@ MIN_DISPLAY_CONFIDENCE = 0.5  # only show skills with at least this confidence
 
 
 class ProjectAnalyzer:
-    """
-    Unified interface for analyzing zipped project files.
-    Responsibilities:
-    1. Git repo analysis + contribution share
-    2. Metadata and file statistics
-    3. File categorization
-    4. Folder tree printing
-    5. Language detection
-    6. Run all analyses
-    7. Analyze New Folder
-    8. Change Selected Users
-    9. Analyze Skills
-    10. Generate Resume
-    11. Display Previous Results
-    12. Exit
-    """
+    """The main entry point of our program. Caller to all of our dedicated analysis-classes."""
 
     def __init__(self, config_manager: ConfigManager):
         self.root_folder = None
@@ -60,8 +45,10 @@ class ProjectAnalyzer:
         self.repo_finder = RepoFinder()
         self.project_manager = ProjectManager()
         self.contribution_analyzer = ContributionAnalyzer()
+        ### WHY NOT SELF.REPOPROJECTBUILDER? WHY ARE WE ALLOWING SELF.ROOT_FOLDER TO BE NONE?
+        ### ITS NOT THAT IT'S TREATING ALL PROJECTS AS THE SAME. SOMETHING IS WRONG WITH THE CLEANUP/INSTANTIATION OF THE TEMP_DIR
+        ### WHEN IT'S BEING PASSED ONTO THE NEXT PROJECT OBJECT IN THE ZIP. IE PROJECT 1 IS STILL ANALYZED CORRECTLY. ITS JUST THAT PROJECT 2 ONWARDS IS NOT.
 
-        # Caches used primarily for resume insight generation
         self.cached_extract_dir: Optional[Path] = None
         self.cached_projects: Optional[Iterable[Project]] = None
 
@@ -93,12 +80,6 @@ class ProjectAnalyzer:
                 root_folder=str(self.root_folder.name if self.root_folder else "")
             )
         return project
-
-    def _print_project(self, project: Project) -> None:
-        print(f"Project: {project.name}")
-        print("-" * (len(project.name) + 9))
-        print(f"  - Authors ({project.author_count}): {', '.join(project.authors)}")
-        print(f"  - Status: {project.collaboration_status}\n")
 
     def clean_path(self, raw_input: str) -> Path:
         stripped = raw_input.strip()
@@ -201,10 +182,10 @@ class ProjectAnalyzer:
 
         # Ensure we have already cached a temp directory for reuse across ProjectAnalyzer
         temp_dir = self.ensure_cached_dir()
-        builder = RepoProjectBuilder(self.root_folder)
+        repo_builder = RepoProjectBuilder(self.root_folder)
 
         created_projects = []
-        projects_from_builder = builder.scan(temp_dir)
+        projects_from_builder = repo_builder.scan(temp_dir)
         if not projects_from_builder:
             print("No Git repositories found to build projects from.")
             # If no repos found, treat the whole zip as one project
@@ -457,7 +438,7 @@ class ProjectAnalyzer:
             return
         
         # temp_dir is passed to repo_finder, not used again in this method
-        temp_dir = self.cached_extract_dir
+        temp_dir = self.ensure_cached_dir()
         # returns a list of Path objects, where each Path points to the root dir of a Git repo
         repo_paths = self.repo_finder.find_repos(temp_dir)
         if not repo_paths:
@@ -1016,15 +997,11 @@ class ProjectAnalyzer:
             print("No project loaded. Please load a zip file first.\n")
             return
 
-        # Extract ZIP once per session and cache the directory
-        if getattr(self, "cached_extract_dir", None) is None:
-            self.cached_extract_dir = Path(extract_zip(self.zip_path))
-
-        extract_dir = self.cached_extract_dir
+        temp_dir = self.ensure_cached_dir()
 
         # use RepoProjectBuilder to fully build project objects
-        builder = RepoProjectBuilder(self.root_folder)
-        projects = builder.scan(extract_dir)
+        repo_builder = RepoProjectBuilder(self.root_folder)
+        projects = repo_builder.scan(temp_dir)
         if not projects:
             print("No Git repositories found.")
             return
@@ -1063,16 +1040,6 @@ class ProjectAnalyzer:
             # Return to main menu
             if choice == str(return_option):
                 print("\nReturning to main menu...\n")
-
-                # CLEAN UP TEMP EXTRACT DIR
-                if hasattr(self, "cached_extract_dir") and self.cached_extract_dir:
-                    try:
-                        shutil.rmtree(self.cached_extract_dir, ignore_errors=True)
-                    except Exception:
-                        pass
-
-                self.cached_extract_dir = None
-                return
 
             # Generate for ALL
             if choice == "0":
@@ -1122,7 +1089,7 @@ class ProjectAnalyzer:
                 files = extractor.collect_all_files()
 
                 # Language share (per directory)
-                language_share = analyze_language_share(extract_dir / proj.name)
+                language_share = analyze_language_share(temp_dir / proj.name)
 
                 # Language list (per-file detection)
                 repo_languages = set()
@@ -1138,7 +1105,7 @@ class ProjectAnalyzer:
                 if stored is None:
                     stored = Project(
                         name=proj.name,
-                        file_path=str(extract_dir / proj.name),
+                        file_path=str(temp_dir / proj.name),
                         root_folder=proj.name,
                     )
 

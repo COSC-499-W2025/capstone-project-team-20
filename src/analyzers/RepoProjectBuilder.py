@@ -5,6 +5,7 @@ from src.analyzers.ContributionAnalyzer import ContributionAnalyzer
 from src.analyzers.language_detector import analyze_language_share, detect_language_per_file
 from utils.RepoFinder import RepoFinder
 import io, contextlib
+from typing import List
 
 
 class RepoProjectBuilder:
@@ -24,7 +25,7 @@ class RepoProjectBuilder:
         self.repo_finder = RepoFinder()
         self.contribution_analyzer = ContributionAnalyzer()
 
-    def scan(self, extract_dir: Path):
+    def scan(self, extract_dir: Path) -> List[Project]:
         """
         Main entry point of RepoProjectBuilder.
         Takes an extracted ZIP directory, scans for Git repos, builds Project objects for each repo, returns them as a List.
@@ -103,7 +104,7 @@ class RepoProjectBuilder:
         return proj
 
     def _build_single_project(self, repo_path: Path) -> Project:
-        """Build and return an empty project object, ready for analysis."""
+        """Build and return an empty project object, ready for analysis. Called from scan()."""
         repo_name = repo_path.name
         folder = self._find_folder_by_name(self.root_folder, repo_name)
         if not folder:
