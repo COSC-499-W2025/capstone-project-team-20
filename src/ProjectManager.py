@@ -1,7 +1,9 @@
-import sqlite3, json
+import sqlite3
+import json
 from typing import Any, Dict, Generator, Optional
 from src.StorageManager import StorageManager
 from src.Project import Project
+
 
 class ProjectManager(StorageManager):
     """Manages storage and retrieval of Project objects in the database.
@@ -10,6 +12,7 @@ class ProjectManager(StorageManager):
         1. First ensure you've made the necessary changes for your new variable in Project.py
         2. Add variable to `create_table_query` method
         3. Add variable to `columns` method
+        4. the display() method must be updated to reflect the addition of this variable
     """
     def __init__(self, db_path="projects.db") -> None:
         super().__init__(db_path)
@@ -26,7 +29,7 @@ class ProjectManager(StorageManager):
     def create_table_query(self) -> str:
         """
         Returns the SQL query to create the projects table.
-        This version includes the 'resume_score' column.
+        Includes resume_score and tech-profile fields.
         """
         return """CREATE TABLE IF NOT EXISTS projects (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -42,6 +45,9 @@ class ProjectManager(StorageManager):
         language_share TEXT,
         frameworks TEXT,
         skills_used TEXT,
+        dependencies_list TEXT,
+        dependency_files_list TEXT,
+        build_tools TEXT,
         individual_contributions TEXT,
         collaboration_status TEXT,
         categories TEXT,
@@ -58,6 +64,13 @@ class ProjectManager(StorageManager):
         modularity_score REAL,
         language_depth_level TEXT,
         language_depth_score REAL,
+        has_dockerfile TEXT,
+        has_database TEXT,
+        has_frontend TEXT,
+        has_backend TEXT,
+        has_test_files TEXT,
+        has_readme TEXT,
+        readme_keywords TEXT,
         bullets TEXT,
         summary TEXT,
         resume_score REAL,
@@ -65,7 +78,6 @@ class ProjectManager(StorageManager):
         last_modified TEXT,
         last_accessed TEXT
         )"""
-
 
     @property
     def table_name(self) -> str:
@@ -81,28 +93,32 @@ class ProjectManager(StorageManager):
     def columns(self) -> str:
         """
         Comma-separated list of column names for project storage.
-        This version includes the 'resume_score' column.
+        Must match create_table_query.
         """
         return (
             "id, name, file_path, root_folder, num_files, size_kb, author_count, "
-            "authors, author_contributions, languages, language_share, frameworks, skills_used, "
+            "authors, author_contributions, languages, frameworks, skills_used, "
+            "dependencies_list, dependency_files_list, build_tools, "
             "individual_contributions, collaboration_status, categories, "
             "total_loc, comment_ratio, test_file_ratio, "
             "avg_functions_per_file, max_function_length, "
             "testing_discipline_level, testing_discipline_score, "
             "documentation_habits_level, documentation_habits_score, "
             "modularity_level, modularity_score, "
-            "bullets, summary, "
-            "language_depth_level, language_depth_score, resume_score, "
+            "language_depth_level, language_depth_score, "
+            "has_dockerfile, has_database, has_frontend, has_backend, "
+            "has_test_files, has_readme, readme_keywords, "
+            "bullets, summary, resume_score, "
             "date_created, last_modified, last_accessed"
         )
 
+    @property
+    def columns_list(self) -> list[str]:
+        return [c.strip() for c in self.columns.split(",")]
 
     def set(self, proj: Project) -> None:
         """
         Store a Project in the database.
-        This version is corrected to handle both new and existing Project objects
-        by reliably converting the object to a dictionary and then serializing its fields.
         """
         project_dict = proj.to_dict()
 
@@ -115,20 +131,21 @@ class ProjectManager(StorageManager):
             cols_str = ", ".join(columns_to_set)
             placeholders = ", ".join("?" for _ in columns_to_set)
 
-            values = [project_dict.get(col) for col in columns_to_set]
+            raw_values = [project_dict.get(col) for col in columns_to_set]
+            values = []
+            for v in raw_values:
+                if isinstance(v, (list, dict)):
+                    values.append(json.dumps(v))
+                else:
+                    values.append(v)
 
             query = f"INSERT OR REPLACE INTO {self.table_name} ({cols_str}) VALUES ({placeholders})"
 
-            try:
-                cursor.execute(query, values)
-            except sqlite3.Error as e:
-                print(f"[ERROR] Database error during .set(): {e}")
-                print(f"  - Query: {query}")
-                print(f"  - Values: {values}")
-                raise
+            cursor.execute(query, values)
 
             if proj.id is None:
                 proj.id = cursor.lastrowid
+
 
     def get(self, id: int) -> Optional[Project]:
         """Retrieve a Project from the database by its primary key."""

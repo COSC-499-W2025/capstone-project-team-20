@@ -52,6 +52,12 @@ class Project:
     language_share: Dict[str, float] = field(default_factory=dict)
     frameworks: List[str] = list_field()
     skills_used: List[str] = list_field()
+
+    # New: dependency and tooling info
+    dependencies_list: List[str] = list_field()
+    dependency_files_list: List[str] = list_field()
+    build_tools: List[str] = list_field()
+
     individual_contributions: List[str] = list_field()
     author_contributions: List[Dict[str, Any]] = list_field()
     collaboration_status: Literal["individual", "collaborative"] = "individual"
@@ -63,8 +69,17 @@ class Project:
     avg_functions_per_file: float = 0.0
     max_function_length: int = 0
 
-    # Skill dimensions (from SkillAnalyzer._compute_dimensions)
-    testing_discipline_level: str = ""       # "strong" | "good" | "ok" | "needs_improvement"
+    # Tech-profile flags
+    has_dockerfile: bool = False
+    has_database: bool = False
+    has_frontend: bool = False
+    has_backend: bool = False
+    has_test_files: bool = False
+    has_readme: bool = False
+    readme_keywords: List[str] = list_field()
+
+    # Skill dimensions ...
+    testing_discipline_level: str = ""
     testing_discipline_score: float = 0.0
 
     documentation_habits_level: str = ""
@@ -110,21 +125,23 @@ class Project:
         return proj_dict
 
     @classmethod
-    def from_dict(cls, proj_dict: dict) -> Project:
+    def from_dict(cls, proj_dict: dict) -> "Project":
         """
         Reconstructs a Project object from a dictionary, typically from a database record.
         This method deserializes JSON strings back into their original Python types.
         """
-        # Create a copy to avoid modifying the original dictionary.
         proj_dict_copy = proj_dict.copy()
 
         #de-serialize lists from JSON strings
         for field_name in Project.LIST_FIELDS:
             value = proj_dict_copy.get(field_name)
             if isinstance(value, str):
-                proj_dict_copy[field_name] = json.loads(value)
+                try:
+                    proj_dict_copy[field_name] = json.loads(value)
+                except json.JSONDecodeError:
+                    proj_dict_copy[field_name] = {} if field_name == "categories" else []
             elif value is None:
-                proj_dict_copy[field_name] = []
+                proj_dict_copy[field_name] = {} if field_name == "categories" else []
 
         #de-serialize dicts from JSON strings
         for field_name in Project.DICT_FIELDS:
@@ -138,7 +155,10 @@ class Project:
         for field_name in ["date_created", "last_modified", "last_accessed"]:
             value = proj_dict_copy.get(field_name)
             if isinstance(value, str):
-                proj_dict_copy[field_name] = datetime.fromisoformat(value)
+                try:
+                    proj_dict_copy[field_name] = datetime.fromisoformat(value)
+                except ValueError:
+                    proj_dict_copy[field_name] = None
             else:
                 proj_dict_copy[field_name] = None
 
@@ -190,6 +210,54 @@ class Project:
         if self.last_modified:
             print(f"  Modified: {self.last_modified.strftime('%Y-%m-%d')}")
 
+        # Categories (if populated by metadata extractor / CLI)
+        if self.categories:
+            print("\n  Categories:")
+            for key, value in self.categories.items():
+                if isinstance(value, list):
+                    value_str = ", ".join(map(str, value))
+                else:
+                    value_str = str(value)
+                print(f"    - {key}: {value_str}")
+
+        # Tech/profile flags (Docker, DB, frontend/backend, tests, README)
+        tech_flags = []
+        if self.has_dockerfile:
+            tech_flags.append("Dockerfile")
+        if self.has_database:
+            tech_flags.append("Database")
+        if self.has_frontend:
+            tech_flags.append("Frontend")
+        if self.has_backend:
+            tech_flags.append("Backend")
+        if self.has_test_files:
+            tech_flags.append("Tests")
+        if self.has_readme:
+            tech_flags.append("README")
+
+        if tech_flags or self.readme_keywords:
+            print("\n  Tech/profile flags:")
+            if tech_flags:
+                print(f"    - Flags: {', '.join(tech_flags)}")
+            if self.readme_keywords:
+                print(f"    - README keywords: {', '.join(self.readme_keywords)}")
+
+        # Dependencies & tooling
+        has_dep_info = any([self.dependencies_list,
+                            self.dependency_files_list,
+                            self.build_tools])
+        if has_dep_info:
+            print("\n  Dependencies & tooling:")
+            if self.dependencies_list:
+                deps_preview = ", ".join(self.dependencies_list[:8])
+                if len(self.dependencies_list) > 8:
+                    deps_preview += " ..."
+                print(f"    - Dependencies ({len(self.dependencies_list)}): {deps_preview}")
+            if self.dependency_files_list:
+                print(f"    - Dependency files: {', '.join(self.dependency_files_list)}")
+            if self.build_tools:
+                print(f"    - Build tools: {', '.join(self.build_tools)}")
+
         # Code metrics (populated by Analyze Skills)
         has_metrics = any([
             self.total_loc,
@@ -223,10 +291,14 @@ class Project:
             for label, level, score in dims:
                 if level:
                     print(f"    - {label}: {level} (score {score:.2f})")
+
+        # Resume insights
         if self.bullets:
+            print("\n  Resume insights:")
             for b in self.bullets:
-                print(f" • {b}")
+                print(f"    • {b}")
         if self.summary:
-            print(self.summary)
+            print(f"\n  Summary:\n    {self.summary}")
 
         print()
+

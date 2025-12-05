@@ -1,16 +1,17 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Callable, Tuple, Set
+from typing import Any, Dict, Iterable, List, Callable, Tuple, Set, Optional
 
 import os
 
 from src.FileCategorizer import FileCategorizer
 
-from .skill_models import Evidence, SkillProfileItem, TAXONOMY
+from .skill_models import Evidence, SkillProfileItem, TAXONOMY, KNOWN_FRAMEWORKS
 from .skill_patterns import DEP_TO_SKILL, SNIPPET_PATTERNS, KNOWN_CONFIG_HINTS
 from .skill_proficiency import ProficiencyEstimator
 from .code_metrics_analyzer import CodeMetricsAnalyzer, CodeFileAnalysis
+
 
 # Heuristic mapping: which snippet-based skills make sense for which languages.
 # This lets us avoid running JS regexes on Python files, etc.
@@ -28,22 +29,82 @@ LANG_TO_ALLOWED_SNIPPET_SKILLS: Dict[str, Set[str]] = {
     "rust": {"Rust", "CMake"},
 }
 
-DEPENDENCY_FILES = {
-        "package.json",
-        "package-lock.json",
-        "pnpm-lock.yaml",
-        "yarn.lock",
-        "requirements.txt",
-        "pyproject.toml",
-        "Pipfile",
-        "Pipfile.lock",
-        "environment.yml",
-        "poetry.lock",
-        "pom.xml",
-        "build.gradle",
-        "build.gradle.kts",
-        "go.mod",
-    }
+# Simple helpers for tech-profile classification.
+BUILD_TOOL_SKILLS: Set[str] = {
+    "Maven",
+    "Gradle",
+    "Webpack",
+    "Vite",
+    "Rollup",
+    "Parcel",
+    "CMake",
+    "Make",
+}
+
+FRONTEND_FRAMEWORKS: Set[str] = {
+    "React",
+    "Next.js",
+    "Angular",
+    "Vue",
+    "Svelte",
+}
+
+BACKEND_FRAMEWORKS: Set[str] = {
+    "Django",
+    "Flask",
+    "FastAPI",
+    "Spring",
+    "ASP.NET",
+    "Node.js",
+    "Express",
+}
+
+DB_KEYWORDS: Set[str] = {
+    "postgres",
+    "postgresql",
+    "mysql",
+    "mariadb",
+    "sqlite",
+    "mongodb",
+    "mongo",
+    "redis",
+    "prisma",
+    "typeorm",
+    "hibernate",
+    "sequelize",
+}
+
+# Direct DB file extensions (for .db, .sqlite, etc.)
+DB_FILE_SUFFIXES: Set[str] = {
+    ".db",
+    ".sqlite",
+    ".sqlite3",
+}
+
+README_KEYWORDS_WHITELIST: Set[str] = {
+    "installation", "install", "setup",
+    "usage", "use", "run",
+    "testing", "tests", "test",
+    "contributing", "contribution",
+    "license", "roadmap",
+}
+
+DEPENDENCY_FILES: Set[str] = {
+    "package.json",
+    "package-lock.json",
+    "pnpm-lock.yaml",
+    "yarn.lock",
+    "requirements.txt",
+    "pyproject.toml",
+    "Pipfile",
+    "Pipfile.lock",
+    "environment.yml",
+    "poetry.lock",
+    "pom.xml",
+    "build.gradle",
+    "build.gradle.kts",
+    "go.mod",
+}
 
 
 class SkillAnalyzer:
@@ -101,7 +162,7 @@ class SkillAnalyzer:
 
                 yield file_path
 
-    def _iter_pattern_pairs(self, raw_patterns: Iterable[Any]) -> Iterable[tuple[Any, str]]:
+    def _iter_pattern_pairs(self, raw_patterns: Iterable[Any]) -> Iterable[Tuple[Any, str]]:
         """
         Normalize whatever structure DEP_TO_SKILL / SNIPPET_PATTERNS use into
         (pattern, skill) pairs.
@@ -190,6 +251,7 @@ class SkillAnalyzer:
               "stats": Dict[str, Any],   # project-level metrics used for scoring
               "dimensions": Dict[str, Any],
               "resume_suggestions": List[Dict[str, Any]],
+              "tech_profile": Dict[str, Any],  # frameworks/deps/flags
             }
         """
         file_analyses = self.metrics_analyzer.analyze()
@@ -205,6 +267,7 @@ class SkillAnalyzer:
 
         skills = self._build_skill_profiles(evidence, stats)
         dimensions = self._compute_dimensions(stats)
+        tech_profile = self._compute_tech_profile(evidence, stats, skills)
 
         # placeholder for future fully-formed bullets
         resume_suggestions: List[Dict[str, Any]] = []
@@ -214,6 +277,140 @@ class SkillAnalyzer:
             "stats": stats,
             "dimensions": dimensions,
             "resume_suggestions": resume_suggestions,
+            "tech_profile": tech_profile,
+        }
+
+    # ------------------------------------------------------------------
+    # Utility helpers
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _normalize_str_list(items: Iterable[str]) -> List[str]:
+        """Return a deterministic, deduplicated string list."""
+        return sorted({str(i) for i in items if i})
+
+    def _analyze_readme(self) -> Tuple[bool, List[str]]:
+        """
+        Look for a README* file anywhere in the project (respecting ignored dirs)
+        and extract a few coarse keywords.
+        """
+        readme_path: Optional[Path] = None
+        try:
+            for candidate in self._iter_project_files():
+                if candidate.is_file() and candidate.name.lower().startswith("readme"):
+                    readme_path = candidate
+                    break
+        except FileNotFoundError:
+            return False, []
+
+        if not readme_path or not readme_path.exists():
+            return False, []
+
+        try:
+            text = readme_path.read_text(encoding="utf-8", errors="ignore")
+        except OSError:
+            # We know a README exists, but we couldn't read it
+            return True, []
+
+        tokens = {
+            t.strip(".,:;()[]{}\"'").lower()
+            for t in text.split()
+        }
+        keywords = sorted(t for t in tokens if t in README_KEYWORDS_WHITELIST)
+        return True, keywords
+
+    def _compute_tech_profile(
+        self,
+        evidence: List[Evidence],
+        stats: Dict[str, Any],
+        skills: List[SkillProfileItem],
+    ) -> Dict[str, Any]:
+        """
+        Aggregate frameworks, dependencies, and high-level booleans
+        from existing evidence + stats into a tech-profile dict.
+        """
+        overall = stats.get("overall", {}) or {}
+
+        # Collect skill names (canonical) once.
+        skill_names = {
+            (item.skill or "").strip()
+            for item in skills
+            if getattr(item, "skill", None)
+        }
+
+        # Frameworks are any skills that intersect our known framework set.
+        frameworks = {
+            name for name in skill_names
+            if name in KNOWN_FRAMEWORKS
+        }
+
+        # Build tools from a small curated list.
+        build_tools = {
+            name for name in skill_names
+            if name in BUILD_TOOL_SKILLS
+        }
+
+        # Dependencies and dependency files from Evidence (source == "dependency").
+        dep_names: set[str] = set()
+        dep_files: set[str] = set()
+        for ev in evidence:
+            if ev.source == "dependency":
+                if ev.raw:
+                    dep_names.add(ev.raw)
+                if ev.file_path:
+                    dep_files.add(ev.file_path)
+
+        # Dockerfile / Docker presence
+        has_dockerfile = False
+        for ev in evidence:
+            if ev.file_path and "dockerfile" in ev.file_path.lower():
+                has_dockerfile = True
+                break
+            if "docker" in (ev.skill or "").lower():
+                has_dockerfile = True
+                break
+
+        # Database use: look for DB keywords in detected skills.
+        lower_skills = [s.lower() for s in skill_names]
+        has_database = any(
+            any(db_kw in s for db_kw in DB_KEYWORDS)
+            for s in lower_skills
+        )
+
+        # Treat .db / .sqlite / .sqlite3 files as DB evidence.
+        has_database_files = False
+        for path in self._iter_project_files():
+            if not path.is_file():
+                continue
+            if path.suffix.lower() in DB_FILE_SUFFIXES:
+                has_database_files = True
+                break
+
+        has_database = has_database or has_database_files
+
+        # Frontend / backend flags based on frameworks.
+        has_frontend = any(f in FRONTEND_FRAMEWORKS for f in frameworks)
+        has_backend = any(f in BACKEND_FRAMEWORKS for f in frameworks)
+
+        # Test files from overall stats.
+        num_test_files = int(overall.get("num_test_files", 0) or 0)
+        has_test_files = num_test_files > 0
+
+        # README keywords
+        has_readme, readme_keywords = self._analyze_readme()
+
+        return {
+            "frameworks": self._normalize_str_list(frameworks),
+            "dependencies_list": self._normalize_str_list(dep_names),
+            "dependency_files_list": self._normalize_str_list(dep_files),
+            "build_tools": self._normalize_str_list(build_tools),
+            "has_dockerfile": has_dockerfile,
+            "has_database": has_database,
+            "has_frontend": has_frontend,
+            "has_backend": has_backend,
+            "has_test_files": has_test_files,
+            "has_readme": has_readme,
+            "readme_keywords": readme_keywords,
         }
 
     # ------------------------------------------------------------------
@@ -307,8 +504,8 @@ class SkillAnalyzer:
 
         return evidence
 
-    
     def _dependency_evidence(self) -> List[Evidence]:
+        """Evidence from dependency files (requirements.txt, package.json, etc.)."""
         evidence: List[Evidence] = []
 
         for path in self._iter_project_files():
@@ -316,7 +513,7 @@ class SkillAnalyzer:
                 continue
 
             if path.name not in DEPENDENCY_FILES:
-                continue   # <-- ignore random docs
+                continue   # ignore random docs
 
             try:
                 text = path.read_text(encoding="utf-8", errors="ignore")
@@ -372,41 +569,35 @@ class SkillAnalyzer:
         For each code file, scan its text once and record which snippet patterns matched.
         This avoids re-reading files in _snippet_evidence and also gates patterns
         by language to keep Analyze Skills fast.
-
-        Uses language gating from LANG_TO_ALLOWED_SNIPPET_SKILLS to avoid running
-        JS regexes on Python files, etc.
         """
         for fa in file_analyses:
             full_path = fa.path
-
             if not isinstance(full_path, Path):
                 full_path = Path(full_path)
+
             try:
                 text = full_path.read_text(encoding="utf-8", errors="ignore")
             except OSError:
                 continue
+
             lang = (fa.language or "").lower()
-            allowed_skills = LANG_TO_ALLOWED_SNIPPET_SKILLS.get(lang, [])
+            allowed_skills = LANG_TO_ALLOWED_SNIPPET_SKILLS.get(lang, set())
 
             if not allowed_skills:
                 continue
 
-            for skill in allowed_skills:
             # Count matches per skill
-                for pattern, skill in self._iter_pattern_pairs(SNIPPET_PATTERNS):
-                    # If we have a whitelist for this language, skip skills that don't apply
-                    if allowed_skills is not None and skill not in allowed_skills:
-                        continue
+            for pattern, skill in self._iter_pattern_pairs(SNIPPET_PATTERNS):
+                if allowed_skills and skill not in allowed_skills:
+                    continue
 
-                    if hasattr(pattern, "findall"):
-                        matches = len(pattern.findall(text))
-                    else:
-                        matches = text.count(str(pattern))
+                if hasattr(pattern, "findall"):
+                    matches = len(pattern.findall(text))
+                else:
+                    matches = text.count(str(pattern))
 
-                    if matches > 0:
-                        fa.snippet_matches[skill] = (
-                            fa.snippet_matches.get(skill, 0) + matches
-                        )
+                if matches > 0:
+                    fa.snippet_matches[skill] = fa.snippet_matches.get(skill, 0) + matches
 
             # Also populate snippet_skills list for backward compatibility
             if fa.snippet_matches:
@@ -494,7 +685,6 @@ class SkillAnalyzer:
         per_lang = stats.get("per_language", {}) or {}
 
         # --- Testing discipline ---
-        # FIX: Directly use the 'test_file_ratio' from the overall stats, which is pre-calculated.
         test_ratio = overall.get("test_file_ratio", 0.0)
         test_score = min(1.0, test_ratio / 0.4)  # 0.4+ tests/code ~= strong
         testing_level = self._level_from_score(test_score)
@@ -504,7 +694,6 @@ class SkillAnalyzer:
             "level": testing_level,
             "raw": {
                 "test_file_ratio": test_ratio,
-                # FIX: Use the correct keys from overall stats
                 "num_test_files": overall.get("num_test_files", 0),
                 "num_code_files": overall.get("num_code_files", 0),
                 "total_files": overall.get("file_count", 0),
@@ -533,9 +722,9 @@ class SkillAnalyzer:
         modularity_score = 0.0
         if avg_funcs >= 3:
             modularity_score += 0.5
-        if max_func_len > 0 and max_func_len <= 50: # FIX: Added check for > 0
+        if max_func_len > 0 and max_func_len <= 50:
             modularity_score += 0.5
-        elif max_func_len > 0 and max_func_len <= 100: # FIX: Added check for > 0
+        elif max_func_len > 0 and max_func_len <= 100:
             modularity_score += 0.25
 
         modularity_score = min(1.0, modularity_score)
@@ -551,15 +740,13 @@ class SkillAnalyzer:
         }
 
         # --- Language depth ---
-        # FIX: Correctly calculate total_loc and language count
         total_loc = overall.get("total_lines_of_code", 0)
         lang_count = len(per_lang) if isinstance(per_lang, dict) else 0
 
-        # A simple proxy: fraction of languages above a LOC threshold
         depth_languages = {
             lang: data["loc"]
             for lang, data in per_lang.items()
-            if isinstance(data, dict) and data.get("loc", 0) >= 500  # arbitrary "non-toy" threshold
+            if isinstance(data, dict) and data.get("loc", 0) >= 500
         }
 
         depth_ratio = len(depth_languages) / max(1, lang_count) if lang_count > 0 else 0.0
