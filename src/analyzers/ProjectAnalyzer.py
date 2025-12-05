@@ -65,23 +65,6 @@ class ProjectAnalyzer:
         self.cached_extract_dir: Optional[Path] = None
         self.cached_projects: Optional[Iterable[Project]] = None
 
-    # ------------------------------------------------------------------
-    # Helpers
-    # ------------------------------------------------------------------
-
-    @contextlib.contextmanager
-    def suppress_output(self):
-        """Temporarily suppress stdout and stderr."""
-        with open(os.devnull, "w") as devnull:
-            old_stdout = sys.stdout
-            old_stderr = sys.stderr
-            sys.stdout = devnull
-            sys.stderr = devnull
-            try:
-                yield
-            finally:
-                sys.stdout = old_stdout
-                sys.stderr = old_stderr
 
     def load_or_create_project(self):
         name = Path(self.zip_path).stem
@@ -531,6 +514,7 @@ class ProjectAnalyzer:
         # Touch last_accessed
         project.last_accessed = datetime.now()
         self.project_manager.set(project)
+        ProjectMetadataExtractor.print_metadata_summary(metadata_full)
 
     def analyze_categories(self) -> None:
         print("File Categories")
@@ -892,8 +876,7 @@ class ProjectAnalyzer:
         print("\n=== BADGE ANALYSIS ===")
 
         # 1) Metadata & category summary
-        with self.suppress_output():
-            meta_payload = self.metadata_extractor.extract_metadata() or {}
+        meta_payload = self.metadata_extractor.extract_metadata() or {}
         project_meta = meta_payload.get("project_metadata") or {}
         category_summary = meta_payload.get("category_summary") or {}
 
@@ -1111,10 +1094,9 @@ class ProjectAnalyzer:
                     print("Skipping this project.\n")
                     continue
 
-                # Metadata extraction (silenced)
+                # Metadata extraction
                 extractor = ProjectMetadataExtractor(folder)
-                with self.suppress_output():
-                    metadata_full = extractor.extract_metadata()
+                metadata_full = extractor.extract_metadata()
 
                 metadata = metadata_full.get("project_metadata", {})
                 categorized_files = metadata_full.get(
