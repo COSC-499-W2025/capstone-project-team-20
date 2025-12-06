@@ -2,6 +2,7 @@ from unittest.mock import patch, MagicMock, Mock
 from src.analyzers.ProjectAnalyzer import ProjectAnalyzer
 from src.ConfigManager import ConfigManager
 from src.Project import Project
+from src.ProjectFolder import ProjectFolder
 from pathlib import Path
 import shutil
 from src.analyzers.ContributionAnalyzer import ContributionStats
@@ -17,27 +18,38 @@ def mock_config_manager():
     return mock_cm
 
 @pytest.fixture
-def analyzer(mock_config_manager):
-    """Create a ProjectAnalyzer with mocked dependencies"""
-    return ProjectAnalyzer(config_manager=mock_config_manager)
+def mock_root_folder():
+    mock_folder = MagicMock(spec=ProjectFolder)
+    return mock_folder
 
-def test_init_with_config_manager(mock_config_manager):
+@pytest.fixture
+def analyzer(mock_config_manager, mock_root_folder):
+    dummy_zip = Path("/dummy/path.zip")
+    return ProjectAnalyzer(
+        config_manager=mock_config_manager, 
+        root_folder=mock_root_folder, 
+        zip_path=dummy_zip
+    )
+
+def test_init_with_config_manager(mock_config_manager, mock_root_folder):
     """Test ProjectAnalyzer initializes with ConfigManager"""
-    analyzer = ProjectAnalyzer(config_manager=mock_config_manager)
+    dummy_zip = Path("/dummy/path.zip")
+    analyzer = ProjectAnalyzer(config_manager=mock_config_manager, root_folder=mock_root_folder, zip_path=dummy_zip)
     assert analyzer._config_manager is mock_config_manager
     assert analyzer.repo_finder is not None
 
-def test_load_zip_success(analyzer):
+def test_load_zip_success(mock_config_manager):
     fake_root = MagicMock()
     with patch("os.path.exists", return_value=True):
         with patch("zipfile.is_zipfile", return_value=True):
             with patch("src.analyzers.ProjectAnalyzer.parse", return_value=fake_root):
                 with patch("builtins.input", side_effect=["/path/fake.zip"]):
-                    result = analyzer.load_zip()
-    assert result is True
+                    root_folder, zip_path = ProjectAnalyzer.load_zip()
+    analyzer = ProjectAnalyzer(config_manager=mock_config_manager, root_folder=root_folder, zip_path=zip_path)
     assert analyzer.root_folder is fake_root
+    assert Path(zip_path).name == "fake.zip"
 
-def test_load_zip_retry_then_success(analyzer):
+def test_load_zip_retry_then_success(mock_config_manager):
     fake_root = MagicMock()
 
     inputs = iter(["bad.zip", "good.zip"])
@@ -49,17 +61,20 @@ def test_load_zip_retry_then_success(analyzer):
         with patch("zipfile.is_zipfile", side_effect=check_path):
             with patch("builtins.input", side_effect=lambda prompt: next(inputs)):
                 with patch("src.analyzers.ProjectAnalyzer.parse", return_value=fake_root):
-                    result = analyzer.load_zip()
+                    root_folder, zip_path = ProjectAnalyzer.load_zip()
 
-    assert result is True
+    analyzer = ProjectAnalyzer(config_manager=mock_config_manager, root_folder=root_folder, zip_path=zip_path)
     assert analyzer.root_folder is fake_root
+    assert Path(zip_path).name == "good.zip"
 
-def test_load_zip_parse_error(analyzer):
+def test_load_zip_parse_error(mock_config_manager):
     with patch("os.path.exists", return_value=True):
         with patch("zipfile.is_zipfile", return_value=True):
             with patch("builtins.input", return_value="/path/project.zip"):
                 with patch("src.analyzers.ProjectAnalyzer.parse", side_effect=Exception("bad zip")):
-                    assert analyzer.load_zip() is False
+                    with pytest.raises(Exception):
+                        ProjectAnalyzer.load_zip()
+
 
 # Tests for username prompting
 def test_prompt_for_usernames_single_selection(analyzer):
