@@ -151,13 +151,12 @@ class ProjectMetadataExtractor:
                     summary["end_date"] = latest.strftime("%Y-%m-%d")
                     summary["duration_days"] = duration
 
-        full_summary = {
+        return {
             "project_metadata": summary,
             "category_summary": category_summary
         }
-
-
+    
+    def print_metadata_summary(full_summary):
         if full_summary:
             print("\n===== Project metadata summary: =====")
             print(json.dumps(full_summary, indent=2))
-        return full_summary
