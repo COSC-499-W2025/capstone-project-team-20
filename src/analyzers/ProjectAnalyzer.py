@@ -23,6 +23,7 @@ from src.analyzers.ContributionAnalyzer import ContributionAnalyzer, Contributio
 from utils.RepoFinder import RepoFinder
 from src.ProjectManager import ProjectManager
 from src.Project import Project
+from src.ProjectFolder import ProjectFolder
 from src.analyzers.SkillAnalyzer import SkillAnalyzer
 from src.generators.ResumeInsightsGenerator import ResumeInsightsGenerator
 from src.ConfigManager import ConfigManager
@@ -35,9 +36,9 @@ MIN_DISPLAY_CONFIDENCE = 0.5  # only show skills with at least this confidence
 class ProjectAnalyzer:
     """The main entry point of our program. Caller to all of our dedicated analysis-classes."""
 
-    def __init__(self, config_manager: ConfigManager):
-        self.root_folder = None
-        self.zip_path: Optional[Path] = None
+    def __init__(self, config_manager: ConfigManager, root_folder:ProjectFolder, zip_path: Path):
+        self.root_folder: ProjectFolder = root_folder
+        self.zip_path: Path = zip_path
         self._config_manager = config_manager
 
         self.metadata_extractor = ProjectMetadataExtractor(self.root_folder)
@@ -45,6 +46,7 @@ class ProjectAnalyzer:
         self.repo_finder = RepoFinder()
         self.project_manager = ProjectManager()
         self.contribution_analyzer = ContributionAnalyzer()
+        self.metadata_extractor = ProjectMetadataExtractor(self.root_folder)
         ### WHY NOT SELF.REPOPROJECTBUILDER? WHY ARE WE ALLOWING SELF.ROOT_FOLDER TO BE NONE?
         ### ITS NOT THAT IT'S TREATING ALL PROJECTS AS THE SAME. SOMETHING IS WRONG WITH THE CLEANUP/INSTANTIATION OF THE TEMP_DIR
         ### WHEN IT'S BEING PASSED ONTO THE NEXT PROJECT OBJECT IN THE ZIP. IE PROJECT 1 IS STILL ANALYZED CORRECTLY. ITS JUST THAT PROJECT 2 ONWARDS IS NOT.
@@ -81,7 +83,8 @@ class ProjectAnalyzer:
             )
         return project
 
-    def clean_path(self, raw_input: str) -> Path:
+    @staticmethod
+    def clean_path(raw_input: str) -> Path:
         stripped = raw_input.strip()
         # Only strip quotes that surround path (so that something like `dylan's.zip` does not break the parser)
         if (stripped.startswith('"') and stripped.endswith('"')) or \
@@ -140,23 +143,17 @@ class ProjectAnalyzer:
         print(f"{'=' * 40}\n")
         self._cleanup_temp()
 
-    def load_zip(self) -> bool:
+    @staticmethod
+    def load_zip() -> Tuple[ProjectFolder, Path]:
         """Prompts user for ZIP file and parses into folder tree."""
-        zip_path = self.clean_path(input("Please enter the path to the zipped folder: "))
+        zip_path = ProjectAnalyzer.clean_path(input("Please enter the path to the zipped folder: "))
         while not (os.path.exists(zip_path) and zipfile.is_zipfile(zip_path)):
-            zip_path = self.clean_path(input("Invalid path or not a zipped file. Please try again: "))
+            zip_path = ProjectAnalyzer.clean_path(input("Invalid path or not a zipped file. Please try again: "))
 
-        self.zip_path = zip_path
         print("Parsing ZIP structure...")
-        try:
-            self.root_folder = parse(zip_path)
-            print("Project parsed successfully...\n")
-        except Exception as e:
-            print(f"Error while parsing: {e}")
-            return False
-
-        self.metadata_extractor = ProjectMetadataExtractor(self.root_folder)
-        return True
+        root_folder = parse(zip_path)
+        print("Project parsed successfully...\n")
+        return root_folder, zip_path
 
     # ------------------------------------------------------------------
     # Project Initialization using RepoProjectBuilder
@@ -1196,15 +1193,18 @@ class ProjectAnalyzer:
         """Reset caches and load a new ZIP project."""
         if hasattr(self, "cached_extract_dir") and self.cached_extract_dir:
             self._cleanup_temp()
-            return
 
         print("\nLoading new project...")
-        success = self.load_zip()
+        new_zip = ProjectAnalyzer.load_zip()
 
-        if success:
-            print("\nNew project loaded successfully\n")
-        else:
+        if new_zip is None:
             print("\nFailed to load new project.\n")
+
+        root_folder, zip_path = new_zip
+        self.root_folder = root_folder
+        self.zip_path = zip_path
+        self.metadata_extractor = ProjectMetadataExtractor(self.root_folder)
+        print("\nNew project loaded successfully\n")
 
     def run_all(self) -> None:
         print("Running All Analyzers\n")
