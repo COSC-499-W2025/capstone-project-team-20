@@ -47,9 +47,6 @@ class ProjectAnalyzer:
         self.project_manager = ProjectManager()
         self.contribution_analyzer = ContributionAnalyzer()
         self.metadata_extractor = ProjectMetadataExtractor(self.root_folder)
-        ### WHY NOT SELF.REPOPROJECTBUILDER? WHY ARE WE ALLOWING SELF.ROOT_FOLDER TO BE NONE?
-        ### ITS NOT THAT IT'S TREATING ALL PROJECTS AS THE SAME. SOMETHING IS WRONG WITH THE CLEANUP/INSTANTIATION OF THE TEMP_DIR
-        ### WHEN IT'S BEING PASSED ONTO THE NEXT PROJECT OBJECT IN THE ZIP. IE PROJECT 1 IS STILL ANALYZED CORRECTLY. ITS JUST THAT PROJECT 2 ONWARDS IS NOT.
 
         self.cached_extract_dir: Optional[Path] = None
         self.cached_projects: Optional[Iterable[Project]] = None
