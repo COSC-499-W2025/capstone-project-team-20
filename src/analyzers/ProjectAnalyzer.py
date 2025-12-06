@@ -1,7 +1,17 @@
+from __future__ import annotations
+
 import signal
-import json, os, sys, re, shutil, contextlib, zipfile
+import json
+import os
+import sys
+import re
+import shutil
+import contextlib
+import zipfile
 from pathlib import Path
 from typing import Iterable, List, Optional, Tuple, Dict, Any
+
+from datetime import datetime
 
 from src.project_timeline import (
     get_projects_with_skills_timeline_from_projects,
@@ -12,8 +22,6 @@ from src.analyzers.badge_engine import (
     assign_badges,
     build_fun_facts,
 )
-
-from datetime import datetime
 
 from src.ZipParser import parse, toString, extract_zip
 from src.analyzers.ProjectMetadataExtractor import ProjectMetadataExtractor
@@ -28,6 +36,7 @@ from src.generators.ResumeInsightsGenerator import ResumeInsightsGenerator
 from src.ConfigManager import ConfigManager
 from src.ProjectRanker import ProjectRanker
 from src.analyzers.RepoProjectBuilder import RepoProjectBuilder
+from utils.set_variables_analysis import set_project_analysis_values
 
 MIN_DISPLAY_CONFIDENCE = 0.5  # only show skills with at least this confidence
 
@@ -66,14 +75,14 @@ class ProjectAnalyzer:
         self.cached_projects: Optional[Iterable[Project]] = None
 
 
-    def load_or_create_project(self):
+    def load_or_create_project(self) -> Project:
         name = Path(self.zip_path).stem
         project = self.project_manager.get_by_name(name)
         if project is None:
             project = Project(
                 name=name,
                 file_path=str(self.zip_path),
-                root_folder=str(self.root_folder.name if self.root_folder else "")
+                root_folder=str(self.root_folder.name if self.root_folder else ""),
             )
         return project
 
@@ -179,7 +188,7 @@ class ProjectAnalyzer:
         self.cached_extract_dir = temp_dir
         builder = RepoProjectBuilder(self.root_folder)
 
-        created_projects = []
+        created_projects: List[Project] = []
         projects_from_builder = builder.scan(temp_dir)
         if not projects_from_builder:
             print("No Git repositories found to build projects from.")
@@ -234,7 +243,7 @@ class ProjectAnalyzer:
                 print("Aborting user selection.")
                 return None
 
-            selected_authors = []
+            selected_authors: List[str] = []
             choices = [c.strip() for c in choice_str.split(",")]
             for choice in choices:
                 if not choice.isdigit():
@@ -651,7 +660,7 @@ class ProjectAnalyzer:
         This:
         - Extracts the zip to a temporary directory,
         - Runs SkillAnalyzer for each project (which internally runs CodeMetricsAnalyzer),
-        - Enriches project objects with metrics and scores,
+        - Enriches project objects with metrics, tech-profile flags, and scores,
         - Persists the enriched projects to the database,
         - Prints a human-readable summary of detected skills and metrics for each project.
         """
@@ -689,9 +698,10 @@ class ProjectAnalyzer:
                 skill_analyzer = SkillAnalyzer(project_source_path)
                 result = skill_analyzer.analyze()
 
-                skills = result.get("skills", []) or []
-                stats = result.get("stats", {}) or {}
-                dimensions = result.get("dimensions", {}) or {}
+                skills = result.get("skills") or []
+                stats = result.get("stats") or {}
+                dimensions = result.get("dimensions") or {}
+                tech_profile = result.get("tech_profile") or {}
 
                 if not stats:
                     print(f"  - No metrics could be inferred for {project.name}.")
@@ -700,21 +710,15 @@ class ProjectAnalyzer:
                 overall = stats.get("overall", {}) or {}
                 per_lang = stats.get("per_language", {}) or {}
 
-                # --- Enrich the existing Project object with metrics ---
-                project.total_loc = overall.get("total_lines_of_code", 0)
-                project.comment_ratio = overall.get("comment_ratio", 0.0)
-                project.test_file_ratio = overall.get("test_file_ratio", 0.0)
-                project.avg_functions_per_file = overall.get("avg_functions_per_file", 0.0)
-                project.max_function_length = overall.get("max_function_length", 0)
+                # --- Use helper to push stats + tech profile into Project fields ---
+                set_project_analysis_values(
+                    project=project,
+                    stats=stats,
+                    dimensions=dimensions,
+                    tech_profile=tech_profile,
+                )
 
-                # Languages: keys from per-language stats, excluding "Unknown"
-                display_langs = [
-                    lang for lang in sorted(per_lang.keys())
-                    if str(lang).lower() != "unknown"
-                ]
-                project.languages = display_langs
-
-                # Filter skills by confidence for display & persistence
+                # --- Filter skills by confidence for display & persistence ---
                 filtered_skills: List[Tuple[str, float]] = []
                 for item in skills:
                     if isinstance(item, dict):
@@ -735,26 +739,9 @@ class ProjectAnalyzer:
                         seen.add(key)
                         deduped_skill_names.append(name)
 
-                # Persist filtered skill names
                 project.skills_used = deduped_skill_names
 
-                # Dimensions
-                td = dimensions.get("testing_discipline", {}) or {}
-                project.testing_discipline_score = td.get("score", 0.0)
-                project.testing_discipline_level = td.get("level", "")
-
-                doc = dimensions.get("documentation_habits", {}) or {}
-                project.documentation_habits_score = doc.get("score", 0.0)
-                project.documentation_habits_level = doc.get("level", "")
-
-                mod = dimensions.get("modularity", {}) or {}
-                project.modularity_score = mod.get("score", 0.0)
-                project.modularity_level = mod.get("level", "")
-
-                ld = dimensions.get("language_depth", {}) or {}
-                project.language_depth_score = ld.get("score", 0.0)
-                project.language_depth_level = ld.get("level", "")
-
+                # Update timestamps
                 project.last_modified = datetime.now()
                 project.last_accessed = datetime.now()
 
@@ -769,20 +756,37 @@ class ProjectAnalyzer:
 
                 # --- Display detailed analysis results ---
                 print("\n  Project-level code metrics:")
-                for k, v in overall.items():
-                    print(f"    - {k}: {v}")
+                if not overall:
+                    print("    (no metrics available)")
+                else:
+                    for k, v in overall.items():
+                        print(f"    - {k}: {v}")
 
                 print("\n  Per-language metrics:")
-                for lang, data in per_lang.items():
-                    print(f"    - {lang}:")
-                    for k_lang, v_lang in data.items():
-                        print(f"        {k_lang}: {v_lang}")
+                if per_lang:
+                    for lang, data in per_lang.items():
+                        print(f"    - {lang}:")
+                        for k_lang, v_lang in data.items():
+                            print(f"        {k_lang}: {v_lang}")
+                else:
+                    print("    (no per-language data)")
 
                 print("\n  Dimensions:")
                 for dim_name, dim_data in dimensions.items():
                     level = dim_data.get("level", "")
                     score = dim_data.get("score", 0.0)
                     print(f"    - {dim_name}: level={level}, score={score:.2f}")
+
+                display_langs = [
+                    lang for lang in sorted(per_lang.keys())
+                    if str(lang).lower() != "unknown"
+                ]
+                print("\n  Detected languages:")
+                if display_langs:
+                    for lang in display_langs:
+                        print(f"    - {lang}")
+                else:
+                    print("    (no reliable languages detected)")
 
                 print("\n  Detected skills (filtered by confidence):")
                 if deduped_skill_names:
@@ -810,8 +814,6 @@ class ProjectAnalyzer:
             print("\nNo projects found in the database. Run analyses first.")
             return
 
-        # 1) Project-centric view: when each project happened, and what skills
-        #    were exercised in it.
         rows = get_projects_with_skills_timeline_from_projects(projects)
 
         print("\n=== Project Timeline (Chronological) ===")
@@ -823,19 +825,15 @@ class ProjectAnalyzer:
             skills_str = ", ".join(skills) if skills else "(no skills recorded)"
             print(f"{when.isoformat()} — {name}: {skills_str}")
 
-        # 2) Skill-centric view: first time we see each skill, with date +
-        #    project name. Uses the same underlying SkillEvent stream.
         events = get_skill_timeline_from_projects(projects)
         if not events:
             return
 
         print("\n=== Skill First-Use Timeline ===")
 
-        first_seen: dict[str, Any] = {}
+        first_seen: Dict[str, Any] = {}
         for ev in events:
             key = ev.skill.lower()
-            # events are already chronological, so the first time we see a skill
-            # is its earliest use.
             if key not in first_seen:
                 first_seen[key] = ev
 
@@ -969,7 +967,8 @@ class ProjectAnalyzer:
     # Display stored analysis
     # ------------------------------------------------------------------
 
-    def display_analysis_results(self, projects: Iterable[Project]) -> None:  # generate_bullet_points and generate_project_summary
+    def display_analysis_results(self, projects: Iterable[Project]) -> None:
+        """Print previously stored analysis results."""
         projects_list = list(projects)
         if not projects_list:
             print("\nNo analysis results to display.")
@@ -993,9 +992,6 @@ class ProjectAnalyzer:
         - run ProjectMetadataExtractor,
         - compute language shares,
         - generate resume-friendly bullet points and summaries.
-
-        Uses a selection menu similar to main-branch behaviour,
-        but relies on the existing RepoFinder + ProjectMetadataExtractor (bug branch).
         """
         print("\nGenerating Resume Insights...\n")
 
@@ -1017,7 +1013,7 @@ class ProjectAnalyzer:
             return
 
         # Rebuild project list by matching against DB whenever possible
-        all_projects = []
+        all_projects: List[Project] = []
 
         for proj in projects:  # 'projects' is from builder.scan()
             project_from_db = self.project_manager.get_by_name(proj.name)
@@ -1101,7 +1097,7 @@ class ProjectAnalyzer:
                 metadata = metadata_full.get("project_metadata", {})
                 categorized_files = metadata_full.get(
                     "category_summary",
-                    {"counts": {}, "percentages": {}}
+                    {"counts": {}, "percentages": {}},
                 )
 
                 # File collection
@@ -1162,10 +1158,7 @@ class ProjectAnalyzer:
                 bullets = resume_insights_generator.generate_resume_bullet_points()
                 summary = resume_insights_generator.generate_project_summary()
 
-                # NOTE: DB persistence of bullets/summary is left as-is for now,
-                # since the surrounding infrastructure for that is still evolving.
-
-                # Print resume insights to console (assuming a helper exists)
+                # Print resume insights to console
                 if hasattr(resume_insights_generator, "display_insights"):
                     resume_insights_generator.display_insights(bullets, summary)
                 else:
@@ -1175,7 +1168,7 @@ class ProjectAnalyzer:
                     print("\nSummary:")
                     print(summary)
 
-    def _cleanup_temp(self):
+    def _cleanup_temp(self) -> None:
         """Delete the extracted ZIP temp folder if it exists."""
         if getattr(self, "cached_extract_dir", None):
             try:
@@ -1185,7 +1178,7 @@ class ProjectAnalyzer:
                 print(f"[Cleanup Error] {e}")
             self.cached_extract_dir = None
 
-    def _signal_cleanup(self, signum, frame):
+    def _signal_cleanup(self, signum, frame) -> None:
         """Handle Ctrl+C cleanly by cleaning temp folder then exiting."""
         print("\n[Interrupted] Cleaning up temporary files...")
         self._cleanup_temp()
@@ -1213,9 +1206,8 @@ class ProjectAnalyzer:
 
     def analyze_new_folder(self) -> None:
         """Reset caches and load a new ZIP project."""
-        if hasattr(self, "cached_extract_dir") and self.cached_extract_dir:
+        if getattr(self, "cached_extract_dir", None):
             self._cleanup_temp()
-            return
 
         print("\nLoading new project...")
         success = self.load_zip()
@@ -1240,10 +1232,12 @@ class ProjectAnalyzer:
         print("\nAnalyses complete.\n")
 
     def retrieve_previous_insights(self, projects: Iterable[Project]) -> Dict[str, Tuple[List[str], str]]:
-        """Retrieves previous insights for all stored projects.
-        Returns as a dict with the project name as the key and the insights as the value."""
+        """
+        Retrieves previous insights for all stored projects.
+        Returns as a dict with the project name as the key and the insights as the value.
+        """
         projects_list = list(projects)
-        results = {}
+        results: Dict[str, Tuple[List[str], str]] = {}
         for project in projects_list:
             bullets = project.bullets or []
             summary = project.summary or ""
@@ -1251,7 +1245,10 @@ class ProjectAnalyzer:
         return results
 
     def print_previous_insights(self, insights_dict: Dict[str, Tuple[List[str], str]]) -> None:
-        """Takes the dict returned by `retrieve_previous_insights` and passes them into `display_insights` method provided by ResumeInsightsGenerator"""
+        """
+        Takes the dict returned by `retrieve_previous_insights` and displays them
+        via ResumeInsightsGenerator.display_insights.
+        """
         if not insights_dict:
             print("\nNo previous insights to display.")
             return
@@ -1276,7 +1273,7 @@ class ProjectAnalyzer:
     def run(self) -> None:
         """The main interactive loop for the Project Analyzer."""
         print("Welcome to the Project Analyzer.\n")
-        signal.signal(signal.SIGINT, self._cleanup_temp)
+        signal.signal(signal.SIGINT, self._signal_cleanup)
 
         while True:
             print("""
