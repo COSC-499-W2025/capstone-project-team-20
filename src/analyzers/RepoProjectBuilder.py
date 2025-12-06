@@ -5,6 +5,7 @@ from src.analyzers.ContributionAnalyzer import ContributionAnalyzer
 from src.analyzers.language_detector import analyze_language_share, detect_language_per_file
 from utils.RepoFinder import RepoFinder
 import io, contextlib
+from typing import List
 
 
 class RepoProjectBuilder:
@@ -24,11 +25,10 @@ class RepoProjectBuilder:
         self.repo_finder = RepoFinder()
         self.contribution_analyzer = ContributionAnalyzer()
 
-    # scan for all repos and return List[Project]
-    def scan(self, extract_dir: Path):
+    def scan(self, extract_dir: Path) -> List[Project]:
         """
-        Main entry point.
-        Takes an extracted ZIP directory, finds all Git repos, builds Project objects.
+        Main entry point of RepoProjectBuilder.
+        Takes an extracted ZIP directory, scans for Git repos, builds Project objects for each repo, returns them as a List.
 
         Returns:
             List[Project]
@@ -43,8 +43,9 @@ class RepoProjectBuilder:
 
         return projects
 
-    # Build a single Project object (metadata + contributions)
-    def _build_single_project(self, repo_path: Path) -> Project:
+    # Note: This method is being kept solely for later use. Currently not being used anywhere.
+    def _build_full_project(self, repo_path: Path) -> Project:
+        """Builds and returns an analyzed Project object."""
         repo_name = repo_path.name
 
         # 1. Map filesystem repo → ZIP tree folder
@@ -95,6 +96,20 @@ class RepoProjectBuilder:
         proj.language_share = language_share
 
         return proj
+
+    def _build_single_project(self, repo_path: Path) -> Project:
+        """Build and return an empty project object, ready for analysis. Called from scan()."""
+        repo_name = repo_path.name
+        folder = self._find_folder_by_name(self.root_folder, repo_name)
+        if not folder:
+            print(f"[WARN] Could not map repo folder '{repo_name}' inside ZIP.")
+            return None
+
+        return Project(
+            name=repo_name,
+            file_path=str(repo_path),
+            root_folder=str(folder.name)
+        )
 
 
     # Helper to map repo folder to ZIP-tree ProjectFolder
