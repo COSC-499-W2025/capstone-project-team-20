@@ -89,11 +89,38 @@ class ProjectAnalyzer:
         if projects_needing_score:
             print("\n  - Calculating resume scores for unscored projects...")
             self.analyze_skills(projects=projects_needing_score, silent=True)
-            # Re-fetch all projects to get the updated scores
             all_projects = self._get_projects()
             print("  - Score calculation complete.")
 
         return all_projects
+
+    def _select_project(self, prompt: str) -> Optional[Project]:
+        """
+        A generic helper to display a numbered list of projects and have the user select one.
+        Returns the selected Project object or None.
+        """
+        projects = self._get_projects()
+        if not projects:
+            print("\nNo projects found to select from.")
+            return None
+
+        print(f"\n{prompt}")
+        for i, proj in enumerate(projects, 1):
+            print(f"  {i}: {proj.name}")
+
+        try:
+            choice_str = input(f"Enter your choice (1-{len(projects)}), or 'q' to cancel: ").strip().lower()
+            if choice_str == 'q':
+                return None
+            choice = int(choice_str)
+            if 1 <= choice <= len(projects):
+                return projects[choice - 1]
+            else:
+                print("Invalid selection.")
+                return None
+        except ValueError:
+            print("Invalid input. Please enter a number.")
+            return None
 
     # ------------------------------------------------------------------
     # ZIP Loading and Project Initialization
@@ -217,7 +244,6 @@ class ProjectAnalyzer:
         if not all_authors:
             print("No Git authors found in any project.")
             return
-        # FIX: Corrected typo from _prompt_for_username to _prompt_for_usernames
         new_usernames = self._prompt_for_usernames(sorted(list(all_authors)))
         if new_usernames:
             self._config_manager.set("usernames", new_usernames)
@@ -366,8 +392,55 @@ class ProjectAnalyzer:
                 print(f"  - Successfully enriched '{project.name}'. Resume Score: {project.resume_score:.2f}")
 
     def analyze_badges(self) -> None:
-        # This method is fine as is
-        pass
+        """
+        Compute and display badges for a selected project.
+        """
+        print("\n--- Badge Analysis ---")
+        project = self._select_project("Select a project to analyze for badges:")
+        if not project:
+            return
+
+        # Ensure we have the necessary data for badge analysis
+        if not all([project.num_files, project.date_created, project.last_modified, project.categories, project.languages, project.skills_used]):
+            print(f"\n  - Prerequisite data missing for {project.name}. Running required analyses...")
+            self.analyze_metadata(projects=[project])
+            self.analyze_categories(projects=[project])
+            self.analyze_languages(projects=[project])
+            self.analyze_skills(projects=[project], silent=True)
+            print(f"  - Prerequisite analyses complete for {project.name}.")
+            # Re-fetch the project to get the updated data
+            project = self.project_manager.get_by_name(project.name)
+
+        duration_days = (project.last_modified - project.date_created).days if project.last_modified and project.date_created else 0
+
+        snapshot = ProjectAnalyticsSnapshot(
+            name=project.name,
+            total_files=project.num_files,
+            total_size_kb=project.size_kb,
+            total_size_mb=(project.size_kb / 1024),
+            duration_days=duration_days,
+            category_summary={"counts": project.categories},
+            languages=project.language_share,
+            skills=set(project.skills_used),
+            author_count=project.author_count,
+            collaboration_status=project.collaboration_status,
+        )
+
+        badge_ids = assign_badges(snapshot)
+        fun_facts = build_fun_facts(snapshot, badge_ids)
+
+        if badge_ids:
+            print("\nBadges Earned:")
+            for b in badge_ids:
+                print(f"  - {b}")
+        else:
+            print("No badges assigned for this project.")
+
+        if fun_facts:
+            print("\nFun Facts:")
+            for fact in fun_facts:
+                print(f"  • {fact}")
+        print()
 
     # ------------------------------------------------------------------
     # Display and Utility Methods
@@ -462,11 +535,13 @@ class ProjectAnalyzer:
                 ResumeInsightsGenerator.display_insights(project.bullets, project.summary)
 
     def delete_previous_insights(self) -> None:
+        """Deletes the stored resume insights for a user-selected project."""
         project = self._select_project("Select a project to delete insights from:")
-        if not project: return
+        if not project:
+            return
         project.bullets, project.summary = [], ""
         self.project_manager.set(project)
-        print(f"Deleted insights for {project.name}.")
+        print(f"Successfully deleted insights for {project.name}.")
 
     def display_project_timeline(self) -> None:
         print("\n--- Project & Skill Timeline ---")
@@ -484,7 +559,6 @@ class ProjectAnalyzer:
 
     def display_analysis_results(self) -> None:
         print(f"\n{'=' * 30}\n      Analysis Results\n{'=' * 30}")
-        # Ensure scores are up-to-date before displaying
         all_projects = self._ensure_scores_are_calculated()
         scored_projects = [p for p in all_projects if p.resume_score > 0]
 
@@ -541,10 +615,14 @@ class ProjectAnalyzer:
 
     def run_all(self) -> None:
         print("\n--- Running All Supported Analyses ---")
-        if not self._get_projects(): self.initialize_projects()
+        if not self._get_projects():
+            print("Initializing projects first...")
+            self.initialize_projects()
+
         if not self.cached_projects:
             print("Initialization failed. No projects to analyze.")
             return
+
         self.analyze_git_and_contributions()
         self.analyze_metadata()
         self.analyze_categories()
