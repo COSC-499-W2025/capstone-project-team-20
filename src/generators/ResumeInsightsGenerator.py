@@ -1,6 +1,6 @@
 import random
 from datetime import datetime
-from typing import Tuple
+from typing import Tuple, Dict, Any, List
 
 class ResumeInsightsGenerator:
     """
@@ -19,7 +19,7 @@ class ResumeInsightsGenerator:
 
     """
 
-    def __init__(self, metadata, categorized_files, language_share, project, language_list):
+    def __init__(self, metadata: Dict, categorized_files: Dict, language_share: Dict, project: Any, language_list: List[str]):
         self.metadata = metadata
         self.categorized_files = categorized_files
         self.language_share = language_share
@@ -51,7 +51,8 @@ class ResumeInsightsGenerator:
     # Category counts
     def get_category_counts(self) -> Tuple[int,int,int,int]:
         "Returns count of code, doc, test and config files"
-        counts = self.categorized_files.get("counts", {})
+        counts = self.categorized_files or {}
+
         code_files = counts.get("code", 0)
         doc_files = counts.get("docs", 0)
         test_files = counts.get("test", 0) or counts.get("tests", 0)
@@ -60,10 +61,10 @@ class ResumeInsightsGenerator:
 
     # Resume Bullet Points
     def generate_resume_bullet_points(self) -> list[str]:
-        """Currently generates up to 5 bullet points, 
+        """Currently generates up to 5 bullet points,
         1. Contributions and language use
         2. Documentation and Testing (if applicable)
-        3. Length of time spent on project 
+        3. Length of time spent on project
         4. Team-based collaboration (if applicable)
         5. Generation of config files (if applicable)
         """
@@ -92,10 +93,11 @@ class ResumeInsightsGenerator:
 
         # Bullet 3 — Duration in months/days
         days = self._compute_days()
-        duration_text = self.format_duration(days)
-        bullets.append(
-            f"Iterated on the project across a {duration_text} development timeline, incorporating continuous updates and improvements."
-        )
+        if days > 0:
+            duration_text = self.format_duration(days)
+            bullets.append(
+                f"Iterated on the project across a {duration_text} development timeline, incorporating continuous updates and improvements."
+            )
 
         # Bullet 4 — Collaboration vs Solo
         if team_size > 1:
@@ -117,19 +119,22 @@ class ResumeInsightsGenerator:
 
     # Project Summary
     def generate_project_summary(self) -> str:
-        """Generates a project summary (str) detailing tech stack, time spent, 
+        """Generates a project summary (str) detailing tech stack, time spent,
         num files, code/doc/test file split, collaboration status (team-based or individual)
         """
         code_files, doc_files, test_files, config_files = self.get_category_counts()
-        total_files = sum(self.categorized_files.get("counts", {}).values())
+        # ** THIS IS THE FIX **
+        # Safely sum all values in the categorized_files dictionary.
+        # The `or {}` handles cases where it might be None.
+        total_files = sum((self.categorized_files or {}).values())
 
         top_langs = ", ".join(self.language_list[:4]) if self.language_list else "multiple languages"
 
         days = self._compute_days()
-        duration_text = f" {self.format_duration(days)}" if days > 0 else ""
+        duration_text = f" over {self.format_duration(days)}" if days > 0 else ""
 
         summary = (
-            f"This software project was built using a tech stack of {top_langs} over {duration_text}. "
+            f"This software project was built using a tech stack of {top_langs}{duration_text}. "
             f"It follows a modular and maintainable architecture and contains over {total_files} files, including "
             f"{code_files} source modules, {test_files} automated tests, and {doc_files} documentation files. "
         )
@@ -160,6 +165,9 @@ class ResumeInsightsGenerator:
     def _compute_days(self) -> int:
         start = self.metadata.get("start_date")
         end = self.metadata.get("end_date")
+
+        if not start or not end:
+            return 0
 
         if isinstance(start, str):
             start = datetime.strptime(start, "%Y-%m-%d")
@@ -193,4 +201,3 @@ class ResumeInsightsGenerator:
         print("\nProject Summary:")
         print(summary)
         print("\n")
-
