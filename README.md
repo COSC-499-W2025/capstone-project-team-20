@@ -153,12 +153,6 @@ The Database Layer provides persistent storage through the File Metadata DB, whi
 
 ---
 
-## Team Resources
-
-- [Team Contract (Google Doc)](https://docs.google.com/document/d/1DcXkmHYj8U9HkEnPPMSvHPCUEKag1lkZ32FaHIsgTeI/edit?usp=sharing)
-
----
-
 ## Contributors
 
 <table>
