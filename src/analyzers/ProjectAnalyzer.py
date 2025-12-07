@@ -529,7 +529,7 @@ class ProjectAnalyzer:
 
     def analyze_new_folder(self) -> None:
         self._cleanup_temp()
-        print("\nLoading new project...")
+        print("\nPreparing to load a new project...")
         root_folders, zip_path = ProjectAnalyzer.load_zip()
         if not root_folders:
             print("\nFailed to load new project.\n")
