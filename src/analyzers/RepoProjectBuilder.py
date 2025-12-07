@@ -42,11 +42,10 @@ class RepoProjectBuilder:
                 projects.append(proj)
 
         return projects
-    
+
     def suppress_output(self):
         """Silence stdout while running noisy extractors."""
         return contextlib.redirect_stdout(io.StringIO())
-    
 
     # Note: This method is being kept solely for later use. Currently not being used anywhere.
     def _build_full_project(self, repo_path: Path) -> Project:

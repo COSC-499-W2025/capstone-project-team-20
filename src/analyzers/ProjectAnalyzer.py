@@ -178,7 +178,7 @@ class ProjectAnalyzer:
         temp_dir = self.ensure_cached_dir()
         repo_builder = RepoProjectBuilder(self.root_folder)
 
-        created_projects = []
+        created_projects: List[Project] = []
         projects_from_builder = repo_builder.scan(temp_dir)
         if not projects_from_builder:
             print("No Git repositories found to build projects from.")
@@ -349,7 +349,7 @@ class ProjectAnalyzer:
         if not path_obj.exists() or path_obj.suffix.lower() != ".zip":
             print(f"Error: {path_obj} is not a valid zip file.")
             return
-        
+
         # temp_dir is passed to repo_finder, not used again in this method
         temp_dir = self.ensure_cached_dir()
         # returns a list of Path objects, where each Path points to the root dir of a Git repo
@@ -430,7 +430,7 @@ class ProjectAnalyzer:
         if not path_obj.exists() or path_obj.suffix.lower() != ".zip":
             print(f"Error: {path_obj} is not a valid zip file.")
             return
-        
+
         # temp_dir is passed to repo_finder, not used again in this method
         temp_dir = self.ensure_cached_dir()
         # returns a list of Path objects, where each Path points to the root dir of a Git repo
@@ -540,7 +540,7 @@ class ProjectAnalyzer:
         if not projects:
             print("No projects found to analyze.")
             return
-        
+
         print("Language Detection")
 
         # temp_dir is passed to analyze_language_share, not used again in this method
@@ -681,6 +681,7 @@ class ProjectAnalyzer:
             skills = result.get("skills", []) or []
             stats = result.get("stats", {}) or {}
             dimensions = result.get("dimensions", {}) or {}
+            tech_profile = result.get("tech_profile") or {}
 
             if not stats:
                 print(f"  - No metrics could be inferred for {project.name}.")
@@ -758,20 +759,33 @@ class ProjectAnalyzer:
 
             # --- Display detailed analysis results ---
             print("\n  Project-level code metrics:")
-            for k, v in overall.items():
-                print(f"    - {k}: {v}")
+            if not overall:
+                print("    (no metrics available)")
+            else:
+                for k, v in overall.items():
+                    print(f"    - {k}: {v}")
 
             print("\n  Per-language metrics:")
-            for lang, data in per_lang.items():
-                print(f"    - {lang}:")
-                for k_lang, v_lang in data.items():
-                    print(f"        {k_lang}: {v_lang}")
+            if per_lang:
+                for lang, data in per_lang.items():
+                    print(f"    - {lang}:")
+                    for k_lang, v_lang in data.items():
+                        print(f"        {k_lang}: {v_lang}")
+            else:
+                print("    (no per-language data)")
 
             print("\n  Dimensions:")
             for dim_name, dim_data in dimensions.items():
                 level = dim_data.get("level", "")
                 score = dim_data.get("score", 0.0)
                 print(f"    - {dim_name}: level={level}, score={score:.2f}")
+
+            print("\n  Detected languages:")
+            if display_langs:
+                for lang in display_langs:
+                    print(f"    - {lang}")
+            else:
+                print("    (no reliable languages detected)")
 
             print("\n  Detected skills (filtered by confidence):")
             if deduped_skill_names:
@@ -1288,7 +1302,7 @@ class ProjectAnalyzer:
             if not self.zip_path:
                 if not self.load_zip():
                     return
-                self.initialize_projects() 
+                self.initialize_projects()
 
             elif choice == "1":
                 self.analyze_git_and_contributions()
