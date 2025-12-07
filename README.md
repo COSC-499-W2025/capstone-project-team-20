@@ -1,5 +1,8 @@
 #  Team 20
 
+## Team Contract
+[Team Contract (Google Doc)](https://docs.google.com/document/d/1DcXkmHYj8U9HkEnPPMSvHPCUEKag1lkZ32FaHIsgTeI/edit?usp=sharing)
+
 ## Work Breakdown Structure
 
 ### Milestone #1 (October - December 7th)
@@ -34,26 +37,20 @@ The Database Layer provides persistent storage through the File Metadata DB, whi
 
 ## DFD Level 1
 
-[lucidchart](https://lucid.app/lucidchart/13a08813-0a92-4798-84d0-2930be2d6aab/edit?page=0_0&invitationId=inv_bf1a126c-f925-4868-bae1-2bdfacdd4bf7#)
-
 ![Level 1 DFD](media/DFD_Level_1.png)
 
-This diagram shows how data moves through the system — from user actions to file analysis and reporting.
+## Data Flow Overview
 
-- User selects files, sets filters, and generates reports.
+- User initiates the workflow by providing consent and uploading a project zip file.
 
-- Permission & Privacy Logic ensures user consent before processing data.
+- Prompt for Consent captures user permission before any file processing begins, recording consent for privacy compliance.
 
-- File Selection and Exclude Logic handle which files are included or ignored.
+- Load Zip receives the zip file path and extracts its contents, identifying the root folder structure for analysis.
 
-- Validation & Scan Logic check and scan files to collect type, size, and metadata.
+- Project Analyzer examines the extracted project data, parsing file structures, dependencies, and project characteristics.
 
-- The Database stores all scanned data for later use.
+- Skill Assessment evaluates the project data to identify technical skills demonstrated, generate insights about code quality and complexity, calculate an overall project score, and award achievement badges.
 
-- Filter and Aggregation Logic organize and summarize the data.
+- Display Stored Analysis presents the complete analysis results and skill summary back to the user. Users can also request previously stored analyses from the database.
 
-- User Analytics calculates metrics and insights.
-
-- Display Logic shows charts, tables, and summaries.
-
-- Finally, the user can Generate Reports and export them as PDF or CSV.
+- Database serves as the central data store, persisting user configurations as well as project data and analysis results for future retrieval and comparison.
