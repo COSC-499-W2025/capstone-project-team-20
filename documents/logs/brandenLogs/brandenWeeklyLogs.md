@@ -182,7 +182,7 @@ Next week, I will ensure we have all basic criteria met for Milestone 1, with ex
 
 **Tasks worked on:**
 
-![Week 13 log](imagesForBrandenLogs/week_13_log_ss.png)
+![Week 14 log](imagesForBrandenLogs/week_14_log_ss.png)
 
 **Weekly Goals Recap:**
 
