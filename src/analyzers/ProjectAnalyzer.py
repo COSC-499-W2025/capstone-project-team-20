@@ -630,6 +630,39 @@ class ProjectAnalyzer:
         self.analyze_skills()
         self.display_project_timeline()
         print("\nAll analyses complete.\n")
+    
+    def menu_print_metadata_summary(self):
+        """
+        Display metadata that has already been analyzed and stored. This method is only used for Option 2 in our menu (Extract metadata & file statistics) to print it...
+        """
+        projects = self._get_projects()
+        if not projects:
+            print("No projects available.")
+            return
+
+        print("\n===== Project Metadata Summary =====")
+        for project in projects:
+            if not project.num_files:
+                print(f"\n{project.name}: No metadata analyzed yet.")
+                continue
+
+            summary = {
+                "total_files": project.num_files,
+                "total_size_kb": project.size_kb,
+                "start_date": project.date_created.strftime("%Y-%m-%d") if project.date_created else None,
+                "end_date": project.last_modified.strftime("%Y-%m-%d") if project.last_modified else None,
+            }
+
+            print(f"\n--- {project.name} ---")
+            print(json.dumps(summary, indent=2))
+
+            if project.categories:
+                print("\nFile category counts:")
+                print(json.dumps(project.categories, indent=2))
+            else:
+                print("\nFile categories not analyzed yet.")
+
+
 
     def run(self) -> None:
         """The main interactive menu loop."""
@@ -666,7 +699,7 @@ class ProjectAnalyzer:
                 continue
 
             menu = {
-                "1": self.analyze_git_and_contributions, "2": self.analyze_metadata,
+                "1": self.analyze_git_and_contributions, "2": self.menu_print_metadata_summary,
                 "3": self.analyze_categories, "4": self.print_tree,
                 "5": self.analyze_languages, "6": self.run_all,
                 "7": self.analyze_new_folder, "8": self.change_selected_users,
