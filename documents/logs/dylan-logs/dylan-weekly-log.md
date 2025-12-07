@@ -228,3 +228,35 @@ Besides the couple PRs I made, I think my main contribution to the team was in r
 **Goals for the Week Ahead**
 
 If time allows I'd like to get my ML project classification done by the end of next week. Of course, I will have to temper my expectations, as this last week of school is looking quite busy. Having at least a first pass in main would be nice, given how long I've devoted to this specific topic. The whole process has been a pretty entertaining cycle of working on that -> realize we're not storing enough analysis for it to be useful -> go help out elsewhere in the project to try and fix that problem -> repeat. But such is the nature of software development!
+
+### **Week 14: December 1st - 7th**
+
+**Tasks worked on** 
+
+![week 14 log](images/dylan-week-14-ss.png)
+
+**Weekly Goals Recap**
+
+This week, our team was focused on preparing for the Milestone #1 Deadline, which took priority over my specified goals for the week. Me and Sven spent a lot of time cleaning up our ProjectAnalyzer class, which had a lot of inefficiencies. Branden did a great job testing my PR for this, and was very helpful spotting bugs I didn't see. All in all, we pulled it all together and I'm very happy with our final product for Milestone #1. I'm happy enough to keep tinkering with ML over the winter break.
+
+**Pull Requests I made this week**
+
+[Restore and Update Language Detector](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/264)
+
+[Cleanup temp_dir creation in ProjectAnalyzer](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/268)
+
+**Code Review I did this week**
+
+[feat: Correctly identify sub-projects within zip + RIG automation](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/273)
+
+[Moved print statement out of extract_metadata in the metadata extractor. Removed suppress_output methods and calls from project analyzer](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/267)
+
+[Feature/framework detection](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/236)
+
+**Goals for the Winter Break**
+
+Sit back, relax and prepare for the new semester 😎
+
+
+
+
