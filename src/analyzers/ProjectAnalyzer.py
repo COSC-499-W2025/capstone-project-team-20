@@ -110,7 +110,7 @@ class ProjectAnalyzer:
         if not root_folders:
             print("Warning: No projects could be parsed from the zip file.")
         else:
-            print(f"Project(s) parsed successfully: {[f.name.strip('/') for f in root_folders]}\n")
+            print(f"Project(s) parsed successfully: {[f.name for f in root_folders]}\n")
         return root_folders, zip_path
 
     def ensure_cached_dir(self) -> Path:
@@ -217,7 +217,8 @@ class ProjectAnalyzer:
         if not all_authors:
             print("No Git authors found in any project.")
             return
-        new_usernames = self._prompt_for_username(sorted(list(all_authors)))
+        # FIX: Corrected typo from _prompt_for_username to _prompt_for_usernames
+        new_usernames = self._prompt_for_usernames(sorted(list(all_authors)))
         if new_usernames:
             self._config_manager.set("usernames", new_usernames)
             print(f"\nSuccessfully updated selected users to: {', '.join(new_usernames)}")
@@ -487,6 +488,10 @@ class ProjectAnalyzer:
         all_projects = self._ensure_scores_are_calculated()
         scored_projects = [p for p in all_projects if p.resume_score > 0]
 
+        if not scored_projects:
+            print("\nNo projects with calculated scores to display.")
+            return
+
         for project in scored_projects:
             project.display()
 
@@ -509,7 +514,7 @@ class ProjectAnalyzer:
         target_lower = target_name.lower()
 
         def search(folder: ProjectFolder) -> Optional[ProjectFolder]:
-            if folder.name.strip('/').lower() == target_lower:
+            if folder.name.lower() == target_lower:
                 return folder
             for subfolder in folder.subdir:
                 if found := search(subfolder):
