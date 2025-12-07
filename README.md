@@ -45,7 +45,21 @@ You will need Python 3.8+ and pip installed on your machine.
     ```sh
     cd capstone-project-team-20
     ```
-3.  Install the required packages using pip:
+3.  Create and activate a virtual environment. This keeps your project dependencies isolated.
+
+    **For Windows:**
+    ```sh
+    python -m venv .venv
+    .venv\Scripts\activate
+    ```
+
+    **For macOS/Linux:**
+    ```sh
+    python3 -m venv .venv
+    source .venv/bin/activate
+    ```
+
+4.  Install the required packages using pip:
     ```sh
     pip install -r requirements.txt
     ```
@@ -54,14 +68,19 @@ You will need Python 3.8+ and pip installed on your machine.
 
 ## Usage
 
-To start the application, run the `main.py` script from the `src` directory:
+To start the application, run the `main` module from the root directory.
 
+**On Windows:**
 ```sh
-python src/main.py
+py -m src.main
+```
+
+**On macOS/Linux:**
+```sh
+python -m src.main
 ```
 
 Once running, the command-line interface will present you with several analysis options:
-
 ```
 ========================
 Project Analyzer
