@@ -78,28 +78,22 @@ class ProjectAnalyzer:
             self.cached_projects = list(self.project_manager.get_all())
         return self.cached_projects
 
-    def _select_project(self, prompt: str = "Please select a project:") -> Optional[Project]:
-        """Displays a menu for the user to select a project."""
-        projects = self._get_projects()
-        if not projects:
-            print("\nNo projects found. Please initialize projects first.")
-            return None
+    def _ensure_scores_are_calculated(self) -> List[Project]:
+        """
+        Checks for projects with a zero score, runs skill analysis on them silently,
+        and returns a complete list of all projects with their updated scores.
+        """
+        all_projects = self._get_projects()
+        projects_needing_score = [p for p in all_projects if p.resume_score == 0]
 
-        print(f"\n{prompt}")
-        for i, proj in enumerate(projects, 1):
-            print(f"  {i}: {proj.name}")
+        if projects_needing_score:
+            print("\n  - Calculating resume scores for unscored projects...")
+            self.analyze_skills(projects=projects_needing_score, silent=True)
+            # Re-fetch all projects to get the updated scores
+            all_projects = self._get_projects()
+            print("  - Score calculation complete.")
 
-        try:
-            choice = input(f"Enter your choice (1-{len(projects)}): ").strip()
-            index = int(choice) - 1
-            if 0 <= index < len(projects):
-                return projects[index]
-            else:
-                print("Invalid selection.")
-                return None
-        except (ValueError, IndexError):
-            print("Invalid input.")
-            return None
+        return all_projects
 
     # ------------------------------------------------------------------
     # ZIP Loading and Project Initialization
@@ -153,7 +147,7 @@ class ProjectAnalyzer:
         return created_projects
 
     # ------------------------------------------------------------------
-    # Analysis Methods (Fully Refactored)
+    # Analysis Methods
     # ------------------------------------------------------------------
 
     def _prompt_for_usernames(self, authors: List[str]) -> Optional[List[str]]:
@@ -223,7 +217,7 @@ class ProjectAnalyzer:
         if not all_authors:
             print("No Git authors found in any project.")
             return
-        new_usernames = self._prompt_for_usernames(sorted(list(all_authors)))
+        new_usernames = self._prompt_for_username(sorted(list(all_authors)))
         if new_usernames:
             self._config_manager.set("usernames", new_usernames)
             print(f"\nSuccessfully updated selected users to: {', '.join(new_usernames)}")
@@ -252,17 +246,13 @@ class ProjectAnalyzer:
             all_author_stats = self.contribution_analyzer.analyze(str(project.file_path))
             if not all_author_stats: print(f"  - No contribution stats found."); continue
 
-            # ** FIX FOR AUTHOR LOGIC **
-            # Intersect the user's selected names with the authors of THIS specific repo.
             project_authors = set(all_author_stats.keys())
             user_authors_in_project = sorted([name for name in selected_usernames if name in project_authors])
 
-            # Set the project's authors to only the user's selected names.
             project.authors = user_authors_in_project
             project.author_count = len(user_authors_in_project)
             project.collaboration_status = "collaborative" if project.author_count > 1 else "individual"
 
-            # Stats aggregation remains the same
             selected_stats = self._aggregate_stats(all_author_stats, selected_usernames)
             total_stats = self._aggregate_stats(all_author_stats)
             project.author_contributions = [stats.to_dict() for stats in all_author_stats.values()]
@@ -309,8 +299,6 @@ class ProjectAnalyzer:
             files = ProjectMetadataExtractor(root_folder).collect_all_files()
             file_dicts = [{"path": f.full_path, "language": getattr(f, "language", "Unknown")} for f in files]
 
-            # ** FIX FOR CATEGORY DATA **
-            # Store the 'counts' dictionary directly, not the whole nested structure.
             metrics = self.file_categorizer.compute_metrics(file_dicts)
             project.categories = metrics.get("counts", {})
 
@@ -335,39 +323,65 @@ class ProjectAnalyzer:
             if not language_share: print("  - No languages detected."); continue
             for lang, share in language_share.items(): print(f"  - {lang}: {share:.1f}%")
 
-    def analyze_skills(self) -> None:
-        # ... (This method is fine, no changes needed) ...
-        pass
+    def analyze_skills(self, projects: Optional[List[Project]] = None, silent: bool = False) -> None:
+        """Runs skill analysis and calculates resume score for projects."""
+        if not silent:
+            print("\n--- Enriching Projects with Skill Analysis & Scoring ---")
+
+        projects_to_run = projects if projects is not None else self._get_projects()
+
+        for project in projects_to_run:
+            if not silent:
+                print(f"\nAnalyzing skills for: {project.name}...")
+
+            with self.suppress_output():
+                if not Path(project.file_path).exists():
+                    if not silent: print(f"  - Warning: Path not found. Skipping.");
+                    continue
+
+                result = SkillAnalyzer(Path(project.file_path)).analyze()
+
+                skills_raw = result.get("skills", [])
+                filtered_skills = []
+                for item in skills_raw:
+                    name, conf = (item.get("skill"), item.get("confidence")) if isinstance(item, dict) else (getattr(item, 'skill', None), getattr(item, 'confidence', 0.0))
+                    if name and conf >= MIN_DISPLAY_CONFIDENCE:
+                        filtered_skills.append(name.strip())
+                project.skills_used = sorted(list(set(filtered_skills)))
+
+                if dimensions := result.get("dimensions", {}):
+                    if td := dimensions.get("testing_discipline"): project.testing_discipline_score, project.testing_discipline_level = td.get("score", 0.0), td.get("level", "")
+                    if doc := dimensions.get("documentation_habits"): project.documentation_habits_score, project.documentation_habits_level = doc.get("score", 0.0), doc.get("level", "")
+
+                if overall := result.get("stats", {}).get("overall"):
+                    project.total_loc, project.comment_ratio = overall.get("total_lines_of_code", 0), overall.get("comment_ratio", 0.0)
+
+                ranker = ProjectRanker(project)
+                ranker.calculate_resume_score()
+
+                self.project_manager.set(project)
+
+            if not silent:
+                print(f"  - Successfully enriched '{project.name}'. Resume Score: {project.resume_score:.2f}")
 
     def analyze_badges(self) -> None:
-        # ... (This method is fine, no changes needed) ...
+        # This method is fine as is
         pass
 
     # ------------------------------------------------------------------
     # Display and Utility Methods
     # ------------------------------------------------------------------
 
-    def generate_resume_insights(self) -> None:
-        project = self._select_project("Select a project to generate insights for:")
-        if not project: return
-
-        # ** SIMPLIFIED DEPENDENCY CHECK **
-        if not project.categories or not project.num_files or not project.languages:
-            print("\n  - Prerequisite data missing. Running required analyses for this project first...")
-            self.analyze_metadata(projects=[project])
-            self.analyze_categories(projects=[project])
-            self.analyze_languages(projects=[project])
-            print("  - Prerequisite analyses complete.")
-
+    def _generate_insights_for_project(self, project: Project):
+        """Helper function to run the insight generation for a single project."""
         print(f"\n--- Generating Resume Insights for: {project.name} ---")
-        root_folder = self._find_folder_by_name_recursive(project.name)
-        if not root_folder:
-            print(f"Could not find project '{project.name}' in ZIP structure."); return
 
         with self.suppress_output():
+            root_folder = self._find_folder_by_name_recursive(project.name)
+            if not root_folder:
+                print(f"Could not find project '{project.name}' in ZIP structure."); return
             metadata = (ProjectMetadataExtractor(root_folder).extract_metadata(repo_path=project.file_path) or {}).get("project_metadata", {})
 
-        # The generator is now passed the correct, simple dictionary for `categorized_files`
         gen = ResumeInsightsGenerator(
             metadata, project.categories, project.language_share, project, project.languages
         )
@@ -376,6 +390,68 @@ class ProjectAnalyzer:
         self.project_manager.set(project)
         print(f"\nGenerated and saved insights for {project.name}:")
         gen.display_insights(project.bullets, project.summary)
+
+    def generate_resume_insights(self) -> None:
+        """Presents a menu to generate resume insights, ensuring scores are calculated first."""
+        all_projects_with_scores = self._ensure_scores_are_calculated()
+
+        scored_projects = [p for p in all_projects_with_scores if p.resume_score > 0]
+
+        if not scored_projects:
+            print("\nNo scored projects found to generate insights for. Please run 'Analyze Skills' first.")
+            return
+
+        sorted_projects = sorted(scored_projects, key=lambda p: p.resume_score, reverse=True)
+
+        while True:
+            print("\n--- Generate Resume Insights ---")
+            print("\nPlease select a project, or choose a special option:")
+            for i, proj in enumerate(sorted_projects, 1):
+                print(f"  {i}: {proj.name} (Score: {proj.resume_score:.2f})")
+
+            num_projects = len(sorted_projects)
+            top_3_option = num_projects + 1
+            all_option = num_projects + 2
+            exit_option = num_projects + 3
+
+            print("\n--- Special Options ---")
+            print(f"  {top_3_option}: Generate for Top 3 Projects")
+            print(f"  {all_option}: Generate for ALL scored projects")
+            print(f"  {exit_option}: Return to Main Menu")
+
+            choice_str = input("Your choice: ").strip()
+
+            try:
+                choice = int(choice_str)
+                selected_projects = []
+
+                if choice == top_3_option:
+                    selected_projects = sorted_projects[:3]
+                elif choice == all_option:
+                    selected_projects = sorted_projects
+                elif choice == exit_option:
+                    print("Returning to main menu...")
+                    return
+                elif 1 <= choice <= num_projects:
+                    selected_projects = [sorted_projects[choice - 1]]
+                else:
+                    print("Invalid selection. Please try again.")
+                    continue
+
+                for proj in selected_projects:
+                    if not proj.categories or not proj.num_files or not proj.languages:
+                         print(f"\n  - Prerequisite data missing for {proj.name}. Running required analyses...")
+                         self.analyze_metadata(projects=[proj])
+                         self.analyze_categories(projects=[proj])
+                         self.analyze_languages(projects=[proj])
+                         print(f"  - Prerequisite analyses complete for {proj.name}.")
+                    self._generate_insights_for_project(proj)
+
+                return
+
+            except ValueError:
+                print("Invalid input. Please enter a number.")
+                continue
 
     def retrieve_previous_insights(self) -> None:
         print("\n--- Previous Resume Insights ---")
@@ -407,7 +483,12 @@ class ProjectAnalyzer:
 
     def display_analysis_results(self) -> None:
         print(f"\n{'=' * 30}\n      Analysis Results\n{'=' * 30}")
-        for project in self._get_projects(): project.display()
+        # Ensure scores are up-to-date before displaying
+        all_projects = self._ensure_scores_are_calculated()
+        scored_projects = [p for p in all_projects if p.resume_score > 0]
+
+        for project in scored_projects:
+            project.display()
 
     def print_tree(self) -> None:
         print("\n--- Project Folder Structures ---")
