@@ -51,7 +51,7 @@ class ResumeInsightsGenerator:
     # Category counts
     def get_category_counts(self) -> Tuple[int,int,int,int]:
         "Returns count of code, doc, test and config files"
-        counts = self.categorized_files.get("counts", {})
+        counts = self.categorized_files
         code_files = counts.get("code", 0)
         doc_files = counts.get("docs", 0)
         test_files = counts.get("test", 0) or counts.get("tests", 0)
@@ -60,10 +60,10 @@ class ResumeInsightsGenerator:
 
     # Resume Bullet Points
     def generate_resume_bullet_points(self) -> list[str]:
-        """Currently generates up to 5 bullet points, 
+        """Currently generates up to 5 bullet points,
         1. Contributions and language use
         2. Documentation and Testing (if applicable)
-        3. Length of time spent on project 
+        3. Length of time spent on project
         4. Team-based collaboration (if applicable)
         5. Generation of config files (if applicable)
         """
@@ -117,7 +117,7 @@ class ResumeInsightsGenerator:
 
     # Project Summary
     def generate_project_summary(self) -> str:
-        """Generates a project summary (str) detailing tech stack, time spent, 
+        """Generates a project summary (str) detailing tech stack, time spent,
         num files, code/doc/test file split, collaboration status (team-based or individual)
         """
         code_files, doc_files, test_files, config_files = self.get_category_counts()
@@ -193,4 +193,3 @@ class ResumeInsightsGenerator:
         print("\nProject Summary:")
         print(summary)
         print("\n")
-
