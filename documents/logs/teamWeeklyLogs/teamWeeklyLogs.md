@@ -333,7 +333,7 @@ Issue [COSC-499-W2025/capstone-project-team-20#146](https://github.com/COSC-499-
 [Week 13 Test Report](teamWeeklyLogsImages/week_13_test_report.png)
 
 
-### Week 13 (November 24th - November 30th)
+### Week 14 (December 1st - December 7th)
 
 **Work Performed:**
 - Branden Kennedy (42474551): 
@@ -357,12 +357,12 @@ Issue [COSC-499-W2025/capstone-project-team-20#146](https://github.com/COSC-499-
 
 **Table View of Completed Tasks on Project Board:**
 
-[Week 13 completed tasks](teamWeeklyLogsImages/week_14_completed_tasks.png)
+[Week 14 completed tasks](teamWeeklyLogsImages/week_14_completed_tasks.png)
 
 **Table View of In-Progress Tasks on Project Board:**
 
-[Week 13 In-Progress tasks](teamWeeklyLogsImages/week_14_in_progress_tasks.png)
+[Week 14 In-Progress tasks](teamWeeklyLogsImages/week_14_in_progress_tasks.png)
 
 **Test Report:**
 
-[Week 13 Test Report](teamWeeklyLogsImages/week_14_test_report.png)
+[Week 14 Test Report](teamWeeklyLogsImages/week_14_test_report.png)
