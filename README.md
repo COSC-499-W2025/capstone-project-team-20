@@ -113,20 +113,42 @@ Choose an option:
 This diagram shows how our system's components will be organized into layers, and the responsibility each layer has.
 
 ### Presentation Layer
+This layer is responsible for all user-facing interactions and outputs.
+- CLI Menu: Entry point for users to select analysis actions.
+- Reports & Views: Displays generated results such as resume insights, skill badges, rankings, and timelines.
 
-The Presentation Layer manages interactions with the user. It allows the user to input a .ZIP folder containing their files and displays any summaries or reports that the user requests.
+Purpose:
+- Provide a simple interface for users to trigger analyses and view results without exposing internal complexity.
 
-### Application Layer
+### Orchestration Layer
 
-The Application Layer performs the system's main processing tasks. The Artifact Crawling component scans selected files, applies filters and gathers metadata. While the Export to Preferred Format component generates any report that the user requests and passes it up to the Presentation Layer.
+This layer acts as the “conductor” of the system, managing how data flows between layers.
+- ProjectAnalyzer / RepoProjectBuilder: Orchestrates analysis workflows and assembles project objects.
+- ConfigManager: Loads and manages YAML/JSON configuration files (languages, categories, ignore rules).
 
-### Communication Layer
+Purpose:
+- Coordinate components without performing heavy analysis itself, keeping logic centralized and readable.
 
-The Communication Layer acts as a link between the Application Layer and the Database Layer. The Data Distribution component ensures that any relevant file data, metadata and any analysis the system produces is served to the Database Layer for storage. The Data Retrieval component passes any relevant stored data from previous scans to the Application Layer.
+### Analysis Engines Layer
 
-### Database Layer
+This layer performs all intensive analysis and data transformations.
+- Repo & Code Analysis: ZIP parsing, Git repository detection, metadata extraction, and file-level analysis.
+- Project (dataclass): Central data model that aggregates all analysis results.
+- Skill / Profile Analysis: Detects skills, generates timelines, badges, and rankings.
+- ResumeInsightsGenerator: Produces resume-ready bullet points and summaries.
 
-The Database Layer provides persistent storage through the File Metadata DB, which collects the information that the system gathers about the user's files, as well as previously produced reports and summaries, and stores them for later use.
+Purpose:
+- Encapsulate analysis logic while keeping results structured and reusable through the Project model.
+
+### Data & Integration Layer
+
+This layer handles input sources and persistent storage.
+- YAML / JSON Configs: Define languages, file categories, ignored directories, and detection rules.
+- Git Repos & ZIP Files: Raw input data that has been stored.
+- SQLite Database (ProjectManager): Stores and retrieves analyzed project records.
+
+Purpose:
+- Isolate external dependencies and storage concerns from analysis and orchestration logic.
 
 ---
 
