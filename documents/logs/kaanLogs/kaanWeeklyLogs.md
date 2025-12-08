@@ -177,3 +177,23 @@ Parallel to this, I improved the Project Chronology to ensure that projects are 
 We also had a highly productive meeting on Friday, where we finalized our presentation content and aligned on the final requirements for Milestone 1. As part of team collaboration, I reviewed several PRs from teammates to ensure compatibility with the new badge logic, chronology systems, and updated Skill Analyzer architecture.
 
 Overall, the week significantly strengthened both the backend analytics and the cohesion between features, pushing us much closer to a stable, presentation-ready milestone.
+
+### Week 14
+
+Log Checkbox:
+
+![week 14 log](imagesForKaanLogs/week_14_log.png)
+
+### Weekly Goals
+
+This week centered on Milestone 1 presentations, team coordination, and solidifying the structural foundations of our project as we move into the next phase.
+
+The main achievement of the week was presenting our Milestone 1 features to the class. I walked through the badge system, skill chronology improvements, enhanced analytics pipeline, and overall Skill Analyzer architecture. The presentation highlighted how the system now produces interpretable learning insights based on real project history, and how these features support the educational focus of the platform. After our presentation, I watched the other groups’ demos and completed the evaluation forms, which gave useful perspective on different approaches to project design and communication.
+
+I also helped finalize our team contract. This included defining roles, communication expectations, PR guidelines, accountability structures, and shared standards for documentation and testing. This contract will help keep development consistent and collaborative as the project grows in complexity.
+
+Another key task was distributing the work for the Milestone 1 team demo video. We broke down responsibilities for milestone 1 requirements. This ensures the final video will clearly communicate the value of our system while reflecting contributions from across the team.
+
+Finally, I updated the System Architecture Diagram based on recent design changes. The diagram now more clearly separates presentation, orchestration, and analysis layers, and fixes several connection flow issues that had come up during earlier reviews. This updated version will be used in the demo video and future documentation.
+
+Overall, Week 14 was focused on communicating our progress, aligning the team, and tightening the structural and visual components necessary for a polished Milestone 1 delivery.
