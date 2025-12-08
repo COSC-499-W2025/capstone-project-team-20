@@ -157,10 +157,10 @@ class ProjectAnalyzer:
             zip_path = self.clean_path(input("Invalid path or not a zipped file. Please try again: "))
 
         self.zip_path = zip_path
-        print("Parsing ZIP structure...")
+        print("\nParsing ZIP structure...")
         try:
             self.root_folder = parse(zip_path)
-            print("Project parsed successfully...\n")
+            print("\nProject parsed successfully...\n")
         except Exception as e:
             print(f"Error while parsing: {e}")
             return False

@@ -113,6 +113,11 @@ def parse(path: str) -> ProjectFolder:
         #--------------------------------#
 
         for file in z.infolist():
+
+            #-----     PROGRESS BAR     -----#
+            my_bar.update(file.file_size)
+            #--------------------------------#
+
             if ignore_file_criteria(file):
                 continue
 
@@ -131,10 +136,6 @@ def parse(path: str) -> ProjectFolder:
                 else:
                     parent = "/".join(parent_parts[:-1]) + "/"
                     add_to_tree(file,parent,dirs)
-
-            #-----     PROGRESS BAR     -----#
-            my_bar.update(file.file_size)
-            #--------------------------------#
 
     return (root)
 
