@@ -344,7 +344,7 @@ Issue [COSC-499-W2025/capstone-project-team-20#146](https://github.com/COSC-499-
 
 - Dylan Alexander (16394025): 
 
-- Sven Annist (42486720): 
+- Sven Annist (42486720): This week, I introduced a "just-in-time" analysis workflow to automatically calculate and cache project scores, ensuring project lists are always sorted by relevance without manual user action. This effort included automated background scoring, pre-sorted project menus for clarity, and corrected the "Top 3" summary option. I fixed a big bug that was happening in a feature branch where projects were unable to be detected individually but I've incorporated multi-project finding. I also fixed a bug in the `ResumeInsightsGenerator` where the "total files" count was incorrect. Beyond coding, I reviewed PRs **#278**, **#274**, and **#236**, worked on preparing for our Milestone 1 presentation, and recorded my portion of the video demo.
 
 **Features included in the project plan for this milestone are:**
 
