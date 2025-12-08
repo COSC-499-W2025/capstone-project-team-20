@@ -340,7 +340,7 @@ Issue [COSC-499-W2025/capstone-project-team-20#146](https://github.com/COSC-499-
 
 - Necmi Kaan Sapoglu (17014796): This week I presented our Milestone 1 features to the class, walked through the analytics upgrades, and evaluated the other groups’ presentations. I also finalized our team contract, outlining roles, expectations, and workflow standards. We distributed the tasks for creating the Milestone 1 demo video and aligned on who will handle narration, screen captures, and editing. Finally, I updated the system architecture diagram to better reflect our current design and clean up the layer boundaries and arrows.
 
-- Lex Nash (84668540): 
+- Lex Nash (84668540): Team meeting, team presentation, team contract, visual bug fixes, milestone 1 demo video.
 
 - Dylan Alexander (16394025): This week, aside from preparing our presentation, I made two PRs. One related to restoring the implementation of the language detector, which had been affected by the consolidation of our system into the ProjectAnalyzer class. Another for consolidating duplicate temporary directory creation across ProjectAnalyzer into one cached temporary directory. Finally, I updated our DFD to reflect our current system for Milestone 1.
 
