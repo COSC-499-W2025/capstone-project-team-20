@@ -331,3 +331,38 @@ Issue [COSC-499-W2025/capstone-project-team-20#146](https://github.com/COSC-499-
 **Test Report:**
 
 [Week 13 Test Report](teamWeeklyLogsImages/week_13_test_report.png)
+
+
+### Week 13 (November 24th - November 30th)
+
+**Work Performed:**
+- Branden Kennedy (42474551): 
+
+- Necmi Kaan Sapoglu (17014796): This week I presented our Milestone 1 features to the class, walked through the analytics upgrades, and evaluated the other groups’ presentations. I also finalized our team contract, outlining roles, expectations, and workflow standards. We distributed the tasks for creating the Milestone 1 demo video and aligned on who will handle narration, screen captures, and editing. Finally, I updated the system architecture diagram to better reflect our current design and clean up the layer boundaries and arrows.
+
+- Lex Nash (84668540): 
+
+- Dylan Alexander (16394025): 
+
+- Sven Annist (42486720): 
+
+**Features included in the project plan for this milestone are:**
+
+
+**Continuing tasks from last week and plan for the next week:**
+
+**Burnup chart:**
+
+[Week 14 burnup chart](teamWeeklyLogsImages/week_14_burnup_chart.png)
+
+**Table View of Completed Tasks on Project Board:**
+
+[Week 13 completed tasks](teamWeeklyLogsImages/week_14_completed_tasks.png)
+
+**Table View of In-Progress Tasks on Project Board:**
+
+[Week 13 In-Progress tasks](teamWeeklyLogsImages/week_14_in_progress_tasks.png)
+
+**Test Report:**
+
+[Week 13 Test Report](teamWeeklyLogsImages/week_14_test_report.png)
