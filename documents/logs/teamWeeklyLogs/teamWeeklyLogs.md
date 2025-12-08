@@ -336,13 +336,13 @@ Issue [COSC-499-W2025/capstone-project-team-20#146](https://github.com/COSC-499-
 ### Week 14 (December 1st - December 7th)
 
 **Work Performed:**
-- Branden Kennedy (42474551): 
+- Branden Kennedy (42474551): This week, I coded small refactors that related to unwanted functionality coming from the ProjectMetadataExtractor. I created a new method for printing the metadata & file statistics, which now makes the extract_metadata() method purely for doing that, not printing. This came with other refactors like removing the suppress_output method in our ProjectAnalyzer (this methods sole purpose was to suppress that output from the extract_metadata() method). And then i updated and added tests corresponding to this refactor. For PR reviews, I spent lots of time helping with PR #268, and testing it thoroughly. This took up many hours in my week, but we got it fixed and merged! I also worked on helping setup the presentations for the team, and doing the video editing and splicing together of our video demonstration. 
 
 - Necmi Kaan Sapoglu (17014796): This week I presented our Milestone 1 features to the class, walked through the analytics upgrades, and evaluated the other groups’ presentations. I also finalized our team contract, outlining roles, expectations, and workflow standards. We distributed the tasks for creating the Milestone 1 demo video and aligned on who will handle narration, screen captures, and editing. Finally, I updated the system architecture diagram to better reflect our current design and clean up the layer boundaries and arrows.
 
 - Lex Nash (84668540): 
 
-- Dylan Alexander (16394025): 
+- Dylan Alexander (16394025): This week, aside from preparing our presentation, I made two PRs. One related to restoring the implementation of the language detector, which had been affected by the consolidation of our system into the ProjectAnalyzer class. Another for consolidating duplicate temporary directory creation across ProjectAnalyzer into one cached temporary directory. Finally, I updated our DFD to reflect our current system for Milestone 1.
 
 - Sven Annist (42486720): This week, I introduced a "just-in-time" analysis workflow to automatically calculate and cache project scores, ensuring project lists are always sorted by relevance without manual user action. This effort included automated background scoring, pre-sorted project menus for clarity, and corrected the "Top 3" summary option. I fixed a big bug that was happening in a feature branch where projects were unable to be detected individually but I've incorporated multi-project finding. I also fixed a bug in the `ResumeInsightsGenerator` where the "total files" count was incorrect. Beyond coding, I reviewed PRs **#278**, **#274**, and **#236**, worked on preparing for our Milestone 1 presentation, and recorded my portion of the video demo.
 
