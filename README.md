@@ -10,7 +10,7 @@
 
 ## System Architecture Diagram
 
-![System Architecture Diagram](media/System_Architecture_Diagram.png)
+![System Architecture Diagram](media/system_architecture.png)
 
 This diagram shows how our system's components will be organized into layers, and the responsibility each layer has.
 
