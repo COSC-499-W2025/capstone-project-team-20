@@ -212,3 +212,30 @@ I also prepared and refined my Milestone 1 presentation slides.
 - Add an optional auto-enrich flag for Generate Resume Insights so users can choose to auto-run analysis when generating insights (UX decision: auto-run vs explicit).
 - Explore visualization/export (Issue #199) to allow exporting summarized resume bullets and metrics for top projects.
 - Continue finalizing Milestone 1 slides and prepare presenter notes.
+
+# Week 14: Dec 01 - Dec 08
+
+### Tasks worked on:
+- **PR #273 - Correctly identify sub-projects within zip + RIG automation**: Implemented a "just-in-time" analysis workflow that automatically calculates and sorts projects by `resume_score` in the background when generating insights. This ensures the most relevant projects are always presented first without manual user intervention. Also fixed a bug in the `ResumeInsightsGenerator` that caused the "total files" count to be incorrect.
+- **Milestone 1 Presentation**: Prepared and recorded my portion of the Milestone 1 video demonstration, focusing on the functionality and impact of the `resume_score` feature.
+
+![Svens Tasks for W14](./imagesForSvenLogs/w14.png)
+
+### Weekly Goals Recap:
+This week, the primary focus was on enhancing the user experience and finalizing key deliverables for Milestone 1. The main achievement was the implementation of an automated, just-in-time scoring mechanism in **PR #273**, which streamlines the process of generating resume insights by ensuring projects are always scored and sorted by relevance. This removes a manual step for the user and presents a polished, prioritized list of projects.
+
+In parallel, I completed my contribution to the Milestone 1 presentation, preparing and recording a video segment that demonstrates the newly implemented `resume_score` and the automated Resume Insights Generator (RIG) workflow.
+
+### PRs I reviewed this week:
+- **PR #278 - Updated System Architecture Diagram (kaanspgl)**: Reviewed and approved updates to the system architecture diagram, ensuring it accurately reflects the current state of the project.
+- **PR #274 - docs: update README.md with DFD and Team Contract (dylanstephenalexander)**: Reviewed documentation updates, including the addition of the Data Flow Diagram and Team Contract to the repository's README.
+- **PR #236 - Feature/framework detection (kaanspgl)**: Reviewed the implementation of a new feature to detect and profile the technologies (frameworks, dependencies, build tools) used in a project.
+
+### PRs I opened this week:
+- **PR #273 - feat: Correctly identify sub-projects within zip + RIG automation**: https://github.com/COSC-499-W2025/capstone-project-team-20/pull/273
+
+### Problems Encountered:
+No significant technical blockers were encountered this week. The main challenge was coordinating the final pieces of the Milestone 1 presentation and ensuring all feature work was polished and merged in time.
+
+### Looking Ahead:
+With Milestone 1 complete, the focus now shifts to refining the existing feature set and planning for the next phase of development. Immediate goals include addressing any feedback from the milestone presentation and continuing to improve the robustness and accuracy of the analysis tools. I also plan to revisit the goal of expanding input handling (Issue #151) to make the application more flexible for different use cases.
