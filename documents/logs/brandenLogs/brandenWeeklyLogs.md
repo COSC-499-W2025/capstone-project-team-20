@@ -177,3 +177,23 @@ Issue [COSC-499-W2025/capstone-project-team-20#239](https://github.com/COSC-499-
 I was overall very happy with the progress we made this week, and we had our most productive team meeting yet! We finished our team contract and got on the same page about where our project analyzer is and exactly what else we need to do to get it to where we want it to be for this milestone. I dont have any regrets for this week or any wishes for what I could have improved on, I feel the week went exceedingly well (especially considering it was a 40 hour work week for me too!). Very happy overall with the progress.
 
 Next week, I will ensure we have all basic criteria met for Milestone 1, with extra implementations as well! This week will be about finalizing our whole milestone and focusing on presenting the work on Wednesday and submitting our video submission for Friday. The main focus will just be finalizing that weve met all criteria for it, and exceeded with other features!
+
+### **Week 14: December 1st - December 7th**
+
+**Tasks worked on:**
+
+![Week 14 log](imagesForBrandenLogs/week_14_log_ss.png)
+
+**Weekly Goals Recap:**
+
+This week, our main focus was preparing for the Milestone #1 demonstration for both video and in person. This took our top priority. I did code some small refactors that included adjusting our ProjectMetadataExtractor. The method that we were calling to extract the metadata (extract_metadata() method) was also printing the extracted metadata. This was giving us output that we didnt want when using it either in our other analyzers or in our generators. I created a new method for just the printing, and made extract_metadata() ONLY extract the metadata. We had additional methods in our ProjectAnalyzer.py to combat this output (a suppress_output method) that was being used just to suppress that output. I also added corresponding tests to ensure this was working as intended. 
+For review, I do want to talk about PR #268. I did hours of manual testing on this PR. It was a major refactor, so it was giving us some big issues when i was testing. It went through multiple iterations (changes requested twice), until we finally got exactly what we were intending! Lastly, this week i worked on setting up the team presentation, working on my section of the presentation, developing a script that was (exactly!) 1 minute, and overall polish of our presentations. It was definitely a stressful final week and I'm very happy with my team for the close of milestone #1!
+
+Issues closed: 
+Issue #266
+
+This week and semester, I have been very happy with my team! This week solidified all that, I felt our projects matched up very well against other team's. I think weve really come together as a team, and the effort has been consistent overall. Our team contract will really solidify the inefficiencies that we have had so far, so im also really looking forward to that!
+
+**Goals for the Winter Break:**
+
+Its possible that I do a couple small additions to our project. As of right now, I do not know what those may be, but I think I will work on it if i can for those bonus marks! I am going to be relaxing, recharging, spending time with my family, and working as much as I can to prepare for the second semester!
