@@ -112,6 +112,8 @@ def test_analyze_accumulates_multiple_commits(analyzer):
 # Tests for file categorization
 def test_categorize_file_path_code(analyzer):
     assert analyzer._categorize_file_path("src/main.py") == "code"
+
+def test_categorize_file_path_other_code(analyzer):
     assert analyzer._categorize_file_path("lib/utils.js") == "code"
 
 def test_categorize_file_path_test(analyzer):
@@ -130,7 +132,8 @@ def test_analyze_categorizes_contributions(analyzer):
     files_changed = {
         "src/main.py": {"insertions": 10, "deletions": 0},
         "test/test_main.py": {"insertions": 5, "deletions": 0},
-        "docs/README.md": {"insertions": 3, "deletions": 0}
+        "docs/README.md": {"insertions": 3, "deletions": 0},
+        "config.yml": {"insertions": 2, "deletions": 0}
     }
     commit = create_mock_commit("Alice", files_changed)
     with patch("src.analyzers.ContributionAnalyzer.Repo") as MockRepo:
@@ -142,6 +145,7 @@ def test_analyze_categorizes_contributions(analyzer):
     assert alice_stats.contribution_by_type["code"] == 10
     assert alice_stats.contribution_by_type["test"] == 5
     assert alice_stats.contribution_by_type["docs"] == 3
+    assert alice_stats.contribution_by_type["other"] == 2
 
 # Tests for ContributionStats
 def test_contribution_stats_to_dict():
@@ -163,4 +167,13 @@ def test_contribution_stats_empty():
     assert stats.lines_deleted == 0
     assert stats.total_commits == 0
     assert len(stats.files_touched) == 0
-    assert stats.contribution_by_type == {"code": 0, "docs": 0, "test": 0}
+    # FIX: Assert the full default dictionary including 'other'
+    assert stats.contribution_by_type == {"code": 0, "docs": 0, "test": 0, "other": 0}
+
+def test_calculate_share_returns_dict(analyzer):
+    selected_stats = ContributionStats(lines_added=50, lines_deleted=10)
+    total_stats = ContributionStats(lines_added=100, lines_deleted=20)
+    share = analyzer.calculate_share(selected_stats, total_stats)
+    assert isinstance(share, dict)
+    assert "contribution_share_percent" in share
+    assert share["contribution_share_percent"] == 50.0

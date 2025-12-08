@@ -1,114 +1,88 @@
 from pathlib import Path
+from typing import List
 from src.Project import Project
+from src.ProjectFolder import ProjectFolder
 from src.analyzers.ProjectMetadataExtractor import ProjectMetadataExtractor
 from src.analyzers.ContributionAnalyzer import ContributionAnalyzer
-from src.analyzers.language_detector import analyze_language_share, detect_language_per_file
 from utils.RepoFinder import RepoFinder
-import io, contextlib
-
+import io
+import contextlib
 
 class RepoProjectBuilder:
     """
-    Replacement for the old GitRepoAnalyzer.
-    Scans an extracted directory for Git repositories, maps them to the ZIP's
-    internal folder tree, extracts metadata + contributions, then builds
-    fully populated Project objects.
+    Scans an extracted directory for Git repositories or top-level folders,
+    maps them to the ZIP's internal folder tree, and builds fully populated Project objects.
     """
 
-    def __init__(self, root_folder):
+    def __init__(self, root_folders: List[ProjectFolder]):
         """
-        root_folder = the ProjectFolder root created by parsing the ZIP.
-        This allows us to match repo names to ZIP tree folders.
+        root_folders: A list of ProjectFolder roots created by parsing the ZIP.
         """
-        self.root_folder = root_folder
+        self.root_folders = root_folders
         self.repo_finder = RepoFinder()
         self.contribution_analyzer = ContributionAnalyzer()
 
-    # scan for all repos and return List[Project]
-    def scan(self, extract_dir: Path):
+    def scan(self, extract_dir: Path) -> List[Project]:
         """
-        Main entry point.
-        Takes an extracted ZIP directory, finds all Git repos, builds Project objects.
-
-        Returns:
-            List[Project]
+        Main entry point. Scans for Git repos, and for non-repo folders,
+        creates a project for each root folder.
+        Returns a list of Project objects.
         """
         repo_paths = self.repo_finder.find_repos(extract_dir)
         projects = []
 
+        processed_repo_names = set()
+
+        # First, process all found Git repositories
         for repo_path in repo_paths:
             proj = self._build_single_project(repo_path)
             if proj:
                 projects.append(proj)
+                processed_repo_names.add(proj.name.lower())
+
+        # Then, process root folders that were NOT identified as Git repos
+        for root_folder in self.root_folders:
+            folder_name = root_folder.name.strip('/')
+            if folder_name.lower() not in processed_repo_names:
+                # This folder is not a git repo, create a basic project for it
+                proj = Project(
+                    name=folder_name,
+                    file_path=str(extract_dir / folder_name),
+                    root_folder=root_folder.name
+                )
+                projects.append(proj)
 
         return projects
 
-    # Build a single Project object (metadata + contributions)
-    def _build_single_project(self, repo_path: Path) -> Project:
-        repo_name = repo_path.name
+    def suppress_output(self):
+        """Silence stdout while running noisy extractors."""
+        return contextlib.redirect_stdout(io.StringIO())
 
-        # 1. Map filesystem repo → ZIP tree folder
-        folder = self._find_folder_by_name(self.root_folder, repo_name)
+    def _build_single_project(self, repo_path: Path) -> Project:
+        """Build and return an empty project object for a found repository."""
+        repo_name = repo_path.name
+        folder = self._find_folder_by_name(repo_name)
         if not folder:
             print(f"[WARN] Could not map repo folder '{repo_name}' inside ZIP.")
-            return None
+            # Create a project even if mapping fails
+            return Project(
+                name=repo_name,
+                file_path=str(repo_path),
+                root_folder=repo_name # Fallback
+            )
 
-        # 2. Extract metadata from ZIP tree
-        extractor = ProjectMetadataExtractor(folder)
-        metadata_full = extractor.extract_metadata()
-        metadata = metadata_full["project_metadata"]
-        category_summary = metadata_full["category_summary"]
-        files = extractor.collect_all_files()
-
-        # 3. Contribution stats from actual repo folder
-        author_stats = self.contribution_analyzer.analyze(str(repo_path))
-        authors = list(author_stats.keys())
-
-        if (len(authors)) <=1:
-            if len(folder.subdir) > 1:
-                authors = folder.subdir
-
-        # 4. Language share from local repository contents
-        language_share = analyze_language_share(str(repo_path))
-
-        # 5. Per-file language detection from ZIP content
-        repo_languages = set()
-        for f in files:
-            lang = detect_language_per_file(Path(f.file_name))
-            if lang:
-                repo_languages.add(lang)
-        repo_languages = sorted(repo_languages)
-
-        # 6. Build Project object
-        proj = Project(
+        return Project(
             name=repo_name,
             file_path=str(repo_path),
-            root_folder=str(folder.name),
-            authors=authors,
-            author_count=len(authors),
-            languages=repo_languages,
-            collaboration_status="collaborative" if len(authors)>1 else "individual"
+            root_folder=str(folder.name)
         )
 
-        proj.metadata = metadata
-        proj.categories = category_summary
-        proj.language_share = language_share
-
-        return proj
-
-
-    # Helper to map repo folder to ZIP-tree ProjectFolder
-    def _find_folder_by_name(self, folder, target_name):
+    def _find_folder_by_name(self, target_name: str) -> ProjectFolder | None:
         """
-        Recursively search ZIP tree (ProjectFolder nodes)
-        to find a folder whose name matches the repo.
+        Search through the root folders to find one matching the target name.
         """
-        if folder.name.lower() == target_name.lower():
-            return folder
-
-        for sub in folder.subdir:
-            found = self._find_folder_by_name(sub, target_name)
-            if found:
-                return found
-
+        for folder in self.root_folders:
+            # Name comparison should be case-insensitive and ignore trailing slashes
+            if folder.name.strip('/').lower() == target_name.lower():
+                return folder
         return None
