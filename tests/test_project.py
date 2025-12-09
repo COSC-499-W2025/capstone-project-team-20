@@ -1,6 +1,6 @@
 import pytest
 from datetime import datetime
-from src.Project import Project
+from src.models.Project import Project
 import json
 
 @pytest.fixture

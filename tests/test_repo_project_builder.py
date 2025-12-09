@@ -2,7 +2,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from src.analyzers.RepoProjectBuilder import RepoProjectBuilder
-from src.Project import Project
+from src.models.Project import Project
 from src.ProjectFolder import ProjectFolder
 
 def build_zip_tree():

@@ -1,5 +1,5 @@
 import math
-from src.Project import Project
+from src.models.Project import Project
 import json
 
 class ProjectRanker:

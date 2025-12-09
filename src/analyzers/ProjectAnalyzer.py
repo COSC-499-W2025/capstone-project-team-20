@@ -21,7 +21,7 @@ from src.analyzers.language_detector import detect_language_per_file, analyze_la
 from src.analyzers.ContributionAnalyzer import ContributionAnalyzer, ContributionStats
 from utils.RepoFinder import RepoFinder
 from src.ProjectManager import ProjectManager
-from src.Project import Project
+from src.models.Project import Project
 from src.ProjectFolder import ProjectFolder
 from src.analyzers.SkillAnalyzer import SkillAnalyzer
 from src.generators.ResumeInsightsGenerator import ResumeInsightsGenerator

@@ -1,6 +1,6 @@
 from pathlib import Path
 from typing import List
-from src.Project import Project
+from src.models.Project import Project
 from src.ProjectFolder import ProjectFolder
 from src.analyzers.ProjectMetadataExtractor import ProjectMetadataExtractor
 from src.analyzers.ContributionAnalyzer import ContributionAnalyzer

@@ -10,7 +10,7 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from ProjectFile import ProjectFile  # noqa: E402
+from src.ProjectFile import ProjectFile  # noqa: E402
 
 
 def test_project_file_from_zipinfo_extracts_name_type_size_and_modified(tmp_path: Path) -> None:
