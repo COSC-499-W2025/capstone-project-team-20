@@ -2,7 +2,7 @@ from typing import List, Optional, Dict, Any, Generator
 from datetime import datetime
 import sqlite3
 
-from src.StorageManager import StorageManager
+from src.managers.StorageManager import StorageManager
 from src.models.ReportProject import ReportProject
 
 

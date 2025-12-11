@@ -1,6 +1,6 @@
-from src.ConsentManager import ConsentManager
+from src.managers.ConsentManager import ConsentManager
 from src.analyzers.ProjectAnalyzer import ProjectAnalyzer
-from src.ConfigManager import ConfigManager
+from src.managers.ConfigManager import ConfigManager
 
 def main():
     """

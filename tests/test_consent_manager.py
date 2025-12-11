@@ -1,5 +1,5 @@
 import pytest
-from src.ConsentManager import ConsentManager
+from src.managers.ConsentManager import ConsentManager
 from src.main import main
 
 @pytest.fixture

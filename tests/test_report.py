@@ -87,14 +87,14 @@ def test_all_frameworks():
 
 def test_to_dict_excludes_projects():
     r = Report(
-        report_id=10,
+        id=10,
         title="My Report",
         notes="test notes",
     )
 
     d = r.to_dict()
 
-    assert d["report_id"] == 10
+    assert d["id"] == 10
     assert d["title"] == "My Report"
     assert d["sort_by"] == "resume_score"
     assert d["notes"] == "test notes"

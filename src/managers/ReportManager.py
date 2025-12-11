@@ -2,8 +2,8 @@ from typing import List, Optional, Dict, Any, Generator
 from datetime import datetime
 import sqlite3
 
-from src.StorageManager import StorageManager
-from src.ReportProjectManager import ReportProjectManager
+from src.managers.StorageManager import StorageManager
+from src.managers.ReportProjectManager import ReportProjectManager
 from src.models.Report import Report
 from src.models.ReportProject import ReportProject
 

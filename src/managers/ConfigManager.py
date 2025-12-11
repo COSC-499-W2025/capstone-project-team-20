@@ -1,4 +1,4 @@
-from src.StorageManager import StorageManager
+from src.managers.StorageManager import StorageManager
 from typing import Any, Dict
 
 class ConfigManager(StorageManager):

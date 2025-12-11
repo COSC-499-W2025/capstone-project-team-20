@@ -2,25 +2,25 @@ import pytest
 from unittest.mock import MagicMock
 from datetime import datetime
 
-from src.ReportManager import ReportManager
+from src.managers.ReportManager import ReportManager
 from src.models.Report import Report
 from src.models.ReportProject import ReportProject
 
 
 @pytest.fixture
 def mock_storage(monkeypatch):
-    monkeypatch.setattr("src.ReportManager.StorageManager.set", MagicMock())
-    monkeypatch.setattr("src.ReportManager.StorageManager.get", MagicMock())
-    monkeypatch.setattr("src.ReportManager.StorageManager.get_all", MagicMock())
-    monkeypatch.setattr("src.ReportManager.StorageManager.delete", MagicMock())
-    monkeypatch.setattr("src.ReportManager.StorageManager._get_connection", MagicMock())
+    monkeypatch.setattr("src.managers.ReportManager.StorageManager.set", MagicMock())
+    monkeypatch.setattr("src.managers.ReportManager.StorageManager.get", MagicMock())
+    monkeypatch.setattr("src.managers.ReportManager.StorageManager.get_all", MagicMock())
+    monkeypatch.setattr("src.managers.ReportManager.StorageManager.delete", MagicMock())
+    monkeypatch.setattr("src.managers.ReportManager.StorageManager._get_connection", MagicMock())
     return True
 
 
 @pytest.fixture
 def mock_project_manager(monkeypatch):
     mock = MagicMock()
-    monkeypatch.setattr("src.ReportManager.ReportProjectManager", lambda: mock)
+    monkeypatch.setattr("src.managers.ReportManager.ReportProjectManager", lambda: mock)
     return mock
 
 
@@ -76,7 +76,7 @@ def test_get_report(rm, mock_project_manager, monkeypatch):
 
     # ✅ Correct: mock StorageManager.get, not rm.get
     monkeypatch.setattr(
-        "src.ReportManager.StorageManager.get",
+        "src.managers.ReportManager.StorageManager.get",
         MagicMock(return_value={
             "id": 10,
             "title": "My Report",
@@ -145,7 +145,7 @@ def test_list_reports(rm, mock_project_manager, monkeypatch):
 
     # ✅ Correct: mock StorageManager.get_all, not rm.get_all
     monkeypatch.setattr(
-        "src.ReportManager.StorageManager.get_all",
+        "src.managers.ReportManager.StorageManager.get_all",
         MagicMock(return_value=[
             {"id": 1, "title": "R1", "date_created": now, "sort_by": "resume_score", "notes": None},
             {"id": 2, "title": "R2", "date_created": now, "sort_by": "resume_score", "notes": None},

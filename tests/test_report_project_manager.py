@@ -2,17 +2,17 @@ import pytest
 from unittest.mock import MagicMock
 from datetime import datetime
 
-from src.ReportProjectManager import ReportProjectManager
+from src.managers.ReportProjectManager import ReportProjectManager
 from src.models.ReportProject import ReportProject
 
 
 @pytest.fixture
 def mock_storage(monkeypatch):
-    monkeypatch.setattr("src.ReportProjectManager.StorageManager.set", MagicMock())
-    monkeypatch.setattr("src.ReportProjectManager.StorageManager.get", MagicMock())
-    monkeypatch.setattr("src.ReportProjectManager.StorageManager.get_all", MagicMock())
-    monkeypatch.setattr("src.ReportProjectManager.StorageManager._deserialize_row", lambda self, x: x)
-    monkeypatch.setattr("src.ReportProjectManager.StorageManager._get_connection", MagicMock())
+    monkeypatch.setattr("src.managers.ReportProjectManager.StorageManager.set", MagicMock())
+    monkeypatch.setattr("src.managers.ReportProjectManager.StorageManager.get", MagicMock())
+    monkeypatch.setattr("src.managers.ReportProjectManager.StorageManager.get_all", MagicMock())
+    monkeypatch.setattr("src.managers.ReportProjectManager.StorageManager._deserialize_row", lambda self, x: x)
+    monkeypatch.setattr("src.managers.ReportProjectManager.StorageManager._get_connection", MagicMock())
     return True
 
 
@@ -53,7 +53,7 @@ def test_get_success(rpm, monkeypatch):
     now = datetime.now().isoformat()
 
     monkeypatch.setattr(
-        "src.ReportProjectManager.StorageManager.get",
+        "src.managers.ReportProjectManager.StorageManager.get",
         MagicMock(return_value={
             "project_name": "ProjA",
             "resume_score": 2.0,
@@ -77,7 +77,7 @@ def test_get_success(rpm, monkeypatch):
 
 def test_get_not_found(rpm, monkeypatch):
     monkeypatch.setattr(
-        "src.ReportProjectManager.StorageManager.get",
+        "src.managers.ReportProjectManager.StorageManager.get",
         MagicMock(return_value=None)
     )
     assert rpm.get(99) is None
@@ -147,7 +147,7 @@ def test_delete_all_for_report(rpm):
 
 def test_get_all_generator(rpm, monkeypatch):
     monkeypatch.setattr(
-        "src.ReportProjectManager.StorageManager.get_all",
+        "src.managers.ReportProjectManager.StorageManager.get_all",
         MagicMock(return_value=[
             {
                 "project_name": "A",
