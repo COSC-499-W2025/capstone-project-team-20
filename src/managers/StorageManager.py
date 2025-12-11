@@ -45,6 +45,7 @@ class StorageManager(ABC):
         Returns a Generator object, ensuring that only one connection is open at once.
         """
         conn = sqlite3.connect(self.db_path)
+        conn.execute("PRAGMA foreign_keys = ON;")
         try:
             yield conn
             conn.commit()
