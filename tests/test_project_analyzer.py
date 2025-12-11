@@ -1,7 +1,7 @@
 from unittest.mock import patch, MagicMock
 from src.analyzers.ProjectAnalyzer import ProjectAnalyzer
 from src.ConfigManager import ConfigManager
-from src.Project import Project
+from src.models.Project import Project
 from src.ProjectFolder import ProjectFolder
 from pathlib import Path
 import pytest

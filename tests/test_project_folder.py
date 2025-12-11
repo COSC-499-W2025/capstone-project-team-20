@@ -9,7 +9,7 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from ProjectFolder import ProjectFolder
+from src.ProjectFolder import ProjectFolder
 
 path = "tests/test_resource/testzip.zip"
 

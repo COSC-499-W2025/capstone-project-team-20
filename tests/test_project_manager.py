@@ -4,7 +4,7 @@ import sqlite3
 import json
 from datetime import datetime
 from src.ProjectManager import ProjectManager
-from src.Project import Project
+from src.models.Project import Project
 
 DB_PATH = "test_projects.db"
 

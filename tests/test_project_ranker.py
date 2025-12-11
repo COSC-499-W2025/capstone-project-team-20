@@ -1,6 +1,6 @@
 import pytest
 from datetime import datetime, timedelta
-from src.Project import Project
+from src.models.Project import Project
 from src.ProjectRanker import ProjectRanker
 
 @pytest.fixture

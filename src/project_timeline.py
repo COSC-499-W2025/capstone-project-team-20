@@ -3,7 +3,7 @@ from typing import Any, Dict, Iterable, List, Tuple, Optional
 
 from git import Repo
 
-from src.Project import Project
+from src.models.Project import Project
 from utils.timeline_builder import (
     SkillEvent,
     build_timeline,
