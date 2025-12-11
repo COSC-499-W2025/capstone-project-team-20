@@ -6,7 +6,7 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from ProgressBar import Bar
+from src.ProgressBar import Bar
 
 def test_too_small_abort():
     '''Bars created with 7 or less bytes (including negative numbers) should abort (create an already completed bar where STAGES is 1)'''
