@@ -189,35 +189,35 @@ Purpose:
       <a href="https://github.com/mr-sban">
         <img src="https://github.com/mr-sban.png?size=100" width="100px;" alt="mr-sban"/>
         <br />
-        <sub><b>mr-sban</b></sub>
+        <sub><b>Sven Annist</b></sub>
       </a>
     </td>
     <td align="center">
       <a href="https://github.com/kaanspgl">
         <img src="https://github.com/kaanspgl.png?size=100" width="100px;" alt="kaanspgl"/>
         <br />
-        <sub><b>kaanspgl</b></sub>
+        <sub><b>Kaan Sapoglu</b></sub>
       </a>
     </td>
     <td align="center">
       <a href="https://github.com/branden6">
         <img src="https://github.com/branden6.png?size=100" width="100px;" alt="branden6"/>
         <br />
-        <sub><b>branden6</b></sub>
+        <sub><b>Branden Kennedy</b></sub>
       </a>
     </td>
     <td align="center">
       <a href="https://github.com/dylanstephenalexander">
         <img src="https://github.com/dylanstephenalexander.png?size=100" width="100px;" alt="dylanstephenalexander"/>
         <br />
-        <sub><b>dylanstephenalexander</b></sub>
+        <sub><b>Dylan Alexander</b></sub>
       </a>
     </td>
     <td align="center">
       <a href="https://github.com/mewlic">
         <img src="https://github.com/mewlic.png?size=100" width="100px;" alt="mewlic"/>
         <br />
-        <sub><b>mewlic</b></sub>
+        <sub><b>Lex Nash</b></sub>
       </a>
     </td>
   </tr>
