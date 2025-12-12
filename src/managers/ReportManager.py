@@ -1,4 +1,4 @@
-from typing import List, Optional, Dict, Any, Generator
+from typing import List, Literal, Optional, Dict, Any, Generator
 from datetime import datetime
 import sqlite3
 
@@ -92,31 +92,55 @@ class ReportManager(StorageManager):
             notes=report_dict.get("notes")
         )
     
-    def update_report_metadata(self, id: int, **kwargs) -> bool:
+    def set_title(self, id: int, title: str) -> bool:
         """
-        Update report metadata (title, notes, etc.).
-        Does NOT update projects - use add_project/remove_project for that.
+        Update report title.
         
         Args:
             id: ID of report to update
-            **kwargs: Fields to update (title, notes, sort_by, etc.)
+            title: New title
             
         Returns:
             True if updated successfully
         """
-        allowed_fields = {'title', 'sort_by', 'notes'}
-        
-        updates = {k: v for k, v in kwargs.items() if k in allowed_fields}
-        if not updates:
-            return False
-        
         with self._get_connection() as conn:
             cursor = conn.cursor()
-            set_clause = ", ".join(f"{k} = ?" for k in updates.keys())
-            values = list(updates.values()) + [id]
+            query = f"UPDATE {self.table_name} SET title = ? WHERE {self.primary_key} = ?"
+            cursor.execute(query, (title, id))
+            return cursor.rowcount > 0
+
+    def set_notes(self, id: int, notes: Optional[str]) -> bool:
+        """
+        Update report notes.
+        
+        Args:
+            id: ID of report to update
+            notes: New notes (can be None to clear)
             
-            query = f"UPDATE {self.table_name} SET {set_clause} WHERE {self.primary_key} = ?"
-            cursor.execute(query, values)
+        Returns:
+            True if updated successfully
+        """
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            query = f"UPDATE {self.table_name} SET notes = ? WHERE {self.primary_key} = ?"
+            cursor.execute(query, (notes, id))
+            return cursor.rowcount > 0
+
+    def set_sort_by(self, id: int, sort_by: Literal["resume_score", "date_created", "last_modified"]) -> bool:
+        """
+        Update report sort order.
+        
+        Args:
+            id: ID of report to update
+            sort_by: New sort method
+            
+        Returns:
+            True if updated successfully
+        """
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            query = f"UPDATE {self.table_name} SET sort_by = ? WHERE {self.primary_key} = ?"
+            cursor.execute(query, (sort_by, id))
             return cursor.rowcount > 0
     
     def add_project_to_report(self, id: int, project: ReportProject) -> bool:

@@ -97,8 +97,7 @@ def test_get_report(rm, mock_project_manager, monkeypatch):
     assert report.title == "My Report"
     assert len(report.projects) == 2
 
-
-def test_update_report_metadata(rm):
+def test_set_title(rm):
     mock_conn = MagicMock()
     mock_cursor = MagicMock()
     mock_cursor.rowcount = 1
@@ -106,14 +105,62 @@ def test_update_report_metadata(rm):
     mock_conn.cursor.return_value = mock_cursor
     rm._get_connection.return_value.__enter__.return_value = mock_conn
 
-    ok = rm.update_report_metadata(5, title="New Title", notes="Updated")
+    ok = rm.set_title(5, "New Title")
+
+    assert ok is True
+    mock_cursor.execute.assert_called_once()
+
+
+def test_set_title_not_found(rm):
+    mock_conn = MagicMock()
+    mock_cursor = MagicMock()
+    mock_cursor.rowcount = 0  # No rows updated
+
+    mock_conn.cursor.return_value = mock_cursor
+    rm._get_connection.return_value.__enter__.return_value = mock_conn
+
+    ok = rm.set_title(999, "New Title")
+
+    assert ok is False
+
+
+def test_set_notes(rm):
+    mock_conn = MagicMock()
+    mock_cursor = MagicMock()
+    mock_cursor.rowcount = 1
+
+    mock_conn.cursor.return_value = mock_cursor
+    rm._get_connection.return_value.__enter__.return_value = mock_conn
+
+    ok = rm.set_notes(5, "Updated notes")
 
     assert ok is True
 
 
-def test_update_report_metadata_invalid(rm):
-    ok = rm.update_report_metadata(5, foo="bar")
-    assert ok is False
+def test_set_notes_to_none(rm):
+    mock_conn = MagicMock()
+    mock_cursor = MagicMock()
+    mock_cursor.rowcount = 1
+
+    mock_conn.cursor.return_value = mock_cursor
+    rm._get_connection.return_value.__enter__.return_value = mock_conn
+
+    ok = rm.set_notes(5, None)
+
+    assert ok is True
+
+
+def test_set_sort_by(rm):
+    mock_conn = MagicMock()
+    mock_cursor = MagicMock()
+    mock_cursor.rowcount = 1
+
+    mock_conn.cursor.return_value = mock_cursor
+    rm._get_connection.return_value.__enter__.return_value = mock_conn
+
+    ok = rm.set_sort_by(5, "date_created")
+
+    assert ok is True
 
 
 def test_add_project_to_report(rm, mock_project_manager):
