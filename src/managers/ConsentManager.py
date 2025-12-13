@@ -1,4 +1,4 @@
-from src.ConfigManager import ConfigManager
+from src.managers.ConfigManager import ConfigManager
 
 class ConsentManager:
     """

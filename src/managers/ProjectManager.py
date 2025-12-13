@@ -1,7 +1,7 @@
 import sqlite3
 import json
 from typing import Any, Dict, Generator, Optional
-from src.StorageManager import StorageManager
+from src.managers.StorageManager import StorageManager
 from src.models.Project import Project
 
 

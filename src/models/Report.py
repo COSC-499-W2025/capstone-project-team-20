@@ -14,7 +14,7 @@ class Report:
     and how to organize them, but pull current user info (e.g. email address) at export time.
     """
 
-    report_id: Optional[int] = None
+    id: Optional[int] = None
     title: str = ""
     date_created: datetime = field(default_factory=datetime.now)
     sort_by: Literal["resume_score", "date_created", "last_modified"] = "resume_score"
@@ -89,7 +89,7 @@ class Report:
 
     def to_dict(self) -> Dict: # can't use asdict(), because we need to omit projects
         return {
-            "report_id": self.report_id,
+            "id": self.id,
             "title": self.title,
             "date_created": self.date_created.isoformat(),
             "sort_by": self.sort_by,

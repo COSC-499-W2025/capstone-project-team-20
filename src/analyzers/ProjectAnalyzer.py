@@ -20,12 +20,12 @@ from src.FileCategorizer import FileCategorizer
 from src.analyzers.language_detector import detect_language_per_file, analyze_language_share
 from src.analyzers.ContributionAnalyzer import ContributionAnalyzer, ContributionStats
 from utils.RepoFinder import RepoFinder
-from src.ProjectManager import ProjectManager
+from src.managers.ProjectManager import ProjectManager
 from src.models.Project import Project
 from src.ProjectFolder import ProjectFolder
 from src.analyzers.SkillAnalyzer import SkillAnalyzer
 from src.generators.ResumeInsightsGenerator import ResumeInsightsGenerator
-from src.ConfigManager import ConfigManager
+from src.managers.ConfigManager import ConfigManager
 from src.ProjectRanker import ProjectRanker
 from src.analyzers.RepoProjectBuilder import RepoProjectBuilder
 

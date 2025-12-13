@@ -1,6 +1,6 @@
 import pytest
 import os
-from src.ConfigManager import ConfigManager
+from src.managers.ConfigManager import ConfigManager
 
 @pytest.fixture
 def config_manager():
