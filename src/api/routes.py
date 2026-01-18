@@ -1,19 +1,18 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException, status
-from pydantic import BaseModel
 from pathlib import Path
-import tempfile
-import shutil
-from src.api.schemas import ConsentResponse, UploadProjectResponse, ProjectSummary
+import tempfile, shutil
+from src.api.schemas import ConsentResponse, UploadProjectResponse, ProjectsListResponse, ProjectSummary, ProjectDetailResponse, ProjectDetail
 from src.analyzers.ProjectAnalyzer import ProjectAnalyzer
 from src.managers.ConfigManager import ConfigManager
 from src.managers.ConsentManager import ConsentManager
+from src.managers.ProjectManager import ProjectManager
 from src.ZipParser import parse_zip_to_project_folders
 
 """For all our routes. Requirement 32, endpoints"""
 router = APIRouter()
 
-@router.post("/projects/upload", response_model=UploadProjectResponse)
-def upload_project(zip_file: UploadFile = File()):
+@router.post("/projects/upload", response_model=UploadProjectResponse, status_code=status.HTTP_201_CREATED)
+def upload_project(zip_file: UploadFile = File(...)):
     with tempfile.NamedTemporaryFile(delete=False, suffix=".zip") as tmp:
         tmp_path = Path(tmp.name)
         shutil.copyfileobj(zip_file.file, tmp)
@@ -37,11 +36,25 @@ def upload_consent(consent: bool):
     cm.set_consent(consent)
     return ConsentResponse(consent=consent)
 
-@router.get("/projects")
+@router.get("/projects", response_model=ProjectsListResponse)
 def get_list_projects():
+    pm = ProjectManager()
+    projects = pm.get_all()
+    return ProjectsListResponse(
+        projects=[ProjectSummary(id=p.id, name=p.name) for p in projects]
+    )
 
-@router.get("/projects/{id}")
+@router.get("/projects/{id}", response_model=ProjectDetailResponse)
 def get_project(id: int):
+    pm = ProjectManager()
+    project = pm.get(id)
+
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found.")
+    
+    return ProjectDetailResponse(
+        project=ProjectDetail(**project.__dict__)
+    )
 
 @router.get("/skills")
 def get_skills_list():
