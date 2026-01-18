@@ -1,6 +1,7 @@
 from src.managers.ConsentManager import ConsentManager
 from src.analyzers.ProjectAnalyzer import ProjectAnalyzer
 from src.managers.ConfigManager import ConfigManager
+from src.api.routes import fastapi
 
 def main():
     """
