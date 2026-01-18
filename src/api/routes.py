@@ -1,7 +1,8 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException, status
 from pathlib import Path
+from collections import Counter
 import tempfile, shutil
-from src.api.schemas import ConsentResponse, UploadProjectResponse, ProjectsListResponse, ProjectSummary, ProjectDetailResponse, ProjectDetail
+from src.api.schemas import SkillsListResponse, SkillItem, PortfolioResponse, ConsentResponse, UploadProjectResponse, ProjectsListResponse, ProjectSummary, ProjectDetailResponse, ProjectDetail, TodoResponse
 from src.analyzers.ProjectAnalyzer import ProjectAnalyzer
 from src.managers.ConfigManager import ConfigManager
 from src.managers.ConsentManager import ConsentManager
@@ -56,23 +57,58 @@ def get_project(id: int):
         project=ProjectDetail(**project.__dict__)
     )
 
-@router.get("/skills")
+@router.get("/skills", response_model=SkillsListResponse)
 def get_skills_list():
+    pm = ProjectManager()
+    projects = list(pm.get_all())
 
-@router.get("/resume/{id}")
+    counts = Counter()
+
+    for p in projects:
+        for s in (p.skills_used or []):
+            if s:
+                counts[s.strip()] += 1
+    
+    skills = [
+        SkillItem(name=name, project_count=count)
+        for name, count in sorted(counts.items(), key=lambda x: (-x[1], x[0].lower()))
+    ]
+
+    return SkillsListResponse(skills=skills)
+
+# Note: Resume endpoints are placeholders.
+# The system only currently generates resume insights (As of Jan 18)
+# TODO: Full resume generation then we edit these endpoints
+
+@router.get("/resume/{id}", response_model=TodoResponse)
 def get_resume(id: int):
+    return TodoResponse(message="Resume retrieval not implemented yet.")
 
-@router.post("/resume/generate")
+@router.post("/resume/generate", response_model=TodoResponse)
 def generate_resume():
+    return TodoResponse(message="Resume generation not implemented yet.")
 
-@router.post("/resume/{id}/edit")
+@router.post("/resume/{id}/edit", response_model=TodoResponse)
 def edit_resume(id: int):
+    return TodoResponse(message="Resume editing not implemented yet.")
 
-@router.get("/portfolio/{id}")
+# Note: Portfolio endpoints are placeholders.
+# same idea as our resume endpoints...
+# TODO: Full portfolio generation then we edit these endpoints
+
+@router.get("/portfolio/{id}", response_model=PortfolioResponse)
 def get_portfolio(id: int):
-
-@router.post("/portfolio/generate")
+    return PortfolioResponse(
+        message="Portfolio retrieval not implemented yet."
+    )
+@router.post("/portfolio/generate", response_model=PortfolioResponse)
 def generate_portfolio():
+    return PortfolioResponse(
+        message="Portfolio generation not implemented yet."
+    )
 
 @router.post("/portfolio/{id}/edit")
 def edit_portfolio(id: int):
+    return PortfolioResponse(
+        message="Portfolio editing not implemented yet."
+    )
