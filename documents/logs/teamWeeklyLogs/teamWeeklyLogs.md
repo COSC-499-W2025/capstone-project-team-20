@@ -391,7 +391,7 @@ Issue [COSC-499-W2025/capstone-project-team-20#146](https://github.com/COSC-499-
 
 - Lex Nash (84668540):
 
-- Dylan Alexander (16394025): 
+- Dylan Alexander (16394025): Continued work on Resume Generation. Although I do not have a PR to show for it. I selected a resume template. Made some progress in getting familiar with LaTeX. Currently in the process of figuring out how to dynamically generate resumes with the template, given the user's chosen portfolio. Reviewed 3 PRs. Those being (PR #311), (PR #305), (PR #302).
 
 - Sven Annist (42486720):
 
