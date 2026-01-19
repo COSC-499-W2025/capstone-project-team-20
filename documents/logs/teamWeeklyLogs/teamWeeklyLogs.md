@@ -393,7 +393,7 @@ Issue [COSC-499-W2025/capstone-project-team-20#146](https://github.com/COSC-499-
 
 - Dylan Alexander (16394025): Continued work on Resume Generation. Although I do not have a PR to show for it. I selected a resume template. Made some progress in getting familiar with LaTeX. Currently in the process of figuring out how to dynamically generate resumes with the template, given the user's chosen portfolio. Reviewed 3 PRs. Those being (PR #311), (PR #305), (PR #302).
 
-- Sven Annist (42486720):
+- Sven Annist (42486720): This week, we added a complete portfolio generation and retrieval flow to the CLI. The portfolio entries now follow a professional structure (role, timeline, technologies, overview, achievements), and the new “Retrieve Full Portfolio (Aggregated)” option displays previously generated entries in a clear, most-recent-first list. We also fixed the author role misidentification by basing collaboration status on total repo authors via `get_all_authors()` and updated the Option 10 workflow to run contribution analysis if author data is missing, ensuring portfolio entries reflect the correct team size. The changes are captured in PRs **#305** and **#319**, along with unit tests for portfolio generation and aggregation. Reviewed #314
 
 **Features included in the project plan for this milestone are:**
 
