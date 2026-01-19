@@ -212,3 +212,15 @@ I'm looking forward to cleaning up the project output before the video demo!
 
 Issues closed:
 - Issue [COSC-499-W2025/capstone-project-team-20#244](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/244)
+
+## T2 Week 2
+**Types of tasks worked on**
+![Week 2 Tasks](imagesForLexLogs/w2t2.png)
+
+Did some refactoring as well as bugfixes on progress bar code as it developed some problems due to some sweeping changes at the end of last term. That is now merged.
+
+As a team we've been trying to figure out when is best to meet as we all need to discuss our plan going forward before we can start picking up the pace with development of milestone 2. I'm really hoping we can meet multiple times a week because we work especially productively when we are all in the same room i have found from last term.
+
+This week's main focus was planning front end stuff since im going to be in charge of most of the visual design for that, I've been researching different modules and settling on tkinter. I have started to make mockups of the different screens for our application, which will be finalized with the team's input as it can heavily influence code complexity if we split things up into too many screens and I want to get input on what the rest of the team is envisioning.
+
+I reviewed Branden's API pull request, which involved having to research a lot about the different modules used as well as learning more about the function of APIs themselves since I haven't had to learn about them prior to this point. It is really enjoyable to learn new things and I have no doubt this effort will be rewarded throughout the rest of the project.
