@@ -239,3 +239,29 @@ No significant technical blockers were encountered this week. The main challenge
 
 ### Looking Ahead:
 With Milestone 1 complete, the focus now shifts to refining the existing feature set and planning for the next phase of development. Immediate goals include addressing any feedback from the milestone presentation and continuing to improve the robustness and accuracy of the analysis tools. I also plan to revisit the goal of expanding input handling (Issue #151) to make the application more flexible for different use cases.
+
+# Term 2 Week 2: Jan 13 - Jan 19
+
+### Tasks worked on:
+- **PR #305 – Portfolio generation and retrieval option**: Implemented a professionally structured portfolio generator that produces a narrative entry per project (role, timeline, technologies, overview, achievements). Added a new CLI option to retrieve an aggregated portfolio list (sorted by most recent). Persisted entries on the `Project` model and included tests for generation and aggregation.
+- **PR #319 – Correct author role detection and insights flow**: Fixed “Solo Developer” misidentification by basing role on total repo authors (`author_count`). Ensured Option 10 (Generate Resume Insights) runs contribution analysis beforehand when author data is missing. Integrated `ContributionAnalyzer.get_all_authors()` to set `author_count` reliably.
+
+![Svens Tasks for T2W2](./imagesForSvenLogs/t2w2.png)
+
+### Weekly Goals Recap:
+The focus this week was on fulfilling the missing portfolio requirement and improving the reliability of role attribution within portfolio entries. In **PR #305**, I added a portfolio generator aligned with professional guidance and a dedicated “Retrieve Full Portfolio” option that aggregates prior entries for easy review. In **PR #319**, I corrected author role detection by using total repo authors and updated the insights workflow so Option 10 triggers contribution analysis when needed, ensuring portfolio entries reflect actual collaboration status.
+
+### PRs I reviewed this week:
+- Reviewed internal changes related to portfolio formatting and analyzer flow (local reviews tied to **#305** and **#319**).
+
+### PRs I opened this week:
+- **PR #305 – feat: Portfolio generator + aggregated retrieval option**
+  https://github.com/COSC-499-W2025/capstone-project-team-20/pull/305
+- **PR #319 – fix: Accurate author role detection + insights flow improvements**
+  https://github.com/COSC-499-W2025/capstone-project-team-20/pull/319
+
+### Problems Encountered:
+Initially, portfolio entries misattributed the role as “Solo Developer” when running Option 10 directly. The issue stemmed from relying on selected usernames rather than total authors. I resolved it by using `author_count` from `get_all_authors()` and invoking contribution analysis automatically if author data was missing prior to insights generation.
+
+### Looking Ahead:
+Next steps include an export feature to write aggregated portfolio output to a Markdown file (in a separate PR), and further refinements to portfolio entry content (e.g., optional repository links when available).
