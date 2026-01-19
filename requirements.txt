@@ -5,3 +5,6 @@ pytest-cov
 python-docx
 pypdf
 reportlab
+fastapi
+uvicorn
+httpx
