@@ -1,6 +1,21 @@
 ## **Dylan Weekly Log**
 
-### **Week 3: September 14th - September 21st**
+### **Table of Contents:**
+
+- [Term 2 Week 2: January 12th - January 18th](#term-2-week-2-january-12th---january-18th)
+- [Term 1 Week 14: December 1st - December 7th](#term-1-week-14-december-1st---december-7th)
+- [Term 1 Week 13: November 24th - November 30th](#term-1-week-13-november-24th---november-30th)
+- [Term 1 Week 12: November 17th - November 23rd](#term-1-week-12-november-17th---november-23rd)
+- [Term 1 Week 9: October 27th - November 2nd](#term-1-week-9-october-27th---november-2nd)
+- [Term 1 Week 8: October 20th - October 26th](#term-1-week-8-october-20th---october-26th)
+- [Term 1 Week 7: October 13th - October 19th](#term-1-week-7-october-13th---october-19th)
+- [Term 1 Week 6: October 6th - October 12th](#term-1-week-6-october-6th---october-12th)
+- [Term 1 Week 5: September 29th - October 5th](#term-1-week-5-september-29th---october-5th)
+- [Term 1 Week 4: September 22nd - September 28th](#term-1-week-4-september-22nd---september-28th)
+- [Term 1 Week 3: September 14th - September 21st](#term-1-week-3-september-14th---september-21st)
+
+
+### Term 1 Week 3: September 14th - September 21st
 
  **Tasks worked on:**
 
@@ -10,7 +25,7 @@
 
 This week, our team created a rough draft of functional and non-functional requirements for our project. We then shared what we had with other groups in class and exhanged ideas in order to refine and expand on our ideas. 
 
-### **Week 4: September 22nd - September 28th**
+### Term 1 Week 4: September 22nd - September 28th
 
  **Tasks worked on:**
 
@@ -22,7 +37,7 @@ This week, our team produced a system architecture diagram and gathered feedback
 
 We've also been working on a project proposal document that clearly lays out the project scope, our proposed solution, use cases, requirements and testing. I will be working on drafting both positive and negative test cases for each requirement.
 
-### **Week 5: September 29th - October 5th**
+### Term 1 Week 5: September 29th - October 5th
 
  **Tasks worked on:**
 
@@ -32,7 +47,7 @@ We've also been working on a project proposal document that clearly lays out the
 
 This week, our team produced a data flow diagram and exchanged them with other groups in class. We offered feedback to the other groups, and they gave us feedback on our DFD diagram in return. We've taken this feedback and gained some valuable insights into how data will flow through our system and how different processes will interact.
 
-### **Week 6: October 6th - October 12th**
+### Term 1 Week 6: October 6th - October 12th
 
  **Tasks worked on:**
 
@@ -44,7 +59,7 @@ This week, our team held discussions over Discord in order to finalize our syste
 
 As for myself, this week I made a PR establishing an initial skeleton setup and basic test framework for our project. This included making a comprehensive .gitignore, establishing the required folder structure, as well as initializing pytest. It's very basic, but it gives us a good place to start building.
 
-### **Week 7: October 13th - October 19th**
+### Term 1 Week 7: October 13th - October 19th
 
  **Tasks worked on**
 
@@ -68,7 +83,7 @@ I also did some code review on the following PRs
 
 Next week, I'm planning on working on storing project information in the database. I think this should be an achievable goal. I think the main problem I'll run into is trying to decide what information we need to store, but perfect is the enemy of progress.
 
-### **Week 8: October 20th - October 26th**
+### Term 1 Week 8: October 20th - October 26th
 
 **Tasks worked on** 
 
@@ -110,7 +125,7 @@ The first step would be gathering and storing the metadata in a format that a ML
 
 Here's an issue I've made as a first step for my week ahead: [Link to issue: Prepare project metadata for use with machine learning](https://github.com/orgs/COSC-499-W2025/projects/9/views/1?pane=issue&itemId=135645498&issue=COSC-499-W2025%7Ccapstone-project-team-20%7C120)
 
-### **Week 9: October 27th - November 2nd**
+### Term 1 Week 9: October 27th - November 2nd
 
 **Tasks worked on** 
 
@@ -144,7 +159,7 @@ I've got several midterms this upcoming week, so I'm aiming to be realistic in w
 
 I think we're getting quite close to combining our individual modules into one comprehensive system. I know others in the team are taking a look at that this week, so in order not to step on their toes I think I'll compile some repositories to train the ML model on. I'm thinking I'll start on project classification (i.e. judging what a project is for). For now I'm just going to work on the initial steps to this and see how that goes.
 
-### **Week 12: November 17th - November 23rd**
+### Term 1 Week 12: November 17th - November 23rd
 
 **Tasks worked on** 
 
@@ -181,7 +196,7 @@ My main focus this week is still working on ML project classification (i.e. judg
 
 Also, I realized my first implementation of the Repo dataset was extremely primitive (I didn't need to be selecting them by hand). I've since learned GitHub exposes a 'topics' API that I could use to make the process much more pain-free. I'll probably expand that dataset now that I know it doesn't need to take hours of manual data entry. 
 
-### **Week 13: November 24th - November 30th**
+### Term 1 Week 13: November 24th - November 30th
 
 **Tasks worked on** 
 
@@ -229,7 +244,7 @@ Besides the couple PRs I made, I think my main contribution to the team was in r
 
 If time allows I'd like to get my ML project classification done by the end of next week. Of course, I will have to temper my expectations, as this last week of school is looking quite busy. Having at least a first pass in main would be nice, given how long I've devoted to this specific topic. The whole process has been a pretty entertaining cycle of working on that -> realize we're not storing enough analysis for it to be useful -> go help out elsewhere in the project to try and fix that problem -> repeat. But such is the nature of software development!
 
-### **Week 14: December 1st - 7th**
+### Term 1 Week 14: December 1st - 7th
 
 **Tasks worked on** 
 
@@ -258,5 +273,34 @@ This week, our team was focused on preparing for the Milestone #1 Deadline, whic
 Sit back, relax and prepare for the new semester 😎
 
 
+### Term 2 Week 2: January 12th - January 18th
+**Screenshot of Tasks Worked On:**
 
+![Term 2 Week 2 Log](images/dylan-week-2-term-2-ss.png)
+
+**Coding Tasks:**
+
+Over the winter break, I decided to take on resume generation. In that time, I laid the groundwork for this by creating Report and ReportProject dataclasses, and ReportManager and ReportProjectManager manager classes. The next step was actually generating the resumes, which is what I've been working on this week. Unfortunately, I'm a bit in the weeds with the implementation here. As it involves a technology I was not previously familar with (LaTeX). Unfortunately, I won't be ready to PR my implementation this week. If anything, it will have to be next week. 
+
+**Reviewing or Collaboration Tasks:**
+
+I manually tested and reviewed the following PRs this week. 
+
+[Feature/setup fast api](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/311)
+
+[fix: Correct the display of collab status within git analysis](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/305)
+
+[progressbar but awesome](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/302)
+
+**Brief Description of Last Week Connecting This Week:**
+
+Over the break, I laid the groundwork for resume generation. My work this week continued this, although I don't yet have a PR to show for it.
+
+**Plan/Goals for Upcoming Week:**
+
+In the upcoming week, I want to have some initial resume generation functionality merged into main. 
+
+**Any issues or Blockers That I Encountered This Week and How I Addressed/Plan to Address Them:**
+
+My main blocker this week was my unfamiliarity with so much of the nitty gritty of resume generation. For example, LaTeX. Another example is the actual resume templates themselves. In all honesty, I am completely unfamiliar with what an industry standard resume might look like. What seperates a good resume from a bad one. Etc. It's not often I encounter so many roadblocks in my weekly quest to get a PR merged for this class, not that I'm looking for excuses. There's not much to address here, it's just led to me taking longer than I expected with this particular task.
 
