@@ -1,5 +1,20 @@
 ## Team 20 Weekly Log 
 
+### Table of contents
+- [Term 2 Week 2 (January 12th - January 18th)](#term-2-week-2-january-12th---january-18th)
+- [Week 14 (December 1st - December 7th)](#week-14-december-1st---december-7th)
+- [Week 13 (November 24th - November 30th)](#week-13-november-24th---november-30th)
+- [Week 12 (November 17th - November 23rd)](#week-12-november-17th---november-23rd)
+- [Week 11 (November 10th - November 16th)](#week-11-november-10th---november-16th)
+- [Week 9 (October 27th - November 2nd)](#week-9-october-27th---november-2nd)
+- [Week 8 (October 20th - October 26th)](#week-8-october-20th---october-26th)
+- [Week 7 (October 13th - October 19th)](#week-7-october-13th---october-19th)
+- [Week 6 (October 6th - October 12th)](#week-6-october-6th-october-12th)
+- [Week 5 (September 29 - October 5th)](#week-5-september-29-october-5th)
+- [Week 4 (September 22-28)](#week-4-september-22-28)
+- [Week 3 (September 15-21)](#week-3-september-15-21)
+
+
 ### Week 3 (September 15-21)
 
 **Work Performed:**
@@ -366,3 +381,36 @@ Issue [COSC-499-W2025/capstone-project-team-20#146](https://github.com/COSC-499-
 **Test Report:**
 
 [Week 14 Test Report](teamWeeklyLogsImages/week_14_test_report.png)
+
+### Term 2 Week 2 (January 12th - January 18th)
+
+**Work Performed:**
+- Branden Kennedy (42474551): Set up the initial FastAPI layer by adding a new src/api module with schemas for consent, projects, skills, resume, and portfolio. Implemented the required endpoint routes in routes.py to match Milestone 2 Requirement 32, and made minor updates to requirements.txt, ProjectAnalyzer.py, ConsentManager.py for compatibility and cleanup (PR #311). Added an API test suite (tests/test_api.py) using pytest/TestClient to validate endpoint wiring, response formats, status codes, key error cases, and that routes correctly call their corresponding managers/analyzers (PR #314).
+
+- Necmi Kaan Sapoglu (17014796):
+
+- Lex Nash (84668540):
+
+- Dylan Alexander (16394025): 
+
+- Sven Annist (42486720):
+
+**Features included in the project plan for this milestone are:**
+
+**Continuing tasks from last week and plan for the next week:**
+
+**Burnup chart:**
+
+[Term 2 Week 2 burnup chart](teamWeeklyLogsImages/)
+
+**Table View of Completed Tasks on Project Board:**
+
+[Term 2 Week 2 completed tasks](teamWeeklyLogsImages/)
+
+**Table View of In-Progress Tasks on Project Board:**
+
+[Term 2 Week 2 In-Progress tasks](teamWeeklyLogsImages/)
+
+**Test Report:**
+
+[Term 2 Week 2 Test Report](teamWeeklyLogsImages/)
