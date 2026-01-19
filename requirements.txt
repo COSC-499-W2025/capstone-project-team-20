@@ -7,3 +7,4 @@ pypdf
 reportlab
 fastapi
 uvicorn
+httpx
