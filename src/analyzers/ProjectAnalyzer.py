@@ -465,10 +465,13 @@ class ProjectAnalyzer:
             metadata, project.categories, project.language_share, project, project.languages
         )
 
-        project.bullets, project.summary = gen.generate_resume_bullet_points(), gen.generate_project_summary()
+        project.bullets = gen.generate_resume_bullet_points()
+        project.summary = gen.generate_project_summary()
+        project.portfolio_entry = gen.generate_portfolio_entry()
+
         self.project_manager.set(project)
         print(f"\nGenerated and saved insights for {project.name}:")
-        gen.display_insights(project.bullets, project.summary)
+        gen.display_insights(project.bullets, project.summary, project.portfolio_entry)
 
     def generate_resume_insights(self) -> None:
         """Presents a menu to generate resume insights, ensuring scores are calculated first."""
@@ -535,16 +538,42 @@ class ProjectAnalyzer:
     def retrieve_previous_insights(self) -> None:
         print("\n--- Previous Resume Insights ---")
         for project in self._get_projects():
-            if project.bullets or project.summary:
+            if project.bullets or project.summary or project.portfolio_entry:
                 print(f"\n{'='*20}\nInsights for: {project.name}\n{'='*20}")
-                ResumeInsightsGenerator.display_insights(project.bullets, project.summary)
+                ResumeInsightsGenerator.display_insights(project.bullets, project.summary, project.portfolio_entry)
+
+    def retrieve_full_portfolio(self) -> None:
+        """
+        Aggregates all previously generated portfolio entries into a single,
+        professional portfolio display. Skips projects without generated entries.
+        """
+        print("\n" + "="*50)
+        print("          PROFESSIONAL PORTFOLIO          ")
+        print("="*50 + "\n")
+
+        projects = self._get_projects()
+        portfolio_projects = [p for p in projects if p.portfolio_entry]
+
+        if not portfolio_projects:
+            print("No portfolio entries found. Please generate insights for projects first.")
+            return
+
+        # Sort by most recent (assuming last_modified exists, else fallback to creation)
+        portfolio_projects.sort(key=lambda x: x.last_modified or datetime.min, reverse=True)
+
+        for i, project in enumerate(portfolio_projects, 1):
+            print(f"{project.portfolio_entry}")
+            print("-" * 50 + "\n")
+
+        print(f"Total Projects in Portfolio: {len(portfolio_projects)}\n")
+
 
     def delete_previous_insights(self) -> None:
         """Deletes the stored resume insights for a user-selected project."""
         project = self._select_project("Select a project to delete insights from:")
         if not project:
             return
-        project.bullets, project.summary = [], ""
+        project.bullets, project.summary, project.portfolio_entry = [], "", ""
         self.project_manager.set(project)
         print(f"Successfully deleted insights for {project.name}.")
 
@@ -694,12 +723,13 @@ class ProjectAnalyzer:
                 13. Display Previous Results
                 14. Show Project Timeline (Projects & Skills)
                 15. Analyze Badges
-                16. Exit
+                16. Retrieve Full Portfolio (Aggregated)
+                17. Exit
                   """)
 
             choice = input("Selection: ").strip()
 
-            if not self.zip_path and choice not in ["7", "16"]:
+            if not self.zip_path and choice not in ["7", "17"]:
                 print("No project loaded. Please analyze a new folder first.")
                 continue
 
@@ -712,9 +742,10 @@ class ProjectAnalyzer:
                 "11": self.retrieve_previous_insights, "12": self.delete_previous_insights,
                 "13": self.display_analysis_results, "14": self.display_project_timeline,
                 "15": self.analyze_badges,
+                "16": self.retrieve_full_portfolio,
             }
 
-            if choice == "16":
+            if choice == "17":
                 print("Exiting Project Analyzer.")
                 self._cleanup_temp()
                 return
