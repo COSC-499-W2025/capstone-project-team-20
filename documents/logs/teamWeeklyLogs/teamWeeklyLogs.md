@@ -387,7 +387,7 @@ Issue [COSC-499-W2025/capstone-project-team-20#146](https://github.com/COSC-499-
 **Work Performed:**
 - Branden Kennedy (42474551): Set up the initial FastAPI layer by adding a new src/api module with schemas for consent, projects, skills, resume, and portfolio. Implemented the required endpoint routes in routes.py to match Milestone 2 Requirement 32, and made minor updates to requirements.txt, ProjectAnalyzer.py, ConsentManager.py for compatibility and cleanup (PR #311). Added an API test suite (tests/test_api.py) using pytest/TestClient to validate endpoint wiring, response formats, status codes, key error cases, and that routes correctly call their corresponding managers/analyzers (PR #314).
 
-- Necmi Kaan Sapoglu (17014796):
+- Necmi Kaan Sapoglu (17014796): I reviewed some PRs, and also implemented a feature for displaying resume items from the recently created API structure. Implemented my changes into that feature, and created testing for the feature. I worked on closing issue number 299.
 
 - Lex Nash (84668540):
 
