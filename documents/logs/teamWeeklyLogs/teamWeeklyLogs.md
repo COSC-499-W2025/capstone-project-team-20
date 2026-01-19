@@ -1,5 +1,20 @@
 ## Team 20 Weekly Log 
 
+### Table of contents
+- [Term 2 Week 2 (January 12th - January 18th)](#term-2-week-2-january-12th---january-18th)
+- [Week 14 (December 1st - December 7th)](#week-14-december-1st---december-7th)
+- [Week 13 (November 24th - November 30th)](#week-13-november-24th---november-30th)
+- [Week 12 (November 17th - November 23rd)](#week-12-november-17th---november-23rd)
+- [Week 11 (November 10th - November 16th)](#week-11-november-10th---november-16th)
+- [Week 9 (October 27th - November 2nd)](#week-9-october-27th---november-2nd)
+- [Week 8 (October 20th - October 26th)](#week-8-october-20th---october-26th)
+- [Week 7 (October 13th - October 19th)](#week-7-october-13th---october-19th)
+- [Week 6 (October 6th - October 12th)](#week-6-october-6th-october-12th)
+- [Week 5 (September 29 - October 5th)](#week-5-september-29-october-5th)
+- [Week 4 (September 22-28)](#week-4-september-22-28)
+- [Week 3 (September 15-21)](#week-3-september-15-21)
+
+
 ### Week 3 (September 15-21)
 
 **Work Performed:**
@@ -298,34 +313,104 @@ Issue [COSC-499-W2025/capstone-project-team-20#146](https://github.com/COSC-499-
 [Week 12 Test Report](teamWeeklyLogsImages/week_12_test_report.png)
 
 
-
 ### Week 13 (November 24th - November 30th)
 
 **Work Performed:**
-- Branden Kennedy (42474551): 
+- Branden Kennedy (42474551): Refactored ProjectMetadataExtractor and FileCategorizer to improve accuracy, consistency, and output quality for the ResumeInsightsGenerator. ensured category/metadata summaries are structured consistently. improved handling of file collection and timestamp/size aggregation. FileCategorizer received updates on classification rules and a fix for innaccurate category assignments. ResumeInsightsGenerator is now aligned with these updates. I also worked on full project storage to the database. Now, all projects metadata is stored into the database. this allows the ResumeInsightsGenerator, "Display Previous Results" option, and other classes to use cached results, improving efficiency. Expanded Project.py schema to support category counts, author_contributions, commit metadata, language lists, file categories, timestamps, and project status. Now, the ProjectAnalyzer writes all extracted metadata to the database, and ensures categories, language shares, author stats, and timestamps are saved. I also worked on code review, reviewing multiple PRs, as well as our team's google slides presentation. Participated in Fridays meeting to finalize milestone presentation and the last sprint for milestone 1.
 
-- Necmi Kaan Sapoglu (17014796): 
+- Necmi Kaan Sapoglu (17014796): Delivered multiple major PRs advancing the analytics pipeline for Milestone 1. Implemented the new Badge Analysis system with rules-based badge assignment and project-level badge aggregation. Refined the Skill Analyzer output for clearer, more accurate skill detection and alignment with badge metrics. Completed the Skill Chronology feature using commit-based timestamps and improved the Project Chronology so projects are ordered by actual commit history rather than file metadata. Integrated all updates into the CLI and ensured compatibility across modules. Reviewed teammate PRs for consistency with the revised architecture, and participated in Friday’s highly productive meeting to finalize the milestone presentation and sync upcoming sprint tasks.
 
-- Lex Nash (84668540): 
+- Lex Nash (84668540): Programmed a github workflow to automatically assign 2 reviewers for each pull request, first it shuffles the list, second it removes the user who submitted the pr from the candidates, third it orders the users from least to greatest amount of (open) pull request reviews currently assigned to, then finally it picks the first two users and assigns them to review the pull request. Has not had the opportunity to be tested as of yet, since you cant exactly test this workflow before merging it, but if all goes well we'll have a very useful feature that should help productivity. Programming this involved learning a lot of new things, but I intended to challenge myself and believe I have done well. I participated in the team meeting and have tasked myself with cleaning up the program's output for the video demo after all the current major features are implemented.
 
-- Dylan Alexander (16394025): Implemented mechanism for the display, storage, retrieval, and deletion of generated resume insights in order to satisfy 2 of the 20 requirements for milestone 1. Wrote a CI Github Actions script that automatically runs our pytest suite on every pull request. Reviewed numerous pull requests by the team (10 at the time of writing).
+- Dylan Alexander (16394025): Implemented mechanisms for the display, storage, retrieval, and deletion of generated resume insights to satisfy 2 of the 20 requirements for Milestone 1. Developed a CI GitHub Actions workflow that automatically runs our pytest suite on every pull request. Reviewed numerous pull requests (10 at the time of writing) to help the team merge the large backlog into main in time for the presentation.
 
-- Sven Annist (42486720): 
+- Sven Annist (42486720): Implemented multi-repo ranking and resume scoring in **PR #253**: added `ProjectRanker` and `resume_score`, refactored `ProjectAnalyzer` to initialize per-repo projects and enrich them (including a "Summarize Top 3 Projects" option), persisted individual contribution summaries via `ContributionAnalyzer.calculate_share`, updated `ProjectManager` upsert/schema handling, added tests, and filed **Issue #258**. Reviewed PRs **#255**, **#246**, **#242**, **#236**, **#235** and continued Milestone 1 slide prep.
 
 **Features included in the project plan for this milestone are:**
-- 
+
 
 **Continuing tasks from last week and plan for the next week:**
 
-
 **Burnup chart:**
 
+[Week 13 burnup chart](teamWeeklyLogsImages/week_13_burnup_chart.png)
 
 **Table View of Completed Tasks on Project Board:**
 
+[Week 13 completed tasks](teamWeeklyLogsImages/week_13_completed_tasks.png)
 
 **Table View of In-Progress Tasks on Project Board:**
 
+[Week 13 In-Progress tasks](teamWeeklyLogsImages/week_13_in_progress_tasks.png)
 
 **Test Report:**
 
+[Week 13 Test Report](teamWeeklyLogsImages/week_13_test_report.png)
+
+
+### Week 14 (December 1st - December 7th)
+
+**Work Performed:**
+- Branden Kennedy (42474551): This week, I coded small refactors that related to unwanted functionality coming from the ProjectMetadataExtractor. I created a new method for printing the metadata & file statistics, which now makes the extract_metadata() method purely for doing that, not printing. This came with other refactors like removing the suppress_output method in our ProjectAnalyzer (this methods sole purpose was to suppress that output from the extract_metadata() method). And then i updated and added tests corresponding to this refactor. For PR reviews, I spent lots of time helping with PR #268, and testing it thoroughly. This took up many hours in my week, but we got it fixed and merged! I also worked on helping setup the presentations for the team, and doing the video editing and splicing together of our video demonstration. 
+
+- Necmi Kaan Sapoglu (17014796): This week I presented our Milestone 1 features to the class, walked through the analytics upgrades, and evaluated the other groups’ presentations. I also finalized our team contract, outlining roles, expectations, and workflow standards. We distributed the tasks for creating the Milestone 1 demo video and aligned on who will handle narration, screen captures, and editing. Finally, I updated the system architecture diagram to better reflect our current design and clean up the layer boundaries and arrows.
+
+- Lex Nash (84668540): Team meeting, team presentation, team contract, visual bug fixes, milestone 1 demo video.
+
+- Dylan Alexander (16394025): This week, aside from preparing our presentation, I made two PRs. One related to restoring the implementation of the language detector, which had been affected by the consolidation of our system into the ProjectAnalyzer class. Another for consolidating duplicate temporary directory creation across ProjectAnalyzer into one cached temporary directory. Finally, I updated our DFD to reflect our current system for Milestone 1.
+
+- Sven Annist (42486720): This week, I introduced a "just-in-time" analysis workflow to automatically calculate and cache project scores, ensuring project lists are always sorted by relevance without manual user action. This effort included automated background scoring, pre-sorted project menus for clarity, and corrected the "Top 3" summary option. I fixed a big bug that was happening in a feature branch where projects were unable to be detected individually but I've incorporated multi-project finding. I also fixed a bug in the `ResumeInsightsGenerator` where the "total files" count was incorrect. Beyond coding, I reviewed PRs **#278**, **#274**, and **#236**, worked on preparing for our Milestone 1 presentation, and recorded my portion of the video demo.
+
+**Features included in the project plan for this milestone are:**
+
+
+**Continuing tasks from last week and plan for the next week:**
+
+**Burnup chart:**
+
+[Week 14 burnup chart](teamWeeklyLogsImages/week_14_burnup_chart.png)
+
+**Table View of Completed Tasks on Project Board:**
+
+[Week 14 completed tasks](teamWeeklyLogsImages/week_14_completed_tasks.png)
+
+**Table View of In-Progress Tasks on Project Board:**
+
+[Week 14 In-Progress tasks](teamWeeklyLogsImages/week_14_in_progress_tasks.png)
+
+**Test Report:**
+
+[Week 14 Test Report](teamWeeklyLogsImages/week_14_test_report.png)
+
+### Term 2 Week 2 (January 12th - January 18th)
+
+**Work Performed:**
+- Branden Kennedy (42474551): Set up the initial FastAPI layer by adding a new src/api module with schemas for consent, projects, skills, resume, and portfolio. Implemented the required endpoint routes in routes.py to match Milestone 2 Requirement 32, and made minor updates to requirements.txt, ProjectAnalyzer.py, ConsentManager.py for compatibility and cleanup (PR #311). Added an API test suite (tests/test_api.py) using pytest/TestClient to validate endpoint wiring, response formats, status codes, key error cases, and that routes correctly call their corresponding managers/analyzers (PR #314).
+
+- Necmi Kaan Sapoglu (17014796):
+
+- Lex Nash (84668540):
+
+- Dylan Alexander (16394025): 
+
+- Sven Annist (42486720):
+
+**Features included in the project plan for this milestone are:**
+
+**Continuing tasks from last week and plan for the next week:**
+
+**Burnup chart:**
+
+[Term 2 Week 2 burnup chart](teamWeeklyLogsImages/)
+
+**Table View of Completed Tasks on Project Board:**
+
+[Term 2 Week 2 completed tasks](teamWeeklyLogsImages/)
+
+**Table View of In-Progress Tasks on Project Board:**
+
+[Term 2 Week 2 In-Progress tasks](teamWeeklyLogsImages/)
+
+**Test Report:**
+
+[Term 2 Week 2 Test Report](teamWeeklyLogsImages/)
