@@ -116,12 +116,20 @@ def test_tech_stack_output():
     tech = gen.generate_tech_stack()
     assert tech == "Tech Stack: JavaScript"
 
-def test_portfolio_entry():
+def test_portfolio_entry_team_contributor():
     gen = make_generator(code=15, docs=5, tests=5, config=2, languages=("Python", 100.0))
 
     portfolio = gen.generate_portfolio_entry()
 
     assert "### TestProject" in portfolio
     assert "**Technologies:** Python" in portfolio
-    assert "Team Contributor" in portfolio
+    assert "Team Contributor" in portfolio  # team of 2
     assert "**Key Technical Achievements:**" in portfolio
+
+def test_portfolio_entry_solo_developer():
+    gen = make_generator(authors=["Solo"], languages=("Go", 100.0))
+
+    portfolio = gen.generate_portfolio_entry()
+
+    assert "Solo Developer" in portfolio
+    assert "**Technologies:** Go" in portfolio
