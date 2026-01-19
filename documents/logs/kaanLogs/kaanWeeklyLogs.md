@@ -197,3 +197,31 @@ Another key task was distributing the work for the Milestone 1 team demo video. 
 Finally, I updated the System Architecture Diagram based on recent design changes. The diagram now more clearly separates presentation, orchestration, and analysis layers, and fixes several connection flow issues that had come up during earlier reviews. This updated version will be used in the demo video and future documentation.
 
 Overall, Week 14 was focused on communicating our progress, aligning the team, and tightening the structural and visual components necessary for a polished Milestone 1 delivery.
+
+### Term 2 Week 2: January 12th-January 18th
+
+Log Checkbox:
+
+![Term 2 Week 2 Log](imagesForKaanLogs/T2_W2_SS.png)
+
+### Weekly Goals
+
+This week, I focused on implementing Milestone 2 features for the API layer and collaborating with the team on peer review preparation.
+
+**Coding Tasks:**
+I implemented Requirement #299: "Display textual information about a project as a resume item." This involved creating a new REST API endpoint (`GET /resume/{id}`) that retrieves a project's resume information including summary and bullet points. I created a new `ResumeItemResponse` Pydantic schema to ensure type-safe API responses, updated the routes and schemas modules to integrate the endpoint, and added comprehensive unit tests. The implementation leverages the existing `Project` data model and `ProjectManager` for database persistence, allowing frontend applications and external tools to programmatically access formatted project achievements for resume and portfolio generation. This feature builds upon the CLI infrastructure (Option 11: "Retrieve Previous Resume Insights") and extends it to the API layer.
+
+**Testing Tasks:**
+I added a full test suite for the new resume endpoint (`tests/test_resume_item_endpoint.py`) with three test cases that verify: successful retrieval of projects with populated resume data, proper 404 error handling when projects don't exist, and graceful handling of empty bullets/summary fields. All tests passed successfully and follow the existing mocking and fixture patterns used across the project.
+
+**Reviewing or Collaboration Tasks:**
+I reviewed and evaluated several team pull requests to ensure code quality and architectural consistency. I analyzed which Milestone 2 requirements were best suited for implementation this sprint, considering dependencies and current team capacity. I also helped prepare materials for the upcoming peer review session by assessing the state of our existing codebase.
+
+**Brief Description of Last Week Connecting This Week:**
+Unlike the first week of Term 2, I came in ready to contribute code immediately, I didn't realize that development starts immediately after milestone transitions, which is why I didn't make any contributions last week.
+
+**Plan/Goals for Upcoming Week:**
+In the upcoming week, I plan to continue implementing Milestone 2 requirements by working on the portfolio display feature (similar to the resume display) and potentially tackling requirement #297 (customize and save custom wording for resume items). I also want to ensure all Milestone 1 deliverables are fully polished before peer review, which may require some refactoring of larger analytical modules. Additionally, I'll continue supporting the team through code reviews and helping unblock any integration issues that arise.
+
+**Any issues or Blockers That I Encountered This Week and How I Addressed/Plan to Address Them:**
+The main challenge was team availability this week. On Wednesday, only a couple of team members attended class, and communication in Discord was slower than usual. Unlike last week where Branden was building the foundational API infrastructure, my work was more self-contained (implementing a specific feature on top of existing architecture), which allowed me to progress independently. However, I will be much more active starting from this week to make sure I am helping my group create the best product that we are able to.
