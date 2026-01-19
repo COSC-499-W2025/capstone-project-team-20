@@ -1,4 +1,20 @@
 ## **Branden Weekly Logs**
+### **Table of contents:**
+
+
+- [Term 2 Week 2](#term-2-week-2-january-12th-january-18th)
+- [Term 1 Week 14](#week-14-december-1st---december-7th)
+- [Term 1 Week 13](#week-13-november-24th---november-30th)
+- [Term 1 Week 12](#week-12-november-17th---november-23rd)
+- [Term 1 Week 11](#week-11-november-10th---16th)
+- [Term 1 Week 9](#week-9-october-27th---november-2nd)
+- [Term 1 Week 8](#week-8-october-20th---october-26th)
+- [Term 1 Week 7](#week-7-october-13th---october-19th)
+- [Term 1 Week 6](#week-6-october-6th---october-12th)
+- [Term 1 Week 5](#week-5-september-29th---october-5th)
+- [Term 1 Week 4](#week-4-september-22nd---september-28th)
+- [Term 1 Week 3](#week-3-september-14th---september-21st)
+
 
 ### **Week 3: September 14th - September 21st**
 
@@ -197,3 +213,29 @@ This week and semester, I have been very happy with my team! This week solidifie
 **Goals for the Winter Break:**
 
 Its possible that I do a couple small additions to our project. As of right now, I do not know what those may be, but I think I will work on it if i can for those bonus marks! I am going to be relaxing, recharging, spending time with my family, and working as much as I can to prepare for the second semester!
+
+### **Term 2 Week 2: January 12th-January 18th**
+**Screenshot of Tasks Worked On:**
+
+![Term 2 Week 2 Log](imagesForBrandenLogs/T2_W2_SS.png)
+
+**Coding Tasks:**
+I setup a FastAPI by creating a new folder (api), and added in schemas with an API data model for each area (consent, portfolio, projects, resume, and skills). I also added in a routes.py file to setup all the endpoints with the required endpoints in Requirement 32 of Milestone 2. I had to minorly adjust a couple other files (requirements.txt, ProjectAnalyzer.py, and ConsentManager.py) just for some housekeeping and necessary adjustments for our API to work. Full context can be found in PR #311.
+
+**Testing or Debugging Tasks:**
+I added a full test suite for the API. it is under tests/test_api.py. it tests route wiring, HTTP status codes are proper, request/response shapes, some error handling branches, and that endpoints call their managers or analyzers correctly. This will be found under PR #314
+As far as testing teammates code... No one else actually had done any coding this week. I did not get the opportunity to review code. I had reviewed in the previous week and tried to get my team going, but I hope this doesnt cause me receiving a 0 for testing. If there was literally anything to review/test, i would have. (This may also change by the end of the night sunday, but at the time of writing this on Sunday evening, no teammates have sent a PR.)
+
+**Reviewing or Collaboration Tasks:**
+I reviewed which tasks we have for Milestone 2, came up with a plan for myself for what will need to be prioritized, and also looked into what we'll need to have a successful peer review day.
+
+**Brief Description of Last Week Connecting This Week:**
+Last week, I was mainly focused on just rebooting to start the semester, I didnt get any coding done because I didnt realize it was immediately starting for contributions. I thought we would be discussing milestone 2 and the quizzes during class (which, we did discuss the quizzes), but I had missed that we were meant to start last week. So, this is my first week getting back into the full swing of things.
+
+**Plan/Goals for Upcoming Week:**
+In the upcoming week, I want to make sure that all of our milestone 1 goals are hashed out and very polished for the peer review coming up. This will include refactoring of any larger/sloppier files. I also want to look into finishing off a resume being built so that I can take out the placeholders for the API endpoints for all of our resume generation.
+
+**Any issues or Blockers That I Encountered This Week and How I Addressed/Plan to Address Them:**
+The main blocker was that the group wasnt very active this week... On Wednesday, only Sven and I had shown up to class, and I had tried to send a when2meet so that our group could schedule another meeting, but was getting very little replies in our discord server... I also didnt really have the opportunity to review code because the group was inactive for any other coding going on. Hopefully that flips around this week and we get back into full collaboration with eachother.
+
+
