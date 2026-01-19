@@ -6,7 +6,7 @@ import src.api.routes as routes
 from src.api.api_main import app
 
 
-# Shared Test Client, fake HTTP client connected to FastAPI app
+# Shared Test Client, fake HTTP client connected to FastAPI app.
 @pytest.fixture
 def client():
     return TestClient(app)
