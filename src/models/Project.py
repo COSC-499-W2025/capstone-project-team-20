@@ -13,7 +13,7 @@ class Project:
     """
     This class represents a project detected by our system. It is a pure data
     container with no external dependencies or file system interactions.
-    
+
     Checklist for adding a variable to this class:
         1. if that variable is a List or a Dict, it must be added to class-level LIST_FIELDS / DICT_FIELDS
         2. the display() method must be updated to reflect the addition of this variable
@@ -94,6 +94,8 @@ class Project:
     # Resume Insights - generated from ResumeInsightsGenerator
     bullets: List[str] = list_field()
     summary: str = ""
+    portfolio_entry: str = ""  # Narrative style entry for portfolios
+
     # Scoring for ranking projects against one another
     resume_score: float = 0.0
 
@@ -299,6 +301,7 @@ class Project:
                 print(f"    • {b}")
         if self.summary:
             print(f"\n  Summary:\n    {self.summary}")
+        if self.portfolio_entry:
+            print(f"\n  Portfolio Entry:\n    {self.portfolio_entry}")
 
         print()
-
