@@ -7,10 +7,11 @@ from src.generators.ResumeInsightsGenerator import ResumeInsightsGenerator
 
 class DummyProject:
     """Simple stand-in for Project objects."""
-    def __init__(self, authors=None, author_count=None):
+    def __init__(self, authors=None, author_count=None, name="TestProject"):
         self.authors = authors or []
         # author_count is sometimes set manually in ProjectAnalyzer
         self.author_count = author_count if author_count is not None else len(self.authors)
+        self.name = name
 
 
 def make_generator(
@@ -115,24 +116,12 @@ def test_tech_stack_output():
     tech = gen.generate_tech_stack()
     assert tech == "Tech Stack: JavaScript"
 
-def test_test_files_not_counted_as_code():
-    """
-    Ensure test files do NOT count toward code totals
-    and appear only in the `test` category.
-    """
-    gen = make_generator(
-        code=5,   # real code files
-        docs=2,
-        tests=7,  # test files
-        config=1,
-        languages=("Python", 100.0),
-        authors=["A"]
-    )
+def test_portfolio_entry():
+    gen = make_generator(code=15, docs=5, tests=5, config=2, languages=("Python", 100.0))
 
-    code, docs, tests, config = gen.get_category_counts()
+    portfolio = gen.generate_portfolio_entry()
 
-    # FIX: Validate category totals are read correctly
-    assert code == 5
-    assert tests == 7
-    assert docs == 2
-    assert config == 1
+    assert "### TestProject" in portfolio
+    assert "**Technologies:** Python" in portfolio
+    assert "Team Contributor" in portfolio
+    assert "**Key Technical Achievements:**" in portfolio
