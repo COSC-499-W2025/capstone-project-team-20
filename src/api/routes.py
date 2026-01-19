@@ -2,7 +2,7 @@ from fastapi import APIRouter, UploadFile, File, HTTPException, status
 from pathlib import Path
 from collections import Counter
 import tempfile, shutil
-from src.api.schemas import SkillsListResponse, SkillItem, PortfolioResponse, ConsentResponse, UploadProjectResponse, ProjectsListResponse, ProjectSummary, ProjectDetailResponse, ProjectDetail, TodoResponse
+from src.api.schemas import SkillsListResponse, SkillItem, PortfolioResponse, ConsentResponse, UploadProjectResponse, ProjectsListResponse, ProjectSummary, ProjectDetailResponse, ProjectDetail, TodoResponse, ResumeItemResponse
 from src.analyzers.ProjectAnalyzer import ProjectAnalyzer
 from src.managers.ConfigManager import ConfigManager
 from src.managers.ConsentManager import ConsentManager
@@ -80,9 +80,24 @@ def get_skills_list():
 # The system only currently generates resume insights (As of Jan 18)
 # TODO: Full resume generation then we edit these endpoints
 
-@router.get("/resume/{id}", response_model=TodoResponse)
+@router.get("/resume/{id}", response_model=ResumeItemResponse)
 def get_resume(id: int):
-    return TodoResponse(message="Resume retrieval not implemented yet.")
+    """
+    Retrieve textual information about a project as a resume item.
+    Returns the project's summary and bullet points for use in a resume.
+    """
+    pm = ProjectManager()
+    project = pm.get(id)
+
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found.")
+    
+    return ResumeItemResponse(
+        project_id=project.id,
+        project_name=project.name,
+        summary=project.summary or "",
+        bullets=project.bullets or []
+    )
 
 @router.post("/resume/generate", response_model=TodoResponse)
 def generate_resume():
