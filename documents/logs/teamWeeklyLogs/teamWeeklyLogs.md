@@ -1,4 +1,4 @@
-## Team 20 Weekly Log 
+## Team 20 Weekly Log
 
 ### Table of contents
 - [Term 2 Week 2 (January 12th - January 18th)](#term-2-week-2-january-12th---january-18th)
@@ -123,10 +123,10 @@ Added all Milestone 1 issues to project board, features included in the project 
 - issue [COSC-499-W2025/capstone-project-team-20#52](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/52)
 - issue [COSC-499-W2025/capstone-project-team-20#53](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/53)
 
-This includes all basic features and requirements for milestone 1. We have started prioritizing which tasks need to be finished first to build on before the Milestone 1 deadline. With prioritizing, we have assigned issues to each team member that we will be working on. 
+This includes all basic features and requirements for milestone 1. We have started prioritizing which tasks need to be finished first to build on before the Milestone 1 deadline. With prioritizing, we have assigned issues to each team member that we will be working on.
 
 **Completed Tasks:**
-- No tasks fully completed this week. We just entered all tasks as issues and assigned them to team members. 
+- No tasks fully completed this week. We just entered all tasks as issues and assigned them to team members.
 
 **In Progress Tasks:**
 - Issue [COSC-499-W2025/capstone-project-team-20#30](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/30)
@@ -172,7 +172,7 @@ This includes all basic features and requirements for milestone 1. We have start
 ### Week 8 (October 20th - October 26th)
 
 **Work Performed:**
-- Branden Kennedy (42474551): Worked on extracting project metadata, specifically file sizes, dates, average sizes. This closed issue [COSC-499-W2025/capstone-project-team-20#99](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/99). I also worked on decomposing Issue #34 into multiple subissues (as its quite a large issue). Lastly, I tested and reviewed other team member's code, thoroughly reviewing PR's. 
+- Branden Kennedy (42474551): Worked on extracting project metadata, specifically file sizes, dates, average sizes. This closed issue [COSC-499-W2025/capstone-project-team-20#99](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/99). I also worked on decomposing Issue #34 into multiple subissues (as its quite a large issue). Lastly, I tested and reviewed other team member's code, thoroughly reviewing PR's.
 - Necmi Kaan Sapoglu (17014796): Worked on enhancing the project analytics and skill tracking functionality. Completed Issue #52, which introduced the SkillEvent class and helper methods for creating a chronological list of skills across projects. This feature allows project data to be structured and analyzed over time. Also completed Issue #78, implementing the Project dataclass for storing metadata such as project name, folder path, timestamps, and technical metrics. This dataclass forms the foundation for how projects are persisted and analyzed throughout the system. I also reviewed other other team member's code through PR's and provided review. I will be starting the new issues that I created for next week.
 - Lex Nash (84668540): Completed the rest of the sub issues under issue [COSC-499-W2025/capstone-project-team-20#31](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/31). For this week this included issue #97 (tests for ZipParser), issue #127 (tests for ProjectFolder), issue #111(ZipParser.toString() which takes a root ProjectFolder and returns a String representation of every file and directory within the zipped folder and tests), and a bug fix (issue #119). Reviewed a single PR as that was all that was there at the time. Need to decide on tasks for next week.
 - Dylan Alexander (16394025): Worked on refactoring ConfigManager into a StorageManager base class, Implemented Project dataclass, Implemented ProjectManager for storage of Project objects into the database, and did some refactoring of the database manager classes, adding docstrings and typehints where they were previously missing. I've linked these PRs and the code reviews I did this week in my personal log.
@@ -243,7 +243,7 @@ This includes all basic features and requirements for milestone 1. We have start
 ### Week 11 (November 10th - November 16th)
 
 **Work Performed:**
-- Branden Kennedy (42474551): This week, I implemented the Project Analyzer and cleaned up main.py. The project analyzer synthesizes all of our analyzers into one location. It shows a simple menu where you can select which analyzer youd like to use, use all of them, analyze a new zipped folder, or exit the application. Closing Issue #142. I also implemented a full test suite for the project analyzer and did multiple PR reviews. 
+- Branden Kennedy (42474551): This week, I implemented the Project Analyzer and cleaned up main.py. The project analyzer synthesizes all of our analyzers into one location. It shows a simple menu where you can select which analyzer youd like to use, use all of them, analyze a new zipped folder, or exit the application. Closing Issue #142. I also implemented a full test suite for the project analyzer and did multiple PR reviews.
 
 - Necmi Kaan Sapoglu (17014796): This week I compertmantalized the monolith of a feature I had which was the skill extractor, also making minor tweaks where necessary to make sure that the pr would be easier to review and incremental under issue [COSC-499-W2025/capstone-project-team-20#36](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/36). I also started working on the badge feature and implemented the basic qualifications of a badge as well as developing the system itself to be functional, working on issue #114. I also did multiple PR reviews of my team mates codes.
 
@@ -254,7 +254,7 @@ This includes all basic features and requirements for milestone 1. We have start
 - Sven Annist (42486720): Executed a comprehensive architectural refactoring of the Git repository analysis workflow. Repositioned GitRepoAnalyzer as a central orchestrator instead of a utility unit, significantly reducing complexity in main.py and improving overall code organization. Implemented an "upsert" (update/insert) mechanism in ProjectManager to prevent duplicate project record creation in the database. Additionally resolved a NameError in PDF document scraping logic by correcting pypdf library usage. Conducted a code review on PR #169 (ProgressBar x ZipParser). Closes Issues COSC-499-W2025/capstone-project-team-20#113 and COSC-499-W2025/capstone-project-team-20#123.
 
 **Features included in the project plan for this milestone are:**
-- Issues #30 up to and including 
+- Issues #30 up to and including
 
 **Continuing tasks from last week and plan for the next week:**
 
@@ -281,7 +281,7 @@ Issue [COSC-499-W2025/capstone-project-team-20#146](https://github.com/COSC-499-
 ### Week 12 (November 17th - November 23rd)
 
 **Work Performed:**
-- Branden Kennedy (42474551): Implemented a Resume Insights Generator to use our analyzers to output resume bullet points, project summary, and a menu to navigate which repository the user would like to generate insights for. Closed Issues [COSC-499-W2025/capstone-project-team-20#202](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/202), #203, #204, #215. Developed an extensive test suite for the resume insight generator. I also completed multiple PR reviews as first and second reviewer. 
+- Branden Kennedy (42474551): Implemented a Resume Insights Generator to use our analyzers to output resume bullet points, project summary, and a menu to navigate which repository the user would like to generate insights for. Closed Issues [COSC-499-W2025/capstone-project-team-20#202](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/202), #203, #204, #215. Developed an extensive test suite for the resume insight generator. I also completed multiple PR reviews as first and second reviewer.
 
 - Necmi Kaan Sapoglu (17014796): Delivered three major pull requests focused on stabilizing and restructuring the Skill Analyzer subsystem for Milestone 1. The first PR refactored the public skill-analysis output by removing the misleading proficiency/confidence scores and replacing them with a resume-friendly, interpretable format centered on languages, frameworks, tools, and feedback dimensions (testing discipline, documentation habits, modularity, language depth). The second PR extended the `Project` data model and SQLite schema to store derived metrics such as total LOC, comment/test ratios, average functions per file, primary languages by LOC, and all four feedback dimensions. Updated serialization and deserialization logic were implemented to persist these fields across sessions. The third PR completed the integration by wiring SkillAnalyzer results directly into the project persistence pipeline, ensuring that analysis now automatically updates a project's stored metrics via upsert and can be surfaced later through the “Display Previous Results” menu. Additionally, I reviewed and tested several teammate PRs to ensure consistency with the new modular architecture, and attended Friday’s milestone-alignment meeting to help finalize our Milestone 1 demo goals.
 
@@ -351,7 +351,7 @@ Issue [COSC-499-W2025/capstone-project-team-20#146](https://github.com/COSC-499-
 ### Week 14 (December 1st - December 7th)
 
 **Work Performed:**
-- Branden Kennedy (42474551): This week, I coded small refactors that related to unwanted functionality coming from the ProjectMetadataExtractor. I created a new method for printing the metadata & file statistics, which now makes the extract_metadata() method purely for doing that, not printing. This came with other refactors like removing the suppress_output method in our ProjectAnalyzer (this methods sole purpose was to suppress that output from the extract_metadata() method). And then i updated and added tests corresponding to this refactor. For PR reviews, I spent lots of time helping with PR #268, and testing it thoroughly. This took up many hours in my week, but we got it fixed and merged! I also worked on helping setup the presentations for the team, and doing the video editing and splicing together of our video demonstration. 
+- Branden Kennedy (42474551): This week, I coded small refactors that related to unwanted functionality coming from the ProjectMetadataExtractor. I created a new method for printing the metadata & file statistics, which now makes the extract_metadata() method purely for doing that, not printing. This came with other refactors like removing the suppress_output method in our ProjectAnalyzer (this methods sole purpose was to suppress that output from the extract_metadata() method). And then i updated and added tests corresponding to this refactor. For PR reviews, I spent lots of time helping with PR #268, and testing it thoroughly. This took up many hours in my week, but we got it fixed and merged! I also worked on helping setup the presentations for the team, and doing the video editing and splicing together of our video demonstration.
 
 - Necmi Kaan Sapoglu (17014796): This week I presented our Milestone 1 features to the class, walked through the analytics upgrades, and evaluated the other groups’ presentations. I also finalized our team contract, outlining roles, expectations, and workflow standards. We distributed the tasks for creating the Milestone 1 demo video and aligned on who will handle narration, screen captures, and editing. Finally, I updated the system architecture diagram to better reflect our current design and clean up the layer boundaries and arrows.
 
@@ -401,16 +401,16 @@ Issue [COSC-499-W2025/capstone-project-team-20#146](https://github.com/COSC-499-
 
 **Burnup chart:**
 
-[Term 2 Week 2 burnup chart](teamWeeklyLogsImages/)
+[Term 2 Week 2 burnup chart](teamWeeklyLogsImages/t2_w2_burnup_chart.png)
 
 **Table View of Completed Tasks on Project Board:**
 
-[Term 2 Week 2 completed tasks](teamWeeklyLogsImages/)
+[Term 2 Week 2 completed tasks](teamWeeklyLogsImages/t2_w2_completed.png)
 
 **Table View of In-Progress Tasks on Project Board:**
 
-[Term 2 Week 2 In-Progress tasks](teamWeeklyLogsImages/)
+[Term 2 Week 2 In-Progress tasks](teamWeeklyLogsImages/t2_w2_in_progress.png)
 
 **Test Report:**
 
-[Term 2 Week 2 Test Report](teamWeeklyLogsImages/)
+[Term 2 Week 2 Test Report](teamWeeklyLogsImages/t2_w2_test_report.png)
