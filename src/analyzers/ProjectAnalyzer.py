@@ -465,6 +465,19 @@ class ProjectAnalyzer:
                 print(f"Could not find project '{project.name}' in ZIP structure."); return
             metadata = (ProjectMetadataExtractor(root_folder).extract_metadata(repo_path=project.file_path) or {}).get("project_metadata", {})
 
+        # Ensure total author_count is populated using get_all_authors() before generating insights
+        try:
+            repo_path = Path(project.file_path)
+            if (repo_path / ".git").exists():
+                with self.suppress_output():
+                    repo_authors = self.contribution_analyzer.get_all_authors(str(repo_path))
+                if repo_authors:
+                    project.author_count = len(repo_authors)
+                    project.collaboration_status = "Collaborative" if project.author_count > 1 else "Individual"
+                    self.project_manager.set(project)
+        except Exception:
+            pass
+
         gen = ResumeInsightsGenerator(
             metadata, project.categories, project.language_share, project, project.languages
         )
