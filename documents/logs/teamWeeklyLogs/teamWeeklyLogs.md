@@ -389,7 +389,7 @@ Issue [COSC-499-W2025/capstone-project-team-20#146](https://github.com/COSC-499-
 
 - Necmi Kaan Sapoglu (17014796): I reviewed some PRs, and also implemented a feature for displaying resume items from the recently created API structure. Implemented my changes into that feature, and created testing for the feature. I worked on closing issue number 299.
 
-- Lex Nash (84668540):
+- Lex Nash (84668540): Reviewed Branden's API code, which required learning about APIs as I had not learned about the topic previously. I fixed some bugs that arose in the progress bar code due to sweeping changes made at the end of last term (pr #302). My main focus has been learning about various modules that could be used for front end development, their advantages and disadvantages, as well as making mockups/prototypes for various pages of the application to bring to the team next meeting to make sure all features are represented.
 
 - Dylan Alexander (16394025): Continued work on Resume Generation. Although I do not have a PR to show for it. I selected a resume template. Made some progress in getting familiar with LaTeX. Currently in the process of figuring out how to dynamically generate resumes with the template, given the user's chosen portfolio. Reviewed 3 PRs. Those being (PR #311), (PR #305), (PR #302).
 
