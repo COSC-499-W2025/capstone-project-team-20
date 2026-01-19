@@ -124,9 +124,6 @@ class ResumeInsightsGenerator:
         num files, code/doc/test file split, collaboration status (team-based or individual)
         """
         code_files, doc_files, test_files, config_files = self.get_category_counts()
-        # ** THIS IS THE FIX **
-        # Safely sum all values in the categorized_files dictionary.
-        # The `or {}` handles cases where it might be None.
         total_files = sum((self.categorized_files or {}).values())
 
         top_langs = ", ".join(self.language_list[:4]) if self.language_list else "multiple languages"
@@ -172,57 +169,46 @@ class ResumeInsightsGenerator:
         # Tech Stack
         langs = ", ".join(self.language_list[:4]) if self.language_list else "various technologies"
 
-        # Role Logic
-        authors = getattr(self.project, "authors", [])
-        team_size = len(authors)
-        if team_size <= 1:
+        # Role Logic — strictly use total author_count
+        team_count = getattr(self.project, "author_count", 0)
+        if team_count > 1:
+            role = f"Team Contributor (Team of {team_count})"
+            collaboration_text = f"collaborated with {team_count-1} other developers to build"
+        else:
             role = "Solo Developer"
             collaboration_text = "independently designed and implemented"
-        else:
-            role = f"Team Contributor (Team of {team_size})"
-            collaboration_text = f"collaborated with {team_size-1} other developers to build"
 
         project_name = getattr(self.project, 'name', 'Project')
 
-        # Overview Sentence
+        # Overview
         overview = (
             f"A software solution {collaboration_text} over a {duration_str} period. "
             f"The codebase consists of {total_files} files, including {code_files} source modules, "
             f"structured for maintainability and scalability."
         )
 
-        # Key Technical Achievements (Dynamically selected based on metrics)
+        # Achievements
         achievements = []
-
-        # Check for testing
         test_ratio = getattr(self.project, 'test_file_ratio', 0)
         if test_ratio > 0.15:
             achievements.append("Implemented a robust automated testing suite ensuring high code reliability.")
         elif test_ratio > 0:
             achievements.append("Integrated automated tests to support continuous integration.")
-
-        # Check for documentation
         doc_score = getattr(self.project, 'documentation_habits_score', 0)
         if doc_score > 75:
             achievements.append("Maintained comprehensive documentation to facilitate developer onboarding and maintenance.")
-
-        # Check for complexity/scale
         loc = getattr(self.project, 'total_loc', 0)
         if loc > 5000:
-             achievements.append(f"Architected a substantial codebase of over {loc} lines of code.")
-
-        # Fallback achievement if none found
+            achievements.append(f"Architected a substantial codebase of over {loc} lines of code.")
         if not achievements:
             achievements.append("Delivered a functional codebase using modern development practices.")
 
-        # Constructing the entry
+        # Entry
         entry = f"### {project_name}\n"
         entry += f"**Role:** {role} | **Timeline:** {duration_str}\n"
         entry += f"**Technologies:** {langs}\n\n"
-
         entry += "**Project Overview:**\n"
         entry += f"{overview}\n\n"
-
         entry += "**Key Technical Achievements:**\n"
         for achievement in achievements:
             entry += f"* {achievement}\n"

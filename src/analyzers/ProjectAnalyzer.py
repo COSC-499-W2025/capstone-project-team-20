@@ -252,44 +252,49 @@ class ProjectAnalyzer:
             print("\nNo changes made to user selection.")
 
     def analyze_git_and_contributions(self) -> None:
+        """
+        Analyze contributions for each project:
+        - Use get_all_authors() to set total author_count reliably
+        - Prompt for selected usernames if not configured
+        - Compute detailed stats where possible
+        """
         print("\n--- Git Repository & Contribution Analysis ---")
         projects = self._get_projects()
         if not projects: return
-        all_repo_authors, git_projects = set(), []
+
         for project in projects:
-            if (Path(project.file_path) / ".git").exists():
-                with self.suppress_output():
-                    all_repo_authors.update(self.contribution_analyzer.get_all_authors(str(project.file_path)))
-                git_projects.append(project)
-        if not git_projects:
-            print("No Git repositories found in the project list.")
-            return
+            repo_path = Path(project.file_path)
+            if not (repo_path / ".git").exists():
+                continue
 
-        selected_usernames = self._get_or_select_usernames(sorted(list(all_repo_authors)))
-        if not selected_usernames: return
-
-        for project in git_projects:
             print(f"\n--- Analyzing contributions for: {project.name} ---")
-            all_author_stats = self.contribution_analyzer.analyze(str(project.file_path))
-            if not all_author_stats: print(f"  - No contribution stats found."); continue
+            # Get total authors using the lightweight method
+            with self.suppress_output():
+                repo_authors = self.contribution_analyzer.get_all_authors(str(repo_path))
 
-            project_authors = set(all_author_stats.keys())
-            user_authors_in_project = sorted([name for name in selected_usernames if name in project_authors])
-
-            project.authors = user_authors_in_project
-            # Use total count of all authors found in git log, not just selected ones
-            project.author_count = len(project_authors)
-            # Title case the status
+            project.author_count = len(repo_authors)
             project.collaboration_status = "Collaborative" if project.author_count > 1 else "Individual"
 
-            selected_stats = self._aggregate_stats(all_author_stats, selected_usernames)
-            total_stats = self._aggregate_stats(all_author_stats)
-            project.author_contributions = [stats.to_dict() for stats in all_author_stats.values()]
-            project.individual_contributions = self.contribution_analyzer.calculate_share(selected_stats, total_stats)
+            # Prompt for usernames if needed (based on authors for this project)
+            selected_usernames = self._get_or_select_usernames(sorted(repo_authors)) or []
+
+            # Compute detailed stats; if it fails or returns empty, keep author_count as-is
+            with self.suppress_output():
+                all_author_stats = self.contribution_analyzer.analyze(str(repo_path))
+
+            # Map selected usernames to authors present in stats or repo_authors
+            project.authors = sorted([name for name in selected_usernames if name in (all_author_stats.keys() if all_author_stats else repo_authors)])
+
+            if all_author_stats:
+                selected_stats = self._aggregate_stats(all_author_stats, selected_usernames)
+                total_stats = self._aggregate_stats(all_author_stats)
+                project.author_contributions = [stats.to_dict() for stats in all_author_stats.values()]
+                project.individual_contributions = self.contribution_analyzer.calculate_share(selected_stats, total_stats)
+            else:
+                print("  - No detailed contribution stats available; using author list for collaboration status.")
 
             project.last_accessed = datetime.now()
             self.project_manager.set(project)
-            # Display findings to user
             print(f"  - Total Contributors: {project.author_count}")
             print(f"  - Collaboration Status: {project.collaboration_status}")
             print(f"  - Saved data for '{project.name}'.")
@@ -413,7 +418,6 @@ class ProjectAnalyzer:
             self.analyze_languages(projects=[project])
             self.analyze_skills(projects=[project], silent=True)
             print(f"  - Prerequisite analyses complete for {project.name}.")
-            # Re-fetch the project to get the updated data
             project = self.project_manager.get_by_name(project.name)
 
         duration_days = (project.last_modified - project.date_created).days if project.last_modified and project.date_created else 0
@@ -527,6 +531,18 @@ class ProjectAnalyzer:
                          self.analyze_categories(projects=[proj])
                          self.analyze_languages(projects=[proj])
                          print(f"  - Prerequisite analyses complete for {proj.name}.")
+
+                    # Ensure author_count is accurate before generating insights
+                    if not proj.author_count or proj.author_count <= 1:
+                        print(f"\n  - Author data missing or incomplete for {proj.name}. Running contribution analysis...")
+                        # Analyze contributions just for this project to avoid unnecessary prompts across all projects
+                        orig_cached = self.cached_projects
+                        self.cached_projects = [proj]
+                        self.analyze_git_and_contributions()
+                        self.cached_projects = orig_cached
+                        proj = self.project_manager.get_by_name(proj.name)
+                        print(f"  - Contribution analysis complete for {proj.name} (Authors: {proj.author_count}).")
+
                     self._generate_insights_for_project(proj)
 
                 return
@@ -558,7 +574,6 @@ class ProjectAnalyzer:
             print("No portfolio entries found. Please generate insights for projects first.")
             return
 
-        # Sort by most recent (assuming last_modified exists, else fallback to creation)
         portfolio_projects.sort(key=lambda x: x.last_modified or datetime.min, reverse=True)
 
         for i, project in enumerate(portfolio_projects, 1):
