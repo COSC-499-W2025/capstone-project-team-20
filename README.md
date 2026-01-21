@@ -33,7 +33,7 @@ Follow these instructions to get a copy of the project up and running on your lo
 
 ### Prerequisites
 
-You will need Python 3.9+ and pip installed on your machine.
+You will need Python 3.10+ and pip installed on your machine.
 
 ### Installation
 
