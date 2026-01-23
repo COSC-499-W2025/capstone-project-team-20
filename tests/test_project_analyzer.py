@@ -1,7 +1,10 @@
+from datetime import datetime
 from unittest.mock import patch, MagicMock
 from src.analyzers.ProjectAnalyzer import ProjectAnalyzer
 from src.managers.ConfigManager import ConfigManager
+from src.managers.ProjectManager import ProjectManager
 from src.models.Project import Project
+from src.ZipParser import parse_zip_to_project_folders
 from src.ProjectFolder import ProjectFolder
 from pathlib import Path
 import pytest
@@ -67,3 +70,80 @@ def test_change_selected_users_workflow(analyzer, mock_config_manager):
 
         mock_prompt.assert_called_once_with(["Alice", "Bob"])
         mock_config_manager.set.assert_called_once_with("usernames", ["Bob"])
+
+def test_initialize_projects_skips_older_zip_update(tmp_path, mock_config_manager):
+    zip_location = tmp_path / "older.zip"
+    with zipfile.ZipFile(zip_location, 'w') as zf:
+        info = zipfile.ZipInfo("project-a/file.txt")
+        info.date_time = datetime(2023, 1, 1).timetuple()[:6]
+        zf.writestr(info, "content")
+
+    root_folders = parse_zip_to_project_folders(str(zip_location))
+    analyzer = ProjectAnalyzer(mock_config_manager, root_folders, zip_location)
+    analyzer.project_manager = ProjectManager(db_path=str(tmp_path / "projects.db"))
+
+    existing = Project(
+        name="project-a",
+        file_path="/old/path",
+        root_folder="project-a",
+        last_modified=datetime(2024, 1, 1),
+    )
+    analyzer.project_manager.set(existing)
+
+    with patch.object(analyzer, "ensure_cached_dir", return_value=tmp_path), \
+         patch("src.analyzers.ProjectAnalyzer.RepoProjectBuilder.scan", return_value=[
+             Project(name="project-a", file_path="/new/path", root_folder="project-a")
+         ]):
+        analyzer.initialize_projects()
+
+    updated = analyzer.project_manager.get_by_name("project-a")
+    assert updated.file_path == "/old/path"
+    assert updated.last_modified == datetime(2024, 1, 1)
+
+def test_initialize_projects_updates_newer_zip(tmp_path, mock_config_manager):
+    zip_location = tmp_path / "newer.zip"
+    with zipfile.ZipFile(zip_location, 'w') as zf:
+        info = zipfile.ZipInfo("project-b/file.txt")
+        info.date_time = datetime(2024, 1, 1).timetuple()[:6]
+        zf.writestr(info, "content")
+
+    root_folders = parse_zip_to_project_folders(str(zip_location))
+    analyzer = ProjectAnalyzer(mock_config_manager, root_folders, zip_location)
+    analyzer.project_manager = ProjectManager(db_path=str(tmp_path / "projects.db"))
+
+    existing = Project(
+        name="project-b",
+        file_path="/old/path",
+        root_folder="project-b",
+        last_modified=datetime(2023, 1, 1),
+    )
+    analyzer.project_manager.set(existing)
+
+    with patch.object(analyzer, "ensure_cached_dir", return_value=tmp_path), \
+         patch("src.analyzers.ProjectAnalyzer.RepoProjectBuilder.scan", return_value=[
+             Project(name="project-b", file_path="/new/path", root_folder="project-b")
+         ]):
+        analyzer.initialize_projects()
+
+    updated = analyzer.project_manager.get_by_name("project-b")
+    assert updated.file_path == "/new/path"
+    assert updated.last_modified.date() == datetime(2024, 1, 1).date()
+
+def test_initialize_projects_does_not_duplicate_projects(tmp_path, mock_config_manager):
+    zip_location = tmp_path / "same.zip"
+    with zipfile.ZipFile(zip_location, 'w') as zf:
+        zf.writestr("project-c/file.txt", "content")
+
+    root_folders = parse_zip_to_project_folders(str(zip_location))
+    analyzer = ProjectAnalyzer(mock_config_manager, root_folders, zip_location)
+    analyzer.project_manager = ProjectManager(db_path=str(tmp_path / "projects.db"))
+
+    with patch.object(analyzer, "ensure_cached_dir", return_value=tmp_path), \
+         patch("src.analyzers.ProjectAnalyzer.RepoProjectBuilder.scan", return_value=[
+             Project(name="project-c", file_path="/path", root_folder="project-c")
+         ]):
+        analyzer.initialize_projects()
+        analyzer.initialize_projects()
+
+    projects = list(analyzer.project_manager.get_all())
+    assert len(projects) == 1

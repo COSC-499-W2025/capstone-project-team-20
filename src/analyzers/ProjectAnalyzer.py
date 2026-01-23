@@ -77,6 +77,23 @@ class ProjectAnalyzer:
         if not self.cached_projects:
             self.cached_projects = list(self.project_manager.get_all())
         return self.cached_projects
+    
+    def _get_zip_project_summary(self, project_name: str) -> Optional[Dict[str, Any]]:
+        root_folder = self._find_folder_by_name_recursive(project_name)
+        if not root_folder:
+            return None
+        extractor = ProjectMetadataExtractor(root_folder)
+        files = extractor.collect_all_files()
+        return extractor.compute_time_and_size_summary(files)
+
+    def _should_update_project(self, existing: Project, incoming: Project) -> bool:
+        if incoming.last_modified and existing.last_modified:
+            return incoming.last_modified > existing.last_modified
+        if incoming.last_modified and not existing.last_modified:
+            return True
+        if not incoming.last_modified and existing.last_modified:
+            return False
+        return True
 
     def _ensure_scores_are_calculated(self) -> List[Project]:
         """
@@ -160,13 +177,38 @@ class ProjectAnalyzer:
             return []
         print(f"Found {len(projects_from_builder)} project(s). Saving initial records...")
         for proj_new in projects_from_builder:
+            if summary := self._get_zip_project_summary(proj_new.name):
+                if summary.get("total_files") is not None:
+                    proj_new.num_files = int(summary["total_files"])
+                if summary.get("total_size_kb") is not None:
+                    proj_new.size_kb = int(summary["total_size_kb"])
+                if summary.get("start_date"):
+                    proj_new.date_created = datetime.strptime(summary["start_date"], "%Y-%m-%d")
+                if summary.get("end_date"):
+                    proj_new.last_modified = datetime.strptime(summary["end_date"], "%Y-%m-%d")
             proj_existing = self.project_manager.get_by_name(proj_new.name)
             if proj_existing:
                 proj_existing.file_path, proj_existing.root_folder = proj_new.file_path, proj_new.root_folder
                 self.project_manager.set(proj_existing)
                 print(f"  - Updated existing project: {proj_existing.name}")
+                if self._should_update_project(proj_existing, proj_new):
+                    proj_existing.file_path, proj_existing.root_folder = proj_new.file_path, proj_new.root_folder
+                    if proj_new.num_files:
+                        proj_existing.num_files = proj_new.num_files
+                    if proj_new.size_kb:
+                        proj_existing.size_kb = proj_new.size_kb
+                    if proj_new.date_created:
+                        proj_existing.date_created = proj_new.date_created
+                    if proj_new.last_modified:
+                        proj_existing.last_modified = proj_new.last_modified
+                    proj_existing.last_accessed = datetime.now()
+                    self.project_manager.set(proj_existing)
+                    print(f"  - Updated existing project: {proj_existing.name}")
+                else:
+                    print(f"  - Skipped older project version: {proj_existing.name}")
                 created_projects.append(proj_existing)
             else:
+                proj_new.last_accessed = datetime.now()
                 self.project_manager.set(proj_new)
                 print(f"  - Created new project record: {proj_new.name} with ID {proj_new.id}")
                 created_projects.append(proj_new)
