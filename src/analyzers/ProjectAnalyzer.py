@@ -21,6 +21,7 @@ from src.analyzers.language_detector import detect_language_per_file, analyze_la
 from src.analyzers.ContributionAnalyzer import ContributionAnalyzer, ContributionStats
 from utils.RepoFinder import RepoFinder
 from src.managers.ProjectManager import ProjectManager
+from src.managers.FileHashManager import FileHashManager
 from src.models.Project import Project
 from src.ProjectFolder import ProjectFolder
 from src.analyzers.SkillAnalyzer import SkillAnalyzer
@@ -28,6 +29,7 @@ from src.generators.ResumeInsightsGenerator import ResumeInsightsGenerator
 from src.managers.ConfigManager import ConfigManager
 from src.ProjectRanker import ProjectRanker
 from src.analyzers.RepoProjectBuilder import RepoProjectBuilder
+from utils.file_hashing import compute_file_hash
 
 MIN_DISPLAY_CONFIDENCE = 0.5  # only show skills with at least this confidence
 
@@ -43,6 +45,7 @@ class ProjectAnalyzer:
         self.file_categorizer = FileCategorizer()
         self.repo_finder = RepoFinder()
         self.project_manager = ProjectManager()
+        self.file_hash_manager = FileHashManager()
         self.contribution_analyzer = ContributionAnalyzer()
 
         self.cached_extract_dir: Optional[Path] = None
@@ -94,6 +97,28 @@ class ProjectAnalyzer:
         if not incoming.last_modified and existing.last_modified:
             return False
         return True
+
+    def _register_project_files(self, project: Project) -> Dict[str, int]:
+        project_root = Path(project.file_path)
+        if not project_root.exists():
+            return {"new": 0, "duplicate": 0}
+
+        new_count = 0
+        duplicate_count = 0
+        for root, _, files in os.walk(project_root):
+            for name in files:
+                file_path = Path(root) / name
+                file_hash = compute_file_hash(file_path)
+                if not file_hash:
+                    continue
+                if self.file_hash_manager.register_hash(
+                    file_hash, str(file_path), project.name
+                ):
+                    new_count += 1
+                else:
+                    duplicate_count += 1
+        return {"new": new_count, "duplicate": duplicate_count}
+
 
     def _ensure_scores_are_calculated(self) -> List[Project]:
         """
@@ -188,9 +213,6 @@ class ProjectAnalyzer:
                     proj_new.last_modified = datetime.strptime(summary["end_date"], "%Y-%m-%d")
             proj_existing = self.project_manager.get_by_name(proj_new.name)
             if proj_existing:
-                proj_existing.file_path, proj_existing.root_folder = proj_new.file_path, proj_new.root_folder
-                self.project_manager.set(proj_existing)
-                print(f"  - Updated existing project: {proj_existing.name}")
                 if self._should_update_project(proj_existing, proj_new):
                     proj_existing.file_path, proj_existing.root_folder = proj_new.file_path, proj_new.root_folder
                     if proj_new.num_files:
@@ -203,6 +225,7 @@ class ProjectAnalyzer:
                         proj_existing.last_modified = proj_new.last_modified
                     proj_existing.last_accessed = datetime.now()
                     self.project_manager.set(proj_existing)
+                    self._register_project_files(proj_existing)
                     print(f"  - Updated existing project: {proj_existing.name}")
                 else:
                     print(f"  - Skipped older project version: {proj_existing.name}")
@@ -210,6 +233,7 @@ class ProjectAnalyzer:
             else:
                 proj_new.last_accessed = datetime.now()
                 self.project_manager.set(proj_new)
+                self._register_project_files(proj_new)
                 print(f"  - Created new project record: {proj_new.name} with ID {proj_new.id}")
                 created_projects.append(proj_new)
         self.cached_projects = created_projects

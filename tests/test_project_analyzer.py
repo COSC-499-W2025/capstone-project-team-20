@@ -3,6 +3,7 @@ from unittest.mock import patch, MagicMock
 from src.analyzers.ProjectAnalyzer import ProjectAnalyzer
 from src.managers.ConfigManager import ConfigManager
 from src.managers.ProjectManager import ProjectManager
+from src.managers.FileHashManager import FileHashManager
 from src.models.Project import Project
 from src.ZipParser import parse_zip_to_project_folders
 from src.ProjectFolder import ProjectFolder
@@ -147,3 +148,30 @@ def test_initialize_projects_does_not_duplicate_projects(tmp_path, mock_config_m
 
     projects = list(analyzer.project_manager.get_all())
     assert len(projects) == 1
+
+def test_register_project_files_dedupes_across_uploads(tmp_path, mock_config_manager):
+    project_a_dir = tmp_path / "project-a"
+    project_b_dir = tmp_path / "project-b"
+    project_a_dir.mkdir()
+    project_b_dir.mkdir()
+
+    content = "same file contents"
+    (project_a_dir / "file.txt").write_text(content)
+    (project_b_dir / "file.txt").write_text(content)
+
+    analyzer = ProjectAnalyzer(mock_config_manager, [], tmp_path / "dummy.zip")
+    analyzer.file_hash_manager = FileHashManager(db_path=str(tmp_path / "files.db"))
+
+    proj_a = Project(name="project-a", file_path=str(project_a_dir))
+    proj_b = Project(name="project-b", file_path=str(project_b_dir))
+
+    result_a = analyzer._register_project_files(proj_a)
+    result_b = analyzer._register_project_files(proj_b)
+
+    assert result_a["new"] == 1
+    assert result_a["duplicate"] == 0
+    assert result_b["new"] == 0
+    assert result_b["duplicate"] == 1
+
+    all_hashes = list(analyzer.file_hash_manager.get_all())
+    assert len(all_hashes) == 1
