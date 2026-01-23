@@ -1,12 +1,13 @@
 # src/ui/streamlitApp.py
 # Mini frontend demo for Project Analyzer (no CLI input prompts)
-# - 16 buttons on the main page (no sidebar)
-# - Load ZIP via textbox or upload
+# - Tabs menu (grouped) instead of 16-button grid
+# - Load ZIP via absolute path (no upload)
 # - Captures print() output and shows it in the UI
 # - Handles options 10/12/15 with Streamlit selectors instead of input()
+# - No “ghost” empty panels: action/output render only when needed
+# - Exit returns to “home screen” (ZIP gate)
 
 import io
-import os
 import zipfile
 from pathlib import Path
 from contextlib import redirect_stdout, redirect_stderr
@@ -17,7 +18,6 @@ from src.analyzers.ProjectAnalyzer import ProjectAnalyzer
 from src.managers.ConfigManager import ConfigManager
 from src.ZipParser import parse_zip_to_project_folders
 from src.analyzers.badge_engine import ProjectAnalyticsSnapshot, assign_badges, build_fun_facts
-from datetime import datetime
 
 
 # ----------------------------
@@ -28,17 +28,47 @@ st.set_page_config(page_title="Project Analyzer", layout="wide")
 st.markdown(
     """
     <style>
-      .pa-card { padding: 1.0rem; border: 1px solid rgba(49,51,63,0.2); border-radius: 16px; }
-      .pa-muted { color: rgba(49,51,63,0.7); }
+      .pa-card {
+        padding: 1.0rem;
+        border: 1px solid rgba(255,255,255,0.10);
+        border-radius: 18px;
+        background: rgba(255,255,255,0.03);
+      }
+      .pa-muted { color: rgba(255,255,255,0.70); }
       .pa-small { font-size: 0.92rem; }
-      .stButton>button { width: 100%; height: 3.1rem; border-radius: 14px; }
+
+      .pa-chip {
+        display: inline-block;
+        padding: 0.35rem 0.70rem;
+        border-radius: 999px;
+        border: 1px solid rgba(255,255,255,0.12);
+        background: rgba(255,255,255,0.05);
+        margin-right: 0.45rem;
+        font-size: 0.9rem;
+      }
+
       .pa-divider { margin: 0.75rem 0 0.75rem 0; }
+
+      .stButton>button {
+        width: 100%;
+        height: 2.7rem;
+        border-radius: 14px;
+        border: 1px solid rgba(255,255,255,0.12);
+        background: rgba(255,255,255,0.04);
+        font-weight: 650;
+      }
+      .stButton>button:hover {
+        border-color: rgba(255,255,255,0.25);
+        background: rgba(255,255,255,0.07);
+      }
+
+      pre { border-radius: 14px !important; }
     </style>
     """,
     unsafe_allow_html=True,
 )
 
-st.title("Project Analyzer")
+st.title("Team 20 Project Analyzer")
 st.markdown('<div class="pa-muted pa-small">Mini frontend (Streamlit)</div>', unsafe_allow_html=True)
 
 OPTIONS = {
@@ -47,14 +77,14 @@ OPTIONS = {
     3: "Categorize Files by Type",
     4: "Print Project Folder Structure",
     5: "Analyze Languages Detected",
-    6: "Run All Analyses",
-    7: "Analyze New Folder (Load ZIP)",
-    8: "Change Selected Users",
+    6: "Run All Analyzers",
+    7: "Analyze New Project (Change ZIP)",
+    8: "Change Selected GitHub Username",
     9: "Analyze Skills (Calculates Resume Score)",
     10: "Generate Resume Insights",
     11: "Retrieve Previous Resume Insights",
     12: "Delete Previous Resume Insights",
-    13: "Display Previous Results",
+    13: "Display Previous Portfolio Information",
     14: "Show Project Timeline (Projects & Skills)",
     15: "Analyze Badges",
     16: "Exit",
@@ -84,25 +114,54 @@ def get_analyzer() -> ProjectAnalyzer:
             zip_path=Path("."),  # placeholder until ZIP loaded
         )
         st.session_state.zip_loaded = False
+        st.session_state.zip_path_str = ""
         st.session_state.last_output = ""
         st.session_state.selected_option = None
     return st.session_state.analyzer
 
 
 def require_zip_loaded() -> bool:
-    """Return True if ready, else show warning and return False."""
     if not st.session_state.get("zip_loaded", False):
-        st.warning("No project ZIP loaded yet. Use **7. Analyze New Folder (Load ZIP)** first.")
+        st.warning("No project ZIP loaded yet. Load one first.")
         return False
     return True
 
 
 def refresh_projects(analyzer: ProjectAnalyzer):
-    """Warm cache so selectboxes show projects."""
     try:
         analyzer._get_projects()
     except Exception:
         pass
+
+
+def load_zip_into_analyzer(analyzer: ProjectAnalyzer, zip_path_str: str) -> str:
+    """Load ZIP and initialize projects. Returns captured output."""
+    zp = Path(zip_path_str).expanduser()
+    if not (zp.exists() and zipfile.is_zipfile(zp)):
+        raise ValueError("Invalid path or not a zip file.")
+
+    analyzer.zip_path = zp
+    analyzer.root_folders = parse_zip_to_project_folders(zp)
+    analyzer.cached_extract_dir = None
+    analyzer.cached_projects = []
+
+    out = capture_output(analyzer.initialize_projects)
+    st.session_state.zip_loaded = True
+    st.session_state.zip_path_str = str(zp)
+    return out
+
+
+def go_home(analyzer: ProjectAnalyzer):
+    """Return to ZIP gate (home)."""
+    try:
+        analyzer._cleanup_temp()
+    except Exception:
+        pass
+    st.session_state.zip_loaded = False
+    st.session_state.zip_path_str = ""
+    st.session_state.selected_option = None
+    st.session_state.last_output = ""
+    st.rerun()
 
 
 # ----------------------------
@@ -112,281 +171,315 @@ analyzer = get_analyzer()
 refresh_projects(analyzer)
 
 # ---- ZIP Gate: force load before showing the menu ----
-if "zip_path_str" not in st.session_state:
-    st.session_state.zip_path_str = ""
-
 if not st.session_state.get("zip_loaded", False):
     st.subheader("Load Project ZIP to Begin")
     st.write("Paste the **absolute path** to the ZIP your Project Analyzer expects.")
 
-    zip_path_str = st.text_input("Absolute path to ZIP", value=st.session_state.zip_path_str)
+    zip_path_str = st.text_input("Absolute path to ZIP", value=st.session_state.get("zip_path_str", ""))
 
     if st.button("Load ZIP", type="primary"):
-        zp = Path(zip_path_str).expanduser()
+        try:
+            st.session_state.last_output = load_zip_into_analyzer(analyzer, zip_path_str)
+            st.success("ZIP loaded! Redirecting to menu…")
+            st.rerun()
+        except Exception as e:
+            st.error(str(e))
 
-        if not (zp.exists() and zipfile.is_zipfile(zp)):
-            st.error("Invalid path or not a zip file.")
-        else:
-            analyzer.zip_path = zp
-            analyzer.root_folders = parse_zip_to_project_folders(zp)
-            analyzer.cached_extract_dir = None
-            analyzer.cached_projects = []
+    st.stop()
 
-            out = capture_output(analyzer.initialize_projects)
-
-            st.session_state.zip_loaded = True
-            st.session_state.zip_path_str = str(zp)
-            st.session_state.last_output = out
-
-            st.success("ZIP loaded! Scroll down to use the menu.")
-            st.rerun()  # immediately refresh into the main menu view
-
-    st.stop()  # IMPORTANT: prevents menu buttons from showing before load
+# ---- Status strip (after ZIP loaded) ----
+usernames = analyzer._config_manager.get("usernames") or []
+st.markdown(
+    f'<span class="pa-chip">📦 ZIP: {st.session_state.get("zip_path_str","")}</span>'
+    f'<span class="pa-chip">👤 Users: {(", ".join(usernames) if usernames else "(not set)")}</span>',
+    unsafe_allow_html=True,
+)
 
 # ----------------------------
-# Button grid (16 buttons)
+# Menu (tabs)
 # ----------------------------
 st.markdown('<div class="pa-divider"></div>', unsafe_allow_html=True)
 st.subheader("Menu")
 
-cols = st.columns(4)
-for i in range(1, 17):
-    c = cols[(i - 1) % 4]
-    with c:
-        if st.button(f"{i}. {OPTIONS[i]}", key=f"btn_{i}"):
-            st.session_state.selected_option = i
+
+def set_choice(n: int):
+    st.session_state.selected_option = n
+
+
+tabA, tabB, tabC, tabD = st.tabs(
+    ["🔍 Analyzers (1–6)", "⚙️ Setup (7–8)", "📄 Outputs (9–15)", "🚪 Exit"]
+)
+
+with tabA:
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        if st.button("1. Git + Contributions"):
+            set_choice(1)
+        if st.button("4. Folder Structure"):
+            set_choice(4)
+    with c2:
+        if st.button("2. Metadata + Stats"):
+            set_choice(2)
+        if st.button("5. Languages"):
+            set_choice(5)
+    with c3:
+        if st.button("3. File Categories"):
+            set_choice(3)
+        if st.button("6. Run All Analyzers", type="primary"):
+            set_choice(6)
+
+with tabB:
+    c1, c2 = st.columns(2)
+    with c1:
+        if st.button("7. Change Project (ZIP)", type="primary"):
+            set_choice(7)
+        st.caption("Switch the active ZIP project.")
+    with c2:
+        if st.button("8. Change GitHub Username"):
+            set_choice(8)
+        st.caption("Set which Git authors count as you.")
+
+with tabC:
+    r1 = st.columns(3)
+    r2 = st.columns(3)
+    r3 = st.columns(3)
+
+    with r1[0]:
+        if st.button("9. Skills + Resume Score"):
+            set_choice(9)
+    with r1[1]:
+        if st.button("10. Generate Resume Insights"):
+            set_choice(10)
+    with r1[2]:
+        if st.button("11. Retrieve Resume Insights"):
+            set_choice(11)
+
+    with r2[0]:
+        if st.button("12. Delete Resume Insights"):
+            set_choice(12)
+    with r2[1]:
+        if st.button("13. Display Portfolio Info"):
+            set_choice(13)
+    with r2[2]:
+        if st.button("14. Project Timeline"):
+            set_choice(14)
+
+    with r3[0]:
+        if st.button("15. Badges"):
+            set_choice(15)
+
+with tabD:
+    if st.button("16. Exit to Home"):
+        set_choice(16)
 
 selected = st.session_state.get("selected_option", None)
-
 st.markdown('<div class="pa-divider"></div>', unsafe_allow_html=True)
 
 # ----------------------------
-# Action panel
+# Action + Output panels (only render when needed)
 # ----------------------------
-left, right = st.columns([1.15, 1])
+if selected is not None or st.session_state.get("last_output"):
+    left, right = st.columns([1.15, 1])
 
-with left:
-    st.markdown('<div class="pa-card">', unsafe_allow_html=True)
-    if selected is None:
-        st.markdown("Pick an option above to get started.")
-    else:
-        st.markdown(f"### Selected: {selected}. {OPTIONS[selected]}")
+    with left:
+        if selected is not None:
+            st.markdown('<div class="pa-card">', unsafe_allow_html=True)
+            st.markdown(
+                f'<span class="pa-chip">Selected: {selected}. {OPTIONS.get(selected, "")}</span>',
+                unsafe_allow_html=True,
+            )
+            st.write("")
 
-        # ----------------------------
-        # Option 16: Exit
-        # ----------------------------
-        if selected == 16:
-            st.success("Exit selected. (Nothing to do in Streamlit.)")
-            st.session_state.selected_option = None
+            # 16: Exit -> Home
+            if selected == 16:
+                st.success("Returning to home screen…")
+                go_home(analyzer)
 
-        # ----------------------------
-        # Option 7: Load ZIP (textbox or upload)
-        # ----------------------------
-        elif selected == 7:
-            st.subheader("Change Project ZIP")
-            zip_path_str = st.text_input("Absolute path to ZIP", value=st.session_state.get("zip_path_str", ""))
-
-            if st.button("Load new ZIP", type="primary"):
-                zp = Path(zip_path_str).expanduser()
-
-                if not (zp.exists() and zipfile.is_zipfile(zp)):
-                    st.error("Invalid path or not a zip file.")
-                else:
-                    analyzer.zip_path = zp
-                    analyzer.root_folders = parse_zip_to_project_folders(zp)
-                    analyzer.cached_extract_dir = None
-                    analyzer.cached_projects = []
-
-                    out = capture_output(analyzer.initialize_projects)
-
-                    st.session_state.zip_loaded = True
-                    st.session_state.zip_path_str = str(zp)
-                    st.session_state.last_output = out
-
-                    st.success("New ZIP loaded and projects initialized.")
-
-        # ----------------------------
-        # Option 8: Change Selected Users (no input() prompts)
-        # ----------------------------
-        elif selected == 8:
-            if not require_zip_loaded():
-                st.stop()
-
-            current = analyzer._config_manager.get("usernames") or []
-            st.write("Set the usernames used for Git contribution analysis.")
-            usernames_text = st.text_input("Comma-separated usernames", value=", ".join(current))
-            if st.button("Save usernames", type="primary"):
-                usernames = [u.strip() for u in usernames_text.split(",") if u.strip()]
-                analyzer._config_manager.set("usernames", sorted(list(set(usernames))))
-                st.success("Saved.")
-                st.session_state.last_output = f"Saved usernames: {', '.join(usernames) if usernames else '(none)'}"
-
-        # ----------------------------
-        # Option 10: Generate Resume Insights (Streamlit selection instead of input())
-        # ----------------------------
-        elif selected == 10:
-            if not require_zip_loaded():
-                st.stop()
-
-            # ensure scores exist
-            out1 = capture_output(analyzer._ensure_scores_are_calculated)
-            refresh_projects(analyzer)
-
-            all_projects = analyzer._get_projects()
-            scored = [p for p in all_projects if getattr(p, "resume_score", 0) and p.resume_score > 0]
-            if not scored:
-                st.warning("No scored projects found. Run **9. Analyze Skills** first.")
-                st.session_state.last_output = out1
-            else:
-                scored_sorted = sorted(scored, key=lambda p: p.resume_score, reverse=True)
-
-                mode = st.radio(
-                    "Generate for",
-                    ["Single project", "Top 3 projects", "All scored projects"],
-                    horizontal=True,
-                    key="insights_mode",
+            # 7: Change ZIP
+            elif selected == 7:
+                st.subheader("Change Project ZIP")
+                zip_path_str = st.text_input(
+                    "Absolute path to ZIP",
+                    value=st.session_state.get("zip_path_str", ""),
+                    key="change_zip_path",
                 )
 
-                selected_projects = []
-                if mode == "Single project":
-                    name = st.selectbox("Project", [p.name for p in scored_sorted], key="insights_project")
-                    selected_projects = [next(p for p in scored_sorted if p.name == name)]
-                elif mode == "Top 3 projects":
-                    selected_projects = scored_sorted[:3]
-                else:
-                    selected_projects = scored_sorted
+                if st.button("Load new ZIP", type="primary"):
+                    try:
+                        st.session_state.last_output = load_zip_into_analyzer(analyzer, zip_path_str)
+                        st.success("New ZIP loaded and projects initialized.")
+                        refresh_projects(analyzer)
+                    except Exception as e:
+                        st.error(str(e))
 
-                if st.button("Generate insights", type="primary"):
-                    buf = io.StringIO()
-                    with redirect_stdout(buf), redirect_stderr(buf):
-                        # run prerequisites + generation (same logic as your CLI flow)
-                        for proj in selected_projects:
-                            if not getattr(proj, "categories", None) or not getattr(proj, "num_files", None) or not getattr(proj, "languages", None):
+            # 8: Change usernames
+            elif selected == 8:
+                current = analyzer._config_manager.get("usernames") or []
+                st.write("Set the usernames used for Git contribution analysis.")
+                usernames_text = st.text_input("Comma-separated usernames", value=", ".join(current))
+
+                if st.button("Save usernames", type="primary"):
+                    usernames_new = [u.strip() for u in usernames_text.split(",") if u.strip()]
+                    analyzer._config_manager.set("usernames", sorted(list(set(usernames_new))))
+                    st.session_state.last_output = (
+                        f"Saved usernames: {', '.join(usernames_new) if usernames_new else '(none)'}"
+                    )
+                    st.success("Saved.")
+
+            # 10: Generate Resume Insights (selectors)
+            elif selected == 10:
+                out1 = capture_output(analyzer._ensure_scores_are_calculated)
+                refresh_projects(analyzer)
+
+                all_projects = analyzer._get_projects()
+                scored = [p for p in all_projects if getattr(p, "resume_score", 0) and p.resume_score > 0]
+
+                if not scored:
+                    st.warning("No scored projects found. Run **9. Skills + Resume Score** first.")
+                    st.session_state.last_output = out1
+                else:
+                    scored_sorted = sorted(scored, key=lambda p: p.resume_score, reverse=True)
+
+                    mode = st.radio(
+                        "Generate for",
+                        ["Single project", "Top 3 projects", "All scored projects"],
+                        horizontal=True,
+                        key="insights_mode",
+                    )
+
+                    if mode == "Single project":
+                        name = st.selectbox("Project", [p.name for p in scored_sorted], key="insights_project")
+                        selected_projects = [next(p for p in scored_sorted if p.name == name)]
+                    elif mode == "Top 3 projects":
+                        selected_projects = scored_sorted[:3]
+                    else:
+                        selected_projects = scored_sorted
+
+                    if st.button("Generate insights", type="primary"):
+                        buf = io.StringIO()
+                        with redirect_stdout(buf), redirect_stderr(buf):
+                            for proj in selected_projects:
+                                if (
+                                    not getattr(proj, "categories", None)
+                                    or not getattr(proj, "num_files", None)
+                                    or not getattr(proj, "languages", None)
+                                ):
+                                    analyzer.analyze_metadata(projects=[proj])
+                                    analyzer.analyze_categories(projects=[proj])
+                                    analyzer.analyze_languages(projects=[proj])
+
+                                analyzer._generate_insights_for_project(proj)
+
+                        st.session_state.last_output = out1 + "\n" + buf.getvalue()
+                        st.success("Insights generated (see Output panel).")
+
+            # 12: Delete insights (selector)
+            elif selected == 12:
+                projects = analyzer._get_projects()
+                if not projects:
+                    st.warning("No projects found.")
+                else:
+                    name = st.selectbox("Project", [p.name for p in projects], key="del_insights_project")
+                    if st.button("Delete insights", type="primary"):
+                        proj = next(p for p in projects if p.name == name)
+                        proj.bullets, proj.summary = [], ""
+                        analyzer.project_manager.set(proj)
+                        st.session_state.last_output = f"Deleted insights for {proj.name}."
+                        st.success("Deleted.")
+
+            # 15: Badges (selector)
+            elif selected == 15:
+                projects = analyzer._get_projects()
+                if not projects:
+                    st.warning("No projects found.")
+                else:
+                    name = st.selectbox("Project", [p.name for p in projects], key="badge_project")
+                    if st.button("Analyze badges", type="primary"):
+                        proj = next(p for p in projects if p.name == name)
+
+                        buf = io.StringIO()
+                        with redirect_stdout(buf), redirect_stderr(buf):
+                            if not all(
+                                [
+                                    getattr(proj, "num_files", None),
+                                    getattr(proj, "date_created", None),
+                                    getattr(proj, "last_modified", None),
+                                    getattr(proj, "categories", None),
+                                    getattr(proj, "languages", None),
+                                    getattr(proj, "skills_used", None),
+                                ]
+                            ):
+                                print(f"\n  - Prerequisite data missing for {proj.name}. Running required analyses...")
                                 analyzer.analyze_metadata(projects=[proj])
                                 analyzer.analyze_categories(projects=[proj])
                                 analyzer.analyze_languages(projects=[proj])
+                                analyzer.analyze_skills(projects=[proj], silent=True)
+                                print(f"  - Prerequisite analyses complete for {proj.name}.")
+                                proj = analyzer.project_manager.get_by_name(proj.name)
 
-                            analyzer._generate_insights_for_project(proj)
+                            duration_days = (
+                                (proj.last_modified - proj.date_created).days
+                                if proj.last_modified and proj.date_created
+                                else 0
+                            )
+                            snapshot = ProjectAnalyticsSnapshot(
+                                name=proj.name,
+                                total_files=proj.num_files,
+                                total_size_kb=proj.size_kb,
+                                total_size_mb=(proj.size_kb / 1024) if proj.size_kb else 0,
+                                duration_days=duration_days,
+                                category_summary={"counts": proj.categories},
+                                languages=proj.language_share,
+                                skills=set(proj.skills_used),
+                                author_count=proj.author_count,
+                                collaboration_status=proj.collaboration_status,
+                            )
+                            badge_ids = assign_badges(snapshot)
+                            fun_facts = build_fun_facts(snapshot, badge_ids)
 
-                    st.session_state.last_output = out1 + "\n" + buf.getvalue()
-                    st.success("Insights generated (see Output panel).")
+                            print("\nBadges Earned:")
+                            if badge_ids:
+                                for b in badge_ids:
+                                    print(f"  - {b}")
+                            else:
+                                print("  (none)")
 
-        # ----------------------------
-        # Option 12: Delete Previous Resume Insights (Streamlit selection)
-        # ----------------------------
-        elif selected == 12:
-            if not require_zip_loaded():
-                st.stop()
+                            if fun_facts:
+                                print("\nFun Facts:")
+                                for fact in fun_facts:
+                                    print(f"  • {fact}")
 
-            projects = analyzer._get_projects()
-            if not projects:
-                st.warning("No projects found.")
+                        st.session_state.last_output = buf.getvalue()
+                        st.success("Badge analysis complete (see Output panel).")
+
+            # All other options (no input)
             else:
-                name = st.selectbox("Project", [p.name for p in projects], key="del_insights_project")
-                if st.button("Delete insights", type="primary"):
-                    proj = next(p for p in projects if p.name == name)
-                    proj.bullets, proj.summary = [], ""
-                    analyzer.project_manager.set(proj)
-                    st.session_state.last_output = f"Deleted insights for {proj.name}."
-                    st.success("Deleted.")
+                menu = {
+                    1: analyzer.analyze_git_and_contributions,
+                    2: analyzer.menu_print_metadata_summary,
+                    3: analyzer.analyze_categories,
+                    4: analyzer.print_tree,
+                    5: analyzer.analyze_languages,
+                    6: analyzer.run_all,
+                    9: analyzer.analyze_skills,
+                    11: analyzer.retrieve_previous_insights,
+                    13: analyzer.display_analysis_results,
+                    14: analyzer.display_project_timeline,
+                }
 
-        # ----------------------------
-        # Option 15: Analyze Badges (Streamlit selection)
-        # ----------------------------
-        elif selected == 15:
-            if not require_zip_loaded():
-                st.stop()
+                action = menu.get(selected)
+                if action is None:
+                    st.info("Not wired yet (or requires special UI).")
+                else:
+                    if st.button("Run", type="primary"):
+                        st.session_state.last_output = capture_output(action)
+                        st.success("Done (see Output panel).")
 
-            projects = analyzer._get_projects()
-            if not projects:
-                st.warning("No projects found.")
-            else:
-                name = st.selectbox("Project", [p.name for p in projects], key="badge_project")
-                if st.button("Analyze badges", type="primary"):
-                    proj = next(p for p in projects if p.name == name)
+            st.markdown("</div>", unsafe_allow_html=True)
 
-                    buf = io.StringIO()
-                    with redirect_stdout(buf), redirect_stderr(buf):
-                        # same prerequisite logic as analyze_badges()
-                        if not all([
-                            getattr(proj, "num_files", None),
-                            getattr(proj, "date_created", None),
-                            getattr(proj, "last_modified", None),
-                            getattr(proj, "categories", None),
-                            getattr(proj, "languages", None),
-                            getattr(proj, "skills_used", None),
-                        ]):
-                            print(f"\n  - Prerequisite data missing for {proj.name}. Running required analyses...")
-                            analyzer.analyze_metadata(projects=[proj])
-                            analyzer.analyze_categories(projects=[proj])
-                            analyzer.analyze_languages(projects=[proj])
-                            analyzer.analyze_skills(projects=[proj], silent=True)
-                            print(f"  - Prerequisite analyses complete for {proj.name}.")
-                            proj = analyzer.project_manager.get_by_name(proj.name)
-
-                        duration_days = (proj.last_modified - proj.date_created).days if proj.last_modified and proj.date_created else 0
-                        snapshot = ProjectAnalyticsSnapshot(
-                            name=proj.name,
-                            total_files=proj.num_files,
-                            total_size_kb=proj.size_kb,
-                            total_size_mb=(proj.size_kb / 1024) if proj.size_kb else 0,
-                            duration_days=duration_days,
-                            category_summary={"counts": proj.categories},
-                            languages=proj.language_share,
-                            skills=set(proj.skills_used),
-                            author_count=proj.author_count,
-                            collaboration_status=proj.collaboration_status,
-                        )
-                        badge_ids = assign_badges(snapshot)
-                        fun_facts = build_fun_facts(snapshot, badge_ids)
-
-                        print("\nBadges Earned:")
-                        if badge_ids:
-                            for b in badge_ids:
-                                print(f"  - {b}")
-                        else:
-                            print("  (none)")
-
-                        if fun_facts:
-                            print("\nFun Facts:")
-                            for fact in fun_facts:
-                                print(f"  • {fact}")
-
-                    st.session_state.last_output = buf.getvalue()
-                    st.success("Badge analysis complete (see Output panel).")
-
-        # ----------------------------
-        # All other options that don't require input()
-        # ----------------------------
-        else:
-            if not require_zip_loaded():
-                st.stop()
-
-            menu = {
-                1: analyzer.analyze_git_and_contributions,
-                2: analyzer.menu_print_metadata_summary,
-                3: analyzer.analyze_categories,
-                4: analyzer.print_tree,
-                5: analyzer.analyze_languages,
-                6: analyzer.run_all,
-                9: analyzer.analyze_skills,
-                11: analyzer.retrieve_previous_insights,
-                13: analyzer.display_analysis_results,
-                14: analyzer.display_project_timeline,
-            }
-
-            action = menu.get(selected)
-            if action is None:
-                st.info("Not wired yet (or requires special UI).")
-            else:
-                if st.button("Run", type="primary"):
-                    st.session_state.last_output = capture_output(action)
-                    st.success("Done (see Output panel).")
-
-    st.markdown("</div>", unsafe_allow_html=True)
-
-with right:
-    st.markdown('<div class="pa-card">', unsafe_allow_html=True)
-    st.markdown("### Output")
-    st.code(st.session_state.get("last_output", "") or "(run an option to see output)")
-    st.markdown("</div>", unsafe_allow_html=True)
+    with right:
+        if st.session_state.get("last_output"):
+            st.markdown('<div class="pa-card">', unsafe_allow_html=True)
+            st.markdown("### Output")
+            st.code(st.session_state.get("last_output", "") or "(run an option to see output)")
+            st.markdown("</div>", unsafe_allow_html=True)
