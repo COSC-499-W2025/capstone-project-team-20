@@ -1,16 +1,9 @@
-# src/ui/streamlitApp.py
-# Mini frontend demo for Project Analyzer (no CLI input prompts)
-# - Tabs menu (grouped) instead of 16-button grid
-# - Load ZIP via absolute path (no upload)
-# - Captures print() output and shows it in the UI
-# - Handles options 10/12/15 with Streamlit selectors instead of input()
-# - No “ghost” empty panels: action/output render only when needed
-# - Exit returns to “home screen” (ZIP gate)
 
 import io
 import zipfile
 from pathlib import Path
 from contextlib import redirect_stdout, redirect_stderr
+import atexit
 
 import streamlit as st
 
@@ -117,6 +110,18 @@ def get_analyzer() -> ProjectAnalyzer:
         st.session_state.zip_path_str = ""
         st.session_state.last_output = ""
         st.session_state.selected_option = None
+
+        if not st.session_state.get("_cleanup_registered", False):
+            def _cleanup():
+                try:
+                    st.session_state.analyzer._cleanup_temp()
+                except Exception:
+                    pass
+
+            atexit.register(_cleanup)
+            st.session_state._cleanup_registered = True
+
+
     return st.session_state.analyzer
 
 
@@ -139,6 +144,11 @@ def load_zip_into_analyzer(analyzer: ProjectAnalyzer, zip_path_str: str) -> str:
     zp = Path(zip_path_str).expanduser()
     if not (zp.exists() and zipfile.is_zipfile(zp)):
         raise ValueError("Invalid path or not a zip file.")
+    
+    try:
+        analyzer._cleanup_temp()
+    except Exception:
+        pass
 
     analyzer.zip_path = zp
     analyzer.root_folders = parse_zip_to_project_folders(zp)
@@ -175,15 +185,22 @@ if not st.session_state.get("zip_loaded", False):
     st.subheader("Load Project ZIP to Begin")
     st.write("Paste the **absolute path** to the ZIP your Project Analyzer expects.")
 
-    zip_path_str = st.text_input("Absolute path to ZIP", value=st.session_state.get("zip_path_str", ""))
+    with st.form("load_zip_form", clear_on_submit=False):
+        zip_path_str = st.text_input(
+            "Absolute path to ZIP",
+            value=st.session_state.get("zip_path_str", ""),
+            placeholder="/Users/you/path/to/project.zip",
+        )
+        submitted = st.form_submit_button("Load ZIP")
 
-    if st.button("Load ZIP", type="primary"):
+    if submitted:
         try:
             st.session_state.last_output = load_zip_into_analyzer(analyzer, zip_path_str)
             st.success("ZIP loaded! Redirecting to menu…")
             st.rerun()
         except Exception as e:
             st.error(str(e))
+
 
     st.stop()
 
@@ -313,18 +330,63 @@ if selected is not None or st.session_state.get("last_output"):
                         st.error(str(e))
 
             # 8: Change usernames
+                        # 8: Change usernames (MATCHES CLI change_selected_users EXACTLY)
             elif selected == 8:
-                current = analyzer._config_manager.get("usernames") or []
-                st.write("Set the usernames used for Git contribution analysis.")
-                usernames_text = st.text_input("Comma-separated usernames", value=", ".join(current))
+                st.subheader("Change Selected Users")
+                st.write("Please select your username(s) from the list of project contributors:")
 
-                if st.button("Save usernames", type="primary"):
-                    usernames_new = [u.strip() for u in usernames_text.split(",") if u.strip()]
-                    analyzer._config_manager.set("usernames", sorted(list(set(usernames_new))))
-                    st.session_state.last_output = (
-                        f"Saved usernames: {', '.join(usernames_new) if usernames_new else '(none)'}"
+                current = analyzer._config_manager.get("usernames") or []
+
+                # Build contributor list the same way CLI does (scan projects -> .git -> get_all_authors)
+                projects = analyzer._get_projects()
+                all_authors = set()
+
+                if not projects:
+                    st.warning("No projects found.")
+                else:
+                    for project in projects:
+                        try:
+                            project_path = Path(project.file_path)
+                            if (project_path / ".git").exists():
+                                with analyzer.suppress_output():
+                                    authors = analyzer.contribution_analyzer.get_all_authors(str(project.file_path))
+                                if authors:
+                                    all_authors.update(authors)
+                        except Exception:
+                            # keep going like CLI would (it just silently skips via suppress_output)
+                            pass
+
+                authors_sorted = sorted(list(all_authors))
+
+                if not authors_sorted:
+                    st.warning("No Git authors found in any project.")
+                    st.info("Tip: this requires projects to have a real .git folder in the extracted ZIP.")
+                else:
+                    # UI equivalent of the CLI number selection
+                    preselect = [a for a in current if a in authors_sorted]
+
+                    selected_authors = st.multiselect(
+                        "Project contributors",
+                        options=authors_sorted,
+                        default=preselect,
                     )
-                    st.success("Saved.")
+
+                    st.caption("You can select multiple contributors.")
+
+                    if st.button("Save usernames", type="primary"):
+                        # exact same behavior as CLI: sorted unique
+                        new_usernames = sorted(list(set(selected_authors)))
+
+                        if new_usernames:
+                            analyzer._config_manager.set("usernames", new_usernames)
+                            st.session_state.last_output = (
+                                f"Successfully updated selected users to: {', '.join(new_usernames)}"
+                            )
+                            st.success("Saved.")
+                        else:
+                            st.session_state.last_output = "No changes made to user selection."
+                            st.info("No changes made to user selection.")
+
 
             # 10: Generate Resume Insights (selectors)
             elif selected == 10:
