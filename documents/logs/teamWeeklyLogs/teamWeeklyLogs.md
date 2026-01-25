@@ -1,6 +1,7 @@
 ## Team 20 Weekly Log
 
 ### Table of contents
+- [Term 2 Week 3(January 19th - January 25th)](#term-2-week-3-january-19th---january-25th)
 - [Term 2 Week 2 (January 12th - January 18th)](#term-2-week-2-january-12th---january-18th)
 - [Week 14 (December 1st - December 7th)](#week-14-december-1st---december-7th)
 - [Week 13 (November 24th - November 30th)](#week-13-november-24th---november-30th)
@@ -414,3 +415,37 @@ Issue [COSC-499-W2025/capstone-project-team-20#146](https://github.com/COSC-499-
 **Test Report:**
 
 [Term 2 Week 2 Test Report](teamWeeklyLogsImages/t2_w2_test_report.png)
+
+### Term 2 Week 3 (January 19th - January 25th)
+
+**Work Performed:**
+- Branden Kennedy (42474551): I setup a mini frontend for testing purposes for PR 1 and for our own testing. I used streamlit to re use our ProjectAnalyzer (our CLI) logic where I could, with just a couple implementation changes for input() prompts (Streamlit doesnt have input()). It ended up coming out really well and it works exactly as our CLI does, so now we have an option to test on our mini front end if we'd like! [PR #331] (https://github.com/COSC-499-W2025/capstone-project-team-20/pull/331). I also created test files to fulfill requirement 32 of Milestone 2. These test files are for testing multiple repositories in a ZIP, as well as testing multiple repositories, a pdf, and a word document. These two test files were created with my own projects over the years (COSC 111 assignments (Java), COSC 499 Project Analyzer (Python), COSC 310 Task management application (Java, React, SQL), and the 2025 Global Game Jam (Unity)). This is [PR #332] (https://github.com/COSC-499-W2025/capstone-project-team-20/pull/332)
+
+- Necmi Kaan Sapoglu (17014796): 
+
+- Lex Nash (84668540): 
+
+- Dylan Alexander (16394025): 
+
+- Sven Annist (42486720): 
+
+**Features included in the project plan for this milestone are:**
+All issues up to and including Issue #330
+
+**Continuing tasks from last week and plan for the next week:**
+
+**Burnup chart:**
+
+[Term 2 Week 2 burnup chart](teamWeeklyLogsImages/)
+
+**Table View of Completed Tasks on Project Board:**
+
+[Term 2 Week 2 completed tasks](teamWeeklyLogsImages/)
+
+**Table View of In-Progress Tasks on Project Board:**
+
+[Term 2 Week 2 In-Progress tasks](teamWeeklyLogsImages/)
+
+**Test Report:**
+
+[Term 2 Week 2 Test Report](teamWeeklyLogsImages/)
