@@ -4,9 +4,6 @@ from typing import List, Literal, Optional, Dict, Any
 from datetime import datetime
 import json
 
-from rich.console import Console
-from rich.markdown import Markdown
-
 # This helper remains useful for creating default lists.
 list_field = lambda: field(default_factory=list)
 
@@ -179,54 +176,51 @@ class Project:
         """A helper method to ensure the author_count is always in sync."""
         self.author_count = len(self.authors)
 
-    def display(self, console: Console = None) -> None:
+    def display(self) -> None:
         """Print the project details to the console."""
-        console = console or Console()
-
-        console.print(f"\n[bold magenta]{'='*50}[/bold magenta]")
-        console.print(f"  📁 [bold white]{self.name}[/bold white]  (Resume Score: {self.resume_score:.2f})")
-        console.print(f"[bold magenta]{'='*50}[/bold magenta]")
-
+        print(f"\n{'='*50}")
+        print(f"  📁 {self.name}  (Resume Score: {self.resume_score:.2f})")
+        print(f"{'='*50}")
         if self.file_path:
-            console.print(f"  File Path: {self.file_path}")
+            print(f"  File Path: {self.file_path}")
         if self.root_folder:
-            console.print(f"  File Path: {self.root_folder}")
+            print(f"  File Path: {self.root_folder}")
         if self.authors:
-            console.print(f"  Authors ({self.author_count}): {', '.join(self.authors)}")
-        console.print(f"  Status: {self.collaboration_status}")
+            print(f"  Authors ({self.author_count}): {', '.join(self.authors)}")
+        print(f"  Status: {self.collaboration_status}")
 
         # High-level tech stack
         if self.languages:
-            console.print(f"  Languages: {', '.join(self.languages)}")
+            print(f"  Languages: {', '.join(self.languages)}")
         if self.language_share:
-            console.print("  Language share:")
+            print("  Language share:")
             for lang, share in sorted(self.language_share.items(), key=lambda x: x[0].lower()):
-                console.print(f"    - {lang}: {share:.1f}%")
+                print(f"    - {lang}: {share:.1f}%")
 
         if self.frameworks:
-            console.print(f"  Frameworks: {', '.join(self.frameworks)}")
+            print(f"  Frameworks: {', '.join(self.frameworks)}")
         if self.skills_used:
-            console.print(f"  Other skills/tools: {', '.join(self.skills_used)}")
+            print(f"  Other skills/tools: {', '.join(self.skills_used)}")
 
         # Basic project stats
         if self.num_files:
-            console.print(f"  Files: {self.num_files}")
+            print(f"  Files: {self.num_files}")
         if self.size_kb:
-            console.print(f"  Size: {self.size_kb} KB")
+            print(f"  Size: {self.size_kb} KB")
         if self.date_created:
-            console.print(f"  Created: {self.date_created.strftime('%Y-%m-%d')}")
+            print(f"  Created: {self.date_created.strftime('%Y-%m-%d')}")
         if self.last_modified:
-            console.print(f"  Modified: {self.last_modified.strftime('%Y-%m-%d')}")
+            print(f"  Modified: {self.last_modified.strftime('%Y-%m-%d')}")
 
         # Categories (if populated by metadata extractor / CLI)
         if self.categories:
-            console.print("\n  [bold]Categories:[/bold]")
+            print("\n  Categories:")
             for key, value in self.categories.items():
                 if isinstance(value, list):
                     value_str = ", ".join(map(str, value))
                 else:
                     value_str = str(value)
-                console.print(f"    - {key}: {value_str}")
+                print(f"    - {key}: {value_str}")
 
         # Tech/profile flags (Docker, DB, frontend/backend, tests, README)
         tech_flags = []
@@ -244,27 +238,27 @@ class Project:
             tech_flags.append("README")
 
         if tech_flags or self.readme_keywords:
-            console.print("\n  [bold]Tech/profile flags:[/bold]")
+            print("\n  Tech/profile flags:")
             if tech_flags:
-                console.print(f"    - Flags: {', '.join(tech_flags)}")
+                print(f"    - Flags: {', '.join(tech_flags)}")
             if self.readme_keywords:
-                console.print(f"    - README keywords: {', '.join(self.readme_keywords)}")
+                print(f"    - README keywords: {', '.join(self.readme_keywords)}")
 
         # Dependencies & tooling
         has_dep_info = any([self.dependencies_list,
                             self.dependency_files_list,
                             self.build_tools])
         if has_dep_info:
-            console.print("\n  [bold]Dependencies & tooling:[/bold]")
+            print("\n  Dependencies & tooling:")
             if self.dependencies_list:
                 deps_preview = ", ".join(self.dependencies_list[:8])
                 if len(self.dependencies_list) > 8:
                     deps_preview += " ..."
-                console.print(f"    - Dependencies ({len(self.dependencies_list)}): {deps_preview}")
+                print(f"    - Dependencies ({len(self.dependencies_list)}): {deps_preview}")
             if self.dependency_files_list:
-                console.print(f"    - Dependency files: {', '.join(self.dependency_files_list)}")
+                print(f"    - Dependency files: {', '.join(self.dependency_files_list)}")
             if self.build_tools:
-                console.print(f"    - Build tools: {', '.join(self.build_tools)}")
+                print(f"    - Build tools: {', '.join(self.build_tools)}")
 
         # Code metrics (populated by Analyze Skills)
         has_metrics = any([
@@ -275,17 +269,17 @@ class Project:
             self.max_function_length,
         ])
         if has_metrics:
-            console.print("\n  [bold]Code metrics:[/bold]")
+            print("\n  Code metrics:")
             if self.total_loc:
-                console.print(f"    - Total LOC: {self.total_loc}")
+                print(f"    - Total LOC: {self.total_loc}")
             if self.comment_ratio:
-                console.print(f"    - Comment ratio: {self.comment_ratio:.1%}")
+                print(f"    - Comment ratio: {self.comment_ratio:.1%}")
             if self.test_file_ratio:
-                console.print(f"    - Test file ratio: {self.test_file_ratio:.1%}")
+                print(f"    - Test file ratio: {self.test_file_ratio:.1%}")
             if self.avg_functions_per_file:
-                console.print(f"    - Avg functions/file: {self.avg_functions_per_file:.2f}")
+                print(f"    - Avg functions/file: {self.avg_functions_per_file:.2f}")
             if self.max_function_length:
-                console.print(f"    - Longest function (lines): {self.max_function_length}")
+                print(f"    - Longest function (lines): {self.max_function_length}")
 
         # Skill dimensions (high-level “quality” view)
         dims = [
@@ -295,20 +289,19 @@ class Project:
             ("Language depth", self.language_depth_level, self.language_depth_score),
         ]
         if any(level for _, level, _ in dims):
-            console.print("\n  [bold]Code quality dimensions:[/bold]")
+            print("\n  Code quality dimensions:")
             for label, level, score in dims:
                 if level:
-                    console.print(f"    - {label}: {level} (score {score:.2f})")
+                    print(f"    - {label}: {level} (score {score:.2f})")
 
         # Resume insights
         if self.bullets:
-            console.print("\n  [bold]Resume insights:[/bold]")
+            print("\n  Resume insights:")
             for b in self.bullets:
-                console.print(f"    • {b}")
+                print(f"    • {b}")
         if self.summary:
-            console.print(f"\n  [bold]Summary:[/bold]\n    {self.summary}")
+            print(f"\n  Summary:\n    {self.summary}")
         if self.portfolio_entry:
-            console.print(f"\n  [bold]Portfolio Entry:[/bold]")
-            console.print(Markdown(self.portfolio_entry))
+            print(f"\n  Portfolio Entry:\n    {self.portfolio_entry}")
 
         print()

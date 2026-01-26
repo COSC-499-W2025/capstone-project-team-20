@@ -2,10 +2,6 @@ import random
 from datetime import datetime
 from typing import Tuple, Dict, Any, List
 
-from rich.console import Console
-from rich.markdown import Markdown
-
-
 class ResumeInsightsGenerator:
     """
 
@@ -30,8 +26,6 @@ class ResumeInsightsGenerator:
         self.language_share = language_share
         self.project = project
         self.language_list = language_list
-        self.console: Console = Console()
-
 
         # rotating words for variation in the bullet points/summaries
         self.verbs = [
@@ -260,18 +254,16 @@ class ResumeInsightsGenerator:
             + f" and {remaining} days"
         )
     @staticmethod
-    def display_insights(bullets: list[str], summary: str, portfolio_entry: str = "", console: Console = None) -> None:
+    def display_insights(bullets: list[str], summary: str, portfolio_entry: str = "") -> None:
         "Called from ProjectAnalyzer, iterates through each bullet point and prints them, and then prints the summary"
-        console = console or Console()
-
-        console.print("\n[bold]Resume Bullet Points:[/bold]")
+        print("Resume Bullet Points:")
         for b in bullets:
-            console.print(f" • {b}")
-        console.print("\n[bold]Project Summary:[/bold]")
-        console.print(summary)
+            print(f" • {b}")
+        print("\nProject Summary:")
+        print(summary)
 
         if portfolio_entry:
-            console.print("\n[bold]Portfolio Entry:[/bold]")
-            console.print(Markdown(portfolio_entry))
+            print("\nPortfolio Entry:")
+            print(portfolio_entry)
 
         print("\n")

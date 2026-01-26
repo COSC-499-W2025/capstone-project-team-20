@@ -15,8 +15,8 @@ class DummyProject:
 def test_retrieve_full_portfolio_aggregates_and_sorts():
     analyzer = ProjectAnalyzer(MagicMock(), [], Path("."))
     projects = [
-        DummyProject("A", "### A\n**Role:** Team Contributor (A) | **Timeline:** 1 month\n", datetime(2025, 2, 1)),
-        DummyProject("B", "### B\n**Role:** Team Contributor (B) | **Timeline:** 2 months\n", datetime(2025, 3, 1)),
+        DummyProject("A", "### A\n**Role:** Team Contributor | **Timeline:** 1 month\n", datetime(2025, 2, 1)),
+        DummyProject("B", "### B\n**Role:** Team Contributor | **Timeline:** 2 months\n", datetime(2025, 3, 1)),
         DummyProject("C", "", datetime(2025, 1, 1)),  # empty entry should be skipped
     ]
 
@@ -27,17 +27,10 @@ def test_retrieve_full_portfolio_aggregates_and_sorts():
         out = buf.getvalue()
 
     assert "PROFESSIONAL PORTFOLIO" in out
-
-    # matching characters in the main header.
-    entry_b_identifier = "Team Contributor (B)"
-    entry_a_identifier = "Team Contributor (A)"
-
-    assert entry_b_identifier in out
-    assert entry_a_identifier in out
-
-    # Ensure the entry for B (the newer project) appears before the entry for A.
-    assert out.find(entry_b_identifier) < out.find(entry_a_identifier)
-
+    assert "### B" in out
+    assert "### A" in out
+    # Ensure B (newest) appears before A
+    assert out.find("### B") < out.find("### A")
     # C is skipped
     assert "### C" not in out
     assert "Total Projects in Portfolio: 2" in out
