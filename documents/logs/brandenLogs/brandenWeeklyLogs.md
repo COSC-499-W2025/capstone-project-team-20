@@ -250,8 +250,9 @@ I setup a mini frontend for testing purposes for PR 1 and for our own testing. I
 All testing for the mini frontend that I created was needed to be done manually. I thoroughly went through the mini front end with our CLI pulled up side by side, testing and ensuring all options are represented the same, and everything outputs exactly as its supposed to. This took some time going through multiple zipped test files and all 16 options of our CLI/frontend, ensuring correctness. I also tested Kaans PR (See below) manually and thoroughly, ensuring correctness.
 
 **Reviewing or Collaboration Tasks:**
-[kaan's PR #330](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/330)
-I also attended our team meeting on Thursday, where we discussed our expectations for each milestone requirement and where we need clarification to ensure we are understanding all requirements properly. We created a google doc for that and will have questions for the ones we found we were uncertain on. Also created a plan of attack to really start digging into milestone 2 and what we needed to get done before Peer Testing.
+I reviewed [kaan's PR #330](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/330), as well as
+[Dylan's PR #333](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/333).
+I attended our team meeting on Thursday, where we discussed our expectations for each milestone requirement and where we need clarification to ensure we are understanding all requirements properly. We created a google doc for that and will have questions for the ones we found we were uncertain on. Also created a plan of attack to really start digging into milestone 2 and what we needed to get done before Peer Testing.
 
 **Brief Description of Last Week Connecting This Week:**
 I wanted to refactor our code for this week to polish it all up and make sure everything was proper for peer testing, but we opted to go for progress over the refactoring i had originally planned. wanted to get back on schedule for milestone 2 before we went ahead and refactored what we have.
