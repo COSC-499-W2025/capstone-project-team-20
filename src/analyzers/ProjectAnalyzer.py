@@ -28,6 +28,8 @@ from src.generators.ResumeInsightsGenerator import ResumeInsightsGenerator
 from src.managers.ConfigManager import ConfigManager
 from src.ProjectRanker import ProjectRanker
 from src.analyzers.RepoProjectBuilder import RepoProjectBuilder
+from src.exporters.ReportExporter import ReportExporter
+from src.managers.ReportManager import ReportManager
 
 MIN_DISPLAY_CONFIDENCE = 0.5  # only show skills with at least this confidence
 
@@ -47,6 +49,9 @@ class ProjectAnalyzer:
 
         self.cached_extract_dir: Optional[Path] = None
         self.cached_projects: List[Project] = []
+
+        self.report_manager = ReportManager()
+        self.report_exporter = ReportExporter()
 
         signal.signal(signal.SIGINT, self._signal_cleanup)
 
@@ -689,7 +694,10 @@ class ProjectAnalyzer:
                 13. Display Previous Results
                 14. Show Project Timeline (Projects & Skills)
                 15. Analyze Badges
-                16. Exit
+                16. Create Report (?)
+                17. Delete Report (?)
+                18. Export Report to Resume
+                19. Exit
                   """)
 
             choice = input("Selection: ").strip()
