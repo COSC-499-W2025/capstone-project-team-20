@@ -225,3 +225,31 @@ In the upcoming week, I plan to continue implementing Milestone 2 requirements b
 
 **Any issues or Blockers That I Encountered This Week and How I Addressed/Plan to Address Them:**
 The main challenge was team availability this week. On Wednesday, only a couple of team members attended class, and communication in Discord was slower than usual. Unlike last week where Branden was building the foundational API infrastructure, my work was more self-contained (implementing a specific feature on top of existing architecture), which allowed me to progress independently. However, I will be much more active starting from this week to make sure I am helping my group create the best product that we are able to.
+
+### Term 2 Week 3: January 19th-January 25th
+
+Log Checkbox:
+
+![Term 2 Week 3 Log](imagesForKaanLogs/T2_W3_SS.png)
+
+### Weekly Goals
+
+This week, I focused on developing the incremental file uploads work and helping the team with PR reviews and follow-up fixes.
+
+**Coding Tasks:**
+I iterated on the incremental file uploads flow to make partial uploads more reliable and to improve the handling of chunked payloads during large submissions. I also reviewed existing upload-related code paths to keep the API responses consistent and reduce redundant validation steps that were slowing down the upload process.
+
+**Testing Tasks:**
+I ran local verification on the upload path using manual upload scenarios and ensured edge cases like empty chunks and retry behavior behaved correctly. I also double-checked existing unit tests related to file intake to confirm they still passed with the incremental flow adjustments.
+
+**Reviewing or Collaboration Tasks:**
+I reviewed multiple teammate PRs, left feedback on API schema consistency, and helped confirm which Milestone 2 tasks should be prioritized for the next sprint. I also coordinated quick follow-up discussions to align on how the upload feature should be presented during peer review.
+
+**Brief Description of Last Week Connecting This Week:**
+Last week was about implementing the resume endpoint and preparing for peer review, so this week I shifted toward refining the upload pipeline and supporting the team’s PRs so we could stabilize core features.
+
+**Plan/Goals for Upcoming Week:**
+Next week, I plan to continue refining the upload experience from the UI/API integration standpoint and to support the team with any fixes needed for Milestone 2 review. I also want to follow up on any remaining PR feedback to ensure integration stays smooth.
+
+**Any issues or Blockers That I Encountered This Week and How I Addressed/Plan to Address Them:**
+The main blocker was aligning on the final upload behavior and how we should handle retries across clients. I documented the expected behavior and plan to validate it with the team during our next sync so the feature remains consistent across the stack.
