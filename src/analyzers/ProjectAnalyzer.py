@@ -1,4 +1,4 @@
-import signal
+import signal, threading
 import json, os, sys, re, shutil, contextlib, zipfile
 from pathlib import Path
 from typing import Iterable, List, Optional, Tuple, Dict, Any
@@ -53,7 +53,8 @@ class ProjectAnalyzer:
         self.report_manager = ReportManager()
         self.report_exporter = ReportExporter()
 
-        signal.signal(signal.SIGINT, self._signal_cleanup)
+        if threading.current_thread() is threading.main_thread():
+            signal.signal(signal.SIGINT, self._signal_cleanup)
 
     # ------------------------------------------------------------------
     # Helpers
@@ -282,8 +283,10 @@ class ProjectAnalyzer:
             user_authors_in_project = sorted([name for name in selected_usernames if name in project_authors])
 
             project.authors = user_authors_in_project
-            project.author_count = len(user_authors_in_project)
-            project.collaboration_status = "collaborative" if project.author_count > 1 else "individual"
+            # Use total count of all authors found in git log, not just selected ones
+            project.author_count = len(project_authors)
+            # Title case the status
+            project.collaboration_status = "Collaborative" if project.author_count > 1 else "Individual"
 
             selected_stats = self._aggregate_stats(all_author_stats, selected_usernames)
             total_stats = self._aggregate_stats(all_author_stats)
@@ -292,7 +295,10 @@ class ProjectAnalyzer:
 
             project.last_accessed = datetime.now()
             self.project_manager.set(project)
-            print(f"  - Saved contribution data for '{project.name}'.")
+            # Display findings to user
+            print(f"  - Total Contributors: {project.author_count}")
+            print(f"  - Collaboration Status: {project.collaboration_status}")
+            print(f"  - Saved data for '{project.name}'.")
 
     def analyze_metadata(self, projects: Optional[List[Project]] = None) -> None:
         """Extracts and saves metadata for all projects or a specific list of them."""
@@ -635,7 +641,7 @@ class ProjectAnalyzer:
         self.analyze_skills()
         self.display_project_timeline()
         print("\nAll analyses complete.\n")
-    
+
     def menu_print_metadata_summary(self):
         """
         Display metadata that has already been analyzed and stored. This method is only used for Option 2 in our menu (Extract metadata & file statistics) to print it...
