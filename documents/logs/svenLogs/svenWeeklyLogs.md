@@ -265,3 +265,30 @@ Initially, portfolio entries misattributed the role as “Solo Developer” when
 
 ### Looking Ahead:
 Next steps include an export feature to write aggregated portfolio output to a Markdown file (in a separate PR), and further refinements to portfolio entry content (e.g., optional repository links when available).
+
+# Term 2 Week 3: Jan 20 - Jan 26
+
+### Tasks worked on:
+- **PR #319 – Fix portfolio generation and retrieval**: Addressed a critical bug where generated portfolio entries were not being saved to the database, causing the "Retrieve Full Portfolio" option to fail. Modified `ProjectManager` to correctly persist the new `portfolio_entry` field.
+- **PR #319 – Refine terminal output and fix tests**: Initially implemented the `rich` library to format Markdown output in the terminal, but later reverted this change based on team feedback to keep the output raw for frontend consumption.
+- **PR #319 – Resolve CI/CD pipeline failures**: Fixed failing unit tests by updating assertions to match the corrected output and managed dependencies in `requirements.txt` to resolve `ModuleNotFoundError` errors in the GitHub Actions workflow.
+
+![mr-sban's Tasks for T2W3](./imagesForSvenLogs/t2w3.png)
+
+### Weekly Goals Recap:
+This week's primary goal was to resolve the bugs preventing the portfolio generation feature from working as intended. In **PR #319**, I fixed the core issue by updating the database manager to correctly save portfolio entries, ensuring they persist between sessions. I also addressed several testing and CI/CD failures that arose from the changes, including updating test assertions and managing project dependencies. The feature is now stable and functions according to the requirements.
+
+### PRs I reviewed this week:
+- **PR #333 – Feature/resume generator**: Reviewed the implementation of the new resume generator feature.
+- **PR #332 – Test files for Requirement 34**: Reviewed the addition of new test files.
+- **PR #331 – Mini Frontend!!!!!!!!**: Reviewed the initial implementation of the Streamlit-based frontend.
+
+### PRs I opened this week:
+- **PR #319 – fix: Portfolio generation and data persistence**
+  https://github.com/COSC-499-W2025/capstone-project-team-20/pull/319
+
+### Problems Encountered:
+The main challenge was a data persistence bug where portfolio entries appeared to save in memory but were lost when re-read from the database. This was solved by updating the `ProjectManager` schema and column definitions. A secondary issue arose when our CI pipeline failed due to a missing dependency, which was resolved by updating the `requirements.txt` file.
+
+### Looking Ahead:
+With the portfolio feature now stable, the immediate plan is to prepare for the upcoming peer testing on Wednesday. After that, the focus will shift to expanding our LaTeX functionality to enable users to generate and export their resumes or portfolios as PDF documents.
