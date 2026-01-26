@@ -425,7 +425,7 @@ Issue [COSC-499-W2025/capstone-project-team-20#146](https://github.com/COSC-499-
 
 - Lex Nash (84668540): 
 
-- Dylan Alexander (16394025): 
+- Dylan Alexander (16394025): Developed an incremental PR for the resume generation feature. Implementing the ReportExporter class, which will handle the exporting of Report objects to PDF format for resume/portfolio generation. Reviewed Branden's mini Frontend PR, (PR #331).
 
 - Sven Annist (42486720): This week, I focused on debugging and stabilizing the new portfolio generation feature (PR #319). I resolved a critical bug that prevented portfolio entries from being saved to the database, which now ensures that generated content persists correctly. I also fixed several related unit test and CI/CD pipeline failures, including updating test assertions and managing dependencies to align with the final implementation. Following team feedback, I reverted the terminal output to raw Markdown to better support frontend integration. Additionally, I reviewed pull requests #333 (Resume Generator), #332 (New Test Files), and #331 (Mini Frontend).
 
