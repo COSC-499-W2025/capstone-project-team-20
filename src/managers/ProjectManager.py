@@ -73,6 +73,7 @@ class ProjectManager(StorageManager):
         readme_keywords TEXT,
         bullets TEXT,
         summary TEXT,
+        portfolio_entry TEXT,
         resume_score REAL,
         date_created TEXT,
         last_modified TEXT,
@@ -108,7 +109,7 @@ class ProjectManager(StorageManager):
             "language_depth_level, language_depth_score, "
             "has_dockerfile, has_database, has_frontend, has_backend, "
             "has_test_files, has_readme, readme_keywords, "
-            "bullets, summary, resume_score, "
+            "bullets, summary, portfolio_entry, resume_score, "
             "date_created, last_modified, last_accessed"
         )
 

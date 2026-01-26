@@ -137,6 +137,7 @@ class ProjectAnalyzer:
         if projects_needing_score:
             print("\n  - Calculating resume scores for unscored projects...")
             self.analyze_skills(projects=projects_needing_score, silent=True)
+            self.cached_projects = []
             all_projects = self._get_projects()
             print("  - Score calculation complete.")
 
@@ -324,44 +325,49 @@ class ProjectAnalyzer:
             print("\nNo changes made to user selection.")
 
     def analyze_git_and_contributions(self) -> None:
+        """
+        Analyze contributions for each project:
+        - Use get_all_authors() to set total author_count reliably
+        - Prompt for selected usernames if not configured
+        - Compute detailed stats where possible
+        """
         print("\n--- Git Repository & Contribution Analysis ---")
         projects = self._get_projects()
         if not projects: return
-        all_repo_authors, git_projects = set(), []
+
         for project in projects:
-            if (Path(project.file_path) / ".git").exists():
-                with self.suppress_output():
-                    all_repo_authors.update(self.contribution_analyzer.get_all_authors(str(project.file_path)))
-                git_projects.append(project)
-        if not git_projects:
-            print("No Git repositories found in the project list.")
-            return
+            repo_path = Path(project.file_path)
+            if not (repo_path / ".git").exists():
+                continue
 
-        selected_usernames = self._get_or_select_usernames(sorted(list(all_repo_authors)))
-        if not selected_usernames: return
-
-        for project in git_projects:
             print(f"\n--- Analyzing contributions for: {project.name} ---")
-            all_author_stats = self.contribution_analyzer.analyze(str(project.file_path))
-            if not all_author_stats: print(f"  - No contribution stats found."); continue
+            # Get total authors using the lightweight method
+            with self.suppress_output():
+                repo_authors = self.contribution_analyzer.get_all_authors(str(repo_path))
 
-            project_authors = set(all_author_stats.keys())
-            user_authors_in_project = sorted([name for name in selected_usernames if name in project_authors])
-
-            project.authors = user_authors_in_project
-            # Use total count of all authors found in git log, not just selected ones
-            project.author_count = len(project_authors)
-            # Title case the status
+            project.author_count = len(repo_authors)
             project.collaboration_status = "Collaborative" if project.author_count > 1 else "Individual"
 
-            selected_stats = self._aggregate_stats(all_author_stats, selected_usernames)
-            total_stats = self._aggregate_stats(all_author_stats)
-            project.author_contributions = [stats.to_dict() for stats in all_author_stats.values()]
-            project.individual_contributions = self.contribution_analyzer.calculate_share(selected_stats, total_stats)
+            # Prompt for usernames if needed (based on authors for this project)
+            selected_usernames = self._get_or_select_usernames(sorted(repo_authors)) or []
+
+            # Compute detailed stats; if it fails or returns empty, keep author_count as-is
+            with self.suppress_output():
+                all_author_stats = self.contribution_analyzer.analyze(str(repo_path))
+
+            # Map selected usernames to authors present in stats or repo_authors
+            project.authors = sorted([name for name in selected_usernames if name in (all_author_stats.keys() if all_author_stats else repo_authors)])
+
+            if all_author_stats:
+                selected_stats = self._aggregate_stats(all_author_stats, selected_usernames)
+                total_stats = self._aggregate_stats(all_author_stats)
+                project.author_contributions = [stats.to_dict() for stats in all_author_stats.values()]
+                project.individual_contributions = self.contribution_analyzer.calculate_share(selected_stats, total_stats)
+            else:
+                print("  - No detailed contribution stats available; using author list for collaboration status.")
 
             project.last_accessed = datetime.now()
             self.project_manager.set(project)
-            # Display findings to user
             print(f"  - Total Contributors: {project.author_count}")
             print(f"  - Collaboration Status: {project.collaboration_status}")
             print(f"  - Saved data for '{project.name}'.")
@@ -485,7 +491,6 @@ class ProjectAnalyzer:
             self.analyze_languages(projects=[project])
             self.analyze_skills(projects=[project], silent=True)
             print(f"  - Prerequisite analyses complete for {project.name}.")
-            # Re-fetch the project to get the updated data
             project = self.project_manager.get_by_name(project.name)
 
         duration_days = (project.last_modified - project.date_created).days if project.last_modified and project.date_created else 0
@@ -533,14 +538,30 @@ class ProjectAnalyzer:
                 print(f"Could not find project '{project.name}' in ZIP structure."); return
             metadata = (ProjectMetadataExtractor(root_folder).extract_metadata(repo_path=project.file_path) or {}).get("project_metadata", {})
 
+        # Ensure total author_count is populated using get_all_authors() before generating insights
+        try:
+            repo_path = Path(project.file_path)
+            if (repo_path / ".git").exists():
+                with self.suppress_output():
+                    repo_authors = self.contribution_analyzer.get_all_authors(str(repo_path))
+                if repo_authors:
+                    project.author_count = len(repo_authors)
+                    project.collaboration_status = "Collaborative" if project.author_count > 1 else "Individual"
+                    self.project_manager.set(project)
+        except Exception:
+            pass
+
         gen = ResumeInsightsGenerator(
             metadata, project.categories, project.language_share, project, project.languages
         )
 
-        project.bullets, project.summary = gen.generate_resume_bullet_points(), gen.generate_project_summary()
+        project.bullets = gen.generate_resume_bullet_points()
+        project.summary = gen.generate_project_summary()
+        project.portfolio_entry = gen.generate_portfolio_entry()
+
         self.project_manager.set(project)
         print(f"\nGenerated and saved insights for {project.name}:")
-        gen.display_insights(project.bullets, project.summary)
+        gen.display_insights(project.bullets, project.summary, project.portfolio_entry)
 
     def generate_resume_insights(self) -> None:
         """Presents a menu to generate resume insights, ensuring scores are calculated first."""
@@ -596,8 +617,19 @@ class ProjectAnalyzer:
                          self.analyze_categories(projects=[proj])
                          self.analyze_languages(projects=[proj])
                          print(f"  - Prerequisite analyses complete for {proj.name}.")
+
+                    if not proj.author_count or proj.author_count <= 1:
+                        print(f"\n  - Author data missing or incomplete for {proj.name}. Running contribution analysis...")
+                        orig_cached = self.cached_projects
+                        self.cached_projects = [proj]
+                        self.analyze_git_and_contributions()
+                        self.cached_projects = orig_cached
+                        proj = self.project_manager.get_by_name(proj.name)
+                        print(f"  - Contribution analysis complete for {proj.name} (Authors: {proj.author_count}).")
+
                     self._generate_insights_for_project(proj)
 
+                self.cached_projects = []
                 return
 
             except ValueError:
@@ -607,16 +639,43 @@ class ProjectAnalyzer:
     def retrieve_previous_insights(self) -> None:
         print("\n--- Previous Resume Insights ---")
         for project in self._get_projects():
-            if project.bullets or project.summary:
+            if project.bullets or project.summary or project.portfolio_entry:
                 print(f"\n{'='*20}\nInsights for: {project.name}\n{'='*20}")
-                ResumeInsightsGenerator.display_insights(project.bullets, project.summary)
+                ResumeInsightsGenerator.display_insights(
+                    project.bullets, project.summary, project.portfolio_entry
+                )
+
+    def retrieve_full_portfolio(self) -> None:
+        """
+        Aggregates all previously generated portfolio entries into a single,
+        professional portfolio display. Skips projects without generated entries.
+        """
+        print("\n" + "="*50)
+        print("          PROFESSIONAL PORTFOLIO          ")
+        print("="*50 + "\n")
+
+        projects = self._get_projects()
+        portfolio_projects = [p for p in projects if p.portfolio_entry]
+
+        if not portfolio_projects:
+            print("No portfolio entries found. Please generate insights for projects first.")
+            return
+
+        portfolio_projects.sort(key=lambda x: x.last_modified or datetime.min, reverse=True)
+
+        for i, project in enumerate(portfolio_projects, 1):
+            print(project.portfolio_entry)
+            print("-" * 50 + "\n")
+
+        print(f"Total Projects in Portfolio: {len(portfolio_projects)}\n")
+
 
     def delete_previous_insights(self) -> None:
         """Deletes the stored resume insights for a user-selected project."""
         project = self._select_project("Select a project to delete insights from:")
         if not project:
             return
-        project.bullets, project.summary = [], ""
+        project.bullets, project.summary, project.portfolio_entry = [], "", ""
         self.project_manager.set(project)
         print(f"Successfully deleted insights for {project.name}.")
 
@@ -766,12 +825,13 @@ class ProjectAnalyzer:
                 13. Display Previous Results
                 14. Show Project Timeline (Projects & Skills)
                 15. Analyze Badges
-                16. Exit
+                16. Retrieve Full Portfolio (Aggregated)
+                17. Exit
                   """)
 
             choice = input("Selection: ").strip()
 
-            if not self.zip_path and choice not in ["7", "16"]:
+            if not self.zip_path and choice not in ["7", "17"]:
                 print("No project loaded. Please analyze a new folder first.")
                 continue
 
@@ -784,9 +844,10 @@ class ProjectAnalyzer:
                 "11": self.retrieve_previous_insights, "12": self.delete_previous_insights,
                 "13": self.display_analysis_results, "14": self.display_project_timeline,
                 "15": self.analyze_badges,
+                "16": self.retrieve_full_portfolio,
             }
 
-            if choice == "16":
+            if choice == "17":
                 print("Exiting Project Analyzer.")
                 self._cleanup_temp()
                 return

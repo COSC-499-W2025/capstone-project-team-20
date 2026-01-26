@@ -16,6 +16,7 @@ class ResumeInsightsGenerator:
     Workflow from that method is:
         1. generate_resume_bullet_points()
         2. generator.generate_project_summary()
+        3. generator.generate_portfolio_entry()
 
     """
 
@@ -123,9 +124,6 @@ class ResumeInsightsGenerator:
         num files, code/doc/test file split, collaboration status (team-based or individual)
         """
         code_files, doc_files, test_files, config_files = self.get_category_counts()
-        # ** THIS IS THE FIX **
-        # Safely sum all values in the categorized_files dictionary.
-        # The `or {}` handles cases where it might be None.
         total_files = sum((self.categorized_files or {}).values())
 
         top_langs = ", ".join(self.language_list[:4]) if self.language_list else "multiple languages"
@@ -153,6 +151,69 @@ class ResumeInsightsGenerator:
 
         return summary
 
+    def generate_portfolio_entry(self) -> str:
+        """
+        Generates a structured portfolio entry following professional guidelines:
+        - Clear role definition
+        - Tech stack listing
+        - Context/Overview
+        - Key Technical Outcomes
+        """
+        code_files, _, _, _ = self.get_category_counts()
+        total_files = sum((self.categorized_files or {}).values())
+
+        # Duration
+        days = self._compute_days()
+        duration_str = self.format_duration(days)
+
+        # Tech Stack
+        langs = ", ".join(self.language_list[:4]) if self.language_list else "various technologies"
+
+        # Role Logic — strictly use total author_count
+        team_count = getattr(self.project, "author_count", 0)
+        if team_count > 1:
+            role = f"Team Contributor (Team of {team_count})"
+            collaboration_text = f"collaborated with {team_count-1} other developers to build"
+        else:
+            role = "Solo Developer"
+            collaboration_text = "independently designed and implemented"
+
+        project_name = getattr(self.project, 'name', 'Project')
+
+        # Overview
+        overview = (
+            f"A software solution {collaboration_text} over a {duration_str} period. "
+            f"The codebase consists of {total_files} files, including {code_files} source modules, "
+            f"structured for maintainability and scalability."
+        )
+
+        # Achievements
+        achievements = []
+        test_ratio = getattr(self.project, 'test_file_ratio', 0)
+        if test_ratio > 0.15:
+            achievements.append("Implemented a robust automated testing suite ensuring high code reliability.")
+        elif test_ratio > 0:
+            achievements.append("Integrated automated tests to support continuous integration.")
+        doc_score = getattr(self.project, 'documentation_habits_score', 0)
+        if doc_score > 75:
+            achievements.append("Maintained comprehensive documentation to facilitate developer onboarding and maintenance.")
+        loc = getattr(self.project, 'total_loc', 0)
+        if loc > 5000:
+            achievements.append(f"Architected a substantial codebase of over {loc:,} lines of code.")
+        if not achievements:
+            achievements.append("Delivered a functional codebase using modern development practices.")
+
+        # Entry
+        entry = f"### {project_name}\n"
+        entry += f"**Role:** {role} | **Timeline:** {duration_str}\n"
+        entry += f"**Technologies:** {langs}\n\n"
+        entry += "**Project Overview:**\n"
+        entry += f"{overview}\n\n"
+        entry += "**Key Technical Achievements:**\n"
+        for achievement in achievements:
+            entry += f"* {achievement}\n"
+
+        return entry
 
     def generate_tech_stack(self) -> str:
         if not self.language_share:
@@ -193,11 +254,16 @@ class ResumeInsightsGenerator:
             + f" and {remaining} days"
         )
     @staticmethod
-    def display_insights(bullets: list[str], summary:str) -> None:
+    def display_insights(bullets: list[str], summary: str, portfolio_entry: str = "") -> None:
         "Called from ProjectAnalyzer, iterates through each bullet point and prints them, and then prints the summary"
         print("Resume Bullet Points:")
         for b in bullets:
             print(f" • {b}")
         print("\nProject Summary:")
         print(summary)
+
+        if portfolio_entry:
+            print("\nPortfolio Entry:")
+            print(portfolio_entry)
+
         print("\n")
