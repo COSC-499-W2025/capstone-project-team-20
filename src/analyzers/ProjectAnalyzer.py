@@ -694,10 +694,7 @@ class ProjectAnalyzer:
                 13. Display Previous Results
                 14. Show Project Timeline (Projects & Skills)
                 15. Analyze Badges
-                16. Create Report (?)
-                17. Delete Report (?)
-                18. Export Report to Resume
-                19. Exit
+                16. Exit
                   """)
 
             choice = input("Selection: ").strip()
