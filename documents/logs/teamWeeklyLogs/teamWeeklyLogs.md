@@ -436,16 +436,16 @@ All issues up to and including Issue #330
 
 **Burnup chart:**
 
-[Term 2 Week 2 burnup chart](teamWeeklyLogsImages/)
+[Term 2 Week 3 burnup chart](teamWeeklyLogsImages/t2_w3_burnup_chart.png)
 
 **Table View of Completed Tasks on Project Board:**
 
-[Term 2 Week 2 completed tasks](teamWeeklyLogsImages/)
+[Term 2 Week 3 completed tasks](teamWeeklyLogsImages/t2_w3_completed.png)
 
 **Table View of In-Progress Tasks on Project Board:**
 
-[Term 2 Week 2 In-Progress tasks](teamWeeklyLogsImages/)
+[Term 2 Week 3 In-Progress tasks](teamWeeklyLogsImages/t2_w3_in_progress.png)
 
 **Test Report:**
 
-[Term 2 Week 2 Test Report](teamWeeklyLogsImages/)
+[Term 2 Week 3 Test Report](teamWeeklyLogsImages/t2_w3_test_report.png)
