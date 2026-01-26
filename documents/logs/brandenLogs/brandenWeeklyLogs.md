@@ -241,7 +241,7 @@ The main blocker was that the group wasnt very active this week... On Wednesday,
 ### **Term 2 Week 3: January 19th-January 25th**
 **Screenshot of Tasks Worked On:**
 
-![Term 2 Week 3 Log](imagesForBrandenLogs/)
+![Term 2 Week 3 Log](imagesForBrandenLogs/T2_W3_SS.png)
 
 **Coding Tasks:**
 I setup a mini frontend for testing purposes for PR 1 and for our own testing. I used streamlit to re use our ProjectAnalyzer (our CLI) logic where I could, with just a couple implementation changes for input() prompts (Streamlit doesnt have input()). It ended up coming out really well and it works exactly as our CLI does, so now we have an option to test on our mini front end if we'd like! [PR #331] (https://github.com/COSC-499-W2025/capstone-project-team-20/pull/331). I also created test files to fulfill requirement 32 of Milestone 2. These test files are for testing multiple repositories in a ZIP, as well as testing multiple repositories, a pdf, and a word document. These two test files were created with my own projects over the years (COSC 111 assignments (Java), COSC 499 Project Analyzer (Python), COSC 310 Task management application (Java, React, SQL), and the 2025 Global Game Jam (Unity)). This is [PR #332] (https://github.com/COSC-499-W2025/capstone-project-team-20/pull/332)
