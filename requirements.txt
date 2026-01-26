@@ -4,8 +4,11 @@ pytest
 pytest-cov
 python-docx
 pypdf
+pylatex
+jinja2
 reportlab
 fastapi
 uvicorn
 httpx
 python-multipart
+streamlit

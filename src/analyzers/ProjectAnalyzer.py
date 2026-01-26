@@ -30,6 +30,8 @@ from src.managers.ConfigManager import ConfigManager
 from src.ProjectRanker import ProjectRanker
 from src.analyzers.RepoProjectBuilder import RepoProjectBuilder
 from utils.file_hashing import compute_file_hash
+from src.exporters.ReportExporter import ReportExporter
+from src.managers.ReportManager import ReportManager
 
 MIN_DISPLAY_CONFIDENCE = 0.5  # only show skills with at least this confidence
 
@@ -50,6 +52,10 @@ class ProjectAnalyzer:
 
         self.cached_extract_dir: Optional[Path] = None
         self.cached_projects: List[Project] = []
+
+        self.report_manager = ReportManager()
+        self.report_exporter = ReportExporter()
+
         if threading.current_thread() is threading.main_thread():
             signal.signal(signal.SIGINT, self._signal_cleanup)
 
