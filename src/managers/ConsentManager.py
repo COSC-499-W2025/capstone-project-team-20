@@ -11,6 +11,9 @@ class ConsentManager:
     def __init__(self, db_path="config.db"):
         self.manager = ConfigManager(db_path=db_path)
 
+    def set_consent(self, consent: bool):
+        self.manager.set("user_consent", bool(consent))
+
     def has_user_consented(self):
         """
         Check if the user has previously given consent.
@@ -33,7 +36,8 @@ class ConsentManager:
         answer = answer.strip().lower() 
         consent = answer in ("yes", "y")
 
-        self.manager.set("user_consent", consent)
+        self.set_consent(consent) #Updated method for API usage
+
         if consent:
             print("Consent recorded in ConsentManager. Thankyou!")
         else:

@@ -1,4 +1,4 @@
-import signal
+import signal, threading
 import json, os, sys, re, shutil, contextlib, zipfile
 from pathlib import Path
 from typing import Iterable, List, Optional, Tuple, Dict, Any
@@ -51,8 +51,8 @@ class ProjectAnalyzer:
 
         self.cached_extract_dir: Optional[Path] = None
         self.cached_projects: List[Project] = []
-
-        signal.signal(signal.SIGINT, self._signal_cleanup)
+        if threading.current_thread() is threading.main_thread():
+            signal.signal(signal.SIGINT, self._signal_cleanup)
 
     # ------------------------------------------------------------------
     # Helpers

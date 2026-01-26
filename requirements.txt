@@ -6,3 +6,8 @@ python-docx
 pypdf
 reportlab
 rich
+fastapi
+uvicorn
+httpx
+python-multipart
+streamlit

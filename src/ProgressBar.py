@@ -1,3 +1,6 @@
+import time
+import sys
+
 class Bar:
 
     STAGES:int  #number of portions in progress bar
@@ -66,8 +69,8 @@ class Bar:
             self.stages_remaining = 0
             self.current_total = self.TOTAL_BYTES
             self.sub_stage_idx = 8
-        
-        print('|' + self.bar_complete + self.SUB_CHARS[self.sub_stage_idx] + self.bar_remaining + '|' + ' (' + f'{self.current_total:0{self.TOTAL_digits}d}' + ' Bytes/' + str(self.TOTAL_BYTES) + ' Bytes)\r',end="")
+            
+        self.output()
     
     def stageup(self):
         '''increase the stage by one'''
@@ -113,7 +116,43 @@ class Bar:
 
                 #print:
                 #(\r returns cursor to the start of the line, end="" prevents newline, so essentially the string will keep replacing itself)
-                print('|' + self.bar_complete + self.SUB_CHARS[self.sub_stage_idx] + self.bar_remaining + '|' + ' (' + f'{self.current_total:0{self.TOTAL_digits}d}' + ' Bytes/' + str(self.TOTAL_BYTES) + ' Bytes)\r',end="")
+                self.output()
                 #time.sleep(0.0001)
         else:
-            print('|' + self.bar_complete + self.SUB_CHARS[self.sub_stage_idx] + self.bar_remaining + '|' + ' (' + f'{self.current_total:0{self.TOTAL_digits}d}' + ' Bytes/' + str(self.TOTAL_BYTES) + ' Bytes)\r', end='')
+            self.output()
+
+    def output(self):
+
+        #if first print, move cursor down before it moves back up (this prevents overwriting complete bar)
+        if self.current_total==0:
+            sys.stdout.write('\n\n\n\n')
+        
+        #move cursor back up
+        sys.stdout.write("\033[4A")
+        sys.stdout.flush()
+
+        #top bar
+        sys.stdout.write('\n')
+        sys.stdout.write('╔')
+        sys.stdout.write(f"{'':{'═'}>{self.STAGES}}")
+        sys.stdout.write('╗')
+        sys.stdout.write('\n')
+
+        sys.stdout.write('║' + self.bar_complete + self.SUB_CHARS[self.sub_stage_idx] + self.bar_remaining + '║' + ' (' + f'{self.current_total:0{self.TOTAL_digits}d}' + ' bytes/' + str(self.TOTAL_BYTES) + ' bytes)')
+        sys.stdout.write('\n')
+
+        #bottom bar
+        sys.stdout.write('╚')
+        sys.stdout.write(f"{'':{'═'}>{self.STAGES}}")
+        sys.stdout.write('╝')
+        sys.stdout.write('\n')
+
+        #spacer
+        #sys.stdout.write('\n')
+
+#testcode
+'''
+mybar = Bar(12345678)
+while mybar.current_total < 12345678:
+    mybar.update(128)
+'''
