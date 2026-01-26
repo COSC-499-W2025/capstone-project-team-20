@@ -427,7 +427,7 @@ Issue [COSC-499-W2025/capstone-project-team-20#146](https://github.com/COSC-499-
 
 - Dylan Alexander (16394025): 
 
-- Sven Annist (42486720): 
+- Sven Annist (42486720): This week, I focused on debugging and stabilizing the new portfolio generation feature (PR #319). I resolved a critical bug that prevented portfolio entries from being saved to the database, which now ensures that generated content persists correctly. I also fixed several related unit test and CI/CD pipeline failures, including updating test assertions and managing dependencies to align with the final implementation. Following team feedback, I reverted the terminal output to raw Markdown to better support frontend integration. Additionally, I reviewed pull requests #333 (Resume Generator), #332 (New Test Files), and #331 (Mini Frontend).
 
 **Features included in the project plan for this milestone are:**
 All issues up to and including Issue #330
