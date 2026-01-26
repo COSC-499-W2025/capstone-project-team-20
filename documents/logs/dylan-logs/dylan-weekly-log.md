@@ -2,6 +2,7 @@
 
 ### **Table of Contents:**
 
+- [Term 2 Week 3: January 12th - January 18th](#term-2-week-3-january-19th---january-25th)
 - [Term 2 Week 2: January 12th - January 18th](#term-2-week-2-january-12th---january-18th)
 - [Term 1 Week 14: December 1st - December 7th](#term-1-week-14-december-1st---december-7th)
 - [Term 1 Week 13: November 24th - November 30th](#term-1-week-13-november-24th---november-30th)
@@ -303,4 +304,38 @@ In the upcoming week, I want to have some initial resume generation functionalit
 **Any issues or Blockers That I Encountered This Week and How I Addressed/Plan to Address Them:**
 
 My main blocker this week was my unfamiliarity with so much of the nitty gritty of resume generation. For example, LaTeX. Another example is the actual resume templates themselves. In all honesty, I am completely unfamiliar with what an industry standard resume might look like. What seperates a good resume from a bad one. Etc. It's not often I encounter so many roadblocks in my weekly quest to get a PR merged for this class, not that I'm looking for excuses. There's not much to address here, it's just led to me taking longer than I expected with this particular task.
+
+### Term 2 Week 3: January 19th - January 25th
+**Screenshot of Tasks Worked On:**
+
+![Term 2 Week 3 Log](images/dylan-week-3-term-2-ss.png)
+
+**Coding Tasks:**
+
+This week I developed an incremental PR for the resume generation feature. Implementing the ReportExporter class, which will handle the exporting of Report objects to PDF format for resume/portfolio generation. 
+
+[Feature/resume generator](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/333)
+
+**Testing or Debugging Tasks:**
+I wrote extensive unit tests for my PR this week, linked above.
+
+**Reviewing or Collaboration Tasks:**
+
+I manually tested and reviewed the following PRs this week. 
+
+[Mini Frontend!!!!!!!!](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/331)
+
+
+**Brief Description of Last Week Connecting This Week:**
+
+This week, I completed the work that I started last week. Namely, implementing a LaTeX resume template, allowing for the input of dynamic variables (using Jinja2), and implementing the ReportExporter class which will enable resume generation. 
+
+**Plan/Goals for Upcoming Week:**
+
+In the upcoming week, I intend to continue working on the resume generation feature. The backbone for which is mainly set up now. I will just need to develop a way for the user to trigger a resume generation event in the ProjectAnalyzer class.
+
+**Any issues or Blockers That I Encountered This Week and How I Addressed/Plan to Address Them:**
+
+N/A
+
 
