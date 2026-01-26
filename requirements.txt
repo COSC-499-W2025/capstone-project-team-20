@@ -5,3 +5,4 @@ pytest-cov
 python-docx
 pypdf
 reportlab
+rich
