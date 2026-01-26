@@ -423,7 +423,7 @@ Issue [COSC-499-W2025/capstone-project-team-20#146](https://github.com/COSC-499-
 
 - Necmi Kaan Sapoglu (17014796): Implemented the incremental file uploads feature end-to-end, including chunk handling, resumable uploads, and integration with existing validation and storage pipelines. Manually tested upload workflows to verify chunk ordering, retries, and edge cases, while ensuring existing file intake tests still passed. Reviewed teammate PRs related to the upload pipeline.
 
-- Lex Nash (84668540): 
+- Lex Nash (84668540): At team meeting lead discussion assigning all remaining tasks for milestone 2, as well as breaking them down into what we actually have to implement, as well as clarifying questions we want to ask to the TA/prof about certain requirements. Created a UI mockup in Blender where fonts/colours can easily be changed out to do quick prototyping without having to edit code, also serves as a plan for how we will design the front end UI, will be updated in future (contained in logs branch).
 
 - Dylan Alexander (16394025): Developed an incremental PR for the resume generation feature. Implementing the ReportExporter class, which will handle the exporting of Report objects to PDF format for resume/portfolio generation. Reviewed Branden's mini Frontend PR, (PR #331).
 
