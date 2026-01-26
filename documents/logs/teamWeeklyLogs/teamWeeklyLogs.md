@@ -433,6 +433,7 @@ Issue [COSC-499-W2025/capstone-project-team-20#146](https://github.com/COSC-499-
 All issues up to and including Issue #330
 
 **Continuing tasks from last week and plan for the next week:**
+Next week, we are continuuing on tasks mentioned above (resume generation, refactoring) and getting ready for peer testing and feedback. We are also going to be implementing further Milestone 2 features, will discuss on exactly which ones at our meeting.
 
 **Burnup chart:**
 
