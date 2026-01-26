@@ -21,6 +21,7 @@ from src.analyzers.language_detector import detect_language_per_file, analyze_la
 from src.analyzers.ContributionAnalyzer import ContributionAnalyzer, ContributionStats
 from utils.RepoFinder import RepoFinder
 from src.managers.ProjectManager import ProjectManager
+from src.managers.FileHashManager import FileHashManager
 from src.models.Project import Project
 from src.ProjectFolder import ProjectFolder
 from src.analyzers.SkillAnalyzer import SkillAnalyzer
@@ -28,6 +29,7 @@ from src.generators.ResumeInsightsGenerator import ResumeInsightsGenerator
 from src.managers.ConfigManager import ConfigManager
 from src.ProjectRanker import ProjectRanker
 from src.analyzers.RepoProjectBuilder import RepoProjectBuilder
+from utils.file_hashing import compute_file_hash
 from src.exporters.ReportExporter import ReportExporter
 from src.managers.ReportManager import ReportManager
 
@@ -45,6 +47,7 @@ class ProjectAnalyzer:
         self.file_categorizer = FileCategorizer()
         self.repo_finder = RepoFinder()
         self.project_manager = ProjectManager()
+        self.file_hash_manager = FileHashManager()
         self.contribution_analyzer = ContributionAnalyzer()
 
         self.cached_extract_dir: Optional[Path] = None
@@ -83,6 +86,45 @@ class ProjectAnalyzer:
         if not self.cached_projects:
             self.cached_projects = list(self.project_manager.get_all())
         return self.cached_projects
+    
+    def _get_zip_project_summary(self, project_name: str) -> Optional[Dict[str, Any]]:
+        root_folder = self._find_folder_by_name_recursive(project_name)
+        if not root_folder:
+            return None
+        extractor = ProjectMetadataExtractor(root_folder)
+        files = extractor.collect_all_files()
+        return extractor.compute_time_and_size_summary(files)
+
+    def _should_update_project(self, existing: Project, incoming: Project) -> bool:
+        if incoming.last_modified and existing.last_modified:
+            return incoming.last_modified > existing.last_modified
+        if incoming.last_modified and not existing.last_modified:
+            return True
+        if not incoming.last_modified and existing.last_modified:
+            return False
+        return True
+
+    def _register_project_files(self, project: Project) -> Dict[str, int]:
+        project_root = Path(project.file_path)
+        if not project_root.exists():
+            return {"new": 0, "duplicate": 0}
+
+        new_count = 0
+        duplicate_count = 0
+        for root, _, files in os.walk(project_root):
+            for name in files:
+                file_path = Path(root) / name
+                file_hash = compute_file_hash(file_path)
+                if not file_hash:
+                    continue
+                if self.file_hash_manager.register_hash(
+                    file_hash, str(file_path), project.name
+                ):
+                    new_count += 1
+                else:
+                    duplicate_count += 1
+        return {"new": new_count, "duplicate": duplicate_count}
+
 
     def _ensure_scores_are_calculated(self) -> List[Project]:
         """
@@ -166,14 +208,38 @@ class ProjectAnalyzer:
             return []
         print(f"Found {len(projects_from_builder)} project(s). Saving initial records...")
         for proj_new in projects_from_builder:
+            if summary := self._get_zip_project_summary(proj_new.name):
+                if summary.get("total_files") is not None:
+                    proj_new.num_files = int(summary["total_files"])
+                if summary.get("total_size_kb") is not None:
+                    proj_new.size_kb = int(summary["total_size_kb"])
+                if summary.get("start_date"):
+                    proj_new.date_created = datetime.strptime(summary["start_date"], "%Y-%m-%d")
+                if summary.get("end_date"):
+                    proj_new.last_modified = datetime.strptime(summary["end_date"], "%Y-%m-%d")
             proj_existing = self.project_manager.get_by_name(proj_new.name)
             if proj_existing:
-                proj_existing.file_path, proj_existing.root_folder = proj_new.file_path, proj_new.root_folder
-                self.project_manager.set(proj_existing)
-                print(f"  - Updated existing project: {proj_existing.name}")
+                if self._should_update_project(proj_existing, proj_new):
+                    proj_existing.file_path, proj_existing.root_folder = proj_new.file_path, proj_new.root_folder
+                    if proj_new.num_files:
+                        proj_existing.num_files = proj_new.num_files
+                    if proj_new.size_kb:
+                        proj_existing.size_kb = proj_new.size_kb
+                    if proj_new.date_created:
+                        proj_existing.date_created = proj_new.date_created
+                    if proj_new.last_modified:
+                        proj_existing.last_modified = proj_new.last_modified
+                    proj_existing.last_accessed = datetime.now()
+                    self.project_manager.set(proj_existing)
+                    self._register_project_files(proj_existing)
+                    print(f"  - Updated existing project: {proj_existing.name}")
+                else:
+                    print(f"  - Skipped older project version: {proj_existing.name}")
                 created_projects.append(proj_existing)
             else:
+                proj_new.last_accessed = datetime.now()
                 self.project_manager.set(proj_new)
+                self._register_project_files(proj_new)
                 print(f"  - Created new project record: {proj_new.name} with ID {proj_new.id}")
                 created_projects.append(proj_new)
         self.cached_projects = created_projects
