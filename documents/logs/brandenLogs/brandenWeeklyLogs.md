@@ -1,7 +1,7 @@
 ## **Branden Weekly Logs**
 ### **Table of contents:**
 
-
+- [Term 2 Week 3](#term-2-week-3-january-19th-january-25th)
 - [Term 2 Week 2](#term-2-week-2-january-12th-january-18th)
 - [Term 1 Week 14](#week-14-december-1st---december-7th)
 - [Term 1 Week 13](#week-13-november-24th---november-30th)
@@ -237,5 +237,30 @@ In the upcoming week, I want to make sure that all of our milestone 1 goals are 
 
 **Any issues or Blockers That I Encountered This Week and How I Addressed/Plan to Address Them:**
 The main blocker was that the group wasnt very active this week... On Wednesday, only Sven and I had shown up to class, and I had tried to send a when2meet so that our group could schedule another meeting, but was getting very little replies in our discord server... I also didnt really have the opportunity to review code because the group was inactive for any other coding going on. Hopefully that flips around this week and we get back into full collaboration with eachother.
+
+### **Term 2 Week 3: January 19th-January 25th**
+**Screenshot of Tasks Worked On:**
+
+![Term 2 Week 3 Log](imagesForBrandenLogs/T2_W3_SS.png)
+
+**Coding Tasks:**
+I setup a mini frontend for testing purposes for PR 1 and for our own testing. I used streamlit to re use our ProjectAnalyzer (our CLI) logic where I could, with just a couple implementation changes for input() prompts (Streamlit doesnt have input()). It ended up coming out really well and it works exactly as our CLI does, so now we have an option to test on our mini front end if we'd like! [PR #331] (https://github.com/COSC-499-W2025/capstone-project-team-20/pull/331). I also created test files to fulfill requirement 32 of Milestone 2. These test files are for testing multiple repositories in a ZIP, as well as testing multiple repositories, a pdf, and a word document. These two test files were created with my own projects over the years (COSC 111 assignments (Java), COSC 499 Project Analyzer (Python), COSC 310 Task management application (Java, React, SQL), and the 2025 Global Game Jam (Unity)). This is [PR #332] (https://github.com/COSC-499-W2025/capstone-project-team-20/pull/332)
+
+**Testing or Debugging Tasks:**
+All testing for the mini frontend that I created was needed to be done manually. I thoroughly went through the mini front end with our CLI pulled up side by side, testing and ensuring all options are represented the same, and everything outputs exactly as its supposed to. This took some time going through multiple zipped test files and all 16 options of our CLI/frontend, ensuring correctness. I also tested Kaans PR (See below) manually and thoroughly, ensuring correctness.
+
+**Reviewing or Collaboration Tasks:**
+I reviewed [kaan's PR #330](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/330), as well as
+[Dylan's PR #333](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/333).
+I attended our team meeting on Thursday, where we discussed our expectations for each milestone requirement and where we need clarification to ensure we are understanding all requirements properly. We created a google doc for that and will have questions for the ones we found we were uncertain on. Also created a plan of attack to really start digging into milestone 2 and what we needed to get done before Peer Testing.
+
+**Brief Description of Last Week Connecting This Week:**
+I wanted to refactor our code for this week to polish it all up and make sure everything was proper for peer testing, but we opted to go for progress over the refactoring i had originally planned. wanted to get back on schedule for milestone 2 before we went ahead and refactored what we have.
+
+**Plan/Goals for Upcoming Week:**
+This week, I do plan on doing the refactoring now before our Peer Testing (Wednesday). I also will take another milestone 2 requirement and start working away at that. I also will need to find what the class's rules are on git LFS, as requirement 33 needs two files from different times of the same repository. I had planned on using our COSC 499 project, but the zipped files are over 100 mb, so git LFS wouldnt allow me to push it.
+
+**Any issues or Blockers That I Encountered This Week and How I Addressed/Plan to Address Them:**
+We just have some issues for clarifying milestone 2 requirements. The team worked well, 4/5 of us were at our meeting and everyone showed up on wednesday so thats a step in the right direction. I have booked a meeting with Bowen on Wednesday morning as well for my clarifications needed.
 
 
