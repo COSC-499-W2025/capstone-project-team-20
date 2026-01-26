@@ -224,3 +224,17 @@ As a team we've been trying to figure out when is best to meet as we all need to
 This week's main focus was planning front end stuff since im going to be in charge of most of the visual design for that, I've been researching different modules and settling on tkinter. I have started to make mockups of the different screens for our application, which will be finalized with the team's input as it can heavily influence code complexity if we split things up into too many screens and I want to get input on what the rest of the team is envisioning.
 
 I reviewed Branden's API pull request, which involved having to research a lot about the different modules used as well as learning more about the function of APIs themselves since I haven't had to learn about them prior to this point. It is really enjoyable to learn new things and I have no doubt this effort will be rewarded throughout the rest of the project.
+
+## T2 Week 3
+**Types of tasks worked on**
+![Week 2 Tasks](imagesForLexLogs/w3t2.png)
+
+Finally had our first proper team meeting outside of class time this week, and I lead a group discussion where we went through every single milestone 2 task, assigned each to people, came up with an understanding as a team of what each task meant, and how we would implement it. This included noting down any tasks that we need further clarification on from the TA/prof. 
+
+The tasks I was assigned during the meeting required me to wait for some holdover tasks from term 1 to be completed, so I was unable to do any coding on my assigned tasks this week.
+
+instead, I started a front end mockup which was added to the documentation. I created it in the 3D software Blender in order to easily simulate things such as drop shadows and to be able to instantly make sweeping colour or font changes, for super fast prototyping. I tried to choose a navigation style that's simple yet likely won't be attempted by other teams in order to challenge myself and help my team stand out.
+
+Example images showing the 3D nature of the mockups, as well as the ability to change colours:
+![3D](imagesForLexLogs/3Dmockup.png)
+![Colour](imagesForLexLogs/3Dmockup_color.png)
