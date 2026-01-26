@@ -2,6 +2,10 @@ import random
 from datetime import datetime
 from typing import Tuple, Dict, Any, List
 
+from rich.console import Console
+from rich.markdown import Markdown
+
+
 class ResumeInsightsGenerator:
     """
 
@@ -26,6 +30,8 @@ class ResumeInsightsGenerator:
         self.language_share = language_share
         self.project = project
         self.language_list = language_list
+        self.console: Console = Console()
+
 
         # rotating words for variation in the bullet points/summaries
         self.verbs = [
@@ -199,7 +205,7 @@ class ResumeInsightsGenerator:
             achievements.append("Maintained comprehensive documentation to facilitate developer onboarding and maintenance.")
         loc = getattr(self.project, 'total_loc', 0)
         if loc > 5000:
-            achievements.append(f"Architected a substantial codebase of over {loc} lines of code.")
+            achievements.append(f"Architected a substantial codebase of over {loc:,} lines of code.")
         if not achievements:
             achievements.append("Delivered a functional codebase using modern development practices.")
 
@@ -254,16 +260,18 @@ class ResumeInsightsGenerator:
             + f" and {remaining} days"
         )
     @staticmethod
-    def display_insights(bullets: list[str], summary: str, portfolio_entry: str = "") -> None:
+    def display_insights(bullets: list[str], summary: str, portfolio_entry: str = "", console: Console = None) -> None:
         "Called from ProjectAnalyzer, iterates through each bullet point and prints them, and then prints the summary"
-        print("Resume Bullet Points:")
+        console = console or Console()
+
+        console.print("\n[bold]Resume Bullet Points:[/bold]")
         for b in bullets:
-            print(f" • {b}")
-        print("\nProject Summary:")
-        print(summary)
+            console.print(f" • {b}")
+        console.print("\n[bold]Project Summary:[/bold]")
+        console.print(summary)
 
         if portfolio_entry:
-            print("\nPortfolio Entry:")
-            print(portfolio_entry)
+            console.print("\n[bold]Portfolio Entry:[/bold]")
+            console.print(Markdown(portfolio_entry))
 
         print("\n")

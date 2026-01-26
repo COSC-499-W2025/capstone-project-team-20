@@ -3,6 +3,9 @@ import json, os, sys, re, shutil, contextlib, zipfile
 from pathlib import Path
 from typing import Iterable, List, Optional, Tuple, Dict, Any
 
+from rich.console import Console
+from rich.markdown import Markdown
+
 from src.project_timeline import (
     get_projects_with_skills_timeline_from_projects,
     get_skill_timeline_from_projects,
@@ -44,6 +47,7 @@ class ProjectAnalyzer:
         self.repo_finder = RepoFinder()
         self.project_manager = ProjectManager()
         self.contribution_analyzer = ContributionAnalyzer()
+        self.console = Console()
 
         self.cached_extract_dir: Optional[Path] = None
         self.cached_projects: List[Project] = []
@@ -89,6 +93,7 @@ class ProjectAnalyzer:
         if projects_needing_score:
             print("\n  - Calculating resume scores for unscored projects...")
             self.analyze_skills(projects=projects_needing_score, silent=True)
+            self.cached_projects = []
             all_projects = self._get_projects()
             print("  - Score calculation complete.")
 
@@ -482,6 +487,8 @@ class ProjectAnalyzer:
             metadata, project.categories, project.language_share, project, project.languages
         )
 
+        gen.console = self.console
+
         project.bullets = gen.generate_resume_bullet_points()
         project.summary = gen.generate_project_summary()
         project.portfolio_entry = gen.generate_portfolio_entry()
@@ -545,10 +552,8 @@ class ProjectAnalyzer:
                          self.analyze_languages(projects=[proj])
                          print(f"  - Prerequisite analyses complete for {proj.name}.")
 
-                    # Ensure author_count is accurate before generating insights
                     if not proj.author_count or proj.author_count <= 1:
                         print(f"\n  - Author data missing or incomplete for {proj.name}. Running contribution analysis...")
-                        # Analyze contributions just for this project to avoid unnecessary prompts across all projects
                         orig_cached = self.cached_projects
                         self.cached_projects = [proj]
                         self.analyze_git_and_contributions()
@@ -558,6 +563,8 @@ class ProjectAnalyzer:
 
                     self._generate_insights_for_project(proj)
 
+                # This is crucial for making the newly saved portfolio entries available.
+                self.cached_projects = []
                 return
 
             except ValueError:
@@ -569,16 +576,18 @@ class ProjectAnalyzer:
         for project in self._get_projects():
             if project.bullets or project.summary or project.portfolio_entry:
                 print(f"\n{'='*20}\nInsights for: {project.name}\n{'='*20}")
-                ResumeInsightsGenerator.display_insights(project.bullets, project.summary, project.portfolio_entry)
+                ResumeInsightsGenerator.display_insights(
+                    project.bullets, project.summary, project.portfolio_entry, console=self.console
+                )
 
     def retrieve_full_portfolio(self) -> None:
         """
         Aggregates all previously generated portfolio entries into a single,
         professional portfolio display. Skips projects without generated entries.
         """
-        print("\n" + "="*50)
-        print("          PROFESSIONAL PORTFOLIO          ")
-        print("="*50 + "\n")
+        self.console.print("\n" + "="*50)
+        self.console.print("          [bold]PROFESSIONAL PORTFOLIO[/bold]          ")
+        self.console.print("="*50 + "\n")
 
         projects = self._get_projects()
         portfolio_projects = [p for p in projects if p.portfolio_entry]
@@ -590,8 +599,8 @@ class ProjectAnalyzer:
         portfolio_projects.sort(key=lambda x: x.last_modified or datetime.min, reverse=True)
 
         for i, project in enumerate(portfolio_projects, 1):
-            print(f"{project.portfolio_entry}")
-            print("-" * 50 + "\n")
+            self.console.print(Markdown(project.portfolio_entry))
+            self.console.print("[blue]" + "-" * 50 + "\n")
 
         print(f"Total Projects in Portfolio: {len(portfolio_projects)}\n")
 
@@ -629,7 +638,7 @@ class ProjectAnalyzer:
             return
 
         for project in scored_projects:
-            project.display()
+            project.display(console=self.console)
 
     def print_tree(self) -> None:
         print("\n--- Project Folder Structures ---")
