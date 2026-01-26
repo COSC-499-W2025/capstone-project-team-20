@@ -421,7 +421,7 @@ Issue [COSC-499-W2025/capstone-project-team-20#146](https://github.com/COSC-499-
 **Work Performed:**
 - Branden Kennedy (42474551): I setup a mini frontend for testing purposes for PR 1 and for our own testing. I used streamlit to re use our ProjectAnalyzer (our CLI) logic where I could, with just a couple implementation changes for input() prompts (Streamlit doesnt have input()). It ended up coming out really well and it works exactly as our CLI does, so now we have an option to test on our mini front end if we'd like! [PR #331](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/331). I also created test files to fulfill requirement 32 of Milestone 2. These test files are for testing multiple repositories in a ZIP, as well as testing multiple repositories, a pdf, and a word document. These two test files were created with my own projects over the years (COSC 111 assignments (Java), COSC 499 Project Analyzer (Python), COSC 310 Task management application (Java, React, SQL), and the 2025 Global Game Jam (Unity)). This is [PR #332](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/332). Also reviewed [PR #333](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/333) and [PR #330](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/330).
 
-- Necmi Kaan Sapoglu (17014796): 
+- Necmi Kaan Sapoglu (17014796): Implemented the incremental file uploads feature end-to-end, including chunk handling, resumable uploads, and integration with existing validation and storage pipelines. Manually tested upload workflows to verify chunk ordering, retries, and edge cases, while ensuring existing file intake tests still passed. Reviewed teammate PRs related to the upload pipeline.
 
 - Lex Nash (84668540): 
 
