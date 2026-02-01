@@ -33,7 +33,7 @@ class InsightEditor:
                 tech_line = ln.strip()
 
         # Overview block
-        m_overview = re.search(r"\*\*Project Overview:\*\*\n(.+?)(?:\n\n|\n\*\*)", text, flags=re.S)
+        m_overview = re.search(r"\*\*Project Overview:\*\*\n(.+?)(?:\n\n|\n\*\*|$)", text, flags=re.S)
         if m_overview:
             overview = m_overview.group(1).strip()
 

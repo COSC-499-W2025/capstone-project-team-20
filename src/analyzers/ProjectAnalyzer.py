@@ -563,16 +563,7 @@ class ProjectAnalyzer:
         print("\nGenerated Portfolio Entry:\n")
         print(project.portfolio_entry)
 
-        edit = input("Would you like to edit the portfolio wording? (y/n): ").strip().lower()
-        if edit == "y":
-            parts = InsightEditor.parse_portfolio_entry(project.portfolio_entry)
-            # simplest version: edit ONLY the overview text
-            print("\nCurrent Project Overview:\n")
-            print(parts.overview)
-            new_overview = input("\nEnter new overview (or press Enter to keep): ").rstrip()
-            if new_overview:
-                parts.overview = new_overview
-            project.portfolio_entry = InsightEditor.build_portfolio_entry(parts)
+        project.portfolio_entry = self.edit_portfolio_entry_cli(project.portfolio_entry)
 
         self.project_manager.set(project)
         print(f"\nGenerated and saved insights for {project.name}:")
@@ -667,7 +658,12 @@ class ProjectAnalyzer:
                 print(f"\nCurrent:\n{parts.role_line}")
                 new_val = input("New (Enter to keep): ").rstrip()
                 if new_val:
-                    parts.role_line = new_val
+                    if "**Role:**" not in new_val or "**Timeline:**" not in new_val:
+                        print("\nPlease keep the format like:")
+                        print("**Role:** <something> | **Timeline:** <something>")
+                        print("Example: **Role:** Team Contributor (Team of 7) | **Timeline:** 25 days")
+                    else:
+                        parts.role_line = new_val
 
             elif choice == "2":
                 print(f"\nCurrent:\n{parts.tech_line}")
@@ -748,7 +744,34 @@ class ProjectAnalyzer:
             print("-" * 50 + "\n")
 
         print(f"Total Projects in Portfolio: {len(portfolio_projects)}\n")
+        edit = input("Would you like to edit one of these entries? (y/n): ").strip().lower()
+        if edit != "y":
+            return
 
+        print("\nSelect a project to edit:")
+        for i, p in enumerate(portfolio_projects, 1):
+            print(f"  {i}: {p.name}")
+
+        choice = input(f"Enter your choice (1-{len(portfolio_projects)}), or 'q' to cancel: ").strip().lower()
+        if choice == "q":
+            return
+
+        try:
+            idx = int(choice) - 1
+            if not (0 <= idx < len(portfolio_projects)):
+                print("Invalid selection.")
+                return
+        except ValueError:
+            print("Invalid input.")
+            return
+
+        project = portfolio_projects[idx]
+
+        project.portfolio_entry = self.edit_portfolio_entry_cli(project.portfolio_entry)
+
+        self.project_manager.set(project)
+        self.cached_projects = []  # refresh cache each time
+        print("\nSaved updated portfolio entry.\n")
 
     def delete_previous_insights(self) -> None:
         """Deletes the stored resume insights for a user-selected project."""
