@@ -1,6 +1,7 @@
 ## **Branden Weekly Logs**
 ### **Table of contents:**
 
+- [Term 2 Week 4](#term-2-week-4-january-26th-february-1st)
 - [Term 2 Week 3](#term-2-week-3-january-19th-january-25th)
 - [Term 2 Week 2](#term-2-week-2-january-12th-january-18th)
 - [Term 1 Week 14](#week-14-december-1st---december-7th)
@@ -262,5 +263,29 @@ This week, I do plan on doing the refactoring now before our Peer Testing (Wedne
 
 **Any issues or Blockers That I Encountered This Week and How I Addressed/Plan to Address Them:**
 We just have some issues for clarifying milestone 2 requirements. The team worked well, 4/5 of us were at our meeting and everyone showed up on wednesday so thats a step in the right direction. I have booked a meeting with Bowen on Wednesday morning as well for my clarifications needed.
+
+### **Term 2 Week 4: January 26th-February 1st**
+**Screenshot of Tasks Worked On (Peer review week, attached the two teams I was assigned to's feedback):**
+
+![Term 2 Week 4 Log](imagesForBrandenLogs/PT_T14.png)
+![Term 2 Week 4 Log](imagesForBrandenLogs/PT_T15.png)
+
+**Coding Tasks:**
+This week, I worked on ensuring all the tests and code (both our frontend and CLI) were good and ready for Peer Testing. I edited the questionnaires as needed and made sure the process for all tasks for our peer testing was straight forward and could all be executed as desired. After Peer Testing, I completed Issue [COSC-499-W2025/capstone-project-team-20#296](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/296), Which was Requirement 27 of Milestone 2. I have PR'ed it at [PR #340](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/340). This task required one new file, edits to our ProjectAnalyzer (orchestrator class), and a full test suite, with updates to one other test file.
+
+**Testing or Debugging Tasks:**
+I tested my own code manually, ensuring that it all worked as expected (edited sections persisted properly), as well as creating tests for the new InsightEditor. I will also be testing [PR #341](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/341) manually for code review.
+
+**Reviewing or Collaboration Tasks:**
+I have reviewed [PR #341](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/341) and testing it to ensure correctness and proper logic. It is the only other Pull Request for the week either than mine at the time of writing this!
+
+**Brief Description of Last Week Connecting This Week:**
+I still have not been able to get around to refactoring. Our logic is all working properly so its been hard to find the time to go back and refactor when I could persist and work on new features. I have not been able to ask about LFS yet as we had peer testing. Will consult this week in our meeting.
+
+**Plan/Goals for Upcoming Week:**
+I plan on continuuing on with Milestone 2 requirements. I think I will try to get the InsightEditor setup to edit resumes as well. The class is all setup and should be able to be implemented for editing the resume, as right now it only edits the portfolio and the resume insights generated from the resume insight generator.
+
+**Any issues or Blockers That I Encountered This Week and How I Addressed/Plan to Address Them:**
+Its been hard getting the motivation going for the team to stick it strong and consistent. Need to reignite the flame to start really going at this project again here. Its mainly just been hard motivating.
 
 
