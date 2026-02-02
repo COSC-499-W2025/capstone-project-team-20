@@ -1,6 +1,7 @@
 ## Team 20 Weekly Log
 
 ### Table of contents
+- [Term 2 Week 4(January 25th - February 1st)](#term-2-week-4-january-26th---february-1st)
 - [Term 2 Week 3(January 19th - January 25th)](#term-2-week-3-january-19th---january-25th)
 - [Term 2 Week 2 (January 12th - January 18th)](#term-2-week-2-january-12th---january-18th)
 - [Week 14 (December 1st - December 7th)](#week-14-december-1st---december-7th)
@@ -450,3 +451,40 @@ Next week, we are continuuing on tasks mentioned above (resume generation, refac
 **Test Report:**
 
 [Term 2 Week 3 Test Report](teamWeeklyLogsImages/t2_w3_test_report.png)
+
+
+### Term 2 Week 4 (January 26th - February 1st)
+
+**Work Performed:**
+- Branden Kennedy (42474551): This week, I worked on ensuring all the tests and code (both our frontend and CLI) were good and ready for Peer Testing. I edited the questionnaires as needed and made sure the process for all tasks for our peer testing was straight forward and could all be executed as desired. After Peer Testing, I completed Issue [COSC-499-W2025/capstone-project-team-20#296](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/296), Which was Requirement 27 of Milestone 2. I have PR'ed it at [PR #340](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/340). This task required one new file, edits to our ProjectAnalyzer (orchestrator class), and a full test suite, with updates to one other test file.
+I also tested and reviewed my own code (both manually and with a test suite), and reviewed [PR #341](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/341).
+
+- Necmi Kaan Sapoglu (17014796): This week, from the feedback that we received from peer testings, I decided on trying to focus on expanding on the badges feature, as well as adding more features for user interactability, and came up with ideas to expand on this with a yearly wrapped type summary of coding activity that could be shared. I started development on this idea. I also reviewed PR #340.
+
+- Lex Nash (84668540): This week I added the ability for the user to edit the resume score as well as the date created and last modified date for projects already in the database. More edits can be added to this new option in future, but was mainly designed to be able to encompass the "correct project chronology" and "reorder project rankings" requirements of Milestone 2. PR: [COSC-499-W2025/capstone-project-team-20#292](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/292)
+
+- Dylan Alexander (16394025): This week I followed up on last week's incremental PR for the resume generation feature. Resume generation is now fully functional. Resumes can be generated from the ProjectAnalyzer menu (from an existing Report object), and exported to PDF. I also reviewed PR #340.
+
+- Sven Annist (42486720): This week, I focused entirely on peer testing to get feedback on our project. The sessions provided valuable insights into where our application shines and where it needs improvement. We learned that while users love the badges feature, they found the menus confusing to navigate and experienced the system breaking when switching between users not present in the loaded dataset. Based on this feedback, we created several new issues (#343, #344, #345) to address the usability and stability problems. I also reviewed PR #341.
+
+**Features included in the project plan for this milestone are:**
+All issues up to and including Issue #330
+
+**Continuing tasks from last week and plan for the next week:**
+Next week, we are continuuing on tasks mentioned in work performed. We will be diving further into Milestone 2, with plans to start the front end soon enough here to get our API's attached.
+
+**Burnup chart:**
+
+[Term 2 Week 3 burnup chart](teamWeeklyLogsImages/t2_w4_burnup_chart.png)
+
+**Table View of Completed Tasks on Project Board:**
+
+[Term 2 Week 3 completed tasks](teamWeeklyLogsImages/t2_w4_completed.png)
+
+**Table View of In-Progress Tasks on Project Board:**
+
+[Term 2 Week 3 In-Progress tasks](teamWeeklyLogsImages/t2_w4_in_progress.png)
+
+**Test Report:**
+
+[Term 2 Week 3 Test Report](teamWeeklyLogsImages/t2_w4_test_report.png)
