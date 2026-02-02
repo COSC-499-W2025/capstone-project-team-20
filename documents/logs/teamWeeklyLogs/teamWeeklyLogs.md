@@ -465,7 +465,7 @@ I also tested and reviewed my own code (both manually and with a test suite), an
 
 - Dylan Alexander (16394025): 
 
-- Sven Annist (42486720): 
+- Sven Annist (42486720): This week, I focused entirely on peer testing to get feedback on our project. The sessions provided valuable insights into where our application shines and where it needs improvement. We learned that while users love the badges feature, they found the menus confusing to navigate and experienced the system breaking when switching between users not present in the loaded dataset. Based on this feedback, we created several new issues (#343, #344, #345) to address the usability and stability problems. I also reviewed PR #341.
 
 **Features included in the project plan for this milestone are:**
 All issues up to and including Issue #330
