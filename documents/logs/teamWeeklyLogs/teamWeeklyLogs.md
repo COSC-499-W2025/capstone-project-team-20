@@ -475,16 +475,16 @@ Next week, we are continuuing on tasks mentioned in work performed. We will be d
 
 **Burnup chart:**
 
-[Term 2 Week 4 burnup chart](teamWeeklyLogsImages/)
+[Term 2 Week 3 burnup chart](teamWeeklyLogsImages/t2_w4_burnup_chart.png)
 
 **Table View of Completed Tasks on Project Board:**
 
-[Term 2 Week 4 completed tasks](teamWeeklyLogsImages/)
+[Term 2 Week 3 completed tasks](teamWeeklyLogsImages/t2_w4_completed.png)
 
 **Table View of In-Progress Tasks on Project Board:**
 
-[Term 2 Week 4 In-Progress tasks](teamWeeklyLogsImages/)
+[Term 2 Week 3 In-Progress tasks](teamWeeklyLogsImages/t2_w4_in_progress.png)
 
 **Test Report:**
 
-[Term 2 Week 4 Test Report](teamWeeklyLogsImages/)
+[Term 2 Week 3 Test Report](teamWeeklyLogsImages/t2_w4_test_report.png)
