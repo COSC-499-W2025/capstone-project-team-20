@@ -463,7 +463,7 @@ I also tested and reviewed my own code (both manually and with a test suite), an
 
 - Lex Nash (84668540): 
 
-- Dylan Alexander (16394025): 
+- Dylan Alexander (16394025): This week I followed up on last week's incremental PR for the resume generation feature. Resume generation is now fully functional. Resumes can be generated from the ProjectAnalyzer menu (from an existing Report object), and exported to PDF. I also reviewed PR #340.
 
 - Sven Annist (42486720): This week, I focused entirely on peer testing to get feedback on our project. The sessions provided valuable insights into where our application shines and where it needs improvement. We learned that while users love the badges feature, they found the menus confusing to navigate and experienced the system breaking when switching between users not present in the loaded dataset. Based on this feedback, we created several new issues (#343, #344, #345) to address the usability and stability problems. I also reviewed PR #341.
 
