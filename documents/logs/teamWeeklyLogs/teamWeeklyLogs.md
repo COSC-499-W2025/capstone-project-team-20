@@ -461,7 +461,7 @@ I also tested and reviewed my own code (both manually and with a test suite), an
 
 - Necmi Kaan Sapoglu (17014796): 
 
-- Lex Nash (84668540): 
+- Lex Nash (84668540): This week I added the ability for the user to edit the resume score as well as the date created and last modified date for projects already in the database. More edits can be added to this new option in future, but was mainly designed to be able to encompass the "correct project chronology" and "reorder project rankings" requirements of Milestone 2. PR: [COSC-499-W2025/capstone-project-team-20#292](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/292)
 
 - Dylan Alexander (16394025): This week I followed up on last week's incremental PR for the resume generation feature. Resume generation is now fully functional. Resumes can be generated from the ProjectAnalyzer menu (from an existing Report object), and exported to PDF. I also reviewed PR #340.
 
