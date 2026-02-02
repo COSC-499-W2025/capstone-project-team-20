@@ -32,6 +32,7 @@ from src.analyzers.RepoProjectBuilder import RepoProjectBuilder
 from utils.file_hashing import compute_file_hash
 from src.exporters.ReportExporter import ReportExporter
 from src.managers.ReportManager import ReportManager
+from src.services.InsightEditor import InsightEditor
 
 MIN_DISPLAY_CONFIDENCE = 0.5  # only show skills with at least this confidence
 
@@ -559,6 +560,11 @@ class ProjectAnalyzer:
         project.summary = gen.generate_project_summary()
         project.portfolio_entry = gen.generate_portfolio_entry()
 
+        print("\nGenerated Portfolio Entry:\n")
+        print(project.portfolio_entry)
+
+        project.portfolio_entry = self.edit_portfolio_entry_cli(project.portfolio_entry)
+
         self.project_manager.set(project)
         print(f"\nGenerated and saved insights for {project.name}:")
         gen.display_insights(project.bullets, project.summary, project.portfolio_entry)
@@ -635,6 +641,76 @@ class ProjectAnalyzer:
             except ValueError:
                 print("Invalid input. Please enter a number.")
                 continue
+    
+    def edit_portfolio_entry_cli(self, entry: str) -> str:
+        parts = InsightEditor.parse_portfolio_entry(entry)
+
+        while True:
+            print("\nEdit Menu:")
+            print("1) Role/Timeline line")
+            print("2) Technologies line")
+            print("3) Project Overview")
+            print("4) Achievements")
+            print("5) Done")
+            choice = input("> ").strip()
+
+            if choice == "1":
+                print(f"\nCurrent:\n{parts.role_line}")
+                new_val = input("New (Enter to keep): ").rstrip()
+                if new_val:
+                    if "**Role:**" not in new_val or "**Timeline:**" not in new_val:
+                        print("\nPlease keep the format like:")
+                        print("**Role:** <something> | **Timeline:** <something>")
+                        print("Example: **Role:** Team Contributor (Team of 7) | **Timeline:** 25 days")
+                    else:
+                        parts.role_line = new_val
+
+            elif choice == "2":
+                print(f"\nCurrent:\n{parts.tech_line}")
+                new_val = input("New (Enter to keep): ").rstrip()
+                if new_val:
+                    parts.tech_line = new_val
+
+            elif choice == "3":
+                print(f"\nCurrent:\n{parts.overview}")
+                new_val = input("New (Enter to keep): ").rstrip()
+                if new_val:
+                    parts.overview = new_val
+
+            elif choice == "4":
+                print("\nCurrent achievements:")
+                for i, a in enumerate(parts.achievements, 1):
+                    print(f"  {i}. {a}")
+                print("Type a number to edit, 'a' to add, 'd' to delete, or Enter to go back.")
+                sub = input("> ").strip().lower()
+
+                if sub.isdigit():
+                    idx = int(sub) - 1
+                    if 0 <= idx < len(parts.achievements):
+                        print(f"Current: {parts.achievements[idx]}")
+                        new_a = input("New (Enter to keep): ").rstrip()
+                        if new_a:
+                            parts.achievements[idx] = new_a
+
+                elif sub == "a":
+                    new_a = input("Add achievement: ").rstrip()
+                    if new_a:
+                        parts.achievements.append(new_a)
+
+                elif sub == "d":
+                    n = input("Delete which number?: ").strip()
+                    if n.isdigit():
+                        idx = int(n) - 1
+                        if 0 <= idx < len(parts.achievements):
+                            parts.achievements.pop(idx)
+
+            elif choice == "5":
+                break
+            else:
+                print("Invalid choice.")
+
+        return InsightEditor.build_portfolio_entry(parts)
+
 
     def retrieve_previous_insights(self) -> None:
         print("\n--- Previous Resume Insights ---")
@@ -668,7 +744,34 @@ class ProjectAnalyzer:
             print("-" * 50 + "\n")
 
         print(f"Total Projects in Portfolio: {len(portfolio_projects)}\n")
+        edit = input("Would you like to edit one of these entries? (y/n): ").strip().lower()
+        if edit != "y":
+            return
 
+        print("\nSelect a project to edit:")
+        for i, p in enumerate(portfolio_projects, 1):
+            print(f"  {i}: {p.name}")
+
+        choice = input(f"Enter your choice (1-{len(portfolio_projects)}), or 'q' to cancel: ").strip().lower()
+        if choice == "q":
+            return
+
+        try:
+            idx = int(choice) - 1
+            if not (0 <= idx < len(portfolio_projects)):
+                print("Invalid selection.")
+                return
+        except ValueError:
+            print("Invalid input.")
+            return
+
+        project = portfolio_projects[idx]
+
+        project.portfolio_entry = self.edit_portfolio_entry_cli(project.portfolio_entry)
+
+        self.project_manager.set(project)
+        self.cached_projects = []  # refresh cache each time
+        print("\nSaved updated portfolio entry.\n")
 
     def delete_previous_insights(self) -> None:
         """Deletes the stored resume insights for a user-selected project."""
