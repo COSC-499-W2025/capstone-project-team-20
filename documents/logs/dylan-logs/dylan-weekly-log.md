@@ -2,7 +2,8 @@
 
 ### **Table of Contents:**
 
-- [Term 2 Week 3: January 12th - January 18th](#term-2-week-3-january-19th---january-25th)
+- [Term 2 Week 4: January 26th - February 1st](#term-2-week-4-january-26th---february-1st)
+- [Term 2 Week 3: January 19th - January 26th](#term-2-week-3-january-19th---january-25th)
 - [Term 2 Week 2: January 12th - January 18th](#term-2-week-2-january-12th---january-18th)
 - [Term 1 Week 14: December 1st - December 7th](#term-1-week-14-december-1st---december-7th)
 - [Term 1 Week 13: November 24th - November 30th](#term-1-week-13-november-24th---november-30th)
@@ -337,5 +338,42 @@ In the upcoming week, I intend to continue working on the resume generation feat
 **Any issues or Blockers That I Encountered This Week and How I Addressed/Plan to Address Them:**
 
 N/A
+
+### Term 2 Week 4: January 26th - February 1at
+**Screenshot of Peer Testing 1:**
+
+![Peer Testing 1 - Team 11](images/peer-testing-1-team-11.png)
+![Peer Testing 1 - Team 17](images/peer-testing-1-team-17.png)
+
+**Coding Tasks:**
+
+This week I followed up on last week's incremental PR for the resume generation feature. Resume generation is now fully functional. Resumes can be generated from the ProjectAnalyzer menu (from an existing Report object), and exported to PDF.
+
+[Feature/Resume Generation - 2](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/348)
+
+**Testing or Debugging Tasks:**
+I wrote extensive unit tests for my PR this week, linked above.
+
+**Reviewing or Collaboration Tasks:**
+
+I manually tested and reviewed the following PRs this week. 
+
+[Feature/edit info about portfolio items (M2 R27)](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/340)
+
+
+**Brief Description of Last Week Connecting This Week:**
+
+Last week, I implemented a LaTeX resume template, allowing for the input of dynamic variables (using Jinja2), and implementing the ReportExporter class which will enable resume generation. 
+
+This week I completed the resume generation feature, which is now fully functional. Resumes can now be generated and exported to PDF.
+
+**Plan/Goals for Upcoming Week:**
+
+In the upcoming week, I intend to add features that will allow the user to create Report objects, and set configs such as name, phone number, and email (both of which are prerequisites for generating a resume)
+
+**Any issues or Blockers That I Encountered This Week and How I Addressed/Plan to Address Them:**
+
+N/A
+
 
 
