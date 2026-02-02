@@ -253,3 +253,27 @@ Next week, I plan to continue refining the upload experience from the UI/API int
 
 **Any issues or Blockers That I Encountered This Week and How I Addressed/Plan to Address Them:**
 The main blocker was aligning on the final upload behavior and how we should handle retries across clients. I documented the expected behavior and plan to validate it with the team during our next sync so the feature remains consistent across the stack.
+
+### Term 2 Week 4: January 26th–February 1st
+
+### Weekly Goals
+
+This week, I focused on responding to feedback from peer testing by expanding the badges feature and improving overall user interactivity. I also began developing a “yearly wrapped”-style summary feature that highlights and shares user coding activity. In addition, I reviewed PR #340 and helping ensure consistency across recent changes.
+
+**Coding Tasks:**  
+I worked on extending the existing badges system by designing additional badge categories and refining the logic behind how users earn achievements. This involved identifying key user actions that should be rewarded and mapping those actions to clear progression milestones. I also started early development on the yearly wrapped-style summary feature by outlining the required data structures and experimenting with how activity metrics could be aggregated into meaningful summaries.
+
+**Testing Tasks:**  
+I performed manual testing on the updated badges logic to confirm that achievements were being triggered correctly under different usage scenarios, while I am still working on the development and a pr hasn't been made yet.
+
+**Reviewing or Collaboration Tasks:**  
+I reviewed PR #340, focusing on code quality, maintainability, and alignment with existing project conventions. I left feedback on areas that could be simplified or made more consistent with the current architecture.
+
+**Brief Description of Last Week Connecting This Week:**  
+Last week focused on stabilizing the incremental upload pipeline and supporting peer review efforts. Building on that foundation, this week shifted toward improving user-facing features and incorporating peer testing feedback to make the platform more engaging and interactive.
+
+**Plan/Goals for Upcoming Week:**  
+Next week, I plan to continue developing the yearly wrapped-style summary feature and further refine the expanded badges system. I also aim to address any remaining feedback from PR reviews and assist the team with final integration tasks leading up to Milestone 2 evaluation.
+
+**Any Issues or Blockers That I Encountered This Week and How I Addressed/Plan to Address Them:**  
+One challenge this week was that I was unable to attend the peer review session, but convened with my group to learn about the feedback that we had received from it, in order to make effective changes in the future.
