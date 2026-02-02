@@ -292,3 +292,27 @@ The main challenge was a data persistence bug where portfolio entries appeared t
 
 ### Looking Ahead:
 With the portfolio feature now stable, the immediate plan is to prepare for the upcoming peer testing on Wednesday. After that, the focus will shift to expanding our LaTeX functionality to enable users to generate and export their resumes or portfolios as PDF documents.
+
+# Term 2 Week 4: Jan 27 - Feb 2
+
+### Tasks worked on:
+- **Peer Testing**: I ran peer testing sessions this week to see how users interacted with our app. I gathered feedback on what was working and what wasn't.
+- **Feedback Analysis & Issue Creation**: I analyzed the notes from the testing sessions and created new GitHub issues to track the problems we found. This included:
+    - **Issue #343**: Making the CLI menu easier to navigate.
+    - **Issue #344**: Expand Badge System with More Achievements
+    - **Issue #345**: Improving error handling for missing user data.
+
+### Weekly Goals Recap:
+My goal this week was to get real-world feedback on our project and turn that feedback into a clear action plan. The testing sessions showed us exactly where users were getting stuck. Based on that, I created issues #343, #344, and #345, which will guide our work for the next sprint. We now have a solid plan based on direct user input.
+
+### PRs I reviewed this week:
+- **PR #341**: I reviewed the resume editing feature which allowed the score to be changed by the user
+
+### PRs I opened this week:
+- None. My focus was on peer testing and planning our next steps.
+
+### Problems Encountered:
+We found a few key problems during testing. Users had a hard time finding features in the menu, which shows we need to make it more intuitive. We also found a bug where the app crashes if it tries to load a user that isn't in the current dataset. These discoveries give us clear problems to solve.
+
+### Looking Ahead:
+Now that the issues are created, the plan is to start working on them. My immediate focus will be on fixing the navigation and error-handling bugs, as they have the biggest impact on the user experience.
