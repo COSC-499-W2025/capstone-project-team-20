@@ -1,6 +1,7 @@
 ## Team 20 Weekly Log
 
 ### Table of contents
+- [Term 2 Week 4(January 25th - February 1st)](#term-2-week-4-january-26th---february-1st)
 - [Term 2 Week 3(January 19th - January 25th)](#term-2-week-3-january-19th---january-25th)
 - [Term 2 Week 2 (January 12th - January 18th)](#term-2-week-2-january-12th---january-18th)
 - [Week 14 (December 1st - December 7th)](#week-14-december-1st---december-7th)
@@ -450,3 +451,40 @@ Next week, we are continuuing on tasks mentioned above (resume generation, refac
 **Test Report:**
 
 [Term 2 Week 3 Test Report](teamWeeklyLogsImages/t2_w3_test_report.png)
+
+
+### Term 2 Week 4 (January 26th - February 1st)
+
+**Work Performed:**
+- Branden Kennedy (42474551): This week, I worked on ensuring all the tests and code (both our frontend and CLI) were good and ready for Peer Testing. I edited the questionnaires as needed and made sure the process for all tasks for our peer testing was straight forward and could all be executed as desired. After Peer Testing, I completed Issue [COSC-499-W2025/capstone-project-team-20#296](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/296), Which was Requirement 27 of Milestone 2. I have PR'ed it at [PR #340](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/340). This task required one new file, edits to our ProjectAnalyzer (orchestrator class), and a full test suite, with updates to one other test file.
+I also tested and reviewed my own code (both manually and with a test suite), and reviewed [PR #341](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/341).
+
+- Necmi Kaan Sapoglu (17014796): 
+
+- Lex Nash (84668540): 
+
+- Dylan Alexander (16394025): 
+
+- Sven Annist (42486720): 
+
+**Features included in the project plan for this milestone are:**
+All issues up to and including Issue #330
+
+**Continuing tasks from last week and plan for the next week:**
+Next week, we are continuuing on tasks mentioned in work performed. We will be diving further into Milestone 2, with plans to start the front end soon enough here to get our API's attached.
+
+**Burnup chart:**
+
+[Term 2 Week 4 burnup chart](teamWeeklyLogsImages/)
+
+**Table View of Completed Tasks on Project Board:**
+
+[Term 2 Week 4 completed tasks](teamWeeklyLogsImages/)
+
+**Table View of In-Progress Tasks on Project Board:**
+
+[Term 2 Week 4 In-Progress tasks](teamWeeklyLogsImages/)
+
+**Test Report:**
+
+[Term 2 Week 4 Test Report](teamWeeklyLogsImages/)
