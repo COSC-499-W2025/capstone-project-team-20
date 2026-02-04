@@ -1081,7 +1081,86 @@ class ProjectAnalyzer:
             else:
                 print("\nFile categories not analyzed yet.")
 
+    def configure_personal_info(self) -> None:
+        """Interactive prompt to store personal info used for resume generation."""
+        print("\n===== Resume Personal Information =====")
 
+        def prompt_value(label: str, key: str) -> None:
+            current = self._config_manager.get(key, "")
+            prompt = f"{label} [{current}]: " if current else f"{label}: "
+            value = input(prompt).strip()
+            if value == "":
+                return
+            if value == "-":
+                self._config_manager.set(key, "")
+                return
+            self._config_manager.set(key, value)
+
+        def prompt_yes_no(prompt: str) -> bool:
+            while True:
+                choice = input(prompt).strip().lower()
+                if choice in {"y", "yes"}:
+                    return True
+                if choice in {"n", "no"}:
+                    return False
+                print("Please enter y or n.")
+
+        prompt_value("Full name", "name")
+        prompt_value("Email", "email")
+        prompt_value("Phone", "phone")
+        prompt_value("GitHub username", "github")
+        prompt_value("LinkedIn handle", "linkedin")
+
+        if prompt_yes_no("Update education history? (y/n): "):
+            education_entries = []
+            while True:
+                add_entry = prompt_yes_no("Add an education entry? (y/n): ")
+                if not add_entry:
+                    break
+                school = input("  School: ").strip()
+                location = input("  Location: ").strip()
+                degree = input("  Degree: ").strip()
+                dates = input("  Dates (e.g., 2019 - 2023): ").strip()
+                if not any([school, location, degree, dates]):
+                    print("  Skipping empty entry.")
+                    continue
+                education_entries.append(
+                    {
+                        "school": school,
+                        "location": location,
+                        "degree": degree,
+                        "dates": dates,
+                    }
+                )
+            self._config_manager.set("education", education_entries)
+
+        if prompt_yes_no("Update experience history? (y/n): "):
+            experience_entries = []
+            while True:
+                add_entry = prompt_yes_no("Add an experience entry? (y/n): ")
+                if not add_entry:
+                    break
+                title = input("  Title: ").strip()
+                company = input("  Company: ").strip()
+                location = input("  Location: ").strip()
+                dates = input("  Dates (e.g., Jun 2022 - Present): ").strip()
+                bullets_raw = input("  Bullets (separate with ;): ").strip()
+                bullets = [b.strip() for b in bullets_raw.split(";") if b.strip()]
+                if not any([title, company, location, dates, bullets]):
+                    print("  Skipping empty entry.")
+                    continue
+                experience_entries.append(
+                    {
+                        "title": title,
+                        "company": company,
+                        "location": location,
+                        "dates": dates,
+                        "bullets": bullets,
+                    }
+                )
+            self._config_manager.set("experience", experience_entries)
+
+        print("Resume personal information saved.\n")
 
     def run(self) -> None:
         """The main interactive menu loop."""
