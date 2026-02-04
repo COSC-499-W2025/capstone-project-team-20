@@ -1,11 +1,16 @@
 
 import io
+import sys
 import zipfile
 from pathlib import Path
 from contextlib import redirect_stdout, redirect_stderr
 import atexit
 
 import streamlit as st
+
+ROOT_DIR = Path(__file__).resolve().parents[2]
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
 
 from src.analyzers.ProjectAnalyzer import ProjectAnalyzer
 from src.managers.ConfigManager import ConfigManager
