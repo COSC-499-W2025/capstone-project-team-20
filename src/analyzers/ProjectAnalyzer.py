@@ -857,16 +857,7 @@ class ProjectAnalyzer:
         }
         sort_by = sort_map.get(sort_choice, "resume_score")
 
-        report_projects = []
-        for p in selected_projects:
-            report_projects.append(
-                ReportProject(
-                    project_name=p.name,
-                    resume_score=p.resume_score,
-                    date_created=p.date_created,
-                    last_modified=p.last_modified,
-                )
-            )
+        report_projects = [ReportProject.from_project(p) for p in selected_projects]
 
         report = Report(
             id=None,

@@ -31,7 +31,10 @@ class ReportExporter:
         latex_content = template_obj.render(**context)
         
         # 3. Write to .tex file
-        output_path = Path(output_path)
+        output_dir = Path("resumes")
+        output_dir.mkdir(exist_ok=True)
+        output_path = output_dir / output_path
+
         tex_path = output_path.with_suffix('.tex')
         with open(tex_path, 'w', encoding='utf-8') as f:
             f.write(latex_content)
@@ -156,14 +159,10 @@ class ReportExporter:
                     text=True,
                     cwd=tex_path.parent
                 )
-                
-                if result.returncode != 0:
-                    # Print last 20 lines of output for debugging
-                    error_lines = result.stdout.split('\n')[-20:]
-                    raise RuntimeError(
-                        f"pdflatex failed:\n" + '\n'.join(error_lines)
-                    )
-            
+
+            if "! LaTeX Error:" in result.stdout or "! Package" in result.stdout:
+                raise RuntimeError("LaTeX compilation failed:\n" + result.stdout)
+ 
             # Move generated PDF to desired location
             generated_pdf = tex_path.with_suffix('.pdf')
             if generated_pdf != output_path:
