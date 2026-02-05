@@ -1189,6 +1189,7 @@ class ProjectAnalyzer:
                 15. Analyze Badges
                 16. Retrieve Full Portfolio (Aggregated)
                 17. Exit
+                18. Enter Resume Personal Information
                 20. Generate Resume
                   """)
 
@@ -1206,8 +1207,8 @@ class ProjectAnalyzer:
                 "9": self.analyze_skills, "10": self.generate_resume_insights,
                 "11": self.retrieve_previous_insights, "12": self.delete_previous_insights,
                 "13": self.display_analysis_results, "14": self.display_project_timeline,
-                "15": self.analyze_badges, "16": self.retrieve_full_portfolio,
-                "20": self.trigger_resume_generation,
+                "15": self.analyze_badges, "16": self.retrieve_full_portfolio, 
+                "18": self.configure_personal_info, "20": self.trigger_resume_generation,
             }
 
             if choice == "17":
