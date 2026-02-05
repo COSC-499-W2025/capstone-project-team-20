@@ -23,6 +23,8 @@ from utils.RepoFinder import RepoFinder
 from src.managers.ProjectManager import ProjectManager
 from src.managers.FileHashManager import FileHashManager
 from src.models.Project import Project
+from src.models.Report import Report
+from src.models.ReportProject import ReportProject
 from src.ProjectFolder import ProjectFolder
 from src.analyzers.SkillAnalyzer import SkillAnalyzer
 from src.generators.ResumeInsightsGenerator import ResumeInsightsGenerator
@@ -798,9 +800,10 @@ class ProjectAnalyzer:
         scored = [p for p in projects if p.resume_score > 0]
         return sorted(scored, key=lambda p: p.resume_score, reverse=True)
 
-    def display_ranked_projects(self) -> None:
+    def display_ranked_projects(self,sorted_projects=None) -> None:
         """Display all scored projects sorted by resume score."""
-        sorted_projects = self.get_projects_sorted_by_score()
+        if sorted_projects is None: 
+            sorted_projects = self.get_projects_sorted_by_score()
         if not sorted_projects:
             print("\nNo projects with calculated scores to display.")
             return
@@ -814,8 +817,101 @@ class ProjectAnalyzer:
         for root in self.root_folders: print(toString(root))
 
     def create_report(self):
+        """Allow the user to select projects and create a report object."""
         sorted_projects = self.get_projects_sorted_by_score()
-        print("\n Please select which projects you'd like included in the report.")
+
+        if not sorted_projects:
+            print("\nNo scored projects available to include in a report.")
+            return
+
+        print("\n--- Create Report ---")
+        print("\nPlease select which projects you'd like included in the report.")
+
+        selected_projects = self._select_multiple_projects(sorted_projects)
+        if selected_projects is None:
+            print("\nReturning to main menu.")
+            return
+
+        # Title input
+        print("\nEnter a title for your report (or press Enter for default):")
+        title = input("Title: ").strip()
+        if not title:
+            title = "My Project Report"
+
+        # Sort-by selection
+        print("\nSelect sorting method for the report:")
+        print("  1: Resume Score (default)")
+        print("  2: Date Created")
+        print("  3: Last Modified")
+        print("  q: Cancel")
+
+        sort_choice = input("Your choice: ").strip().lower()
+        if sort_choice == "q":
+            print("\nCancelled. Returning to main menu.")
+            return
+
+        sort_map = {
+            "1": "resume_score",
+            "2": "date_created",
+            "3": "last_modified",
+        }
+        sort_by = sort_map.get(sort_choice, "resume_score")
+
+        report_projects = []
+        for p in selected_projects:
+            report_projects.append(
+                ReportProject(
+                    project_name=p.name,
+                    resume_score=p.resume_score,
+                    date_created=p.date_created,
+                    last_modified=p.last_modified,
+                )
+            )
+
+        report = Report(
+            id=None,
+            title=title,
+            date_created=datetime.now(),
+            sort_by=sort_by,
+            projects=report_projects,
+            notes=None
+        )
+
+        print("\nReport created successfully:")
+        print(f"  Title: {report.title}")
+        print(f"  Sort By: {report.sort_by}")
+        print(f"  Included Projects: {[p.project_name for p in report_projects]}\n")
+
+        self.report_manager.create_report(report)
+
+
+    
+    def _select_multiple_projects(self, sorted_projects: List[Project]) -> Optional[List[Project]]:
+        print("\nSelect one or more projects by entering numbers separated by commas.\n")
+        print("Enter 'q' to cancel.\n")
+
+        for i, proj in enumerate(sorted_projects, 1):
+            print(f"  {i}: {proj.name} (Score: {proj.resume_score:.2f})")
+
+        choice_str = input("\nYour selection: ").strip().lower()
+        if choice_str == "q":
+            return None
+
+        try:
+            indices = [int(x.strip()) for x in choice_str.split(",")]
+            selected = []
+            for idx in indices:
+                if 1 <= idx <= len(sorted_projects):
+                    selected.append(sorted_projects[idx - 1])
+                else:
+                    print(f"Invalid project number: {idx}")
+                    return self._select_multiple_projects(sorted_projects)
+            return selected
+        except ValueError:
+            print("Invalid input. Please enter numbers separated by commas.")
+            return self._select_multiple_projects(sorted_projects)
+
+
         
     
     def trigger_resume_generation(self) -> Optional[Path]:
@@ -1115,6 +1211,7 @@ class ProjectAnalyzer:
                 15. Analyze Badges
                 16. Retrieve Full Portfolio (Aggregated)
                 17. Exit
+                19. Create Report (For Use With Resume Generation)
                 20. Generate Resume
                   """)
 
