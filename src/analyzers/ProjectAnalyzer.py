@@ -571,15 +571,7 @@ class ProjectAnalyzer:
 
     def generate_resume_insights(self) -> None:
         """Presents a menu to generate resume insights, ensuring scores are calculated first."""
-        all_projects_with_scores = self._ensure_scores_are_calculated()
-
-        scored_projects = [p for p in all_projects_with_scores if p.resume_score > 0]
-
-        if not scored_projects:
-            print("\nNo scored projects found to generate insights for. Please run 'Analyze Skills' first.")
-            return
-
-        sorted_projects = sorted(scored_projects, key=lambda p: p.resume_score, reverse=True)
+        sorted_projects = self.get_projects_sorted_by_score()
 
         while True:
             print("\n--- Generate Resume Insights ---")
@@ -798,20 +790,33 @@ class ProjectAnalyzer:
 
     def display_analysis_results(self) -> None:
         print(f"\n{'=' * 30}\n      Analysis Results\n{'=' * 30}")
-        all_projects = self._ensure_scores_are_calculated()
-        scored_projects = [p for p in all_projects if p.resume_score > 0]
+        self.display_ranked_projects()
+    
+    def get_projects_sorted_by_score(self) -> List[Project]:
+        """Return all projects with ensured resume scores, sorted descending, excluding zero-score projects."""
+        projects = self._ensure_scores_are_calculated()
+        scored = [p for p in projects if p.resume_score > 0]
+        return sorted(scored, key=lambda p: p.resume_score, reverse=True)
 
-        if not scored_projects:
+    def display_ranked_projects(self) -> None:
+        """Display all scored projects sorted by resume score."""
+        sorted_projects = self.get_projects_sorted_by_score()
+        if not sorted_projects:
             print("\nNo projects with calculated scores to display.")
             return
 
-        for project in scored_projects:
+        for project in sorted_projects:
             project.display()
 
     def print_tree(self) -> None:
         print("\n--- Project Folder Structures ---")
         if not self.root_folders: print("No project structure loaded.")
         for root in self.root_folders: print(toString(root))
+
+    def create_report(self):
+        sorted_projects = self.get_projects_sorted_by_score()
+        print("\n Please select which projects you'd like included in the report.")
+        
     
     def trigger_resume_generation(self) -> Optional[Path]:
         """
@@ -1128,7 +1133,7 @@ class ProjectAnalyzer:
                 "11": self.retrieve_previous_insights, "12": self.delete_previous_insights,
                 "13": self.display_analysis_results, "14": self.display_project_timeline,
                 "15": self.analyze_badges, "16": self.retrieve_full_portfolio,
-                "20": self.trigger_resume_generation,
+                "20": self.trigger_resume_generation, "19": self.create_report,
             }
 
             if choice == "17":
