@@ -1067,7 +1067,7 @@ class ProjectAnalyzer:
         # 3. Determine output path
         output_path = Path(output_filename)
         if not output_path.is_absolute():
-            output_path = Path.cwd() / output_path
+            output_path = Path("resumes") / output_filename
         
         # 4. Generate the PDF
         exporter = ReportExporter()
@@ -1075,13 +1075,13 @@ class ProjectAnalyzer:
             exporter.export_to_pdf(
                 report=report,
                 config_manager=self._config_manager,
-                output_path=str(output_path),
+                output_path=output_filename,
                 template="jake"  # TODO: Make this configurable
             )
         except RuntimeError as e:
             raise RuntimeError(f"Failed to generate PDF: {e}")
         
-        return output_path
+        return Path("resumes") / output_filename
         
 
 
