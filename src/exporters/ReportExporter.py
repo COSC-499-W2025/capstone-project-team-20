@@ -62,9 +62,9 @@ class ReportExporter:
         
         if unanalyzed_projects:
             raise ValueError(
-                f"Cannot generate resume: The following projects have not been analyzed:\n"
+                f"Cannot generate resume: The following projects are missing resume insights:\n"
                 f"  {', '.join(unanalyzed_projects)}\n\n"
-                f"Please run 'analyze_skills' on these projects before generating a resume."
+                f"Please run 'Generate Resume Insights' on these projects before generating a resume."
             )
     
     def _build_context(self, report, config_manager):
