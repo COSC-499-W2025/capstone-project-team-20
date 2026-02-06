@@ -83,11 +83,8 @@ class ReportExporter:
         linkedin_url = f"https://linkedin.com/in/{linkedin}" if linkedin else ""
         linkedin_display = f"linkedin.com/in/{linkedin}" if linkedin else ""
         
-        # TODO: Allow user to input this
-        education = []
-        
-        # TODO: Allow user to input this
-        experience = []
+        education = config_manager.get("education", []) or []
+        experience = config_manager.get("experience", []) or []
         
         # Projects from report
         projects = []
