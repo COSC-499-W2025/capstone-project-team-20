@@ -23,6 +23,8 @@ from utils.RepoFinder import RepoFinder
 from src.managers.ProjectManager import ProjectManager
 from src.managers.FileHashManager import FileHashManager
 from src.models.Project import Project
+from src.models.Report import Report
+from src.models.ReportProject import ReportProject
 from src.ProjectFolder import ProjectFolder
 from src.analyzers.SkillAnalyzer import SkillAnalyzer
 from src.generators.ResumeInsightsGenerator import ResumeInsightsGenerator
@@ -571,15 +573,7 @@ class ProjectAnalyzer:
 
     def generate_resume_insights(self) -> None:
         """Presents a menu to generate resume insights, ensuring scores are calculated first."""
-        all_projects_with_scores = self._ensure_scores_are_calculated()
-
-        scored_projects = [p for p in all_projects_with_scores if p.resume_score > 0]
-
-        if not scored_projects:
-            print("\nNo scored projects found to generate insights for. Please run 'Analyze Skills' first.")
-            return
-
-        sorted_projects = sorted(scored_projects, key=lambda p: p.resume_score, reverse=True)
+        sorted_projects = self.get_projects_sorted_by_score()
 
         while True:
             print("\n--- Generate Resume Insights ---")
@@ -798,20 +792,118 @@ class ProjectAnalyzer:
 
     def display_analysis_results(self) -> None:
         print(f"\n{'=' * 30}\n      Analysis Results\n{'=' * 30}")
-        all_projects = self._ensure_scores_are_calculated()
-        scored_projects = [p for p in all_projects if p.resume_score > 0]
+        self.display_ranked_projects()
+    
+    def get_projects_sorted_by_score(self) -> List[Project]:
+        """Return all projects with ensured resume scores, sorted descending, excluding zero-score projects."""
+        projects = self._ensure_scores_are_calculated()
+        scored = [p for p in projects if p.resume_score > 0]
+        return sorted(scored, key=lambda p: p.resume_score, reverse=True)
 
-        if not scored_projects:
+    def display_ranked_projects(self,sorted_projects=None) -> None:
+        """Display all scored projects sorted by resume score."""
+        if sorted_projects is None: 
+            sorted_projects = self.get_projects_sorted_by_score()
+        if not sorted_projects:
             print("\nNo projects with calculated scores to display.")
             return
 
-        for project in scored_projects:
+        for project in sorted_projects:
             project.display()
 
     def print_tree(self) -> None:
         print("\n--- Project Folder Structures ---")
         if not self.root_folders: print("No project structure loaded.")
         for root in self.root_folders: print(toString(root))
+
+    def create_report(self):
+        """Allow the user to select projects and create a report object."""
+        sorted_projects = self.get_projects_sorted_by_score()
+
+        if not sorted_projects:
+            print("\nNo scored projects available to include in a report.")
+            return
+
+        print("\n--- Create Report ---")
+        print("\nPlease select which projects you'd like included in the report.")
+
+        selected_projects = self._select_multiple_projects(sorted_projects)
+        if selected_projects is None:
+            print("\nReturning to main menu.")
+            return
+
+        # Title input
+        print("\nEnter a title for your report (or press Enter for default):")
+        title = input("Title: ").strip()
+        if not title:
+            title = "My Project Report"
+
+        # Sort-by selection
+        print("\nSelect sorting method for the report:")
+        print("  1: Resume Score (default)")
+        print("  2: Date Created")
+        print("  3: Last Modified")
+        print("  q: Cancel")
+
+        sort_choice = input("Your choice: ").strip().lower()
+        if sort_choice == "q":
+            print("\nCancelled. Returning to main menu.")
+            return
+
+        sort_map = {
+            "1": "resume_score",
+            "2": "date_created",
+            "3": "last_modified",
+        }
+        sort_by = sort_map.get(sort_choice, "resume_score")
+
+        report_projects = [ReportProject.from_project(p) for p in selected_projects]
+
+        report = Report(
+            id=None,
+            title=title,
+            date_created=datetime.now(),
+            sort_by=sort_by,
+            projects=report_projects,
+            notes=None
+        )
+
+        print("\nReport created successfully:")
+        print(f"  Title: {report.title}")
+        print(f"  Sort By: {report.sort_by}")
+        print(f"  Included Projects: {[p.project_name for p in report_projects]}\n")
+
+        self.report_manager.create_report(report)
+
+
+    
+    def _select_multiple_projects(self, sorted_projects: List[Project]) -> Optional[List[Project]]:
+        print("\nSelect one or more projects by entering numbers separated by commas.\n")
+        print("Enter 'q' to cancel.\n")
+
+        for i, proj in enumerate(sorted_projects, 1):
+            print(f"  {i}: {proj.name} (Score: {proj.resume_score:.2f})")
+
+        choice_str = input("\nYour selection: ").strip().lower()
+        if choice_str == "q":
+            return None
+
+        try:
+            indices = [int(x.strip()) for x in choice_str.split(",")]
+            selected = []
+            for idx in indices:
+                if 1 <= idx <= len(sorted_projects):
+                    selected.append(sorted_projects[idx - 1])
+                else:
+                    print(f"Invalid project number: {idx}")
+                    return self._select_multiple_projects(sorted_projects)
+            return selected
+        except ValueError:
+            print("Invalid input. Please enter numbers separated by commas.")
+            return self._select_multiple_projects(sorted_projects)
+
+
+        
     
     def trigger_resume_generation(self) -> Optional[Path]:
         """
@@ -975,7 +1067,7 @@ class ProjectAnalyzer:
         # 3. Determine output path
         output_path = Path(output_filename)
         if not output_path.is_absolute():
-            output_path = Path.cwd() / output_path
+            output_path = Path("resumes") / output_filename
         
         # 4. Generate the PDF
         exporter = ReportExporter()
@@ -983,13 +1075,13 @@ class ProjectAnalyzer:
             exporter.export_to_pdf(
                 report=report,
                 config_manager=self._config_manager,
-                output_path=str(output_path),
+                output_path=output_filename,
                 template="jake"  # TODO: Make this configurable
             )
         except RuntimeError as e:
             raise RuntimeError(f"Failed to generate PDF: {e}")
         
-        return output_path
+        return Path("resumes") / output_filename
         
 
 
@@ -1190,6 +1282,7 @@ class ProjectAnalyzer:
                 16. Retrieve Full Portfolio (Aggregated)
                 17. Exit
                 18. Enter Resume Personal Information
+                19. Create Report (For Use With Resume Generation)
                 20. Generate Resume
                   """)
 
@@ -1207,8 +1300,9 @@ class ProjectAnalyzer:
                 "9": self.analyze_skills, "10": self.generate_resume_insights,
                 "11": self.retrieve_previous_insights, "12": self.delete_previous_insights,
                 "13": self.display_analysis_results, "14": self.display_project_timeline,
-                "15": self.analyze_badges, "16": self.retrieve_full_portfolio, 
-                "18": self.configure_personal_info, "20": self.trigger_resume_generation,
+                "15": self.analyze_badges, "16": self.retrieve_full_portfolio,
+                "18": self.configure_personal_info, "19": self.create_report,
+                "20": self.trigger_resume_generation,
             }
 
             if choice == "17":

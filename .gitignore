@@ -56,3 +56,6 @@ build/
 # Test-repo specific directories
 cloned_repos/
 zipped_repos/
+
+# Resumes and Resume artifacts
+resumes/

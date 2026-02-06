@@ -23,6 +23,9 @@ class ReportExporter:
             output_path: Where to save PDF (e.g., "resume.pdf")
             template: Template name (default: "jake")
         """
+        # VALIDATION: Check if projects have been analyzed
+        self._validate_projects_analyzed(report)
+        
         # 1. Prepare data for template (data will be escaped in template)
         context = self._build_context(report, config_manager)
         
@@ -30,16 +33,39 @@ class ReportExporter:
         template_obj = self.env.get_template(f"{template}.tex")
         latex_content = template_obj.render(**context)
         
-        # 3. Write to .tex file
-        output_path = Path(output_path)
+        # 3. Create output directory and determine paths
+        output_dir = Path("resumes")
+        output_dir.mkdir(exist_ok=True)
+        output_path = output_dir / output_path
+        
+        # 4. Write to .tex file in resumes/ directory
         tex_path = output_path.with_suffix('.tex')
         with open(tex_path, 'w', encoding='utf-8') as f:
             f.write(latex_content)
         
-        # 4. Compile to PDF
+        # 5. Compile to PDF
         self._compile_to_pdf(tex_path, output_path)
         
         print(f"✅ Resume exported to {output_path}")
+    
+    def _validate_projects_analyzed(self, report):
+        """
+        Validate that all projects in the report have been analyzed.
+        Raises ValueError if any project is missing bullets or skills.
+        """
+        unanalyzed_projects = []
+        
+        for proj in report.projects:
+            # Check if project has bullets and languages/frameworks
+            if not proj.bullets or (not proj.languages and not proj.frameworks):
+                unanalyzed_projects.append(proj.project_name)
+        
+        if unanalyzed_projects:
+            raise ValueError(
+                f"Cannot generate resume: The following projects are missing resume insights:\n"
+                f"  {', '.join(unanalyzed_projects)}\n\n"
+                f"Please run 'Generate Resume Insights' on these projects before generating a resume."
+            )
     
     def _build_context(self, report, config_manager):
         """Build the data dictionary for the template"""
@@ -139,34 +165,32 @@ class ReportExporter:
         return text
     
     def _compile_to_pdf(self, tex_path, output_path):
-        """Run pdflatex to compile .tex to .pdf"""
+        """Run pdflatex to compile .tex to .pdf - keeps all files in resumes/ directory"""
         try:
             # Convert to absolute paths
             tex_path = tex_path.resolve()
             output_path = output_path.resolve()
+            output_dir = tex_path.parent  # This should be resumes/
             
-            # Run pdflatex twice for proper formatting (first pass for references)
+            # Run pdflatex in the resumes/ directory (where .tex file is)
+            # This ensures all auxiliary files are created there
             for _ in range(2):
                 result = subprocess.run(
-                    ['pdflatex', '-interaction=nonstopmode', tex_path.name],
+                    ['pdflatex', '-interaction=nonstopmode', '-output-directory', str(output_dir), str(tex_path)],
                     capture_output=True,
                     text=True,
-                    cwd=tex_path.parent
+                    cwd=output_dir  # Run from resumes/ directory
                 )
-                
-                if result.returncode != 0:
-                    # Print last 20 lines of output for debugging
-                    error_lines = result.stdout.split('\n')[-20:]
-                    raise RuntimeError(
-                        f"pdflatex failed:\n" + '\n'.join(error_lines)
-                    )
-            
-            # Move generated PDF to desired location
+
+            if "! LaTeX Error:" in result.stdout or "! Package" in result.stdout:
+                raise RuntimeError("LaTeX compilation failed:\n" + result.stdout)
+ 
+            # PDF should already be in the right location
             generated_pdf = tex_path.with_suffix('.pdf')
             if generated_pdf != output_path:
                 shutil.move(str(generated_pdf), str(output_path))
             
-            # Clean up auxiliary files
+            # Clean up auxiliary files from resumes/ directory
             for ext in ['.aux', '.log', '.out']:
                 aux_file = tex_path.with_suffix(ext)
                 if aux_file.exists():
