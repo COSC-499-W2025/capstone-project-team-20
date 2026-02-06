@@ -277,3 +277,26 @@ Next week, I plan to continue developing the yearly wrapped-style summary featur
 
 **Any Issues or Blockers That I Encountered This Week and How I Addressed/Plan to Address Them:**  
 One challenge this week was that I was unable to attend the peer review session, but convened with my group to learn about the feedback that we had received from it, in order to make effective changes in the future.
+
+### Term 2 Week 5: February 2nd – February 8th
+
+### Weekly Goals
+
+This week, I finished up expanding the badges system, adding more badges, as well as improving the detection of badges to normalize the values used, as to make the system less likely to make mistakes. I also helped in creating a manual editing section for users to add their education, past work experiences, and other information that would be relevant to put into a resume.
+
+**Coding Tasks:**  
+I finished extending the existing badges system by designing additional badge categories and refining the logic behind how users earn achievements. This involved identifying key user actions that should be rewarded and mapping those actions to clear progression milestones. I also implemented a manual editing style for the resume information, so that the users could include their past education and work experiences to their resumes. I connected this to the API that was present in Dylan's work, beforehand, and he helped me make sure that this addition was implemented accurately to his code.
+
+**Testing Tasks:**  
+I performed manual testing on the updated badges logic to confirm that achievements were being triggered correctly under different usage scenarios. And tested the manual profile information addition on the minimal frontend we have right now. As well as testing some PRs that I had reviewed, that were assigned to me this week.
+
+**Reviewing or Collaboration Tasks:**  
+I reviewed PR #340, and #319 focusing on code quality, maintainability, and alignment with existing project conventions. I left feedback on areas that could be simplified or made more consistent with the current architecture.
+
+**Brief Description of Last Week Connecting This Week:**  
+Last week I had started expanding on the badges feature, which I completed this week.
+
+**Plan/Goals for Upcoming Week:**  
+Next week, I plan to continue developing the yearly wrapped-style summary feature. I also aim to address any remaining feedback from PR reviews and assist the team with final integration tasks leading up to Milestone 2 evaluation.
+
+**Any Issues or Blockers That I Encountered This Week and How I Addressed/Plan to Address Them:**  
