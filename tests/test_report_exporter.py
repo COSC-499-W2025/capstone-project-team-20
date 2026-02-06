@@ -5,6 +5,8 @@ from unittest.mock import Mock, MagicMock, patch, mock_open
 import subprocess
 from jinja2 import Environment, FileSystemLoader
 from src.exporters.ReportExporter import ReportExporter
+from src.models.Report import Report
+from src.models.ReportProject import ReportProject
 
 
 class TestReportExporter:
@@ -584,6 +586,46 @@ Email: {{ email | escape_latex }}
         assert "john.doe@example.com" in rendered
         assert rendered.strip().startswith("\\documentclass")
 
+class TestTemplateRendering:
+
+    def test_validate_projects_analyzed_success(self):
+        proj = ReportProject(
+            project_name="good",
+            bullets=["x"],
+            languages=["Python"],
+            frameworks=[]
+        )
+        report = Report(None, "t", None, "resume_score", [proj], None)
+
+        ReportExporter()._validate_projects_analyzed(report)
+
+    def test_validate_projects_analyzed_missing_bullets(self):
+        proj = ReportProject(
+            project_name="bad",
+            bullets=[],
+            languages=["Python"],
+            frameworks=[]
+        )
+        report = Report(None, "t", None, "resume_score", [proj], None)
+
+        with pytest.raises(ValueError) as exc:
+            ReportExporter()._validate_projects_analyzed(report)
+
+        assert "bad" in str(exc.value)
+
+    def test_validate_projects_analyzed_missing_skills(self):
+        proj = ReportProject(
+            project_name="bad2",
+            bullets=["x"],
+            languages=[],
+            frameworks=[]
+        )
+        report = Report(None, "t", None, "resume_score", [proj], None)
+
+        with pytest.raises(ValueError) as exc:
+            ReportExporter()._validate_projects_analyzed(report)
+
+        assert "bad2" in str(exc.value)
 
 # ==================== PARAMETRIZED TESTS ====================
 
@@ -599,7 +641,6 @@ def test_escape_latex_parametrized(input_text, expected_contains):
     exporter = ReportExporter()
     result = exporter._escape_latex(input_text)
     assert expected_contains in result
-
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

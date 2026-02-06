@@ -1,16 +1,12 @@
 from datetime import datetime
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 from pathlib import Path
 import pytest
-import zipfile
 
 from src.analyzers.ProjectAnalyzer import ProjectAnalyzer
 from src.managers.ConfigManager import ConfigManager
-from src.managers.ProjectManager import ProjectManager
-from src.managers.FileHashManager import FileHashManager
-from src.models.Project import Project
-from src.ZipParser import parse_zip_to_project_folders
-from src.ProjectFolder import ProjectFolder
+from src.models.ReportProject import ReportProject
+from src.models.Report import Report
 
 
 # ============================================================
@@ -24,7 +20,6 @@ def mock_config_manager():
 
 @pytest.fixture
 def analyzer_base(mock_config_manager):
-    """Analyzer for non-resume tests."""
     dummy_zip = Path("/dummy/path.zip")
     return ProjectAnalyzer(
         config_manager=mock_config_manager,
@@ -35,7 +30,6 @@ def analyzer_base(mock_config_manager):
 
 @pytest.fixture
 def analyzer_resume(mock_config_manager):
-    """Analyzer for resume generation tests."""
     dummy_zip = Path("/dummy/path.zip")
     a = ProjectAnalyzer(
         config_manager=mock_config_manager,
@@ -54,6 +48,7 @@ def sample_report():
             self.languages = ["Python"]
             self.frameworks = ["FastAPI"]
             self.resume_score = 4.5
+            self.bullets = ["a"]
 
     class R:
         def __init__(self):
@@ -65,6 +60,7 @@ def sample_report():
             self.notes = "Some notes"
 
     return R()
+
 
 # ============================================================
 # _generate_resume tests
@@ -131,8 +127,6 @@ def test_trigger_resume_generation_cancel_on_id(analyzer_resume, monkeypatch, sa
     analyzer_resume.report_manager.list_reports_summary.return_value = [
         {"id": 1, "title": "Test", "date_created": "2024-01-01T12:00:00", "project_count": 1}
     ]
-
-    # FIX: get_report must return a real report so formatting doesn't explode
     analyzer_resume.report_manager.get_report.return_value = sample_report
 
     monkeypatch.setattr("builtins.input", lambda _: "q")
@@ -141,8 +135,7 @@ def test_trigger_resume_generation_cancel_on_id(analyzer_resume, monkeypatch, sa
     assert analyzer_resume.trigger_resume_generation() is None
 
 
-
-def test_trigger_resume_generation_invalid_id_then_valid(analyzer_resume, monkeypatch, sample_report):
+def test_trigger_resume_generation_invalid_then_valid(analyzer_resume, monkeypatch, sample_report):
     analyzer_resume.report_manager.list_reports_summary.return_value = [
         {"id": 1, "title": "Test", "date_created": "2024-01-01T12:00:00", "project_count": 1}
     ]
@@ -217,8 +210,11 @@ def test_trigger_resume_generation_generate_raises_value_error(analyzer_resume, 
 
     inputs = iter(["1", "", "y"])
     monkeypatch.setattr("builtins.input", lambda _: next(inputs))
-    monkeypatch.setattr(analyzer_resume, "_generate_resume",
-                        lambda *a, **k: (_ for _ in ()).throw(ValueError("bad config")))
+    monkeypatch.setattr(
+        analyzer_resume,
+        "_generate_resume",
+        lambda *a, **k: (_ for _ in ()).throw(ValueError("bad config"))
+    )
     monkeypatch.setattr("builtins.print", lambda *a, **k: None)
 
     assert analyzer_resume.trigger_resume_generation() is None
@@ -232,8 +228,96 @@ def test_trigger_resume_generation_generate_raises_runtime_error(analyzer_resume
 
     inputs = iter(["1", "", "y"])
     monkeypatch.setattr("builtins.input", lambda _: next(inputs))
-    monkeypatch.setattr(analyzer_resume, "_generate_resume",
-                        lambda *a, **k: (_ for _ in ()).throw(RuntimeError("latex missing")))
+    monkeypatch.setattr(
+        analyzer_resume,
+        "_generate_resume",
+        lambda *a, **k: (_ for _ in ()).throw(RuntimeError("latex missing"))
+    )
     monkeypatch.setattr("builtins.print", lambda *a, **k: None)
 
     assert analyzer_resume.trigger_resume_generation() is None
+
+def test_create_report_success():
+    analyzer = MagicMock()
+    analyzer.get_projects_sorted_by_score.return_value = [
+        MagicMock(name="proj1", resume_score=80),
+        MagicMock(name="proj2", resume_score=70),
+    ]
+
+    analyzer._select_multiple_projects.return_value = [
+        MagicMock(
+            name="proj1",
+            resume_score=80,
+            bullets=["a"],
+            languages=["Python"],
+            frameworks=[],
+            date_created=datetime(2024, 1, 1),
+            last_modified=datetime(2024, 1, 2),
+        )
+    ]
+
+    analyzer.report_manager = MagicMock()
+
+    with patch("builtins.input", side_effect=["My Report", "1"]):
+        ProjectAnalyzer.create_report(analyzer)
+
+    assert analyzer.report_manager.create_report.called
+    created_report = analyzer.report_manager.create_report.call_args[0][0]
+    assert created_report.title == "My Report"
+    assert created_report.sort_by == "resume_score"
+    assert len(created_report.projects) == 1
+    assert isinstance(created_report.projects[0], ReportProject)
+
+
+def test_create_report_cancel_selection():
+    analyzer = MagicMock()
+    analyzer.get_projects_sorted_by_score.return_value = [MagicMock()]
+    analyzer._select_multiple_projects.return_value = None
+
+    with patch("builtins.input", return_value=""):
+        ProjectAnalyzer.create_report(analyzer)
+
+    analyzer.report_manager.create_report.assert_not_called()
+
+
+@pytest.fixture
+def analyzer_base():
+    return ProjectAnalyzer(
+        config_manager=MagicMock(),
+        root_folders=[],
+        zip_path=Path("/dummy.zip")
+    )
+
+
+def test_select_multiple_projects_success(analyzer_base):
+    projects = [
+        MagicMock(name="p1", resume_score=80),
+        MagicMock(name="p2", resume_score=70),
+        MagicMock(name="p3", resume_score=60),
+    ]
+
+    with patch("builtins.input", return_value="1,3"):
+        selected = analyzer_base._select_multiple_projects(projects)
+
+    assert selected == [projects[0], projects[2]]
+
+
+def test_select_multiple_projects_cancel(analyzer_base):
+    with patch("builtins.input", return_value="q"):
+        assert analyzer_base._select_multiple_projects(
+            [MagicMock(resume_score=80)]
+        ) is None
+
+
+def test_select_multiple_projects_invalid_then_valid(analyzer_base):
+    projects = [
+        MagicMock(name="p1", resume_score=80),
+        MagicMock(name="p2", resume_score=70),
+    ]
+
+    with patch("builtins.input", side_effect=["99", "1"]):
+        selected = analyzer_base._select_multiple_projects(projects)
+
+    assert selected == [projects[0]]
+
+
