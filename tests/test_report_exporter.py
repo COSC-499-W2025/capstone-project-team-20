@@ -277,20 +277,102 @@ class TestReportExporter:
         
         with pytest.raises(RuntimeError, match="pdflatex not found"):
             exporter._compile_to_pdf(tex_path, output_path)
-    
     @patch('subprocess.run')
-    def test_compile_to_pdf_compilation_error(self, mock_run, exporter, tmp_path):
-        """Test error handling when pdflatex compilation fails"""
+    @patch('shutil.move')
+    def test_compile_calls_pdflatex_twice(self, mock_move, mock_run, exporter, tmp_path):
+        """Test that pdflatex is called twice for proper formatting"""
         tex_path = tmp_path / "resume.tex"
+        tex_path.write_text("\\documentclass{article}\\begin{document}test\\end{document}")
         output_path = tmp_path / "resume.pdf"
         
+        # Create the generated PDF that pdflatex would create
+        (tmp_path / "resume.pdf").touch()
+        
         mock_run.return_value = Mock(
-            returncode=1, 
-            stdout="Error: Undefined control sequence\nLine 42",
+            returncode=0,
+            stdout="Success",
             stderr=""
         )
         
-        with pytest.raises(RuntimeError, match="pdflatex failed"):
+        exporter._compile_to_pdf(tex_path, output_path)
+        
+        # Verify pdflatex was called exactly twice
+        assert mock_run.call_count == 2
+
+
+    @patch('subprocess.run')
+    @patch('shutil.move')
+    def test_compile_uses_correct_output_directory(self, mock_move, mock_run, exporter, tmp_path):
+        """Test that pdflatex outputs to the correct directory"""
+        tex_path = tmp_path / "resume.tex"
+        tex_path.write_text("\\documentclass{article}\\begin{document}test\\end{document}")
+        output_path = tmp_path / "resume.pdf"
+        
+        (tmp_path / "resume.pdf").touch()
+        
+        mock_run.return_value = Mock(returncode=0, stdout="Success", stderr="")
+        
+        exporter._compile_to_pdf(tex_path, output_path)
+        
+        # Check the subprocess call arguments
+        call_args = mock_run.call_args[0][0]
+        assert '-output-directory' in call_args
+        # The directory should be tmp_path (where tex file is)
+        assert str(tmp_path) in call_args
+
+
+    @patch('subprocess.run')
+    def test_compile_cleans_up_aux_files(self, mock_run, exporter, tmp_path):
+        """Test that auxiliary files are deleted after compilation"""
+        tex_path = tmp_path / "resume.tex"
+        tex_path.write_text("\\documentclass{article}\\begin{document}test\\end{document}")
+        output_path = tmp_path / "resume.pdf"
+        
+        # Create auxiliary files that should be cleaned up
+        (tmp_path / "resume.aux").touch()
+        (tmp_path / "resume.log").touch()
+        (tmp_path / "resume.out").touch()
+        (tmp_path / "resume.pdf").touch()
+        
+        mock_run.return_value = Mock(returncode=0, stdout="Success", stderr="")
+        
+        exporter._compile_to_pdf(tex_path, output_path)
+        
+        # Verify aux files were deleted
+        assert not (tmp_path / "resume.aux").exists()
+        assert not (tmp_path / "resume.log").exists()
+        assert not (tmp_path / "resume.out").exists()
+        # PDF should still exist
+        assert (tmp_path / "resume.pdf").exists()
+
+
+    @patch('subprocess.run')
+    def test_compile_raises_when_pdflatex_not_found(self, mock_run, exporter, tmp_path):
+        """Test helpful error when pdflatex is not installed"""
+        tex_path = tmp_path / "resume.tex"
+        tex_path.write_text("test")
+        output_path = tmp_path / "resume.pdf"
+        
+        mock_run.side_effect = FileNotFoundError()
+        
+        with pytest.raises(RuntimeError, match="pdflatex not found"):
+            exporter._compile_to_pdf(tex_path, output_path)
+
+
+    @patch('subprocess.run')
+    def test_compile_detects_package_errors(self, mock_run, exporter, tmp_path):
+        """Test that Package errors are caught"""
+        tex_path = tmp_path / "resume.tex"
+        tex_path.write_text("test")
+        output_path = tmp_path / "resume.pdf"
+        
+        mock_run.return_value = Mock(
+            returncode=0,
+            stdout="! Package hyperref Error: Wrong driver option 'pdftex'",
+            stderr=""
+        )
+        
+        with pytest.raises(RuntimeError, match="LaTeX compilation failed"):
             exporter._compile_to_pdf(tex_path, output_path)
     
     @patch.object(ReportExporter, '_compile_to_pdf')
