@@ -280,6 +280,8 @@ One challenge this week was that I was unable to attend the peer review session,
 
 ### Term 2 Week 5: February 2nd – February 8th
 
+![Term 2 Week 5 Log](imagesForKaanLogs/T2_W3_SS.png)
+
 ### Weekly Goals
 
 This week, I finished up expanding the badges system, adding more badges, as well as improving the detection of badges to normalize the values used, as to make the system less likely to make mistakes. I also helped in creating a manual editing section for users to add their education, past work experiences, and other information that would be relevant to put into a resume.
