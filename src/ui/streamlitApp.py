@@ -1,11 +1,16 @@
 
 import io
+import sys
 import zipfile
 from pathlib import Path
 from contextlib import redirect_stdout, redirect_stderr
 import atexit
 
 import streamlit as st
+
+ROOT_DIR = Path(__file__).resolve().parents[2]
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
 
 from src.analyzers.ProjectAnalyzer import ProjectAnalyzer
 from src.managers.ConfigManager import ConfigManager
@@ -80,7 +85,8 @@ OPTIONS = {
     13: "Display Previous Portfolio Information",
     14: "Show Project Timeline (Projects & Skills)",
     15: "Analyze Badges",
-    16: "Exit",
+    16: "Enter Resume Personal Information",
+    17: "Exit",
 }
 
 
@@ -96,6 +102,86 @@ def capture_output(fn) -> str:
         except Exception as e:
             print(f"ERROR: {type(e).__name__}: {e}")
     return buf.getvalue()
+
+def parse_education_lines(raw: str) -> list[dict]:
+    entries: list[dict] = []
+    for line in raw.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        parts = [part.strip() for part in line.split("|")]
+        while len(parts) < 4:
+            parts.append("")
+        school, location, degree, dates = parts[:4]
+        if any([school, location, degree, dates]):
+            entries.append(
+                {
+                    "school": school,
+                    "location": location,
+                    "degree": degree,
+                    "dates": dates,
+                }
+            )
+    return entries
+
+
+def parse_experience_lines(raw: str) -> list[dict]:
+    entries: list[dict] = []
+    for line in raw.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        parts = [part.strip() for part in line.split("|")]
+        while len(parts) < 5:
+            parts.append("")
+        title, company, location, dates, bullets_raw = parts[:5]
+        bullets = [b.strip() for b in bullets_raw.split(";") if b.strip()]
+        if any([title, company, location, dates, bullets]):
+            entries.append(
+                {
+                    "title": title,
+                    "company": company,
+                    "location": location,
+                    "dates": dates,
+                    "bullets": bullets,
+                }
+            )
+    return entries
+
+
+def format_education_lines(entries: list[dict]) -> str:
+    lines = []
+    for entry in entries or []:
+        lines.append(
+            " | ".join(
+                [
+                    entry.get("school", ""),
+                    entry.get("location", ""),
+                    entry.get("degree", ""),
+                    entry.get("dates", ""),
+                ]
+            ).strip()
+        )
+    return "\n".join(line for line in lines if line.strip())
+
+
+def format_experience_lines(entries: list[dict]) -> str:
+    lines = []
+    for entry in entries or []:
+        bullets = "; ".join(entry.get("bullets", []) or [])
+        lines.append(
+            " | ".join(
+                [
+                    entry.get("title", ""),
+                    entry.get("company", ""),
+                    entry.get("location", ""),
+                    entry.get("dates", ""),
+                    bullets,
+                ]
+            ).strip()
+        )
+    return "\n".join(line for line in lines if line.strip())
+
 
 
 def get_analyzer() -> ProjectAnalyzer:
@@ -284,10 +370,13 @@ with tabC:
     with r3[0]:
         if st.button("15. Badges"):
             set_choice(15)
+    with r3[1]:
+        if st.button("16. Resume Personal Info"):
+            set_choice(16)
 
 with tabD:
-    if st.button("16. Exit to Home"):
-        set_choice(16)
+    if st.button("17. Exit to Home"):
+        set_choice(17)
 
 selected = st.session_state.get("selected_option", None)
 st.markdown('<div class="pa-divider"></div>', unsafe_allow_html=True)
@@ -307,8 +396,8 @@ if selected is not None or st.session_state.get("last_output"):
             )
             st.write("")
 
-            # 16: Exit -> Home
-            if selected == 16:
+            # 17: Exit -> Home
+            if selected == 17:
                 st.success("Returning to home screen…")
                 go_home(analyzer)
 
@@ -513,6 +602,42 @@ if selected is not None or st.session_state.get("last_output"):
 
                         st.session_state.last_output = buf.getvalue()
                         st.success("Badge analysis complete (see Output panel).")
+
+            # 16: Resume personal information
+            elif selected == 16:
+                st.subheader("Resume Personal Information")
+                st.caption("Use | to separate fields. Use ; to separate bullets.")
+
+                current_education = analyzer._config_manager.get("education", []) or []
+                current_experience = analyzer._config_manager.get("experience", []) or []
+
+                name_value = st.text_input("Full name", value=analyzer._config_manager.get("name", ""))
+                email_value = st.text_input("Email", value=analyzer._config_manager.get("email", ""))
+                phone_value = st.text_input("Phone", value=analyzer._config_manager.get("phone", ""))
+                github_value = st.text_input("GitHub username", value=analyzer._config_manager.get("github", ""))
+                linkedin_value = st.text_input("LinkedIn handle", value=analyzer._config_manager.get("linkedin", ""))
+
+                education_value = st.text_area(
+                    "Education entries (School | Location | Degree | Dates)",
+                    value=format_education_lines(current_education),
+                    height=120,
+                )
+                experience_value = st.text_area(
+                    "Experience entries (Title | Company | Location | Dates | Bullet 1; Bullet 2)",
+                    value=format_experience_lines(current_experience),
+                    height=140,
+                )
+
+                if st.button("Save resume info", type="primary"):
+                    analyzer._config_manager.set("name", name_value.strip())
+                    analyzer._config_manager.set("email", email_value.strip())
+                    analyzer._config_manager.set("phone", phone_value.strip())
+                    analyzer._config_manager.set("github", github_value.strip())
+                    analyzer._config_manager.set("linkedin", linkedin_value.strip())
+                    analyzer._config_manager.set("education", parse_education_lines(education_value))
+                    analyzer._config_manager.set("experience", parse_experience_lines(experience_value))
+                    st.session_state.last_output = "Resume personal information saved."
+                    st.success("Saved.")
 
             # All other options (no input)
             else:
