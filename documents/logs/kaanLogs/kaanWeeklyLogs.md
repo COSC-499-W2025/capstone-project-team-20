@@ -280,7 +280,7 @@ One challenge this week was that I was unable to attend the peer review session,
 
 ### Term 2 Week 5: February 2nd – February 8th
 
-![Term 2 Week 5 Log](imagesForKaanLogs/T2_W3_SS.png)
+![Term 2 Week 5 Log](imagesForKaanLogs/T2_W5_SS.png)
 
 ### Weekly Goals
 
