@@ -13,6 +13,26 @@ class ReportExporter:
         # Add custom filter for LaTeX escaping
         self.env.filters['escape_latex'] = self._escape_latex
     
+    def export_context_to_pdf(self, context: dict, output_path: str = "resume.pdf", template: str = "jake"):
+        """
+        Generates a PDF resume directly from a prepared context dict.
+        Used for exporting saved variants. uses context that we passed in
+        """
+        template_obj = self.env.get_template(f"{template}.tex")
+        latex_content = template_obj.render(**context)
+
+        output_dir = Path("resumes")
+        output_dir.mkdir(exist_ok=True)
+        output_path = output_dir / output_path
+
+        tex_path = output_path.with_suffix('.tex')
+        with open(tex_path, 'w', encoding='utf-8') as f:
+            f.write(latex_content)
+
+        self._compile_to_pdf(tex_path, output_path)
+        print(f"✅ Resume exported to {output_path}")
+
+    
     def export_to_pdf(self, report, config_manager, output_path: str = "resume.pdf", template: str = "jake"):
         """
         Generate PDF resume from Report.
@@ -143,6 +163,9 @@ class ReportExporter:
     def _escape_latex(self, text):
         """Escape LaTeX special characters in user-provided text"""
         if not text:
+            return ""
+        text = str(text)
+        if text == "":
             return ""
         
         # Characters that need escaping in LaTeX
