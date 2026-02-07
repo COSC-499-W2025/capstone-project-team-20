@@ -34,6 +34,7 @@ from src.analyzers.RepoProjectBuilder import RepoProjectBuilder
 from utils.file_hashing import compute_file_hash
 from src.exporters.ReportExporter import ReportExporter
 from src.managers.ReportManager import ReportManager
+from src.managers.ResumeVariantManager import ResumeVariantManager
 from src.services.InsightEditor import InsightEditor
 
 MIN_DISPLAY_CONFIDENCE = 0.5  # only show skills with at least this confidence
@@ -1071,6 +1072,12 @@ class ProjectAnalyzer:
         
         # 4. Generate the PDF
         exporter = ReportExporter()
+
+        # Store a base snapshot of the exact context used for resume generation (for later variants)
+        variant_mgr = ResumeVariantManager(self._config_manager)
+        base_context = exporter._build_context(report, self._config_manager)
+        variant_mgr.ensure_base_snapshot(report.id, report.title, base_context)
+
         try:
             exporter.export_to_pdf(
                 report=report,
@@ -1283,7 +1290,7 @@ class ProjectAnalyzer:
                 17. Exit
                 18. Enter Resume Personal Information
                 19. Create Report (For Use With Resume Generation)
-                20. Generate Resume
+                20. Generate/Edit Resume
                   """)
 
             choice = input("Selection: ").strip()
