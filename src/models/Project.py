@@ -95,6 +95,7 @@ class Project:
     bullets: List[str] = list_field()
     summary: str = ""
     portfolio_entry: str = ""  # Narrative style entry for portfolios
+    thumbnail: Optional[str] = None # Path to thumbnail image
 
     # Scoring for ranking projects against one another
     resume_score: float = 0.0
