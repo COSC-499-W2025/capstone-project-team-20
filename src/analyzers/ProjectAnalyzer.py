@@ -1159,13 +1159,36 @@ class ProjectAnalyzer:
             filename += ".pdf"
         base = filename[:-4]
         return f"{base}_updated.pdf"
+    
+    def _edit_resume_header_cli(self, ctx: Dict[str, Any]) -> None:
+        print("\n--- Edit Header ---")
+        for key in ["name", "email", "phone", "github_display", "linkedin_display"]:
+            cur = ctx.get(key, "")
+            new_val = input(f"{key} [{cur}]: ").strip()
+            if new_val:
+                ctx[key] = new_val
+
+    def _edit_project_info_cli(self, proj: Dict[str, Any]) -> None:
+        print(f"\n--- Edit Project Info: {proj.get('name','Project')} ---")
+        for key in ["name", "stack", "dates"]:
+            cur = proj.get(key, "")
+            new_val = input(f"{key} [{cur}]: ").strip()
+            if new_val:
+                proj[key] = new_val
+
 
     def _edit_resume_variant_cli(self, base_context: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Minimal editor for resume variants:
-        - Edit project bullets only (for now)
-        Returns a NEW edited context dict (does not mutate input).
+        Interactive editor for creating resume variants.
+
+        Allows editing of:
+        - Resume header (name, email, phone, GitHub, LinkedIn)
+        - Project information (name, tech stack, dates)
+        - Project bullet points (add, edit, delete, reorder)
+
+        Returns a new edited context dictionary (does not mutate the original).
         """
+
         ctx = deepcopy(base_context)
         projects = ctx.get("projects", []) or []
         if not projects:
@@ -1174,18 +1197,52 @@ class ProjectAnalyzer:
 
         while True:
             print("\n==============================")
-            print(" Resume Variant Editor (MVP)")
+            print(" Resume Variant Editor")
             print("==============================")
-            print("Select a project to edit bullets:")
+            print("1) Edit header (name/email/phone/links)")
+            print("2) Edit project bullets")
+            print("3) Edit project info (name/stack/dates)")
+            print("q) Done")
+            top = input("> ").strip().lower()
+
+            if top == "q":
+                return ctx
+
+            if top == "1":
+                self._edit_resume_header_cli(ctx)
+                continue
+
+            if top == "3":
+                print("\nSelect a project to edit info:")
+                for i, p in enumerate(projects, 1):
+                    print(f"  {i}) {p.get('name','Project')}")
+                print("  q) Back")
+                pick = input("> ").strip().lower()
+                if pick == "q":
+                    continue
+                if not pick.isdigit():
+                    print("Please enter a number or q.")
+                    continue
+                idx = int(pick) - 1
+                if not (0 <= idx < len(projects)):
+                    print("Invalid project number.")
+                    continue
+                self._edit_project_info_cli(projects[idx])
+                ctx["projects"] = projects
+                continue
+
+            if top != "2":
+                print("Invalid selection.")
+                continue
+
+            print("\nSelect a project to edit bullets:")
             for i, p in enumerate(projects, 1):
                 print(f"  {i}) {p.get('name','Project')}")
-
-            print("  q) Done")
+            print("  q) Back")
             choice = input("> ").strip().lower()
 
             if choice == "q":
-                return ctx
-
+                continue
             if not choice.isdigit():
                 print("Please enter a number or q.")
                 continue
