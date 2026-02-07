@@ -2,6 +2,7 @@ import signal, threading
 import json, os, sys, re, shutil, contextlib, zipfile
 from pathlib import Path
 from typing import Iterable, List, Optional, Tuple, Dict, Any
+from copy import deepcopy
 
 from src.project_timeline import (
     get_projects_with_skills_timeline_from_projects,
@@ -1004,34 +1005,97 @@ class ProjectAnalyzer:
         if not filename.endswith('.pdf'):
             filename += '.pdf'
         
-        # 7. Confirm generation
-        confirm = input(f"\n✓ Generate resume as '{filename}'? (y/n): ").strip().lower()
-        
+        # 7. Confirm continue
+        confirm = input(f"\n✓ Continue with filename '{filename}'? (y/n): ").strip().lower()
         if confirm != 'y':
             print("Resume generation cancelled.")
             return None
-        
-        # 8. Generate the resume using the private method
-        print("\n⏳ Generating resume...")
-        
-        try:
-            pdf_path = self._generate_resume(report, filename)
-            print(f"\n✅ Resume successfully generated!")
-            print(f"📄 Saved to: {pdf_path}")
-            return pdf_path
-            
-        except ValueError as e:
-            print(f"\n❌ Validation Error: {e}")
-            print("💡 Tip: Make sure you've set your name, email, and phone in config.")
-            return None
-            
-        except RuntimeError as e:
-            print(f"\n❌ Generation Error: {e}")
-            return None
-            
-        except Exception as e:
-            print(f"\n❌ Unexpected error: {e}")
-            return None
+
+        # Build base context (snapshot we can edit / export)
+        exporter = ReportExporter()
+        base_context = exporter._build_context(report, self._config_manager)
+
+        variant_mgr = ResumeVariantManager(self._config_manager)
+        variant_mgr.ensure_base_snapshot(report.id, report.title, base_context)
+
+        while True:
+            print("\n====================================")
+            print(" Generate / Edit Resume")
+            print("====================================")
+            print("1) Export base resume (no edits)")
+            print("2) Edit bullets + export (save as variant)")
+            print("3) Export existing variant")
+            print("4) Cancel")
+            sub = input("Selection: ").strip()
+
+            if sub == "1":
+                try:
+                    print("\n⏳ Generating base resume...")
+                    exporter.export_context_to_pdf(base_context, output_path=filename, template="jake")
+                    pdf_path = Path("resumes") / filename
+                    print(f"\n✅ Resume successfully generated!")
+                    print(f"📄 Saved to: {pdf_path}")
+                    return pdf_path
+                except Exception as e:
+                    print(f"\n❌ Export error: {e}")
+                    return None
+
+            elif sub == "2":
+                try:
+                    edited_context = self._edit_resume_variant_cli(base_context)
+                    updated_filename = self._default_updated_filename(filename)
+
+                    variant_mgr.create_variant(report.id, label="updated", context=edited_context)
+
+                    print("\n⏳ Generating edited resume...")
+                    exporter.export_context_to_pdf(edited_context, output_path=updated_filename, template="jake")
+                    pdf_path = Path("resumes") / updated_filename
+                    print(f"\n✅ Edited resume successfully generated!")
+                    print(f"📄 Saved to: {pdf_path}")
+                    return pdf_path
+                except Exception as e:
+                    print(f"\n❌ Export error: {e}")
+                    return None
+
+            elif sub == "3":
+                variants = variant_mgr.list_variants(report.id)
+                if not variants:
+                    print("No variants found for this report yet.")
+                    continue
+
+                print("\nVariants:")
+                for v in variants:
+                    print(f"  [{v['variant_id']}] {v.get('label','variant')} — {v.get('created_at','')}")
+
+                pick = input("Enter variant id to export (or q): ").strip().lower()
+                if pick == "q":
+                    continue
+                if not pick.isdigit():
+                    print("Invalid variant id.")
+                    continue
+
+                v = variant_mgr.get_variant(report.id, int(pick))
+                if not v:
+                    print("Variant not found.")
+                    continue
+
+                try:
+                    print("\n⏳ Generating variant resume...")
+                    exporter.export_context_to_pdf(v["context"], output_path=filename, template="jake")
+                    pdf_path = Path("resumes") / filename
+                    print(f"\n✅ Variant resume successfully generated!")
+                    print(f"📄 Saved to: {pdf_path}")
+                    return pdf_path
+                except Exception as e:
+                    print(f"\n❌ Export error: {e}")
+                    return None
+
+            elif sub == "4":
+                print("Cancelled.")
+                return None
+            else:
+                print("Invalid selection.")
+
     
     def _generate_resume(self, report, output_filename: str = "resume.pdf") -> Path:
         """
@@ -1090,6 +1154,109 @@ class ProjectAnalyzer:
         
         return Path("resumes") / output_filename
         
+    def _default_updated_filename(self, filename: str) -> str:
+        if not filename.lower().endswith(".pdf"):
+            filename += ".pdf"
+        base = filename[:-4]
+        return f"{base}_updated.pdf"
+
+    def _edit_resume_variant_cli(self, base_context: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Minimal editor for resume variants:
+        - Edit project bullets only (for now)
+        Returns a NEW edited context dict (does not mutate input).
+        """
+        ctx = deepcopy(base_context)
+        projects = ctx.get("projects", []) or []
+        if not projects:
+            print("No projects found to edit.")
+            return ctx
+
+        while True:
+            print("\n==============================")
+            print(" Resume Variant Editor (MVP)")
+            print("==============================")
+            print("Select a project to edit bullets:")
+            for i, p in enumerate(projects, 1):
+                print(f"  {i}) {p.get('name','Project')}")
+
+            print("  q) Done")
+            choice = input("> ").strip().lower()
+
+            if choice == "q":
+                return ctx
+
+            if not choice.isdigit():
+                print("Please enter a number or q.")
+                continue
+
+            idx = int(choice) - 1
+            if not (0 <= idx < len(projects)):
+                print("Invalid project number.")
+                continue
+
+            proj = projects[idx]
+            bullets = proj.get("bullets", []) or []
+
+            while True:
+                print(f"\n--- Bullets for {proj.get('name','Project')} ---")
+                if not bullets:
+                    print("(none)")
+                for j, b in enumerate(bullets, 1):
+                    print(f"  {j}) {b}")
+
+                print("\nOptions:")
+                print("  1) Edit bullet")
+                print("  2) Add bullet")
+                print("  3) Delete bullet")
+                print("  4) Move bullet up/down")
+                print("  5) Back to projects")
+                sub = input("> ").strip()
+
+                if sub == "1":
+                    n = input("Bullet # to edit: ").strip()
+                    if n.isdigit() and 1 <= int(n) <= len(bullets):
+                        new_txt = input("New text: ").strip()
+                        if new_txt:
+                            bullets[int(n) - 1] = new_txt
+                    else:
+                        print("Invalid bullet number.")
+
+                elif sub == "2":
+                    new_txt = input("New bullet: ").strip()
+                    if new_txt:
+                        bullets.append(new_txt)
+
+                elif sub == "3":
+                    n = input("Bullet # to delete: ").strip()
+                    if n.isdigit() and 1 <= int(n) <= len(bullets):
+                        bullets.pop(int(n) - 1)
+                    else:
+                        print("Invalid bullet number.")
+
+                elif sub == "4":
+                    n = input("Bullet # to move: ").strip()
+                    if not (n.isdigit() and 1 <= int(n) <= len(bullets)):
+                        print("Invalid bullet number.")
+                        continue
+                    direction = input("u=up, d=down: ").strip().lower()
+                    i = int(n) - 1
+                    if direction == "u" and i > 0:
+                        bullets[i - 1], bullets[i] = bullets[i], bullets[i - 1]
+                    elif direction == "d" and i < len(bullets) - 1:
+                        bullets[i + 1], bullets[i] = bullets[i], bullets[i + 1]
+                    else:
+                        print("Can't move that way.")
+
+                elif sub == "5":
+                    break
+                else:
+                    print("Invalid selection.")
+
+            # save edits back into project
+            proj["bullets"] = bullets
+            projects[idx] = proj
+            ctx["projects"] = projects
 
 
     def _cleanup_temp(self):
