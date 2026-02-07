@@ -36,6 +36,7 @@ from utils.file_hashing import compute_file_hash
 from src.exporters.ReportExporter import ReportExporter
 from src.managers.ReportManager import ReportManager
 from src.managers.ResumeVariantManager import ResumeVariantManager
+from src.services.ResumeVariantEditor import ResumeVariantEditor
 from src.services.InsightEditor import InsightEditor
 
 MIN_DISPLAY_CONFIDENCE = 0.5  # only show skills with at least this confidence
@@ -902,10 +903,7 @@ class ProjectAnalyzer:
             return selected
         except ValueError:
             print("Invalid input. Please enter numbers separated by commas.")
-            return self._select_multiple_projects(sorted_projects)
-
-
-        
+            return self._select_multiple_projects(sorted_projects) 
     
     def trigger_resume_generation(self) -> Optional[Path]:
         """
@@ -1042,7 +1040,8 @@ class ProjectAnalyzer:
 
             elif sub == "2":
                 try:
-                    edited_context = self._edit_resume_variant_cli(base_context)
+                    editor = ResumeVariantEditor()
+                    edited_context = editor.edit_variant_cli(base_context)
                     updated_filename = self._default_updated_filename(filename)
 
                     variant_mgr.create_variant(report.id, label="updated", context=edited_context)
@@ -1096,225 +1095,12 @@ class ProjectAnalyzer:
             else:
                 print("Invalid selection.")
 
-    
-    def _generate_resume(self, report, output_filename: str = "resume.pdf") -> Path:
-        """
-        Generate a PDF resume from a report object.
-        
-        Args:
-            report: Report object to export
-            output_filename: Name of the PDF file to generate (default: "resume.pdf")
-            
-        Returns:
-            Path to the generated PDF file
-            
-        Raises:
-            ValueError: If report not found or config incomplete
-            RuntimeError: If LaTeX not installed or PDF generation fails
-        """
-        # 1. Validate report has projects
-        if not report.projects:
-            raise ValueError("Cannot generate resume: report has no projects")
-        
-        # 2. Validate required config fields
-        required_fields = ["name", "email", "phone"]
-        missing_fields = [
-            field for field in required_fields 
-            if not self._config_manager.get(field)
-        ]
-        
-        if missing_fields:
-            raise ValueError(
-                f"Cannot generate resume: missing required config fields: {', '.join(missing_fields)}\n"
-                f"Please set these using the config command."
-            )
-        
-        # 3. Determine output path
-        output_path = Path(output_filename)
-        if not output_path.is_absolute():
-            output_path = Path("resumes") / output_filename
-        
-        # 4. Generate the PDF
-        exporter = ReportExporter()
-
-        # Store a base snapshot of the exact context used for resume generation (for later variants)
-        variant_mgr = ResumeVariantManager(self._config_manager)
-        base_context = exporter._build_context(report, self._config_manager)
-        variant_mgr.ensure_base_snapshot(report.id, report.title, base_context)
-
-        try:
-            exporter.export_to_pdf(
-                report=report,
-                config_manager=self._config_manager,
-                output_path=output_filename,
-                template="jake"  # TODO: Make this configurable
-            )
-        except RuntimeError as e:
-            raise RuntimeError(f"Failed to generate PDF: {e}")
-        
-        return Path("resumes") / output_filename
         
     def _default_updated_filename(self, filename: str) -> str:
         if not filename.lower().endswith(".pdf"):
             filename += ".pdf"
         base = filename[:-4]
         return f"{base}_updated.pdf"
-    
-    def _edit_resume_header_cli(self, ctx: Dict[str, Any]) -> None:
-        print("\n--- Edit Header ---")
-        for key in ["name", "email", "phone", "github_display", "linkedin_display"]:
-            cur = ctx.get(key, "")
-            new_val = input(f"{key} [{cur}]: ").strip()
-            if new_val:
-                ctx[key] = new_val
-
-    def _edit_project_info_cli(self, proj: Dict[str, Any]) -> None:
-        print(f"\n--- Edit Project Info: {proj.get('name','Project')} ---")
-        for key in ["name", "stack", "dates"]:
-            cur = proj.get(key, "")
-            new_val = input(f"{key} [{cur}]: ").strip()
-            if new_val:
-                proj[key] = new_val
-
-
-    def _edit_resume_variant_cli(self, base_context: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Interactive editor for creating resume variants.
-
-        Allows editing of:
-        - Resume header (name, email, phone, GitHub, LinkedIn)
-        - Project information (name, tech stack, dates)
-        - Project bullet points (add, edit, delete, reorder)
-
-        Returns a new edited context dictionary (does not mutate the original).
-        """
-
-        ctx = deepcopy(base_context)
-        projects = ctx.get("projects", []) or []
-        if not projects:
-            print("No projects found to edit.")
-            return ctx
-
-        while True:
-            print("\n==============================")
-            print(" Resume Variant Editor")
-            print("==============================")
-            print("1) Edit header (name/email/phone/links)")
-            print("2) Edit project bullets")
-            print("3) Edit project info (name/stack/dates)")
-            print("q) Done")
-            top = input("> ").strip().lower()
-
-            if top == "q":
-                return ctx
-
-            if top == "1":
-                self._edit_resume_header_cli(ctx)
-                continue
-
-            if top == "3":
-                print("\nSelect a project to edit info:")
-                for i, p in enumerate(projects, 1):
-                    print(f"  {i}) {p.get('name','Project')}")
-                print("  q) Back")
-                pick = input("> ").strip().lower()
-                if pick == "q":
-                    continue
-                if not pick.isdigit():
-                    print("Please enter a number or q.")
-                    continue
-                idx = int(pick) - 1
-                if not (0 <= idx < len(projects)):
-                    print("Invalid project number.")
-                    continue
-                self._edit_project_info_cli(projects[idx])
-                ctx["projects"] = projects
-                continue
-
-            if top != "2":
-                print("Invalid selection.")
-                continue
-
-            print("\nSelect a project to edit bullets:")
-            for i, p in enumerate(projects, 1):
-                print(f"  {i}) {p.get('name','Project')}")
-            print("  q) Back")
-            choice = input("> ").strip().lower()
-
-            if choice == "q":
-                continue
-            if not choice.isdigit():
-                print("Please enter a number or q.")
-                continue
-
-            idx = int(choice) - 1
-            if not (0 <= idx < len(projects)):
-                print("Invalid project number.")
-                continue
-
-            proj = projects[idx]
-            bullets = proj.get("bullets", []) or []
-
-            while True:
-                print(f"\n--- Bullets for {proj.get('name','Project')} ---")
-                if not bullets:
-                    print("(none)")
-                for j, b in enumerate(bullets, 1):
-                    print(f"  {j}) {b}")
-
-                print("\nOptions:")
-                print("  1) Edit bullet")
-                print("  2) Add bullet")
-                print("  3) Delete bullet")
-                print("  4) Move bullet up/down")
-                print("  5) Back to projects")
-                sub = input("> ").strip()
-
-                if sub == "1":
-                    n = input("Bullet # to edit: ").strip()
-                    if n.isdigit() and 1 <= int(n) <= len(bullets):
-                        new_txt = input("New text: ").strip()
-                        if new_txt:
-                            bullets[int(n) - 1] = new_txt
-                    else:
-                        print("Invalid bullet number.")
-
-                elif sub == "2":
-                    new_txt = input("New bullet: ").strip()
-                    if new_txt:
-                        bullets.append(new_txt)
-
-                elif sub == "3":
-                    n = input("Bullet # to delete: ").strip()
-                    if n.isdigit() and 1 <= int(n) <= len(bullets):
-                        bullets.pop(int(n) - 1)
-                    else:
-                        print("Invalid bullet number.")
-
-                elif sub == "4":
-                    n = input("Bullet # to move: ").strip()
-                    if not (n.isdigit() and 1 <= int(n) <= len(bullets)):
-                        print("Invalid bullet number.")
-                        continue
-                    direction = input("u=up, d=down: ").strip().lower()
-                    i = int(n) - 1
-                    if direction == "u" and i > 0:
-                        bullets[i - 1], bullets[i] = bullets[i], bullets[i - 1]
-                    elif direction == "d" and i < len(bullets) - 1:
-                        bullets[i + 1], bullets[i] = bullets[i], bullets[i + 1]
-                    else:
-                        print("Can't move that way.")
-
-                elif sub == "5":
-                    break
-                else:
-                    print("Invalid selection.")
-
-            # save edits back into project
-            proj["bullets"] = bullets
-            projects[idx] = proj
-            ctx["projects"] = projects
-
 
     def _cleanup_temp(self):
         if self.cached_extract_dir: shutil.rmtree(self.cached_extract_dir, ignore_errors=True)
