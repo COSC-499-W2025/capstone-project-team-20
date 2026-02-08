@@ -1,6 +1,7 @@
 ## Team 20 Weekly Log
 
 ### Table of contents
+- [Term 2 Week 5(February 2nd - February 8th)](#term-2-week-5-february-2nd---february-8th)
 - [Term 2 Week 4(January 25th - February 1st)](#term-2-week-4-january-26th---february-1st)
 - [Term 2 Week 3(January 19th - January 25th)](#term-2-week-3-january-19th---january-25th)
 - [Term 2 Week 2 (January 12th - January 18th)](#term-2-week-2-january-12th---january-18th)
@@ -488,3 +489,37 @@ Next week, we are continuuing on tasks mentioned in work performed. We will be d
 **Test Report:**
 
 [Term 2 Week 3 Test Report](teamWeeklyLogsImages/t2_w4_test_report.png)
+
+
+### Term 2 Week 5 (February 2nd - February 8th)
+
+**Work Performed:**
+- Branden Kennedy (42474551): 
+
+- Necmi Kaan Sapoglu (17014796): 
+
+- Lex Nash (84668540):
+
+- Dylan Alexander (16394025): This week I worked on two substantial PRs. The first focused on tidying up the resume generation process. While resume generation was fully functional, users could not yet create report objects in order to generate a resume. My first PR solved this issue. My second PR implemented thumbnail selection for a project, satisfying Milestone 2, Requirement 26. Additionally, I reviewed 3 PRs this week. Most notably, Branden's PR Linked here: [Feature/Fully Editing Resumes! (M2 R28)](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/357). I had to request changes a few times, and restore the Resume Generation function/tests, so this took much longer than the review process normally does. However the feature works wonderfully now and the architecture is really clean. Very happy with the result.
+
+- Sven Annist (42486720): 
+
+**Features included in the project plan for this milestone are:**
+
+**Continuing tasks from last week and plan for the next week:**
+
+**Burnup chart:**
+
+[Term 2 Week 5 burnup chart]()
+
+**Table View of Completed Tasks on Project Board:**
+
+[Term 2 Week 5 completed tasks]()
+
+**Table View of In-Progress Tasks on Project Board:**
+
+[Term 2 Week 5 In-Progress tasks]()
+
+**Test Report:**
+
+[Term 2 Week 5 Test Report]()
