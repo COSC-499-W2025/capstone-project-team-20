@@ -1,7 +1,7 @@
 import copy
 import pytest
 
-from src.services.ResumeVariantEditor import ResumeVariantEditor
+from src.services.ReportEditor import ResumeVariantEditor
 
 
 def _make_base_context():

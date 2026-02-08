@@ -2,7 +2,6 @@ import signal, threading
 import json, os, sys, re, shutil, contextlib, zipfile
 from pathlib import Path
 from typing import Iterable, List, Optional, Tuple, Dict, Any
-from copy import deepcopy
 
 from src.project_timeline import (
     get_projects_with_skills_timeline_from_projects,
@@ -35,8 +34,7 @@ from src.analyzers.RepoProjectBuilder import RepoProjectBuilder
 from utils.file_hashing import compute_file_hash
 from src.exporters.ReportExporter import ReportExporter
 from src.managers.ReportManager import ReportManager
-from src.managers.ResumeVariantManager import ResumeVariantManager
-from src.services.ResumeVariantEditor import ResumeVariantEditor
+from src.services.ReportEditor import ReportEditor
 from src.services.InsightEditor import InsightEditor
 
 MIN_DISPLAY_CONFIDENCE = 0.5  # only show skills with at least this confidence
@@ -1009,27 +1007,24 @@ class ProjectAnalyzer:
             print("Resume generation cancelled.")
             return None
 
-        # Build base context (snapshot we can edit / export)
-        exporter = ReportExporter()
-        base_context = exporter._build_context(report, self._config_manager)
-
-        variant_mgr = ResumeVariantManager(self._config_manager)
-        variant_mgr.ensure_base_snapshot(report.id, report.title, base_context)
-
         while True:
             print("\n====================================")
             print(" Generate / Edit Resume")
             print("====================================")
-            print("1) Export base resume (no edits)")
-            print("2) Edit bullets + export (save as variant)")
-            print("3) Export existing variant")
-            print("4) Cancel")
+            print("1) Export resume from report")
+            print("2) Edit report + export")
+            print("3) Cancel")
             sub = input("Selection: ").strip()
 
             if sub == "1":
                 try:
-                    print("\n⏳ Generating base resume...")
-                    exporter.export_context_to_pdf(base_context, output_path=filename, template="jake")
+                    print("\n⏳ Generating resume from report...")
+                    self.report_exporter.export_to_pdf(
+                        report,
+                        self._config_manager,
+                        output_path=filename,
+                        template="jake",
+                    )
                     pdf_path = Path("resumes") / filename
                     print(f"\n✅ Resume successfully generated!")
                     print(f"📄 Saved to: {pdf_path}")
@@ -1040,58 +1035,38 @@ class ProjectAnalyzer:
 
             elif sub == "2":
                 try:
-                    editor = ResumeVariantEditor()
-                    edited_context = editor.edit_variant_cli(base_context)
+                    # Edit the Report object + config fields
+                    editor = ReportEditor()
+                    edited = editor.edit_report_cli(report, self._config_manager)
+                    if not edited:
+                        print("Edit cancelled.")
+                        continue
+
+                    # Persist report changes to reports.db
+                    self.report_manager.update_report(report)
+
                     updated_filename = self._default_updated_filename(filename)
 
-                    variant_mgr.create_variant(report.id, label="updated", context=edited_context)
-
                     print("\n⏳ Generating edited resume...")
-                    exporter.export_context_to_pdf(edited_context, output_path=updated_filename, template="jake")
+                    self.report_exporter.export_to_pdf(
+                        report,
+                        self._config_manager,
+                        output_path=updated_filename,
+                        template="jake",
+                    )
                     pdf_path = Path("resumes") / updated_filename
                     print(f"\n✅ Edited resume successfully generated!")
                     print(f"📄 Saved to: {pdf_path}")
                     return pdf_path
+
                 except Exception as e:
                     print(f"\n❌ Export error: {e}")
                     return None
 
             elif sub == "3":
-                variants = variant_mgr.list_variants(report.id)
-                if not variants:
-                    print("No variants found for this report yet.")
-                    continue
-
-                print("\nVariants:")
-                for v in variants:
-                    print(f"  [{v['variant_id']}] {v.get('label','variant')} — {v.get('created_at','')}")
-
-                pick = input("Enter variant id to export (or q): ").strip().lower()
-                if pick == "q":
-                    continue
-                if not pick.isdigit():
-                    print("Invalid variant id.")
-                    continue
-
-                v = variant_mgr.get_variant(report.id, int(pick))
-                if not v:
-                    print("Variant not found.")
-                    continue
-
-                try:
-                    print("\n⏳ Generating variant resume...")
-                    exporter.export_context_to_pdf(v["context"], output_path=filename, template="jake")
-                    pdf_path = Path("resumes") / filename
-                    print(f"\n✅ Variant resume successfully generated!")
-                    print(f"📄 Saved to: {pdf_path}")
-                    return pdf_path
-                except Exception as e:
-                    print(f"\n❌ Export error: {e}")
-                    return None
-
-            elif sub == "4":
                 print("Cancelled.")
                 return None
+
             else:
                 print("Invalid selection.")
 

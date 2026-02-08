@@ -1,40 +1,38 @@
 from __future__ import annotations
+from src.models.Report import Report
+from src.models.ReportProject import ReportProject
 
-from copy import deepcopy
 from typing import Any, Dict, List, Tuple
 
 
-class ResumeVariantEditor:
-    """
-    Interactive CLI editor for a resume "context" dictionary used by ReportExporter.
 
-    Edits the in-memory context (via deepcopy) and returns a new context:
-      - Header fields (name/email/phone/github/linkedin)
-      - Education entries
-      - Experience entries
-      - Projects (name/stack/dates + bullets)
-      - Technical skills (categories + items)
+class ReportEditor:
     """
+    CLI editor for a Report and ConfigManager.
+
+    Edits in-place:
+    - config_manager: header, education, experience, skills
+    - report.projects: project_name, bullets, reorder
+    """
+
 
     # -------------------------
     # Public entry
     # -------------------------
 
-    def edit_variant_cli(self, base_context: Dict[str, Any]) -> Dict[str, Any]:
-        ctx = deepcopy(base_context)
-
-        # Ensure common keys exist so menus don’t crash
-        ctx.setdefault("education", ctx.get("education") or [])
-        ctx.setdefault("experience", ctx.get("experience") or [])
-        ctx.setdefault("skills", ctx.get("skills") or {})
-        ctx.setdefault("projects", ctx.get("projects") or [])
-
+    def edit_report_cli(self, report: Report, config_manager) -> bool:
+        """
+        Edits:
+        - config_manager: name/email/phone/github/linkedin, education, experience
+        - report.projects: project_name, bullets, reorder projects
+        Returns True if user finished (you can treat as "edited"), False if cancelled.
+        """
         while True:
             print("\n==============================")
-            print(" Resume Variant Editor")
+            print(" Report Editor")
             print("==============================")
-            print("1) Edit header (name/email/phone/links)")
-            print("2) Edit projects (info + bullets)")
+            print("1) Edit header (name/email/phone/github/linkedin)")
+            print("2) Edit report projects (name + bullets + reorder)")
             print("3) Edit education")
             print("4) Edit experience")
             print("5) Edit technical skills")
@@ -42,71 +40,61 @@ class ResumeVariantEditor:
             top = input("> ").strip().lower()
 
             if top == "q":
-                return ctx
+                return True
 
             if top == "1":
-                self._edit_resume_header_cli(ctx)
+                self._edit_header_in_config(config_manager)
                 continue
 
             if top == "2":
-                self._edit_projects_menu(ctx)
+                self._edit_report_projects_menu(report.projects)
                 continue
 
             if top == "3":
-                self._edit_education_menu(ctx)
+                self._edit_education_in_config(config_manager)
                 continue
 
             if top == "4":
-                self._edit_experience_menu(ctx)
+                self._edit_experience_in_config(config_manager)
                 continue
 
             if top == "5":
-                self._edit_skills_menu(ctx)
+                self._edit_skills_menu(config_manager)
                 continue
 
             print("Invalid selection.")
 
-    # -------------------------
-    # Header
-    # -------------------------
-
-    def _edit_resume_header_cli(self, ctx: Dict[str, Any]) -> None:
-        """
-        Your LaTeX header uses:
-          - name, phone, email
-          - github_url, github_display
-          - linkedin_url, linkedin_display
-
-        So we edit those *exact* keys, and we also accept a handle for GH/LI and build url+display.
-        """
+    def _edit_header_in_config(self, config_manager) -> None:
         print("\n--- Edit Header ---")
 
-        # Basic fields
-        for key in ["name", "email", "phone"]:
-            cur = (ctx.get(key) or "").strip()
-            new_val = input(f"{key} [{cur}]: ").strip()
-            if new_val:
-                ctx[key] = new_val
+        def prompt(key: str, label: str) -> None:
+            cur = (config_manager.get(key, "") or "").strip()
+            v = input(f"{label} [{cur}]: ").strip()
+            if v:
+                config_manager.set(key, v)
 
-        # GitHub
-        gh_display = (ctx.get("github_display") or "").strip()
-        gh_url = (ctx.get("github_url") or "").strip()
-        gh_cur = gh_display or gh_url
-        gh_in = input(f"github (handle or url) [{gh_cur}]: ").strip()
-        if gh_in:
-            g_url, g_disp = self._normalize_github(gh_in)
-            ctx["github_url"] = g_url
-            ctx["github_display"] = g_disp
+        prompt("name", "name")
+        prompt("email", "email")
+        prompt("phone", "phone")
 
-        # LinkedIn
-        li_display = (ctx.get("linkedin_display") or "").strip()
-        li_url = (ctx.get("linkedin_url") or "").strip()
-        li_cur = li_display or li_url
-        li_in = input(f"linkedin (handle or url) [{li_cur}]: ").strip()
-        if li_in:
-            l_url, l_disp = self._normalize_linkedin(li_in)
-            ctx["linkedin_url"] = l_url
-            ctx["linkedin_display"] = l_disp
+        # github
+        cur_g = (config_manager.get("github", "") or "").strip()
+        raw_g = input(f"github username/url [{cur_g}]: ").strip()
+        if raw_g:
+            url, disp = self._normalize_github(raw_g)
+            handle = disp.replace("github.com/", "").strip("/")
+            config_manager.set("github", handle)       # ✅ store username only
+            config_manager.set("github_url", url)      # optional (full URL)
+
+        # linkedin
+        cur_l = (config_manager.get("linkedin", "") or "").strip()
+        raw_l = input(f"linkedin handle/url [{cur_l}]: ").strip()
+        if raw_l:
+            url, disp = self._normalize_linkedin(raw_l)
+            handle = disp.replace("linkedin.com/in/", "").strip("/")
+            config_manager.set("linkedin", handle)     # ✅ store handle only
+            config_manager.set("linkedin_url", url)
+
 
     def _normalize_github(self, raw: str) -> Tuple[str, str]:
         raw = raw.strip()
@@ -144,89 +132,33 @@ class ResumeVariantEditor:
     # Projects
     # -------------------------
 
-    def _edit_projects_menu(self, ctx: Dict[str, Any]) -> None:
-        projects: List[Dict[str, Any]] = ctx.get("projects", []) or []
+    def _edit_report_projects_menu(self, projects: List[ReportProject]) -> None:
         if not projects:
             print("No projects found to edit.")
             return
 
         while True:
-            print("\n--- Projects ---")
-            print("1) Edit project info (name/stack/dates)")
+            print("\n--- Report Projects ---")
+            print("1) Rename project")
             print("2) Edit project bullets")
             print("3) Reorder projects")
             print("4) Back")
             sub = input("> ").strip()
 
             if sub == "1":
-                self._pick_project_and_edit_info(projects)
-                ctx["projects"] = projects
+                self._pick_report_project_and_rename(projects)
             elif sub == "2":
-                self._pick_project_and_edit_bullets(projects)
-                ctx["projects"] = projects
+                self._pick_report_project_and_edit_bullets(projects)
             elif sub == "3":
                 self._reorder_list_cli(
                     items=projects,
-                    label_getter=lambda p: p.get("name", "Project"),
+                    label_getter=lambda p: p.project_name,
                     title="Reorder Projects",
                 )
-                ctx["projects"] = projects
             elif sub == "4":
                 return
             else:
                 print("Invalid selection.")
-
-    def _edit_project_info_cli(self, proj: Dict[str, Any]) -> None:
-        print(f"\n--- Edit Project Info: {proj.get('name','Project')} ---")
-        for key in ["name", "stack", "dates"]:
-            cur = proj.get(key, "") or ""
-            new_val = input(f"{key} [{cur}]: ").strip()
-            if new_val:
-                proj[key] = new_val
-
-    def _pick_project_and_edit_info(self, projects: List[Dict[str, Any]]) -> None:
-        print("\nSelect a project to edit info:")
-        for i, p in enumerate(projects, 1):
-            print(f"  {i}) {p.get('name','Project')}")
-        print("  q) Back")
-
-        pick = input("> ").strip().lower()
-        if pick == "q":
-            return
-        if not pick.isdigit():
-            print("Please enter a number or q.")
-            return
-
-        idx = int(pick) - 1
-        if not (0 <= idx < len(projects)):
-            print("Invalid project number.")
-            return
-
-        self._edit_project_info_cli(projects[idx])
-
-    def _pick_project_and_edit_bullets(self, projects: List[Dict[str, Any]]) -> None:
-        print("\nSelect a project to edit bullets:")
-        for i, p in enumerate(projects, 1):
-            print(f"  {i}) {p.get('name','Project')}")
-        print("  q) Back")
-
-        choice = input("> ").strip().lower()
-        if choice == "q":
-            return
-        if not choice.isdigit():
-            print("Please enter a number or q.")
-            return
-
-        idx = int(choice) - 1
-        if not (0 <= idx < len(projects)):
-            print("Invalid project number.")
-            return
-
-        proj = projects[idx]
-        bullets = proj.get("bullets", []) or []
-        self._edit_bullets_cli(proj.get("name", "Project"), bullets)
-        proj["bullets"] = bullets
-        projects[idx] = proj
 
     def _edit_bullets_cli(self, project_name: str, bullets: List[str]) -> None:
         while True:
@@ -288,10 +220,13 @@ class ResumeVariantEditor:
     # -------------------------
     # Education
     # -------------------------
+    def _edit_education_in_config(self, config_manager) -> None:
+        edu: List[Dict[str, Any]] = config_manager.get("education", []) or []
+        # reuse your existing menu logic but operate on edu list
+        self._edit_education_list_cli(edu)
+        config_manager.set("education", edu)
 
-    def _edit_education_menu(self, ctx: Dict[str, Any]) -> None:
-        edu: List[Dict[str, Any]] = ctx.get("education", []) or []
-
+    def _edit_education_list_cli(self, edu: List[Dict[str, Any]]) -> None:
         while True:
             print("\n--- Education ---")
             if not edu:
@@ -313,7 +248,7 @@ class ResumeVariantEditor:
 
             if sub == "1":
                 edu.append(self._prompt_education_entry({}))
-                ctx["education"] = edu
+
             elif sub == "2":
                 if not edu:
                     print("No entries to edit.")
@@ -322,9 +257,9 @@ class ResumeVariantEditor:
                 if n.isdigit() and 1 <= int(n) <= len(edu):
                     idx = int(n) - 1
                     edu[idx] = self._prompt_education_entry(edu[idx])
-                    ctx["education"] = edu
                 else:
                     print("Invalid entry number.")
+
             elif sub == "3":
                 if not edu:
                     print("No entries to delete.")
@@ -332,14 +267,15 @@ class ResumeVariantEditor:
                 n = input("Entry # to delete: ").strip()
                 if n.isdigit() and 1 <= int(n) <= len(edu):
                     edu.pop(int(n) - 1)
-                    ctx["education"] = edu
                 else:
                     print("Invalid entry number.")
+
             elif sub == "4":
                 self._reorder_list_cli(edu, lambda e: e.get("school", "School"), "Reorder Education")
-                ctx["education"] = edu
+
             elif sub == "5":
                 return
+
             else:
                 print("Invalid selection.")
 
@@ -360,9 +296,12 @@ class ResumeVariantEditor:
     # Experience
     # -------------------------
 
-    def _edit_experience_menu(self, ctx: Dict[str, Any]) -> None:
-        exp: List[Dict[str, Any]] = ctx.get("experience", []) or []
+    def _edit_experience_in_config(self, config_manager) -> None:
+        exp: List[Dict[str, Any]] = config_manager.get("experience", []) or []
+        self._edit_experience_list_cli(exp)
+        config_manager.set("experience", exp)
 
+    def _edit_experience_list_cli(self, exp: List[Dict[str, Any]]) -> None:
         while True:
             print("\n--- Experience ---")
             if not exp:
@@ -384,7 +323,7 @@ class ResumeVariantEditor:
 
             if sub == "1":
                 exp.append(self._prompt_experience_entry({}))
-                ctx["experience"] = exp
+
             elif sub == "2":
                 if not exp:
                     print("No jobs to edit.")
@@ -393,9 +332,9 @@ class ResumeVariantEditor:
                 if n.isdigit() and 1 <= int(n) <= len(exp):
                     idx = int(n) - 1
                     exp[idx] = self._prompt_experience_entry(exp[idx])
-                    ctx["experience"] = exp
                 else:
                     print("Invalid job number.")
+
             elif sub == "3":
                 if not exp:
                     print("No jobs to delete.")
@@ -403,16 +342,18 @@ class ResumeVariantEditor:
                 n = input("Job # to delete: ").strip()
                 if n.isdigit() and 1 <= int(n) <= len(exp):
                     exp.pop(int(n) - 1)
-                    ctx["experience"] = exp
                 else:
                     print("Invalid job number.")
+
             elif sub == "4":
                 self._reorder_list_cli(exp, lambda j: j.get("title", "Job"), "Reorder Experience")
-                ctx["experience"] = exp
+
             elif sub == "5":
                 return
+
             else:
                 print("Invalid selection.")
+
 
     def _prompt_experience_entry(self, cur: Dict[str, Any]) -> Dict[str, Any]:
         title = input(f"Title [{cur.get('title','')}]: ").strip()
@@ -422,13 +363,17 @@ class ResumeVariantEditor:
 
         bullets = list(cur.get("bullets", []) or [])
         print("\nEdit bullets for this job:")
-        self._edit_bullets_cli(f"{cur.get('title','Job')} bullets", bullets)
+        self._edit_bullets_cli(cur.get("title", "Job"), bullets)
 
         out = dict(cur)
-        if title: out["title"] = title
-        if company: out["company"] = company
-        if location: out["location"] = location
-        if dates: out["dates"] = dates
+        if title:
+            out["title"] = title
+        if company:
+            out["company"] = company
+        if location:
+            out["location"] = location
+        if dates:
+            out["dates"] = dates
         out["bullets"] = bullets
         return out
 
@@ -436,8 +381,8 @@ class ResumeVariantEditor:
     # Skills
     # -------------------------
 
-    def _edit_skills_menu(self, ctx: Dict[str, Any]) -> None:
-        skills: Dict[str, List[str]] = ctx.get("skills", {}) or {}
+    def _edit_skills_menu(self, config_manager) -> None:
+        skills: Dict[str, List[str]] = config_manager.get("skills", {}) or {}
 
         while True:
             print("\n--- Technical Skills ---")
@@ -459,7 +404,7 @@ class ResumeVariantEditor:
                 name = input("New category name: ").strip()
                 if name:
                     skills.setdefault(name, [])
-                    ctx["skills"] = skills
+                    config_manager.set("skills", skills)
 
             elif sub == "2":
                 old = input("Category to rename: ").strip()
@@ -467,7 +412,7 @@ class ResumeVariantEditor:
                     new = input(f"Rename '{old}' to: ").strip()
                     if new and new not in skills:
                         skills[new] = skills.pop(old)
-                        ctx["skills"] = skills
+                        config_manager.set("skills", skills)
                 else:
                     print("Category not found.")
 
@@ -475,7 +420,7 @@ class ResumeVariantEditor:
                 name = input("Category to delete: ").strip()
                 if name in skills:
                     del skills[name]
-                    ctx["skills"] = skills
+                    config_manager.set("skills", skills)
                 else:
                     print("Category not found.")
 
@@ -485,12 +430,13 @@ class ResumeVariantEditor:
                     print("Category not found.")
                     continue
                 self._edit_skill_items_cli(name, skills[name])
-                ctx["skills"] = skills
+                config_manager.set("skills", skills)
 
             elif sub == "5":
                 return
             else:
                 print("Invalid selection.")
+
 
     def _edit_skill_items_cli(self, category: str, items: List[str]) -> None:
         while True:
@@ -548,6 +494,54 @@ class ResumeVariantEditor:
 
             else:
                 print("Invalid selection.")
+
+    def _pick_report_project_and_rename(self, projects: List[ReportProject]) -> None:
+        print("\nSelect a project to rename:")
+        for i, p in enumerate(projects, 1):
+            print(f"  {i}) {p.project_name}")
+        print("  q) Back")
+
+        pick = input("> ").strip().lower()
+        if pick == "q":
+            return
+        if not pick.isdigit():
+            print("Please enter a number or q.")
+            return
+
+        idx = int(pick) - 1
+        if not (0 <= idx < len(projects)):
+            print("Invalid project number.")
+            return
+
+        cur = projects[idx].project_name
+        new_name = input(f"New name [{cur}]: ").strip()
+        if new_name:
+            projects[idx].project_name = new_name
+
+
+    def _pick_report_project_and_edit_bullets(self, projects: List[ReportProject]) -> None:
+        print("\nSelect a project to edit bullets:")
+        for i, p in enumerate(projects, 1):
+            print(f"  {i}) {p.project_name}")
+        print("  q) Back")
+
+        pick = input("> ").strip().lower()
+        if pick == "q":
+            return
+        if not pick.isdigit():
+            print("Please enter a number or q.")
+            return
+
+        idx = int(pick) - 1
+        if not (0 <= idx < len(projects)):
+            print("Invalid project number.")
+            return
+
+        proj = projects[idx]
+        bullets = list(proj.bullets or [])
+        self._edit_bullets_cli(proj.project_name, bullets)
+        proj.bullets = bullets
+
 
     # -------------------------
     # Generic reorder helper
