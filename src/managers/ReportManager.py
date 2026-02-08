@@ -242,6 +242,27 @@ class ReportManager(StorageManager):
         
         return summaries
     
+    def update_report(self, report: Report) -> bool:
+        """
+        Persist edits to an existing report and all its ReportProjects.
+
+        This updates the reports row (title/sort_by/notes) and replaces all
+        report_projects rows for that report with the current in-memory list.
+        """
+        if report.id is None:
+            return False
+
+        # 1) Update report row
+        self.set(report.to_dict())
+
+        # 2) Replace all ReportProjects for this report
+        self.report_project_manager.delete_all_for_report(report.id)
+        for project in report.projects:
+            self.report_project_manager.set_from_report_project(report.id, project)
+
+        return True
+
+    
     def get_all(self) -> Generator[Report, None, None]:
         """Yield all reports with their projects"""
         for report in self.list_reports():
