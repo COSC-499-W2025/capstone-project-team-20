@@ -77,7 +77,8 @@ def test_trigger_resume_generation_export_base_success(analyzer_resume, monkeypa
     monkeypatch.setattr("builtins.print", lambda *a, **k: None)
 
     mock_exporter = MagicMock()
-    monkeypatch.setattr("src.analyzers.ProjectAnalyzer.ReportExporter", lambda: mock_exporter)
+    analyzer_resume.report_exporter = mock_exporter
+
 
     # Inputs:
     # report id 1
@@ -103,45 +104,28 @@ def test_trigger_resume_generation_edit_and_export_report(analyzer_resume, monke
     analyzer_resume.report_manager.get_report.return_value = sample_report
     monkeypatch.setattr("builtins.print", lambda *a, **k: None)
 
+    # ✅ patch the already-created exporter instance
     mock_exporter = MagicMock()
-    monkeypatch.setattr("src.analyzers.ProjectAnalyzer.ReportExporter", lambda: mock_exporter)
+    analyzer_resume.report_exporter = mock_exporter
 
-    # Mock the new editor that edits the report in-place
+    # ✅ patch the editor constructor used INSIDE ProjectAnalyzer.py
     mock_editor = MagicMock()
-    # Your real editor might be edit_report_cli(report) or run(report), etc.
-    # We'll assume it returns the edited report (or None if cancelled).
-    mock_editor.edit_report_cli.return_value = sample_report
-
-    # IMPORTANT: update these names to match your refactor:
-    # - ReportEditor (new) OR ResumeVariantEditor renamed
+    mock_editor.edit_report_cli.return_value = True  # your code checks `if not edited: ...`
     monkeypatch.setattr("src.analyzers.ProjectAnalyzer.ReportEditor", lambda *a, **k: mock_editor)
 
-    # Ensure we persist edits through ReportManager instead of config variants
     analyzer_resume.report_manager.update_report.return_value = True
 
     # Inputs:
-    # pick report id 1
-    # filename "resume.pdf"
-    # confirm y
-    # menu 2 -> edit + export
     _feed(monkeypatch, ["1", "resume.pdf", "y", "2"])
 
     out = analyzer_resume.trigger_resume_generation()
 
     assert out == Path("resumes") / "resume_updated.pdf"
 
-    # Editor was used
     mock_editor.edit_report_cli.assert_called_once()
-
-    # Persisted via ReportManager
-    analyzer_resume.report_manager.update_report.assert_called_once()
-
-    # Exported from report
+    analyzer_resume.report_manager.update_report.assert_called_once_with(sample_report)
     mock_exporter.export_to_pdf.assert_called_once()
-    # Optional stronger assertion:
-    # mock_exporter.export_to_pdf.assert_called_once_with(
-    #     sample_report, analyzer_resume._config_manager, output_path="resume_updated.pdf", template="jake"
-    # )
+
 
 
 def test_trigger_resume_generation_cancel_on_confirm(analyzer_resume, monkeypatch, sample_report):
