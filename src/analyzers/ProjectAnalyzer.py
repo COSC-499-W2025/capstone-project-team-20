@@ -902,173 +902,167 @@ class ProjectAnalyzer:
         except ValueError:
             print("Invalid input. Please enter numbers separated by commas.")
             return self._select_multiple_projects(sorted_projects) 
-    
+
     def trigger_resume_generation(self) -> Optional[Path]:
         """
         Interactive prompt to generate a resume from a report.
         Displays all available reports and lets user select one.
-        
+
         Returns:
             Path to generated PDF, or None if cancelled/failed
         """
-        # 1. Get all reports
         reports_summary = self.report_manager.list_reports_summary()
-        
         if not reports_summary:
             print("\n❌ No reports found. Create a report first before generating a resume.")
             return None
-        
-        # 2. Display reports in a formatted table
-        print("\n" + "="*90)
+
+        # Display reports
+        print("\n" + "=" * 90)
         print("Available Reports")
-        print("="*90)
+        print("=" * 90)
         print(f"{'ID':<5} {'Title':<35} {'Created':<20} {'Projects':<10} {'Avg Score':<10}")
-        print("-"*90)
-        
-        for report_summary in reports_summary:
-            date_created = datetime.fromisoformat(report_summary['date_created'])
-            date_str = date_created.strftime('%Y-%m-%d %H:%M')
-            
-            # Get full report to calculate average score
-            report = self.report_manager.get_report(report_summary['id'])
+        print("-" * 90)
+
+        valid_ids = []
+        for rs in reports_summary:
+            valid_ids.append(rs["id"])
+            date_created = datetime.fromisoformat(rs["date_created"])
+            date_str = date_created.strftime("%Y-%m-%d %H:%M")
+
+            report = self.report_manager.get_report(rs["id"])
             avg_score = f"{report.average_score:.1f}" if report else "N/A"
-            
-            print(f"{report_summary['id']:<5} {report_summary['title']:<35} {date_str:<20} "
-                f"{report_summary['project_count']:<10} {avg_score:<10}")
-        
-        print("-"*90)
-        
-        # 3. Prompt for report selection
+
+            print(
+                f"{rs['id']:<5} {rs['title']:<35} {date_str:<20} "
+                f"{rs['project_count']:<10} {avg_score:<10}"
+            )
+
+        print("-" * 90)
+
+        # Prompt for report selection
         while True:
-            try:
-                choice = input("\nEnter Report ID to export (or 'q' to cancel): ").strip()
-                
-                if choice.lower() == 'q':
-                    print("Resume generation cancelled.")
-                    return None
-                
-                report_id = int(choice)
-                
-                # Validate ID exists
-                valid_ids = [r['id'] for r in reports_summary]
-                if report_id not in valid_ids:
-                    print(f"❌ Invalid ID. Please choose from: {', '.join(map(str, valid_ids))}")
-                    continue
-                
-                break
-                
-            except ValueError:
+            choice = input("\nEnter Report ID to export (or 'q' to cancel): ").strip().lower()
+            if choice == "q":
+                print("Resume generation cancelled.")
+                return None
+            if not choice.isdigit():
                 print("❌ Please enter a valid number or 'q' to cancel.")
-        
-        # 4. Load the selected report
+                continue
+
+            report_id = int(choice)
+            if report_id not in valid_ids:
+                print(f"❌ Invalid ID. Please choose from: {', '.join(map(str, valid_ids))}")
+                continue
+            break
+
         report = self.report_manager.get_report(report_id)
-        
         if not report:
             print(f"❌ Error loading report {report_id}")
             return None
-        
-        # 5. Display report details
+
+        # Display report details (optional but nice)
         print(f"\n{'='*60}")
         print(f"📋 Selected Report: {report.title}")
         print(f"{'='*60}")
         print(f"Created: {report.date_created.strftime('%Y-%m-%d %H:%M')}")
         print(f"Projects: {len(report.projects)}")
         print(f"Average Score: {report.average_score:.1f}")
-        
         if report.notes:
             print(f"Notes: {report.notes}")
-        
-        print(f"\n{'Projects included:':}")
+
+        print("\nProjects included:")
         for i, proj in enumerate(report.projects, 1):
             tech_stack = []
             if proj.languages:
-                tech_stack.extend(proj.languages[:2])  # Show first 2 languages
+                tech_stack.extend(proj.languages[:2])
             if proj.frameworks:
-                tech_stack.extend(proj.frameworks[:2])  # Show first 2 frameworks
-            
+                tech_stack.extend(proj.frameworks[:2])
             tech_str = ", ".join(tech_stack) if tech_stack else "No tech stack"
             print(f"  {i}. {proj.project_name} ({tech_str}) - Score: {proj.resume_score:.1f}")
-        
         print(f"{'='*60}\n")
-        
-        # 6. Prompt for output filename
+
+        # Filename prompt
         default_filename = f"{report.title.replace(' ', '_').lower()}_resume.pdf"
         filename_input = input(f"Output filename (default: '{default_filename}'): ").strip()
-        
         filename = filename_input if filename_input else default_filename
-        
-        # Ensure .pdf extension
-        if not filename.endswith('.pdf'):
-            filename += '.pdf'
-        
-        # 7. Confirm continue
-        confirm = input(f"\n✓ Continue with filename '{filename}'? (y/n): ").strip().lower()
-        if confirm != 'y':
+        if not filename.lower().endswith(".pdf"):
+            filename += ".pdf"
+
+        confirm = input(f"\n✓ Export to '{filename}'? (y/n): ").strip().lower()
+        if confirm != "y":
             print("Resume generation cancelled.")
             return None
 
+        # Export
+        try:
+            print("\n⏳ Generating resume from report...")
+            self.report_exporter.export_to_pdf(
+                report,
+                self._config_manager,
+                output_path=filename,
+                template="jake",
+            )
+            pdf_path = Path("resumes") / filename
+            print("\n✅ Resume successfully generated!")
+            print(f"📄 Saved to: {pdf_path}")
+            return pdf_path
+        except Exception as e:
+            print(f"\n❌ Export error: {e}")
+            return None
+
+    def trigger_report_editing(self) -> None:
+        """
+        Interactive prompt to edit an existing report (and config fields) without exporting.
+        Persists updates back to the reports database.
+        """
+        reports_summary = self.report_manager.list_reports_summary()
+        if not reports_summary:
+            print("\n❌ No reports found. Create a report first.")
+            return
+
+        print("\n" + "=" * 90)
+        print("Available Reports")
+        print("=" * 90)
+        print(f"{'ID':<5} {'Title':<35} {'Created':<20} {'Projects':<10}")
+        print("-" * 90)
+
+        valid_ids = []
+        for rs in reports_summary:
+            valid_ids.append(rs["id"])
+            date_created = datetime.fromisoformat(rs["date_created"])
+            date_str = date_created.strftime("%Y-%m-%d %H:%M")
+            print(f"{rs['id']:<5} {rs['title']:<35} {date_str:<20} {rs['project_count']:<10}")
+
+        print("-" * 90)
+
         while True:
-            print("\n====================================")
-            print(" Generate / Edit Resume")
-            print("====================================")
-            print("1) Export resume from report")
-            print("2) Edit report + export")
-            print("3) Cancel")
-            sub = input("Selection: ").strip()
+            choice = input("\nEnter Report ID to edit (or 'q' to cancel): ").strip().lower()
+            if choice == "q":
+                print("Edit cancelled.")
+                return
+            if not choice.isdigit():
+                print("Please enter a valid number or 'q' to cancel.")
+                continue
 
-            if sub == "1":
-                try:
-                    print("\n⏳ Generating resume from report...")
-                    self.report_exporter.export_to_pdf(
-                        report,
-                        self._config_manager,
-                        output_path=filename,
-                        template="jake",
-                    )
-                    pdf_path = Path("resumes") / filename
-                    print(f"\n✅ Resume successfully generated!")
-                    print(f"📄 Saved to: {pdf_path}")
-                    return pdf_path
-                except Exception as e:
-                    print(f"\n❌ Export error: {e}")
-                    return None
+            report_id = int(choice)
+            if report_id not in valid_ids:
+                print(f"Invalid ID. Please choose from: {', '.join(map(str, valid_ids))}")
+                continue
+            break
 
-            elif sub == "2":
-                try:
-                    # Edit the Report object + config fields
-                    editor = ReportEditor()
-                    edited = editor.edit_report_cli(report, self._config_manager)
-                    if not edited:
-                        print("Edit cancelled.")
-                        continue
+        report = self.report_manager.get_report(report_id)
+        if not report:
+            print(f"Error loading report {report_id}")
+            return
 
-                    # Persist report changes to reports.db
-                    self.report_manager.update_report(report)
+        editor = ReportEditor()
+        edited = editor.edit_report_cli(report, self._config_manager)
+        if not edited:
+            print("No changes saved.")
+            return
 
-                    updated_filename = self._default_updated_filename(filename)
-
-                    print("\n⏳ Generating edited resume...")
-                    self.report_exporter.export_to_pdf(
-                        report,
-                        self._config_manager,
-                        output_path=updated_filename,
-                        template="jake",
-                    )
-                    pdf_path = Path("resumes") / updated_filename
-                    print(f"\n✅ Edited resume successfully generated!")
-                    print(f"📄 Saved to: {pdf_path}")
-                    return pdf_path
-
-                except Exception as e:
-                    print(f"\n❌ Export error: {e}")
-                    return None
-
-            elif sub == "3":
-                print("Cancelled.")
-                return None
-
-            else:
-                print("Invalid selection.")
+        self.report_manager.update_report(report)
+        print("Report updated and saved.")
 
         
     def _default_updated_filename(self, filename: str) -> str:
@@ -1275,7 +1269,8 @@ class ProjectAnalyzer:
                 17. Exit
                 18. Enter Resume Personal Information
                 19. Create Report (For Use With Resume Generation)
-                20. Generate/Edit Resume
+                20. Generate Resume (Export From Report as pdf)
+                21. Edit Report
                   """)
 
             choice = input("Selection: ").strip()
@@ -1294,7 +1289,7 @@ class ProjectAnalyzer:
                 "13": self.display_analysis_results, "14": self.display_project_timeline,
                 "15": self.analyze_badges, "16": self.retrieve_full_portfolio,
                 "18": self.configure_personal_info, "19": self.create_report,
-                "20": self.trigger_resume_generation,
+                "20": self.trigger_resume_generation, "21": self.trigger_report_editing,
             }
 
             if choice == "17":
