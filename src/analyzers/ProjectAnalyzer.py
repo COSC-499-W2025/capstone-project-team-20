@@ -646,14 +646,19 @@ class ProjectAnalyzer:
                 )
     
     def update_score_and_date(self) -> None:
-        refresh = self.helper_score_and_date(False)
-        while refresh ==1:
-            refresh = self.helper_score_and_date(True)
-
-    def helper_score_and_date(self, refresh:bool) -> int: #returns 1 if refreshing, -1 otherwise
-        '''Ability to modify scores and dates of projects while displaying a list of all projects ordered by score'''
+        
         items = self._get_projects()
         sorted_items = sorted(items, key=lambda project: project.resume_score, reverse=True)
+
+        refresh = self.helper_score_and_date(False, sorted_items)
+
+        while refresh != -1:
+            refresh = sorted(refresh, key=lambda project: project.resume_score, reverse=True)
+
+            refresh = self.helper_score_and_date(True, refresh)
+
+    def helper_score_and_date(self, refresh:bool, sorted_items:list): #returns list if refreshing, -1 if exiting
+        '''Ability to modify scores and dates of projects while displaying a list of all projects ordered by score'''
 
         hr = (f"{'':{'─'}>{83}}")   #horizontal rule
         RED = '\033[91m'
@@ -718,7 +723,7 @@ class ProjectAnalyzer:
                                     idx = int(words[0])-1
                                     sorted_items[int(idx)].resume_score = newscore
 
-                                    return 1
+                                    return sorted_items
 
                                 except ValueError:
                                     prompt = RED+"'"+words[2]+"' is not a valid score. Please try again:"+ENDC
@@ -729,7 +734,7 @@ class ProjectAnalyzer:
                                     idx = int(words[0])-1
                                     sorted_items[int(idx)].date_created = newdate
 
-                                    return 1
+                                    return sorted_items
 
                                 except ValueError:
                                     prompt = RED+"'"+words[2]+"' is not a valid date. Please try again:"+ENDC
