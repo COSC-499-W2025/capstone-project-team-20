@@ -59,7 +59,7 @@ class ReportEditor:
                 continue
 
             if top == "5":
-                self._edit_skills_menu(config_manager)
+                self._edit_skills_menu(config_manager, report)
                 continue
 
             print("Invalid selection.")
@@ -381,8 +381,28 @@ class ReportEditor:
     # Skills
     # -------------------------
 
-    def _edit_skills_menu(self, config_manager) -> None:
+    def _edit_skills_menu(self, config_manager, report: Report) -> None:
         skills: Dict[str, List[str]] = config_manager.get("skills", {}) or {}
+
+        # If no saved skills yet, seed from the report projects
+        if not skills:
+            languages = set()
+            frameworks = set()
+
+            for proj in report.projects:
+                if proj.languages:
+                    languages.update(proj.languages)
+                if proj.frameworks:
+                    frameworks.update(proj.frameworks)
+
+            seeded: Dict[str, List[str]] = {}
+            if languages:
+                seeded["Languages"] = sorted(languages)
+            if frameworks:
+                seeded["Frameworks"] = sorted(frameworks)
+
+            skills = seeded
+            config_manager.set("skills", skills)
 
         while True:
             print("\n--- Technical Skills ---")

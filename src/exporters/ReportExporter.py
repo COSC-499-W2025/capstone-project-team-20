@@ -132,19 +132,23 @@ class ReportExporter:
             })
         
         # Skills (aggregate from all projects)
-        all_languages = set()
-        all_frameworks = set()
-        for proj in report.projects:
-            if proj.languages:
-                all_languages.update(proj.languages)
-            if proj.frameworks:
-                all_frameworks.update(proj.frameworks)
-        
-        skills = {}
-        if all_languages:
-            skills["Languages"] = sorted(all_languages)
-        if all_frameworks:
-            skills["Frameworks"] = sorted(all_frameworks)
+        skills = config_manager.get("skills", {}) or {}
+
+        if not skills:
+            all_languages = set()
+            all_frameworks = set()
+            for proj in report.projects:
+                if proj.languages:
+                    all_languages.update(proj.languages)
+                if proj.frameworks:
+                    all_frameworks.update(proj.frameworks)
+
+            skills = {}
+            if all_languages:
+                skills["Languages"] = sorted(all_languages)
+            if all_frameworks:
+                skills["Frameworks"] = sorted(all_frameworks)
+
         
         return {
             "name": name,
