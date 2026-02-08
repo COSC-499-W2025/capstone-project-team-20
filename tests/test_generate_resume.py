@@ -97,34 +97,24 @@ def test_trigger_resume_generation_export_base_success(analyzer_resume, monkeypa
     # )
 
 
-def test_trigger_resume_generation_edit_and_export_report(analyzer_resume, monkeypatch, sample_report):
+def test_trigger_resume_generation_exports_report(analyzer_resume, monkeypatch, sample_report):
     analyzer_resume.report_manager.list_reports_summary.return_value = [
         {"id": 1, "title": "My Report", "date_created": "2026-02-07T12:00:00", "project_count": 1}
     ]
     analyzer_resume.report_manager.get_report.return_value = sample_report
     monkeypatch.setattr("builtins.print", lambda *a, **k: None)
 
-    # ✅ patch the already-created exporter instance
     mock_exporter = MagicMock()
     analyzer_resume.report_exporter = mock_exporter
 
-    # ✅ patch the editor constructor used INSIDE ProjectAnalyzer.py
-    mock_editor = MagicMock()
-    mock_editor.edit_report_cli.return_value = True  # your code checks `if not edited: ...`
-    monkeypatch.setattr("src.analyzers.ProjectAnalyzer.ReportEditor", lambda *a, **k: mock_editor)
-
-    analyzer_resume.report_manager.update_report.return_value = True
-
-    # Inputs:
-    _feed(monkeypatch, ["1", "resume.pdf", "y", "2"])
+    # Inputs: select report id, filename, confirm
+    _feed(monkeypatch, ["1", "resume.pdf", "y"])
 
     out = analyzer_resume.trigger_resume_generation()
 
-    assert out == Path("resumes") / "resume_updated.pdf"
-
-    mock_editor.edit_report_cli.assert_called_once()
-    analyzer_resume.report_manager.update_report.assert_called_once_with(sample_report)
+    assert out == Path("resumes") / "resume.pdf"
     mock_exporter.export_to_pdf.assert_called_once()
+
 
 
 
