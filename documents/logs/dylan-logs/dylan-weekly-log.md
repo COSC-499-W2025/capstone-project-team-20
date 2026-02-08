@@ -415,7 +415,7 @@ Last week, I completed the resume generation feature, which is now fully functio
 This week I tidied up the resume generation process. Users could not yet create report objects in order to generate a resume. I put up a PR solving this issue, and additionally, put up another PR implementing thumbnail selection for a project.
 
 **Plan/Goals for Upcoming Week:**
-In the upcoming week, I intend to add features that will allow the user to create Report objects, and set configs such as name, phone number, and email (both of which are prerequisites for generating a resume)
+In the upcoming week, I intend to add features that will allow for the deletion of Report objects, as well as bug hunting the Resume Generation process. I've made an issue for one crucial bug [Reports without Resume Insights are Still Created](https://github.com/orgs/COSC-499-W2025/projects/9?pane=issue&itemId=155415536&issue=COSC-499-W2025%7Ccapstone-project-team-20%7C358). So i'd like to fix that, as well as any others I encounter to really try and finalize this feature.
 
 **Any issues or Blockers That I Encountered This Week and How I Addressed/Plan to Address Them:**
 
