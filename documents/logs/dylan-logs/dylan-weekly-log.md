@@ -2,6 +2,7 @@
 
 ### **Table of Contents:**
 
+- [Term 2 Week 5: February 2nd - February 8th](#term-2-week-5-february-2nd---february-8th)
 - [Term 2 Week 4: January 26th - February 1st](#term-2-week-4-january-26th---february-1st)
 - [Term 2 Week 3: January 19th - January 26th](#term-2-week-3-january-19th---january-25th)
 - [Term 2 Week 2: January 12th - January 18th](#term-2-week-2-january-12th---january-18th)
@@ -318,6 +319,7 @@ This week I developed an incremental PR for the resume generation feature. Imple
 [Feature/resume generator](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/333)
 
 **Testing or Debugging Tasks:**
+
 I wrote extensive unit tests for my PR this week, linked above.
 
 **Reviewing or Collaboration Tasks:**
@@ -339,7 +341,7 @@ In the upcoming week, I intend to continue working on the resume generation feat
 
 N/A
 
-### Term 2 Week 4: January 26th - February 1at
+### Term 2 Week 4: January 26th - February 1st
 **Screenshot of Peer Testing 1:**
 
 ![Peer Testing 1 - Team 11](images/peer-testing-1-team-11.png)
@@ -352,6 +354,7 @@ This week I followed up on last week's incremental PR for the resume generation 
 [Feature/Resume Generation - 2](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/348)
 
 **Testing or Debugging Tasks:**
+
 I wrote extensive unit tests for my PR this week, linked above.
 
 **Reviewing or Collaboration Tasks:**
@@ -374,6 +377,51 @@ In the upcoming week, I intend to add features that will allow the user to creat
 **Any issues or Blockers That I Encountered This Week and How I Addressed/Plan to Address Them:**
 
 N/A
+
+
+### Term 2 Week 5: February 2nd - February 8th
+
+**Screenshot of Tasks Worked On:**
+
+![Term 2 Week 5 Log](images/dylan-week-5-term-2-ss.png)
+
+**Coding Tasks:**
+
+This week I worked on two substantial PRs. The first focused on tidying up the resume generation process. While resume generation was fully functional, users could not yet create report objects in order to generate a resume. My first PR solved this issue. My second PR implemented thumbnail selection for a project, satisfying Milestone 2, Requirement 26.
+
+[Associate Image as Thumbnail](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/356)
+
+[Feature/create report](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/355)
+
+**Testing or Debugging Tasks:**
+
+I wrote extensive unit tests for my PR this week, linked above.
+
+**Reviewing or Collaboration Tasks:**
+
+I manually tested and reviewed the following PRs this week. 
+
+[Feature/Fully Editing Resumes! (M2 R28)](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/357)
+
+[Feature/profile info edit](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/353)
+
+[Enhance badge engine with share normalization & badges](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/352)
+
+
+**Brief Description of Last Week Connecting This Week:**
+
+Last week, I completed the resume generation feature, which is now fully functional. Resumes can now be generated and exported to PDF.
+
+This week I tidied up the resume generation process. Users could not yet create report objects in order to generate a resume. I put up a PR solving this issue, and additionally, put up another PR implementing thumbnail selection for a project.
+
+**Plan/Goals for Upcoming Week:**
+In the upcoming week, I intend to add features that will allow for the deletion of Report objects, as well as bug hunting the Resume Generation process. I've made an issue for one crucial bug [Reports without Resume Insights are Still Created](https://github.com/orgs/COSC-499-W2025/projects/9?pane=issue&itemId=155415536&issue=COSC-499-W2025%7Ccapstone-project-team-20%7C358). So i'd like to fix that, as well as any others I encounter to really try and finalize this feature.
+
+**Any issues or Blockers That I Encountered This Week and How I Addressed/Plan to Address Them:**
+
+N/A
+
+
 
 
 
