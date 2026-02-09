@@ -12,13 +12,15 @@ class DummyProject:
         self.portfolio_entry = entry
         self.last_modified = last_modified
 
-def test_retrieve_full_portfolio_aggregates_and_sorts():
+def test_retrieve_full_portfolio_aggregates_and_sorts(monkeypatch):
     analyzer = ProjectAnalyzer(MagicMock(), [], Path("."))
     projects = [
         DummyProject("A", "### A\n**Role:** Team Contributor | **Timeline:** 1 month\n", datetime(2025, 2, 1)),
         DummyProject("B", "### B\n**Role:** Team Contributor | **Timeline:** 2 months\n", datetime(2025, 3, 1)),
         DummyProject("C", "", datetime(2025, 1, 1)),  # empty entry should be skipped
     ]
+
+    monkeypatch.setattr("builtins.input", lambda _: "n")
 
     with patch.object(ProjectAnalyzer, "_get_projects", return_value=projects):
         buf = io.StringIO()

@@ -31,6 +31,10 @@ class ProjectAnalyticsSnapshot:
     author_count: int
     collaboration_status: str        # "individual" | "collaborative"
 
+def _normalize_share(value: float) -> float:
+    if value > 1.0:
+        return value / 100.0
+    return value
 
 def _cat_metric(
     summary: Dict[str, Dict[str, Any]],
@@ -47,8 +51,16 @@ def _cat_metric(
     for k in keys:
         v = data.get(k)
         if isinstance(v, (int, float)):
-            return float(v)
+            return _normalize_share(float(v))
     return default
+
+def _category_share(summary: Dict[str, Dict[str, Any]], category: str, total_files: int) -> float:
+    counts = summary.get("counts")
+    if isinstance(counts, dict):
+        count = counts.get(category, 0)
+        if isinstance(count, (int, float)) and total_files > 0:
+            return float(count) / float(total_files)
+    return _cat_metric(summary, category, ["file_share", "files_pct", "share"], 0.0)
 
 
 def assign_badges(snapshot: ProjectAnalyticsSnapshot) -> List[str]:
@@ -71,12 +83,12 @@ def assign_badges(snapshot: ProjectAnalyticsSnapshot) -> List[str]:
     authors = snapshot.author_count
 
     # Category shares (backed by categories.yml)
-    code_share = _cat_metric(cats, "code",   ["file_share", "files_pct", "share"], 0.0)
-    test_share = _cat_metric(cats, "test",   ["file_share", "files_pct", "share"], 0.0)
-    docs_share = _cat_metric(cats, "docs",   ["file_share", "files_pct", "share"], 0.0)
-    design_share = _cat_metric(cats, "design", ["file_share", "files_pct", "share"], 0.0)
-    data_share = _cat_metric(cats, "data",   ["file_share", "files_pct", "share"], 0.0)
-    game_share = _cat_metric(cats, "game",   ["file_share", "files_pct", "share"], 0.0)
+    code_share = _category_share(cats, "code", files)
+    test_share = _category_share(cats, "test", files)
+    docs_share = _category_share(cats, "docs", files)
+    design_share = _category_share(cats, "design", files)
+    data_share = _category_share(cats, "data", files)
+    game_share = _category_share(cats, "game", files)
 
     # ---------- Size / duration driven badges ----------
 
@@ -92,16 +104,34 @@ def assign_badges(snapshot: ProjectAnalyticsSnapshot) -> List[str]:
     if duration <= 30 and files < 50:
         badges.append("fresh_breeze")
 
+    if duration >= 730:
+        badges.append("marathoner")
+
+    if size_mb <= 5 and files >= 10:
+        badges.append("tiny_but_mighty")
+
+    if files >= 500 and duration <= 120:
+        badges.append("rapid_builder")
+
     # ---------- Language diversity ----------
+
+    lang_shares = [_normalize_share(v) for v in langs.values()]
+    top_lang_share = max(lang_shares) if lang_shares else 0.0
 
     if lang_count >= 5:
         badges.append("jack_of_all_trades")
     elif lang_count >= 3:
         badges.append("polyglot")
 
+    if top_lang_share >= 0.8:
+        badges.append("language_specialist")
+
+    if lang_count >= 3 and top_lang_share <= 0.5:
+        badges.append("balanced_palette")
+
     # ---------- Collaboration profile ----------
 
-    if authors == 1:
+    if authors <= 1:
         badges.append("solo_runner")
     elif authors >= 3:
         badges.append("team_effort")
@@ -111,11 +141,23 @@ def assign_badges(snapshot: ProjectAnalyticsSnapshot) -> List[str]:
     if test_share >= 0.15:
         badges.append("test_pilot")
 
+    if 0.05 <= test_share < 0.15:
+        badges.append("test_scout")
+    
     if docs_share >= 0.20:
         badges.append("docs_guardian")
 
+    if 0.10 <= docs_share < 0.20:
+        badges.append("doc_enthusiast")
+
     if design_share >= 0.25 or game_share >= 0.25:
         badges.append("pixel_perfect")
+
+    if 0.15 <= max(design_share, game_share) < 0.25:
+        badges.append("visual_storyteller")
+
+    if 0.10 <= data_share < 0.25:
+        badges.append("data_seedling")
 
     if data_share >= 0.25:
         badges.append("data_wrangler")
@@ -169,6 +211,13 @@ def build_fun_facts(snapshot: ProjectAnalyticsSnapshot, badges: List[str]) -> Li
             f"{snapshot.name} speaks {len(snapshot.languages)} programming language(s)."
         )
 
+    if "language_specialist" in badges and snapshot.languages:
+        top_lang = max(snapshot.languages, key=snapshot.languages.get)
+        facts.append(f"{snapshot.name} leans heavily on {top_lang} for core logic.")
+
+    if "balanced_palette" in badges:
+        facts.append("Language usage is well-balanced across the codebase.")
+
     if "solo_runner" in badges:
         facts.append("Built by a solo contributor from the ground up.")
     elif "team_effort" in badges:
@@ -182,11 +231,32 @@ def build_fun_facts(snapshot: ProjectAnalyticsSnapshot, badges: List[str]) -> Li
     if "docs_guardian" in badges:
         facts.append("Rich documentation footprint detected across the repo.")
 
+    if "doc_enthusiast" in badges:
+        facts.append("Documentation has a consistent, noticeable presence.")
+
     if "pixel_perfect" in badges:
         facts.append("Design and media assets play a major role in this project.")
 
+    if "visual_storyteller" in badges:
+        facts.append("Visual assets provide a solid supporting role.")
+
     if "container_captain" in badges:
         facts.append("Containerization is part of this project’s deployment story.")
+
+    if "marathoner" in badges:
+        facts.append("This project has been evolving for multiple years.")
+
+    if "tiny_but_mighty" in badges:
+        facts.append("Compact in size, but packed with meaningful work.")
+
+    if "rapid_builder" in badges:
+        facts.append("A large amount of work landed in a tight timeframe.")
+
+    if "test_scout" in badges:
+        facts.append("Testing shows up regularly throughout the repo.")
+
+    if "data_seedling" in badges:
+        facts.append("Data assets and pipelines are part of the project mix.")
 
     return facts
 

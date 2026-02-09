@@ -23,6 +23,8 @@ from utils.RepoFinder import RepoFinder
 from src.managers.ProjectManager import ProjectManager
 from src.managers.FileHashManager import FileHashManager
 from src.models.Project import Project
+from src.models.Report import Report
+from src.models.ReportProject import ReportProject
 from src.ProjectFolder import ProjectFolder
 from src.analyzers.SkillAnalyzer import SkillAnalyzer
 from src.generators.ResumeInsightsGenerator import ResumeInsightsGenerator
@@ -32,6 +34,7 @@ from src.analyzers.RepoProjectBuilder import RepoProjectBuilder
 from utils.file_hashing import compute_file_hash
 from src.exporters.ReportExporter import ReportExporter
 from src.managers.ReportManager import ReportManager
+from src.services.InsightEditor import InsightEditor
 
 MIN_DISPLAY_CONFIDENCE = 0.5  # only show skills with at least this confidence
 
@@ -559,21 +562,18 @@ class ProjectAnalyzer:
         project.summary = gen.generate_project_summary()
         project.portfolio_entry = gen.generate_portfolio_entry()
 
+        print("\nGenerated Portfolio Entry:\n")
+        print(project.portfolio_entry)
+
+        project.portfolio_entry = self.edit_portfolio_entry_cli(project.portfolio_entry)
+
         self.project_manager.set(project)
         print(f"\nGenerated and saved insights for {project.name}:")
         gen.display_insights(project.bullets, project.summary, project.portfolio_entry)
 
     def generate_resume_insights(self) -> None:
         """Presents a menu to generate resume insights, ensuring scores are calculated first."""
-        all_projects_with_scores = self._ensure_scores_are_calculated()
-
-        scored_projects = [p for p in all_projects_with_scores if p.resume_score > 0]
-
-        if not scored_projects:
-            print("\nNo scored projects found to generate insights for. Please run 'Analyze Skills' first.")
-            return
-
-        sorted_projects = sorted(scored_projects, key=lambda p: p.resume_score, reverse=True)
+        sorted_projects = self.get_projects_sorted_by_score()
 
         while True:
             print("\n--- Generate Resume Insights ---")
@@ -635,6 +635,76 @@ class ProjectAnalyzer:
             except ValueError:
                 print("Invalid input. Please enter a number.")
                 continue
+    
+    def edit_portfolio_entry_cli(self, entry: str) -> str:
+        parts = InsightEditor.parse_portfolio_entry(entry)
+
+        while True:
+            print("\nEdit Menu:")
+            print("1) Role/Timeline line")
+            print("2) Technologies line")
+            print("3) Project Overview")
+            print("4) Achievements")
+            print("5) Done")
+            choice = input("> ").strip()
+
+            if choice == "1":
+                print(f"\nCurrent:\n{parts.role_line}")
+                new_val = input("New (Enter to keep): ").rstrip()
+                if new_val:
+                    if "**Role:**" not in new_val or "**Timeline:**" not in new_val:
+                        print("\nPlease keep the format like:")
+                        print("**Role:** <something> | **Timeline:** <something>")
+                        print("Example: **Role:** Team Contributor (Team of 7) | **Timeline:** 25 days")
+                    else:
+                        parts.role_line = new_val
+
+            elif choice == "2":
+                print(f"\nCurrent:\n{parts.tech_line}")
+                new_val = input("New (Enter to keep): ").rstrip()
+                if new_val:
+                    parts.tech_line = new_val
+
+            elif choice == "3":
+                print(f"\nCurrent:\n{parts.overview}")
+                new_val = input("New (Enter to keep): ").rstrip()
+                if new_val:
+                    parts.overview = new_val
+
+            elif choice == "4":
+                print("\nCurrent achievements:")
+                for i, a in enumerate(parts.achievements, 1):
+                    print(f"  {i}. {a}")
+                print("Type a number to edit, 'a' to add, 'd' to delete, or Enter to go back.")
+                sub = input("> ").strip().lower()
+
+                if sub.isdigit():
+                    idx = int(sub) - 1
+                    if 0 <= idx < len(parts.achievements):
+                        print(f"Current: {parts.achievements[idx]}")
+                        new_a = input("New (Enter to keep): ").rstrip()
+                        if new_a:
+                            parts.achievements[idx] = new_a
+
+                elif sub == "a":
+                    new_a = input("Add achievement: ").rstrip()
+                    if new_a:
+                        parts.achievements.append(new_a)
+
+                elif sub == "d":
+                    n = input("Delete which number?: ").strip()
+                    if n.isdigit():
+                        idx = int(n) - 1
+                        if 0 <= idx < len(parts.achievements):
+                            parts.achievements.pop(idx)
+
+            elif choice == "5":
+                break
+            else:
+                print("Invalid choice.")
+
+        return InsightEditor.build_portfolio_entry(parts)
+
 
     def retrieve_previous_insights(self) -> None:
         print("\n--- Previous Resume Insights ---")
@@ -783,7 +853,34 @@ class ProjectAnalyzer:
             print("-" * 50 + "\n")
 
         print(f"Total Projects in Portfolio: {len(portfolio_projects)}\n")
+        edit = input("Would you like to edit one of these entries? (y/n): ").strip().lower()
+        if edit != "y":
+            return
 
+        print("\nSelect a project to edit:")
+        for i, p in enumerate(portfolio_projects, 1):
+            print(f"  {i}: {p.name}")
+
+        choice = input(f"Enter your choice (1-{len(portfolio_projects)}), or 'q' to cancel: ").strip().lower()
+        if choice == "q":
+            return
+
+        try:
+            idx = int(choice) - 1
+            if not (0 <= idx < len(portfolio_projects)):
+                print("Invalid selection.")
+                return
+        except ValueError:
+            print("Invalid input.")
+            return
+
+        project = portfolio_projects[idx]
+
+        project.portfolio_entry = self.edit_portfolio_entry_cli(project.portfolio_entry)
+
+        self.project_manager.set(project)
+        self.cached_projects = []  # refresh cache each time
+        print("\nSaved updated portfolio entry.\n")
 
     def delete_previous_insights(self) -> None:
         """Deletes the stored resume insights for a user-selected project."""
@@ -810,20 +907,298 @@ class ProjectAnalyzer:
 
     def display_analysis_results(self) -> None:
         print(f"\n{'=' * 30}\n      Analysis Results\n{'=' * 30}")
-        all_projects = self._ensure_scores_are_calculated()
-        scored_projects = [p for p in all_projects if p.resume_score > 0]
+        self.display_ranked_projects()
+    
+    def get_projects_sorted_by_score(self) -> List[Project]:
+        """Return all projects with ensured resume scores, sorted descending, excluding zero-score projects."""
+        projects = self._ensure_scores_are_calculated()
+        scored = [p for p in projects if p.resume_score > 0]
+        return sorted(scored, key=lambda p: p.resume_score, reverse=True)
 
-        if not scored_projects:
+    def display_ranked_projects(self,sorted_projects=None) -> None:
+        """Display all scored projects sorted by resume score."""
+        if sorted_projects is None: 
+            sorted_projects = self.get_projects_sorted_by_score()
+        if not sorted_projects:
             print("\nNo projects with calculated scores to display.")
             return
 
-        for project in scored_projects:
+        for project in sorted_projects:
             project.display()
 
     def print_tree(self) -> None:
         print("\n--- Project Folder Structures ---")
         if not self.root_folders: print("No project structure loaded.")
         for root in self.root_folders: print(toString(root))
+
+    def create_report(self):
+        """Allow the user to select projects and create a report object."""
+        sorted_projects = self.get_projects_sorted_by_score()
+
+        if not sorted_projects:
+            print("\nNo scored projects available to include in a report.")
+            return
+
+        print("\n--- Create Report ---")
+        print("\nPlease select which projects you'd like included in the report.")
+
+        selected_projects = self._select_multiple_projects(sorted_projects)
+        if selected_projects is None:
+            print("\nReturning to main menu.")
+            return
+
+        # Title input
+        print("\nEnter a title for your report (or press Enter for default):")
+        title = input("Title: ").strip()
+        if not title:
+            title = "My Project Report"
+
+        # Sort-by selection
+        print("\nSelect sorting method for the report:")
+        print("  1: Resume Score (default)")
+        print("  2: Date Created")
+        print("  3: Last Modified")
+        print("  q: Cancel")
+
+        sort_choice = input("Your choice: ").strip().lower()
+        if sort_choice == "q":
+            print("\nCancelled. Returning to main menu.")
+            return
+
+        sort_map = {
+            "1": "resume_score",
+            "2": "date_created",
+            "3": "last_modified",
+        }
+        sort_by = sort_map.get(sort_choice, "resume_score")
+
+        report_projects = [ReportProject.from_project(p) for p in selected_projects]
+
+        report = Report(
+            id=None,
+            title=title,
+            date_created=datetime.now(),
+            sort_by=sort_by,
+            projects=report_projects,
+            notes=None
+        )
+
+        print("\nReport created successfully:")
+        print(f"  Title: {report.title}")
+        print(f"  Sort By: {report.sort_by}")
+        print(f"  Included Projects: {[p.project_name for p in report_projects]}\n")
+
+        self.report_manager.create_report(report)
+
+
+    
+    def _select_multiple_projects(self, sorted_projects: List[Project]) -> Optional[List[Project]]:
+        print("\nSelect one or more projects by entering numbers separated by commas.\n")
+        print("Enter 'q' to cancel.\n")
+
+        for i, proj in enumerate(sorted_projects, 1):
+            print(f"  {i}: {proj.name} (Score: {proj.resume_score:.2f})")
+
+        choice_str = input("\nYour selection: ").strip().lower()
+        if choice_str == "q":
+            return None
+
+        try:
+            indices = [int(x.strip()) for x in choice_str.split(",")]
+            selected = []
+            for idx in indices:
+                if 1 <= idx <= len(sorted_projects):
+                    selected.append(sorted_projects[idx - 1])
+                else:
+                    print(f"Invalid project number: {idx}")
+                    return self._select_multiple_projects(sorted_projects)
+            return selected
+        except ValueError:
+            print("Invalid input. Please enter numbers separated by commas.")
+            return self._select_multiple_projects(sorted_projects)
+
+
+        
+    
+    def trigger_resume_generation(self) -> Optional[Path]:
+        """
+        Interactive prompt to generate a resume from a report.
+        Displays all available reports and lets user select one.
+        
+        Returns:
+            Path to generated PDF, or None if cancelled/failed
+        """
+        # 1. Get all reports
+        reports_summary = self.report_manager.list_reports_summary()
+        
+        if not reports_summary:
+            print("\n❌ No reports found. Create a report first before generating a resume.")
+            return None
+        
+        # 2. Display reports in a formatted table
+        print("\n" + "="*90)
+        print("Available Reports")
+        print("="*90)
+        print(f"{'ID':<5} {'Title':<35} {'Created':<20} {'Projects':<10} {'Avg Score':<10}")
+        print("-"*90)
+        
+        for report_summary in reports_summary:
+            date_created = datetime.fromisoformat(report_summary['date_created'])
+            date_str = date_created.strftime('%Y-%m-%d %H:%M')
+            
+            # Get full report to calculate average score
+            report = self.report_manager.get_report(report_summary['id'])
+            avg_score = f"{report.average_score:.1f}" if report else "N/A"
+            
+            print(f"{report_summary['id']:<5} {report_summary['title']:<35} {date_str:<20} "
+                f"{report_summary['project_count']:<10} {avg_score:<10}")
+        
+        print("-"*90)
+        
+        # 3. Prompt for report selection
+        while True:
+            try:
+                choice = input("\nEnter Report ID to export (or 'q' to cancel): ").strip()
+                
+                if choice.lower() == 'q':
+                    print("Resume generation cancelled.")
+                    return None
+                
+                report_id = int(choice)
+                
+                # Validate ID exists
+                valid_ids = [r['id'] for r in reports_summary]
+                if report_id not in valid_ids:
+                    print(f"❌ Invalid ID. Please choose from: {', '.join(map(str, valid_ids))}")
+                    continue
+                
+                break
+                
+            except ValueError:
+                print("❌ Please enter a valid number or 'q' to cancel.")
+        
+        # 4. Load the selected report
+        report = self.report_manager.get_report(report_id)
+        
+        if not report:
+            print(f"❌ Error loading report {report_id}")
+            return None
+        
+        # 5. Display report details
+        print(f"\n{'='*60}")
+        print(f"📋 Selected Report: {report.title}")
+        print(f"{'='*60}")
+        print(f"Created: {report.date_created.strftime('%Y-%m-%d %H:%M')}")
+        print(f"Projects: {len(report.projects)}")
+        print(f"Average Score: {report.average_score:.1f}")
+        
+        if report.notes:
+            print(f"Notes: {report.notes}")
+        
+        print(f"\n{'Projects included:':}")
+        for i, proj in enumerate(report.projects, 1):
+            tech_stack = []
+            if proj.languages:
+                tech_stack.extend(proj.languages[:2])  # Show first 2 languages
+            if proj.frameworks:
+                tech_stack.extend(proj.frameworks[:2])  # Show first 2 frameworks
+            
+            tech_str = ", ".join(tech_stack) if tech_stack else "No tech stack"
+            print(f"  {i}. {proj.project_name} ({tech_str}) - Score: {proj.resume_score:.1f}")
+        
+        print(f"{'='*60}\n")
+        
+        # 6. Prompt for output filename
+        default_filename = f"{report.title.replace(' ', '_').lower()}_resume.pdf"
+        filename_input = input(f"Output filename (default: '{default_filename}'): ").strip()
+        
+        filename = filename_input if filename_input else default_filename
+        
+        # Ensure .pdf extension
+        if not filename.endswith('.pdf'):
+            filename += '.pdf'
+        
+        # 7. Confirm generation
+        confirm = input(f"\n✓ Generate resume as '{filename}'? (y/n): ").strip().lower()
+        
+        if confirm != 'y':
+            print("Resume generation cancelled.")
+            return None
+        
+        # 8. Generate the resume using the private method
+        print("\n⏳ Generating resume...")
+        
+        try:
+            pdf_path = self._generate_resume(report, filename)
+            print(f"\n✅ Resume successfully generated!")
+            print(f"📄 Saved to: {pdf_path}")
+            return pdf_path
+            
+        except ValueError as e:
+            print(f"\n❌ Validation Error: {e}")
+            print("💡 Tip: Make sure you've set your name, email, and phone in config.")
+            return None
+            
+        except RuntimeError as e:
+            print(f"\n❌ Generation Error: {e}")
+            return None
+            
+        except Exception as e:
+            print(f"\n❌ Unexpected error: {e}")
+            return None
+    
+    def _generate_resume(self, report, output_filename: str = "resume.pdf") -> Path:
+        """
+        Generate a PDF resume from a report object.
+        
+        Args:
+            report: Report object to export
+            output_filename: Name of the PDF file to generate (default: "resume.pdf")
+            
+        Returns:
+            Path to the generated PDF file
+            
+        Raises:
+            ValueError: If report not found or config incomplete
+            RuntimeError: If LaTeX not installed or PDF generation fails
+        """
+        # 1. Validate report has projects
+        if not report.projects:
+            raise ValueError("Cannot generate resume: report has no projects")
+        
+        # 2. Validate required config fields
+        required_fields = ["name", "email", "phone"]
+        missing_fields = [
+            field for field in required_fields 
+            if not self._config_manager.get(field)
+        ]
+        
+        if missing_fields:
+            raise ValueError(
+                f"Cannot generate resume: missing required config fields: {', '.join(missing_fields)}\n"
+                f"Please set these using the config command."
+            )
+        
+        # 3. Determine output path
+        output_path = Path(output_filename)
+        if not output_path.is_absolute():
+            output_path = Path("resumes") / output_filename
+        
+        # 4. Generate the PDF
+        exporter = ReportExporter()
+        try:
+            exporter.export_to_pdf(
+                report=report,
+                config_manager=self._config_manager,
+                output_path=output_filename,
+                template="jake"  # TODO: Make this configurable
+            )
+        except RuntimeError as e:
+            raise RuntimeError(f"Failed to generate PDF: {e}")
+        
+        return Path("resumes") / output_filename
+        
+
 
     def _cleanup_temp(self):
         if self.cached_extract_dir: shutil.rmtree(self.cached_extract_dir, ignore_errors=True)
@@ -913,7 +1288,86 @@ class ProjectAnalyzer:
             else:
                 print("\nFile categories not analyzed yet.")
 
+    def configure_personal_info(self) -> None:
+        """Interactive prompt to store personal info used for resume generation."""
+        print("\n===== Resume Personal Information =====")
 
+        def prompt_value(label: str, key: str) -> None:
+            current = self._config_manager.get(key, "")
+            prompt = f"{label} [{current}]: " if current else f"{label}: "
+            value = input(prompt).strip()
+            if value == "":
+                return
+            if value == "-":
+                self._config_manager.set(key, "")
+                return
+            self._config_manager.set(key, value)
+
+        def prompt_yes_no(prompt: str) -> bool:
+            while True:
+                choice = input(prompt).strip().lower()
+                if choice in {"y", "yes"}:
+                    return True
+                if choice in {"n", "no"}:
+                    return False
+                print("Please enter y or n.")
+
+        prompt_value("Full name", "name")
+        prompt_value("Email", "email")
+        prompt_value("Phone", "phone")
+        prompt_value("GitHub username", "github")
+        prompt_value("LinkedIn handle", "linkedin")
+
+        if prompt_yes_no("Update education history? (y/n): "):
+            education_entries = []
+            while True:
+                add_entry = prompt_yes_no("Add an education entry? (y/n): ")
+                if not add_entry:
+                    break
+                school = input("  School: ").strip()
+                location = input("  Location: ").strip()
+                degree = input("  Degree: ").strip()
+                dates = input("  Dates (e.g., 2019 - 2023): ").strip()
+                if not any([school, location, degree, dates]):
+                    print("  Skipping empty entry.")
+                    continue
+                education_entries.append(
+                    {
+                        "school": school,
+                        "location": location,
+                        "degree": degree,
+                        "dates": dates,
+                    }
+                )
+            self._config_manager.set("education", education_entries)
+
+        if prompt_yes_no("Update experience history? (y/n): "):
+            experience_entries = []
+            while True:
+                add_entry = prompt_yes_no("Add an experience entry? (y/n): ")
+                if not add_entry:
+                    break
+                title = input("  Title: ").strip()
+                company = input("  Company: ").strip()
+                location = input("  Location: ").strip()
+                dates = input("  Dates (e.g., Jun 2022 - Present): ").strip()
+                bullets_raw = input("  Bullets (separate with ;): ").strip()
+                bullets = [b.strip() for b in bullets_raw.split(";") if b.strip()]
+                if not any([title, company, location, dates, bullets]):
+                    print("  Skipping empty entry.")
+                    continue
+                experience_entries.append(
+                    {
+                        "title": title,
+                        "company": company,
+                        "location": location,
+                        "dates": dates,
+                        "bullets": bullets,
+                    }
+                )
+            self._config_manager.set("experience", experience_entries)
+
+        print("Resume personal information saved.\n")
 
     def run(self) -> None:
         """The main interactive menu loop."""
@@ -941,8 +1395,11 @@ class ProjectAnalyzer:
                 14. Show Project Timeline (Projects & Skills)
                 15. Analyze Badges
                 16. Retrieve Full Portfolio (Aggregated)
-                17. Edit project information (Scores & Dates)
-                18. Exit
+                17. Exit
+                18. Enter Resume Personal Information
+                19. Create Report (For Use With Resume Generation)
+                20. Generate Resume
+                21. Edit project information (Scores & Dates)
                   """)
 
             choice = input("Selection: ").strip()
@@ -959,12 +1416,13 @@ class ProjectAnalyzer:
                 "9": self.analyze_skills, "10": self.generate_resume_insights,
                 "11": self.retrieve_previous_insights, "12": self.delete_previous_insights,
                 "13": self.display_analysis_results, "14": self.display_project_timeline,
-                "15": self.analyze_badges,
-                "16": self.retrieve_full_portfolio,
-                "17": self.update_score_and_date
+                "15": self.analyze_badges, "16": self.retrieve_full_portfolio,
+                "18": self.configure_personal_info, "19": self.create_report,
+                "20": self.trigger_resume_generation,
+                "21": self.update_score_and_date
             }
 
-            if choice == "18":
+            if choice == "17":
                 print("Exiting Project Analyzer.")
                 self._cleanup_temp()
                 return
