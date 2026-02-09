@@ -1399,7 +1399,7 @@ class ProjectAnalyzer:
                 18. Enter Resume Personal Information
                 19. Create Report (For Use With Resume Generation)
                 20. Generate Resume
-                21. Edit project information (Scores & Dates)
+                99. Edit project information (Scores & Dates)
                   """)
 
             choice = input("Selection: ").strip()
@@ -1419,7 +1419,7 @@ class ProjectAnalyzer:
                 "15": self.analyze_badges, "16": self.retrieve_full_portfolio,
                 "18": self.configure_personal_info, "19": self.create_report,
                 "20": self.trigger_resume_generation,
-                "21": self.update_score_and_date
+                "99": self.update_score_and_date
             }
 
             if choice == "17":
