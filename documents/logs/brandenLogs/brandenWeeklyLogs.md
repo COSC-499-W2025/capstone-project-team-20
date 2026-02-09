@@ -1,6 +1,7 @@
 ## **Branden Weekly Logs**
 ### **Table of contents:**
 
+- [Term 2 Week 5](#term-2-week-5-february-2nd---february-8th)
 - [Term 2 Week 4](#term-2-week-4-january-26th-february-1st)
 - [Term 2 Week 3](#term-2-week-3-january-19th-january-25th)
 - [Term 2 Week 2](#term-2-week-2-january-12th-january-18th)
@@ -288,4 +289,27 @@ I plan on continuuing on with Milestone 2 requirements. I think I will try to ge
 **Any issues or Blockers That I Encountered This Week and How I Addressed/Plan to Address Them:**
 Its been hard getting the motivation going for the team to stick it strong and consistent. Need to reignite the flame to start really going at this project again here. Its mainly just been hard motivating.
 
+
+### **Term 2 Week 5: February 2nd - February 8th**
+**Screenshot of Tasks Worked On:**
+
+![Term 2 Week 5 Log](imagesForBrandenLogs/T2_W5.png)
+
+**Coding Tasks:**
+This week, I worked on implementing full interactive resume editing. The focus waas in improving and restructuring the resume generation and editing system. i implemented a full interactive reporteditor that supports edits to header, projects, education, experience, and technical skills. these changes persist. Resume export now generates from the edited report. i also seperated resume editing into a new menu option and updated/consolidated tests to match the new architecture. This closed issue #297 and it was [this PR](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/357). There were changes requested twice on it, so I will also put it in my debugging tasks.
+
+**Testing or Debugging Tasks:**
+Manually tested my own code and made a test suite for the report editor implementation. Also had changes requested on my PR twice, so I fixed what was requested in a timely manner. I also reviewed and approved [Kaan's PR](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/353), [Dylan's PR](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/355), and requested changes on [Lex's PR](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/341). I have no other PR's assigned to me at the time of writing this and nothing else to review.
+
+**Reviewing or Collaboration Tasks:**
+Reviewed [Kaan's PR](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/353), [Dylan's PR](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/355). and [Lex's PR](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/341)
+
+**Brief Description of Last Week Connecting This Week:**
+I did continue on with the milestone 2 requirements. My PR closes issue #297, which is also Milestone 2 requirement 28.
+
+**Plan/Goals for Upcoming Week:**
+Next week, I will be continuuing on with Milestone 2 requirements. I believe ill fill out the requirements for the test folders with a snapshot of a project at two different points. I also want to refactor our code in some areas (still need to look further into this, may not be this week but that is coming up in the future.)
+
+**Any issues or Blockers That I Encountered This Week and How I Addressed/Plan to Address Them:**
+none as of right now. Things seem to be getting back on track!
 
