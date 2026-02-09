@@ -522,4 +522,4 @@ Next week, we are continuuing on tasks mentioned in work performed. We will be d
 
 **Test Report:**
 
-[Term 2 Week 5 Test Report]()
+[Term 2 Week 5 Test Report](teamWeeklyLogsImages/Tests_S2_W5.png)
