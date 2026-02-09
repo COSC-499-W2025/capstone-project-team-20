@@ -494,7 +494,7 @@ Next week, we are continuuing on tasks mentioned in work performed. We will be d
 ### Term 2 Week 5 (February 2nd - February 8th)
 
 **Work Performed:**
-- Branden Kennedy (42474551): 
+- Branden Kennedy (42474551): This week, I worked on implementing full interactive resume editing. The focus waas in improving and restructuring the resume generation and editing system. i implemented a full interactive reporteditor that supports edits to header, projects, education, experience, and technical skills. these changes persist. Resume export now generates from the edited report. i also seperated resume editing into a new menu option and updated/consolidated tests to match the new architecture. This closed issue #297 and it was [this PR](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/357). I also have reviewed 3 PRs so far, [Kaan's PR](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/353), [Dylan's PR](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/355), and [Lex's PR](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/341).
 
 - Necmi Kaan Sapoglu (17014796): 
 
