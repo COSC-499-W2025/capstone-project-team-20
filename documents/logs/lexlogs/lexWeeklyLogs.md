@@ -238,3 +238,46 @@ instead, I started a front end mockup which was added to the documentation. I cr
 Example images showing the 3D nature of the mockups, as well as the ability to change colours:
 ![3D](imagesForLexLogs/3Dmockup.png)
 ![Colour](imagesForLexLogs/3Dmockup_color.png)
+
+## T2 Week 4-5
+**Types of tasks worked on**
+![Week 2 Tasks](imagesForLexLogs/w4-5t2.png)
+
+Tasks these two weeks:
+1) I implemented the ability to edit resume rankings and chronology as specified in the Milestone 2 requirement 23(Allow users to choose which information is represented), the aspects of this requirement I did not implement are already implemented in different parts of the system.
+
+2) Setup Tkinter for creating a frontend UI, which incuded the following:
+      i) study tkinter documentation
+     ii) create an app.py file containing an App class which is a tk.TK() window
+    iii) create a constructor for building the main screen
+     iv) implement a framework for switching menus with visual feedback
+      v) thoroughly comment so that teammates unfamiliar with tkinter can understand how the code works and replicate if needed
+
+Team agreed we should get started on the UI due to how well recieved our temporary front end was for the demos last week, as well as due to the fact that our current command line UI is difficult to navigate quickly due to the staggering amount of menu options. 
+
+We discussed as a team what menus/screens would be necessary for the front end, and i ordered them in the application in an order I found intuitive:
+    1. Settings
+    2. Projects [default menu that is open on application start]
+    3. Badges
+    4. Resume
+    5. Portfolio
+    6. Help
+ Despite being the top option, the Options menu is not the menu opened by default upon launching the program, I may attempt to find a better solution for this in the future if it bothers people, but personally I find it most intuitive.
+
+ It was my descision to have a Help menu, I have no concrete plans for what should go in there at the moment.
+
+ The way i've set up the framework each menu and it's UI will be stored in a file containing its corresponding class, with methods .build(self) and .teardown(self) to make their UI elements appear and disappear. Many menus will have to have far more methods in order to handle things such as dynamic tables/pagination or in-place information editing, which im excited to figure out how to implement.
+
+ My first and foremost plan for next week is to hook up the consent manager to the front end, it makes sense as a starting point and would be good practice for understanding how existing features will be implemented on the front end.
+
+ After that I'll take on some of the following in vaguely this order:
+    - finish my remaining Milestone 2 tasks
+    - Implement basic layout for each of the menu classes
+    - Fully implement user profile editing in the settings menu
+    - in the projects menu, 
+        - implement file uploads
+        - implement project viewer
+        - implement project editor
+    - implement badge viewing in the badges menu
+    - (and more later on...)
+    
