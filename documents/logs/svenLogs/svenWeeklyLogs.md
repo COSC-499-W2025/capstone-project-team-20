@@ -316,3 +316,26 @@ We found a few key problems during testing. Users had a hard time finding featur
 
 ### Looking Ahead:
 Now that the issues are created, the plan is to start working on them. My immediate focus will be on fixing the navigation and error-handling bugs, as they have the biggest impact on the user experience.
+
+# Term 2 Week 5: Feb 3 - Feb 9
+![mr-sban's Tasks for T2W5](./imagesForSvenLogs/t2w5.png)
+
+### Tasks worked on:
+- **Portfolio Generation Feature**: The majority of my effort this week was dedicated to developing a new portfolio generation feature. This turned out to be more complex than anticipated, leading to some significant challenges that I am still working to resolve.
+- **Bug Fix for User Handling (Issue #345)**: While grappling with the portfolio feature, I shifted focus to a smaller, critical bug that was identified during peer testing. I successfully implemented a fix for the error handling of non-existent users in the data source, ensuring the application no longer crashes when switching between data sets.
+- **Pull Request Creation**: I created a pull request for the bugfix (#345) so that this improvement could be merged while I continue to work on the larger feature.
+
+### Weekly Goals Recap:
+My primary goal for the week was to make substantial progress on the new portfolio generation branch. Unfortunately, due to its complexity going a bit haywire, I was not able to complete it as planned. However, to maintain momentum and continue contributing, I pivoted to resolving Issue #345. I successfully fixed the bug and submitted a pull request, so while my main goal was delayed, I was still able to deliver a valuable fix for the team.
+
+### PRs I reviewed this week:
+- **PR #341**: I re-reviewed the resume editing feature to ensure it was ready for merging after some updates.
+
+### PRs I opened this week:
+- **PR #363**: Opened a pull request to fix the error handling for non-existent users in the data source (Issue #345).
+
+### Problems Encountered:
+The main problem this week was with the portfolio generation feature, which became unexpectedly complex and difficult to implement. This took up a significant amount of my time and has temporarily blocked my progress on that front. Instead of getting stuck, I decided to switch to a more manageable task to ensure I could still make a tangible contribution.
+
+### Looking Ahead:
+My immediate priority is to continue tackling the portfolio generation feature, breaking down the problem into smaller parts to find a clear path forward. I will also monitor the feedback on my bugfix PR (#346) and address any comments to get it merged quickly.
