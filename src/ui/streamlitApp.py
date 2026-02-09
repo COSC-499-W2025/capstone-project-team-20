@@ -1,4 +1,3 @@
-
 import io
 import sys
 import zipfile
@@ -230,7 +229,7 @@ def load_zip_into_analyzer(analyzer: ProjectAnalyzer, zip_path_str: str) -> str:
     zp = Path(zip_path_str).expanduser()
     if not (zp.exists() and zipfile.is_zipfile(zp)):
         raise ValueError("Invalid path or not a zip file.")
-    
+
     try:
         analyzer._cleanup_temp()
     except Exception:
@@ -419,62 +418,64 @@ if selected is not None or st.session_state.get("last_output"):
                         st.error(str(e))
 
             # 8: Change usernames
-                        # 8: Change usernames (MATCHES CLI change_selected_users EXACTLY)
             elif selected == 8:
                 st.subheader("Change Selected Users")
                 st.write("Please select your username(s) from the list of project contributors:")
 
-                current = analyzer._config_manager.get("usernames") or []
+                # Get currently selected users from the database
+                current_users = analyzer._config_manager.get("usernames") or []
 
-                # Build contributor list the same way CLI does (scan projects -> .git -> get_all_authors)
+                # Get all authors from the currently loaded ZIP projects
                 projects = analyzer._get_projects()
-                all_authors = set()
-
-                if not projects:
-                    st.warning("No projects found.")
-                else:
+                zip_authors = set()
+                if projects:
                     for project in projects:
                         try:
+                            # Ensure the project path and .git directory exist
                             project_path = Path(project.file_path)
                             if (project_path / ".git").exists():
                                 with analyzer.suppress_output():
                                     authors = analyzer.contribution_analyzer.get_all_authors(str(project.file_path))
                                 if authors:
-                                    all_authors.update(authors)
+                                    zip_authors.update(authors)
                         except Exception:
-                            # keep going like CLI would (it just silently skips via suppress_output)
+                            # Silently skip projects that fail analysis, mirroring CLI behavior
                             pass
 
-                authors_sorted = sorted(list(all_authors))
+                # Combine authors from the ZIP and the database for a comprehensive list
+                # This ensures that users from the DB are selectable even if not in the current ZIP
+                combined_authors = sorted(list(set(zip_authors) | set(current_users)))
 
-                if not authors_sorted:
-                    st.warning("No Git authors found in any project.")
-                    st.info("Tip: this requires projects to have a real .git folder in the extracted ZIP.")
+                if not combined_authors:
+                    st.warning("No Git authors found in the current project ZIP or in the user database.")
+                    st.info("Tip: Ensure the project ZIP contains valid .git folders with commit history.")
                 else:
-                    # UI equivalent of the CLI number selection
-                    preselect = [a for a in current if a in authors_sorted]
+                    # Pre-select users who are currently saved in the config
+                    preselect = [user for user in current_users if user in combined_authors]
 
                     selected_authors = st.multiselect(
-                        "Project contributors",
-                        options=authors_sorted,
+                        "Available project contributors and saved users",
+                        options=combined_authors,
                         default=preselect,
                     )
 
-                    st.caption("You can select multiple contributors.")
+                    st.caption("You can select multiple contributors. Users not in the current ZIP are from the database.")
 
                     if st.button("Save usernames", type="primary"):
-                        # exact same behavior as CLI: sorted unique
+                        # Sort and unique the selected usernames before saving
                         new_usernames = sorted(list(set(selected_authors)))
 
+                        analyzer._config_manager.set("usernames", new_usernames)
+
+                        # Provide clear feedback on what was saved
                         if new_usernames:
-                            analyzer._config_manager.set("usernames", new_usernames)
                             st.session_state.last_output = (
                                 f"Successfully updated selected users to: {', '.join(new_usernames)}"
                             )
-                            st.success("Saved.")
+                            st.success("User selection saved successfully.")
                         else:
-                            st.session_state.last_output = "No changes made to user selection."
-                            st.info("No changes made to user selection.")
+                            st.session_state.last_output = "User selection has been cleared."
+                            st.info("No users are currently selected.")
 
 
             # 10: Generate Resume Insights (selectors)
