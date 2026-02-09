@@ -34,6 +34,7 @@ from src.analyzers.RepoProjectBuilder import RepoProjectBuilder
 from utils.file_hashing import compute_file_hash
 from src.exporters.ReportExporter import ReportExporter
 from src.managers.ReportManager import ReportManager
+from src.services.ReportEditor import ReportEditor
 from src.services.InsightEditor import InsightEditor
 
 MIN_DISPLAY_CONFIDENCE = 0.5  # only show skills with at least this confidence
@@ -920,7 +921,7 @@ class ProjectAnalyzer:
             return selected
         except ValueError:
             print("Invalid input. Please enter numbers separated by commas.")
-            return self._select_multiple_projects(sorted_projects)
+            return self._select_multiple_projects(sorted_projects) 
 
     
     def trigger_resume_generation(self) -> Optional[Path]:
@@ -1102,6 +1103,67 @@ class ProjectAnalyzer:
         return Path("resumes") / output_filename
         
 
+
+    def trigger_report_editing(self) -> None:
+        """
+        Interactive prompt to edit an existing report (and config fields) without exporting.
+        Persists updates back to the reports database.
+        """
+        reports_summary = self.report_manager.list_reports_summary()
+        if not reports_summary:
+            print("\n❌ No reports found. Create a report first.")
+            return
+
+        print("\n" + "=" * 90)
+        print("Available Reports")
+        print("=" * 90)
+        print(f"{'ID':<5} {'Title':<35} {'Created':<20} {'Projects':<10}")
+        print("-" * 90)
+
+        valid_ids = []
+        for rs in reports_summary:
+            valid_ids.append(rs["id"])
+            date_created = datetime.fromisoformat(rs["date_created"])
+            date_str = date_created.strftime("%Y-%m-%d %H:%M")
+            print(f"{rs['id']:<5} {rs['title']:<35} {date_str:<20} {rs['project_count']:<10}")
+
+        print("-" * 90)
+
+        while True:
+            choice = input("\nEnter Report ID to edit (or 'q' to cancel): ").strip().lower()
+            if choice == "q":
+                print("Edit cancelled.")
+                return
+            if not choice.isdigit():
+                print("Please enter a valid number or 'q' to cancel.")
+                continue
+
+            report_id = int(choice)
+            if report_id not in valid_ids:
+                print(f"Invalid ID. Please choose from: {', '.join(map(str, valid_ids))}")
+                continue
+            break
+
+        report = self.report_manager.get_report(report_id)
+        if not report:
+            print(f"Error loading report {report_id}")
+            return
+
+        editor = ReportEditor()
+        edited = editor.edit_report_cli(report, self._config_manager)
+        if not edited:
+            print("No changes saved.")
+            return
+
+        self.report_manager.update_report(report)
+        print("Report updated and saved.")
+
+        
+    def _default_updated_filename(self, filename: str) -> str:
+        if not filename.lower().endswith(".pdf"):
+            filename += ".pdf"
+        base = filename[:-4]
+        return f"{base}_updated.pdf"
 
     def _cleanup_temp(self):
         if self.cached_extract_dir: shutil.rmtree(self.cached_extract_dir, ignore_errors=True)
@@ -1359,7 +1421,8 @@ class ProjectAnalyzer:
                 17. Exit
                 18. Enter Resume Personal Information
                 19. Create Report (For Use With Resume Generation)
-                20. Generate Resume
+                20. Generate Resume (Export From Report as pdf)
+                21. Edit Report
                 22. Select Thumbnail for a Given Project
                   """)
 
@@ -1379,7 +1442,7 @@ class ProjectAnalyzer:
                 "13": self.display_analysis_results, "14": self.display_project_timeline,
                 "15": self.analyze_badges, "16": self.retrieve_full_portfolio,
                 "18": self.configure_personal_info, "19": self.create_report,
-                "20": self.trigger_resume_generation,
+                "20": self.trigger_resume_generation, "21": self.trigger_report_editing,
                 "22": self.select_thumbnail,
             }
 
