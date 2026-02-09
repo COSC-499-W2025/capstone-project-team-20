@@ -498,7 +498,7 @@ Next week, we are continuuing on tasks mentioned in work performed. We will be d
 
 - Necmi Kaan Sapoglu (17014796): This week I worked on finishing my expansion of the badges feature as it was very well received during peer testing. I also helped dylan on creating the functionality to edit personal information such as adding school, and past employment information to the resume that is generated. I also reviewed some PRs that were assigned to me for this week.
 
-- Lex Nash (84668540):
+- Lex Nash (84668540): This week i started setting up the front end, I implemented the main screen for the program as well as the framework for switching between different pages of the application following the mockup i made previously. It is set up so each main page of the application will be a seperate file with its own class. Required learning tkinter which was more difficult than I had anticipated. PR[COSC-499-W2025/capstone-project-team-20#361](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/361), I reviewed one of Branden's PRs as well as one of Dylan's.
 
 - Dylan Alexander (16394025): This week I worked on two substantial PRs. The first focused on tidying up the resume generation process. While resume generation was fully functional, users could not yet create report objects in order to generate a resume. My first PR solved this issue. My second PR implemented thumbnail selection for a project, satisfying Milestone 2, Requirement 26. Additionally, I reviewed 3 PRs this week. Most notably, Branden's PR Linked here: [Feature/Fully Editing Resumes! (M2 R28)](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/357). I had to request changes a few times, and restore the Resume Generation function/tests, so this took much longer than the review process normally does. However the feature works wonderfully now and the architecture is really clean. Very happy with the result.
 
@@ -510,15 +510,15 @@ Next week, we are continuuing on tasks mentioned in work performed. We will be d
 
 **Burnup chart:**
 
-[Term 2 Week 5 burnup chart]()
+[Term 2 Week 5 burnup chart](teamWeeklyLogsImages/t2_w5_burnup.png)
 
 **Table View of Completed Tasks on Project Board:**
 
-[Term 2 Week 5 completed tasks]()
+[Term 2 Week 5 completed tasks](teamWeeklyLogsImages/t2_w5_completed.png)
 
 **Table View of In-Progress Tasks on Project Board:**
 
-[Term 2 Week 5 In-Progress tasks]()
+[Term 2 Week 5 In-Progress tasks](teamWeeklyLogsImages/t2_w5_in-progress.png)
 
 **Test Report:**
 
