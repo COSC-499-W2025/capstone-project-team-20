@@ -502,7 +502,7 @@ Next week, we are continuuing on tasks mentioned in work performed. We will be d
 
 - Dylan Alexander (16394025): This week I worked on two substantial PRs. The first focused on tidying up the resume generation process. While resume generation was fully functional, users could not yet create report objects in order to generate a resume. My first PR solved this issue. My second PR implemented thumbnail selection for a project, satisfying Milestone 2, Requirement 26. Additionally, I reviewed 3 PRs this week. Most notably, Branden's PR Linked here: [Feature/Fully Editing Resumes! (M2 R28)](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/357). I had to request changes a few times, and restore the Resume Generation function/tests, so this took much longer than the review process normally does. However the feature works wonderfully now and the architecture is really clean. Very happy with the result.
 
-- Sven Annist (42486720): 
+- Sven Annist (42486720): This week, I spent the primary force of my effort on the new portfolio generation feature, which unfortunately ran into some unexpected complexities that I am still working to solve in the week ahead. As this was not working I moved to a different issue that we encountered during peer testings Issue #345. This issue was related to our username selection across multiple zip files as we discovered changing to a username that is no longer present caused an unexpected edge case to which I resolved and made a subsequent pull for it (#363), and also re-reviewed PR #341.
 
 **Features included in the project plan for this milestone are:**
 
