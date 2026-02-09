@@ -505,8 +505,10 @@ Next week, we are continuuing on tasks mentioned in work performed. We will be d
 - Sven Annist (42486720): This week, I spent the primary force of my effort on the new portfolio generation feature, which unfortunately ran into some unexpected complexities that I am still working to solve in the week ahead. As this was not working I moved to a different issue that we encountered during peer testings Issue #345. This issue was related to our username selection across multiple zip files as we discovered changing to a username that is no longer present caused an unexpected edge case to which I resolved and made a subsequent pull for it (#363), and also re-reviewed PR #341.
 
 **Features included in the project plan for this milestone are:**
+Every issue up to and including Issue #358. Features included are getting the frontend decided on and started.
 
 **Continuing tasks from last week and plan for the next week:**
+Plan for the next week is to decide on a front end framework/GUI and get the base setup for it. Continue on with Milestone 2 features, and refactoring. I believe most of us have midterms this week, so itll be a slow earlier start to the week again, but we will be meeting on Thursday to have a team meeting.
 
 **Burnup chart:**
 
