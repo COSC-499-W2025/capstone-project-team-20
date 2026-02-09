@@ -1,34 +1,40 @@
-from src.managers.ConsentManager import ConsentManager
+import os
+import sys
+from pathlib import Path
+
+# Add the project root to the Python path
+project_root = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(project_root))
+
 from src.analyzers.ProjectAnalyzer import ProjectAnalyzer
 from src.managers.ConfigManager import ConfigManager
 
 def main():
     """
-    Main application entry point. Handles user input and initiates the
-    Git analysis workflow.
+    Main entry point for the Project Analyzer application.
+    Initializes the configuration and starts the analysis process.
     """
-    consent = ConsentManager()
     config_manager = ConfigManager()
 
-    while True:
-        if consent.require_consent():
-            break
-        print("Consent is required to run the program. Please try again.\n")
 
-    # 1. Load the ZIP file a single time.
-    root_folders, zip_path = ProjectAnalyzer.load_zip()
-    if not root_folders:
-        print("Could not find any projects in the ZIP file. Exiting.")
-        return
+    # 1. Create an initial, empty analyzer instance.
+    # We pass empty values because we will load the project next.
+    initial_analyzer = ProjectAnalyzer(config_manager, root_folders=[], zip_path=None)
 
-    # 2. Create the analyzer instance with the loaded data.
-    analyzer = ProjectAnalyzer(config_manager, root_folders, zip_path)
+    # 2. Use the instance to call load_zip.
+    try:
+        root_folders, zip_path = initial_analyzer.load_zip()
+    except (KeyboardInterrupt, EOFError):
+        print("\nExiting application.")
+        return # Exit gracefully if the user cancels at the first prompt.
 
-    # 3. Initialize the projects from the ZIP before showing the menu.
-    analyzer.initialize_projects()
-
-    # 4. Start the interactive menu loop.
-    analyzer.run()
+    # 3. If a project was loaded, create the final analyzer with the project data
+    #    and start the main interactive loop.
+    if zip_path and root_folders:
+        analyzer = ProjectAnalyzer(config_manager, root_folders, zip_path)
+        analyzer.run()
+    else:
+        print("No project loaded. Exiting.")
 
 if __name__ == "__main__":
     main()

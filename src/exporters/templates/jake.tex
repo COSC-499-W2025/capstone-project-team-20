@@ -6,7 +6,6 @@
 %% -------------------------
 
 \documentclass[letterpaper,11pt]{article}
-
 \usepackage{latexsym}
 \usepackage[empty]{fullpage}
 \usepackage{titlesec}
@@ -23,10 +22,11 @@
 \pagestyle{fancy}
 \fancyhf{}
 \fancyfoot{}
+\setlength{\footskip}{4.08003pt}
+
 \renewcommand{\headrulewidth}{0pt}
 \renewcommand{\footrulewidth}{0pt}
 
-% Adjust margins
 \addtolength{\oddsidemargin}{-0.5in}
 \addtolength{\evensidemargin}{-0.5in}
 \addtolength{\textwidth}{1in}
@@ -39,19 +39,16 @@
 \raggedright
 \setlength{\tabcolsep}{0in}
 
-% Sections formatting
 \titleformat{\section}{
   \vspace{-4pt}\scshape\raggedright\large
 }{}{0em}{}[\color{black}\titlerule \vspace{-5pt}]
 
 \pdfgentounicode=1
 
-%% -------------------------
-%% CUSTOM COMMANDS
-%% -------------------------
-{% raw %}
 \newcommand{\resumeItem}[1]{
-  \item\small{#1 \vspace{-2pt}}
+  \item\small{
+    {#1 \vspace{-2pt}}
+  }
 }
 
 \newcommand{\resumeSubheading}[4]{
@@ -59,6 +56,13 @@
     \begin{tabular*}{0.97\textwidth}[t]{l@{\extracolsep{\fill}}r}
       \textbf{#1} & #2 \\
       \textit{\small#3} & \textit{\small #4} \\
+    \end{tabular*}\vspace{-7pt}
+}
+
+\newcommand{\resumeSubSubheading}[2]{
+    \item
+    \begin{tabular*}{0.97\textwidth}{l@{\extracolsep{\fill}}r}
+      \textit{\small#1} & \textit{\small #2} \\
     \end{tabular*}\vspace{-7pt}
 }
 
@@ -70,85 +74,61 @@
 }
 
 \newcommand{\resumeSubItem}[1]{\resumeItem{#1}\vspace{-4pt}}
-{% endraw %}
-
+\renewcommand\labelitemi{$\vcenter{\hbox{\tiny$\bullet$}}$}
 \renewcommand\labelitemii{$\vcenter{\hbox{\tiny$\bullet$}}$}
-
 \newcommand{\resumeSubHeadingListStart}{\begin{itemize}[leftmargin=0.15in, label={}]}
 \newcommand{\resumeSubHeadingListEnd}{\end{itemize}}
 \newcommand{\resumeItemListStart}{\begin{itemize}}
 \newcommand{\resumeItemListEnd}{\end{itemize}\vspace{-5pt}}
 
-%% -------------------------------------------
-%%%%%%  RESUME STARTS HERE  %%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
 \begin{document}
 
-%% ----------HEADING----------
 \begin{center}
-    \textbf{\Huge \scshape {{ name | escape_latex }}} \\ \vspace{1pt}
-    \small {{ phone | escape_latex }} $|$
-    \href{mailto:{{ email }}}{\underline{ {{- email | escape_latex -}} }}
-    {%- if linkedin_url %} $|$ \href{ {{- linkedin_url -}} }{\underline{ {{- linkedin_display | escape_latex -}} }}{% endif -%}
-    {%- if github_url %} $|$ \href{ {{- github_url -}} }{\underline{ {{- github_display | escape_latex -}} }}{% endif %}
+    \textbf{\Huge \scshape \VAR{name}} \\ \vspace{1pt}
+    \small \VAR{phone} $|$ \href{mailto:\VAR{email}}{\underline{\VAR{email}}} $|$
+    \href{https://linkedin.com/in/\VAR{linkedin}}{\underline{linkedin.com/in/\VAR{linkedin}}} $|$
+    \href{https://github.com/\VAR{github}}{\underline{github.com/\VAR{github}}}
 \end{center}
 
-{% if education %}
-%% ----------- EDUCATION -----------
+\BLOCK{if education}
 \section{Education}
   \resumeSubHeadingListStart
-{% for edu in education %}
+    \BLOCK{for school in education}
     \resumeSubheading
-      { {{- edu.school | escape_latex -}} }{ {{- edu.location | escape_latex -}} }
-      { {{- edu.degree | escape_latex -}} }{ {{- edu.dates | escape_latex -}} }
-{% endfor %}
+      {\VAR{school.school | escape_latex}}{\VAR{school.location | escape_latex}}
+      {\VAR{school.degree | escape_latex}}{\VAR{school.dates | escape_latex}}
+    \BLOCK{endfor}
   \resumeSubHeadingListEnd
-{% endif %}
+\BLOCK{endif}
 
-{% if experience %}
-%% ----------- EXPERIENCE -----------
+\BLOCK{if experience}
 \section{Experience}
   \resumeSubHeadingListStart
-{% for job in experience %}
+    \BLOCK{for job in experience}
     \resumeSubheading
-      { {{- job.title | escape_latex -}} }{ {{- job.dates | escape_latex -}} }
-      { {{- job.company | escape_latex -}} }{ {{- job.location | escape_latex -}} }
+      {\VAR{job.title | escape_latex}}{\VAR{job.location | escape_latex}}
+      {\VAR{job.company | escape_latex}}{\VAR{job.dates | escape_latex}}
       \resumeItemListStart
-{% for bullet in job.bullets %}
-        \resumeItem{ {{- bullet | escape_latex -}} }
-{% endfor %}
+        \BLOCK{for bullet in job.bullets}
+        \resumeItem{\VAR{bullet | escape_latex}}
+        \BLOCK{endfor}
       \resumeItemListEnd
-{% endfor %}
+    \BLOCK{endfor}
   \resumeSubHeadingListEnd
-{% endif %}
+\BLOCK{endif}
 
-{% if projects %}
-%% ----------- PROJECTS -----------
 \section{Projects}
     \resumeSubHeadingListStart
-{% for proj in projects %}
+    \BLOCK{for project in projects}
       \resumeProjectHeading
-          {\textbf{ {{- proj.name | escape_latex -}} } $|$ \emph{ {{- proj.stack | escape_latex -}} }}{ {{- proj.dates | escape_latex -}} }
+        {\textbf{\VAR{project.project_name | escape_latex}}}{}
           \resumeItemListStart
-{% for bullet in proj.bullets %}
-            \resumeItem{ {{- bullet | escape_latex -}} }
-{% endfor %}
+            \resumeItem{\VAR{project.summary | escape_latex}}
+            \BLOCK{for bullet in project.bullets}
+            \resumeItem{\VAR{bullet | escape_latex}}
+            \BLOCK{endfor}
           \resumeItemListEnd
-{% endfor %}
-    \resumeSubHeadingListEnd
-{% endif %}
+    \BLOCK{endfor}
+\resumeSubHeadingListEnd
 
-{% if skills %}
-%% ----------- TECHNICAL SKILLS -----------
-\section{Technical Skills}
- \begin{itemize}[leftmargin=0.15in, label={}]
-    \small{\item{
-{% for category, items in skills.items() %}
-     \textbf{ {{- category | escape_latex -}} }{: {{ items | map('escape_latex') | join(", ") }}} \\
-{% endfor %}
-    }}
- \end{itemize}
-{% endif %}
-
-%% -------------------------------------------
 \end{document}

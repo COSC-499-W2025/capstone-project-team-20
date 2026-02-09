@@ -1,14 +1,12 @@
-from src.managers.StorageManager import StorageManager
+import sqlite3
+import json
 from typing import Any, Dict
+from src.managers.StorageManager import StorageManager
 
 class ConfigManager(StorageManager):
     """
     Manages configurations stored in the database.
-
     Each configuration item is stored as a key-value pair in the configs table.
-
-    Values of complex data type are automatically serialized to JSON for storage and
-    deserialized upon retrieval.
     """
 
     def __init__(self, db_path="config.db") -> None:
@@ -33,34 +31,48 @@ class ConfigManager(StorageManager):
     def set(self, key: str, value: Any) -> None:
         """
         Store or update a configuration value by key.
-
-        key (str): The configuration key.
-
-        value (Any): The value to store. Can be any JSON serializable type.
+        This method now implements its own database logic.
         """
-        super().set({"key": key, "value": value})
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            # Serialize complex types to a JSON string for storage.
+            serialized_value = json.dumps(value) if isinstance(value, (dict, list)) else value
+            query = "INSERT OR REPLACE INTO configs (key, value) VALUES (?, ?)"
+            cursor.execute(query, (key, serialized_value))
 
     def get(self, key: str, default: Any = None) -> Any:
         """
         Retrieve a configuration value by key.
-
-        key (str): The configuration key to look up.
-
-        default (Any): Value to return if the key is not found. Defaults to None.
-
-        Returns the deserialized value associated with the key, if found,
-        or else default.
+        This method now implements its own database logic.
         """
-        result = super().get(key, default)
-        if result and isinstance(result, dict):
-            return result.get("value")
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            query = "SELECT value FROM configs WHERE key = ?"
+            cursor.execute(query, (key,))
+            result = cursor.fetchone()
+            if result:
+                # The value is a tuple, e.g., ('["mr-sban"]',)
+                # We need to deserialize it from JSON.
+                try:
+                    return json.loads(result[0])
+                except (json.JSONDecodeError, TypeError):
+                    return result[0] # Return as is if not valid JSON
         return default
 
     def get_all(self) -> Dict[str, Any]:
         """
         Retrieve all configuration items as a dictionary.
-
-        Keys are mapped to their corresponding deserialized values.
+        This method now implements its own database logic.
         """
-        rows = super().get_all()
-        return {row["key"]: row["value"] for row in rows}
+        configs = {}
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            query = "SELECT key, value FROM configs"
+            cursor.execute(query)
+            for row in cursor.fetchall():
+                key, value = row
+                try:
+                    configs[key] = json.loads(value)
+                except (json.JSONDecodeError, TypeError):
+                    configs[key] = value
+        return configs
