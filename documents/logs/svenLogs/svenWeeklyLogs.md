@@ -318,7 +318,7 @@ We found a few key problems during testing. Users had a hard time finding featur
 Now that the issues are created, the plan is to start working on them. My immediate focus will be on fixing the navigation and error-handling bugs, as they have the biggest impact on the user experience.
 
 # Term 2 Week 5: Feb 3 - Feb 9
-![mr-sban's Tasks for T2W5](./imagesForSvenLogs/t2w3.png)
+![mr-sban's Tasks for T2W5](./imagesForSvenLogs/t2w5.png)
 
 ### Tasks worked on:
 - **Portfolio Generation Feature**: The majority of my effort this week was dedicated to developing a new portfolio generation feature. This turned out to be more complex than anticipated, leading to some significant challenges that I am still working to resolve.
@@ -332,7 +332,7 @@ My primary goal for the week was to make substantial progress on the new portfol
 - **PR #341**: I re-reviewed the resume editing feature to ensure it was ready for merging after some updates.
 
 ### PRs I opened this week:
-- **PR #346**: Opened a pull request to fix the error handling for non-existent users in the data source (Issue #345).
+- **PR #363**: Opened a pull request to fix the error handling for non-existent users in the data source (Issue #345).
 
 ### Problems Encountered:
 The main problem this week was with the portfolio generation feature, which became unexpectedly complex and difficult to implement. This took up a significant amount of my time and has temporarily blocked my progress on that front. Instead of getting stuck, I decided to switch to a more manageable task to ensure I could still make a tangible contribution.
