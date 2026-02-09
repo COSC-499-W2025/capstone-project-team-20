@@ -1,6 +1,7 @@
 ## Team 20 Weekly Log
 
 ### Table of contents
+- [Term 2 Week 5(February 2nd - February 8th)](#term-2-week-5-february-2nd---february-8th)
 - [Term 2 Week 4(January 25th - February 1st)](#term-2-week-4-january-26th---february-1st)
 - [Term 2 Week 3(January 19th - January 25th)](#term-2-week-3-january-19th---january-25th)
 - [Term 2 Week 2 (January 12th - January 18th)](#term-2-week-2-january-12th---january-18th)
@@ -488,3 +489,37 @@ Next week, we are continuuing on tasks mentioned in work performed. We will be d
 **Test Report:**
 
 [Term 2 Week 3 Test Report](teamWeeklyLogsImages/t2_w4_test_report.png)
+
+
+### Term 2 Week 5 (February 2nd - February 8th)
+
+**Work Performed:**
+- Branden Kennedy (42474551): This week, I worked on implementing full interactive resume editing. The focus waas in improving and restructuring the resume generation and editing system. i implemented a full interactive reporteditor that supports edits to header, projects, education, experience, and technical skills. these changes persist. Resume export now generates from the edited report. i also seperated resume editing into a new menu option and updated/consolidated tests to match the new architecture. This closed issue #297 and it was [this PR](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/357). Also finished a full test suite for this new feature. I also have reviewed 3 PRs so far, [Kaan's PR](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/353), [Dylan's PR](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/355), and [Lex's PR](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/341).
+
+- Necmi Kaan Sapoglu (17014796): This week I worked on finishing my expansion of the badges feature as it was very well received during peer testing. I also helped dylan on creating the functionality to edit personal information such as adding school, and past employment information to the resume that is generated. I also reviewed some PRs that were assigned to me for this week.
+
+- Lex Nash (84668540): This week i started setting up the front end, I implemented the main screen for the program as well as the framework for switching between different pages of the application following the mockup i made previously. It is set up so each main page of the application will be a seperate file with its own class. Required learning tkinter which was more difficult than I had anticipated. PR[COSC-499-W2025/capstone-project-team-20#361](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/361), I reviewed one of Branden's PRs as well as one of Dylan's.
+
+- Dylan Alexander (16394025): This week I worked on two substantial PRs. The first focused on tidying up the resume generation process. While resume generation was fully functional, users could not yet create report objects in order to generate a resume. My first PR solved this issue. My second PR implemented thumbnail selection for a project, satisfying Milestone 2, Requirement 26. Additionally, I reviewed 3 PRs this week. Most notably, Branden's PR Linked here: [Feature/Fully Editing Resumes! (M2 R28)](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/357). I had to request changes a few times, and restore the Resume Generation function/tests, so this took much longer than the review process normally does. However the feature works wonderfully now and the architecture is really clean. Very happy with the result.
+
+- Sven Annist (42486720): This week, I spent the primary force of my effort on the new portfolio generation feature, which unfortunately ran into some unexpected complexities that I am still working to solve in the week ahead. As this was not working I moved to a different issue that we encountered during peer testings Issue #345. This issue was related to our username selection across multiple zip files as we discovered changing to a username that is no longer present caused an unexpected edge case to which I resolved and made a subsequent pull for it (#363), and also re-reviewed PR #341.
+
+**Features included in the project plan for this milestone are:**
+
+**Continuing tasks from last week and plan for the next week:**
+
+**Burnup chart:**
+
+[Term 2 Week 5 burnup chart](teamWeeklyLogsImages/t2_w5_burnup.png)
+
+**Table View of Completed Tasks on Project Board:**
+
+[Term 2 Week 5 completed tasks](teamWeeklyLogsImages/t2_w5_completed.png)
+
+**Table View of In-Progress Tasks on Project Board:**
+
+[Term 2 Week 5 In-Progress tasks](teamWeeklyLogsImages/t2_w5_in-progress.png)
+
+**Test Report:**
+
+[Term 2 Week 5 Test Report](teamWeeklyLogsImages/Tests_S2_W5.png)
