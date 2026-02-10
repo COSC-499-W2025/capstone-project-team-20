@@ -128,6 +128,10 @@ def parse_zip_to_project_folders(path: str) -> list[ProjectFolder]:
     Parses a zip file and creates a ProjectFolder tree for each top-level
     directory. Returns a list of root ProjectFolder objects.
     """
+    if not path or not Path(path).exists() or not zipfile.is_zipfile(path):
+        print(f"Warning: Invalid or non-existent zip file path provided: {path}")
+        return []
+
     try:
         with ZipFile(path, "r") as z:
             total_bytes = sum(file.file_size for file in z.infolist())
