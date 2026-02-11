@@ -24,6 +24,14 @@ jobs:
       with:
         python-version: '3.11'
     
+    - name: Cache LaTeX packages
+      uses: actions/cache@v3
+      with:
+        path: /var/cache/apt/archives
+        key: ${{ runner.os }}-apt-texlive-${{ hashFiles('.github/workflows/test.yml') }}
+        restore-keys: |
+            ${{ runner.os }}-apt-texlive-
+    
     - name: Install LaTeX
       run: sudo apt-get install -y --no-install-recommends texlive-latex-extra texlive-fonts-recommended
     
