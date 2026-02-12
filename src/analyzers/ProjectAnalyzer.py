@@ -813,9 +813,9 @@ class ProjectAnalyzer:
                                 try:
                                     newdate = datetime.strptime(words[2],'%Y-%m-%d').date()
                                     idx = int(words[0])-1
-                                    sorted_items[int(idx)].date_created = newdate
+                                    sorted_items[int(idx)].last_modified = newdate
 
-                                    return 1
+                                    return sorted_items
                                 
                                 except ValueError:
                                     prompt = RED+"'"+words[2]+"' is not a valid date. Please try again:"+ENDC
