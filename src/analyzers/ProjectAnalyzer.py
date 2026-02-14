@@ -225,15 +225,9 @@ class ProjectAnalyzer:
                         proj_existing.num_files = proj_new.num_files
                     if proj_new.size_kb:
                         proj_existing.size_kb = proj_new.size_kb
-                    if proj_new.date_created:
-                        if proj_existing.date_created:
-                            # Preserve the earliest known creation date across
-                            proj_existing.date_created = min(
-                                proj_existing.date_created,
-                                proj_new.date_created,
-                            )
-                        else:
-                            proj_existing.date_created = proj_new.date_created
+                    if proj_new.date_created and not proj_existing.date_created:
+                        # Preserve any existing creation date. If new one is present but old one isn't, use it. If both are present, keep old one to preserve original creation date.
+                        proj_existing.date_created = proj_new.date_created
                     if proj_new.last_modified:
                         proj_existing.last_modified = proj_new.last_modified
                     proj_existing.last_accessed = datetime.now()
