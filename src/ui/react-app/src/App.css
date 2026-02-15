@@ -1,0 +1,67 @@
+#root {
+  --primary: #55BDCA;
+  --primary_high: #98FFFF;
+  --primary_desat: #C8EFF9;
+  --secondary: #022445;
+  --secondary_low: #03132e;
+  --tertiary: #F27D42;
+  background-color: var(--secondary);
+  width: 100%;
+  overflow: hidden;
+  
+}
+
+.button-on,
+.button-on:hover{
+  color: var(--primary);
+  background: var(--secondary);
+  border: solid 6px var(--secondary_low);
+  border-right: solid 6px var(--secondary);
+  border-top: solid 3px var(--secondary_low);
+  border-bottom: solid 3px var(--secondary_low);
+}
+
+.button-off{
+  color: var(--secondary);
+  background: var(--primary);
+  border: solid 6px var(--secondary_low);
+  border-top: solid 3px var(--secondary_low);
+  border-bottom: solid 3px var(--secondary_low);
+}
+.button-off:hover{
+  border: solid 6px var(--primary_desat);
+  border-top: solid 3px var(--primary_desat);
+  border-bottom: solid 3px var(--primary_desat);
+}
+
+.screen{
+  display:flex;
+  width: auto;
+  height:100vh;
+  background-color: var(--secondary_low);
+}
+
+.stacked-buttons{
+  width:fit-content;
+  height: 100%;
+  display: flex;
+  flex-direction:column;
+  margin-right: 0;
+  margin-top:3px;
+  background-color: var(--secondary_low);
+}
+
+.stacked-buttons button{
+  min-width: 125px;
+  aspect-ratio: 1/1;
+  border-radius: 0;
+  font-weight: bold;
+}
+
+.menu{
+  background-color: var(--secondary);
+  margin: 6px;
+  margin-left: 0;
+  padding: 20px;  
+  flex: 1;
+}
