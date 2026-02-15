@@ -714,18 +714,6 @@ class ProjectAnalyzer:
                 ResumeInsightsGenerator.display_insights(
                     project.bullets, project.summary, project.portfolio_entry
                 )
-    
-    def update_score_and_date(self) -> None:
-        
-        items = self._get_projects()
-        sorted_items = sorted(items, key=lambda project: project.resume_score, reverse=True)
-
-        refresh = self.helper_score_and_date(False, sorted_items)
-
-        while refresh != -1:
-            refresh = sorted(refresh, key=lambda project: project.resume_score, reverse=True)
-
-            refresh = self.helper_score_and_date(True, refresh)
 
     def retrieve_full_portfolio(self) -> None:
         """
