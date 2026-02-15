@@ -34,6 +34,7 @@ from src.analyzers.RepoProjectBuilder import RepoProjectBuilder
 from utils.file_hashing import compute_file_hash
 from src.exporters.ReportExporter import ReportExporter
 from src.managers.ReportManager import ReportManager
+from src.services.ReportEditor import ReportEditor
 from src.services.InsightEditor import InsightEditor
 
 MIN_DISPLAY_CONFIDENCE = 0.5  # only show skills with at least this confidence
@@ -138,11 +139,9 @@ class ProjectAnalyzer:
         projects_needing_score = [p for p in all_projects if p.resume_score == 0]
 
         if projects_needing_score:
-            print("\n  - Calculating resume scores for unscored projects...")
             self.analyze_skills(projects=projects_needing_score, silent=True)
             self.cached_projects = []
             all_projects = self._get_projects()
-            print("  - Score calculation complete.")
 
         return all_projects
 
@@ -229,7 +228,8 @@ class ProjectAnalyzer:
                         proj_existing.num_files = proj_new.num_files
                     if proj_new.size_kb:
                         proj_existing.size_kb = proj_new.size_kb
-                    if proj_new.date_created:
+                    if proj_new.date_created and not proj_existing.date_created:
+                        # Preserve any existing creation date. If new one is present but old one isn't, use it. If both are present, keep old one to preserve original creation date.
                         proj_existing.date_created = proj_new.date_created
                     if proj_new.last_modified:
                         proj_existing.last_modified = proj_new.last_modified
@@ -989,9 +989,31 @@ class ProjectAnalyzer:
         print(f"  Included Projects: {[p.project_name for p in report_projects]}\n")
 
         self.report_manager.create_report(report)
-
-
     
+    def _select_single_project(self, sorted_projects: List[Project]) -> Optional[Project]:
+        print("\nPlease enter the id of the project you'd like to select.\n")
+        print("Enter 'q' to cancel.\n")
+        
+        for i, proj in enumerate(sorted_projects, 1):
+            print(f"  {i}: {proj.name} (Score: {proj.resume_score:.2f})")
+        
+        choice_str = input("\nYour selection: ").strip().lower()
+        
+        if choice_str == "q":
+            return None
+        
+        try:
+            idx = int(choice_str)
+            if 1 <= idx <= len(sorted_projects):
+                return sorted_projects[idx - 1]
+            else:
+                print(f"Invalid project number: {idx}. Please enter a number between 1 and {len(sorted_projects)}.")
+                return self._select_single_project(sorted_projects)
+        except ValueError:
+            print("Invalid input. Please enter a single number.")
+            return self._select_single_project(sorted_projects)
+
+
     def _select_multiple_projects(self, sorted_projects: List[Project]) -> Optional[List[Project]]:
         print("\nSelect one or more projects by entering numbers separated by commas.\n")
         print("Enter 'q' to cancel.\n")
@@ -1015,10 +1037,8 @@ class ProjectAnalyzer:
             return selected
         except ValueError:
             print("Invalid input. Please enter numbers separated by commas.")
-            return self._select_multiple_projects(sorted_projects)
+            return self._select_multiple_projects(sorted_projects) 
 
-
-        
     
     def trigger_resume_generation(self) -> Optional[Path]:
         """
@@ -1200,6 +1220,67 @@ class ProjectAnalyzer:
         
 
 
+    def trigger_report_editing(self) -> None:
+        """
+        Interactive prompt to edit an existing report (and config fields) without exporting.
+        Persists updates back to the reports database.
+        """
+        reports_summary = self.report_manager.list_reports_summary()
+        if not reports_summary:
+            print("\n❌ No reports found. Create a report first.")
+            return
+
+        print("\n" + "=" * 90)
+        print("Available Reports")
+        print("=" * 90)
+        print(f"{'ID':<5} {'Title':<35} {'Created':<20} {'Projects':<10}")
+        print("-" * 90)
+
+        valid_ids = []
+        for rs in reports_summary:
+            valid_ids.append(rs["id"])
+            date_created = datetime.fromisoformat(rs["date_created"])
+            date_str = date_created.strftime("%Y-%m-%d %H:%M")
+            print(f"{rs['id']:<5} {rs['title']:<35} {date_str:<20} {rs['project_count']:<10}")
+
+        print("-" * 90)
+
+        while True:
+            choice = input("\nEnter Report ID to edit (or 'q' to cancel): ").strip().lower()
+            if choice == "q":
+                print("Edit cancelled.")
+                return
+            if not choice.isdigit():
+                print("Please enter a valid number or 'q' to cancel.")
+                continue
+
+            report_id = int(choice)
+            if report_id not in valid_ids:
+                print(f"Invalid ID. Please choose from: {', '.join(map(str, valid_ids))}")
+                continue
+            break
+
+        report = self.report_manager.get_report(report_id)
+        if not report:
+            print(f"Error loading report {report_id}")
+            return
+
+        editor = ReportEditor()
+        edited = editor.edit_report_cli(report, self._config_manager)
+        if not edited:
+            print("No changes saved.")
+            return
+
+        self.report_manager.update_report(report)
+        print("Report updated and saved.")
+
+        
+    def _default_updated_filename(self, filename: str) -> str:
+        if not filename.lower().endswith(".pdf"):
+            filename += ".pdf"
+        base = filename[:-4]
+        return f"{base}_updated.pdf"
+
     def _cleanup_temp(self):
         if self.cached_extract_dir: shutil.rmtree(self.cached_extract_dir, ignore_errors=True)
 
@@ -1238,6 +1319,64 @@ class ProjectAnalyzer:
         self.root_folders, self.zip_path = root_folders, zip_path
         print("\nNew project loaded successfully\n")
         self.initialize_projects()
+
+    def select_thumbnail(self) -> None:
+        sorted_projects = self.get_projects_sorted_by_score()
+        if not sorted_projects:
+            print("\nNo scored projects available to include in a report.")
+            return
+        
+        print("\n--- Select Thumbnail for a Given Project  ---")
+        print("\nPlease select which project you'd like to add a thumbnail to.")
+        project = self._select_single_project(sorted_projects)
+        
+        if project is None:
+            print("\nReturning to main menu.")
+            return
+        
+        print("\nEnter the filepath for the image: ")
+        raw_path = input("Path: ")
+        
+        if not raw_path.strip():
+            print("\nNo path provided. Returning to main menu.")
+            return
+        
+        image_path = self.clean_path(raw_path)
+        
+        # Check if file exists
+        if not image_path.exists():
+            print(f"\nError: File not found at '{image_path}'")
+            return
+        
+        if not image_path.is_file():
+            print(f"\nError: Path is not a file: '{image_path}'")
+            return
+        
+        # Check if it's an image file
+        valid_extensions = {'.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.heic', '.ico', '.svg'}
+        file_ext = image_path.suffix.lower()
+        if file_ext not in valid_extensions:
+            print(f"\nError: Invalid image format '{file_ext}'")
+            print(f"Supported formats: {', '.join(sorted(valid_extensions))}")
+            return
+        
+        # Create thumbnails directory if it doesn't exist
+        thumbnails_dir = Path("thumbnails")
+        thumbnails_dir.mkdir(exist_ok=True)
+        
+        thumbnail_filename = f"project_{project.id}_thumb{file_ext}"
+        thumbnail_path = thumbnails_dir / thumbnail_filename
+        
+        try:
+            shutil.copy(image_path, thumbnail_path)
+            project.thumbnail = str(thumbnail_path)
+            self.project_manager.set(project)
+            print(f"\n✓ Thumbnail successfully added to '{project.name}'")
+            print(f"  Saved to: {thumbnail_path}")
+        except PermissionError:
+            print(f"\nError: Permission denied when copying file")
+        except Exception as e:
+            print(f"\nError copying file: {e}")
 
     def run_all(self) -> None:
         print("\n--- Running All Supported Analyses ---")
@@ -1398,8 +1537,9 @@ class ProjectAnalyzer:
                 17. Exit
                 18. Enter Resume Personal Information
                 19. Create Report (For Use With Resume Generation)
-                20. Generate Resume
-                99. Edit project information (Scores & Dates)
+                20. Generate Resume (Export From Report as pdf)
+                21. Edit Report
+                22. Select Thumbnail for a Given Project
                   """)
 
             choice = input("Selection: ").strip()
@@ -1418,8 +1558,8 @@ class ProjectAnalyzer:
                 "13": self.display_analysis_results, "14": self.display_project_timeline,
                 "15": self.analyze_badges, "16": self.retrieve_full_portfolio,
                 "18": self.configure_personal_info, "19": self.create_report,
-                "20": self.trigger_resume_generation,
-                "99": self.update_score_and_date
+                "20": self.trigger_resume_generation, "21": self.trigger_report_editing,
+                "22": self.select_thumbnail,
             }
 
             if choice == "17":
