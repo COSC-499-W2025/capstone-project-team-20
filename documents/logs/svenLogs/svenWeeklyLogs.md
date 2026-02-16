@@ -339,3 +339,27 @@ The main problem this week was with the portfolio generation feature, which beca
 
 ### Looking Ahead:
 My immediate priority is to continue tackling the portfolio generation feature, breaking down the problem into smaller parts to find a clear path forward. I will also monitor the feedback on my bugfix PR (#346) and address any comments to get it merged quickly.
+
+
+# Term 2 Week 6: Feb 10 - Feb 16
+<!--![Sven's Tasks for T2W6](./imagesForSvenLogs/t2w6.png)-->
+
+### Tasks worked on:
+- **Portfolio Generation Feature (continued)**: Continued the portfolio generation work from last week and finalized the LaTeX portfolio export path. This includes structured `PortfolioDetails` data, a new `portfolio.tex` template, and end-to-end export support.
+- **Menu Workflow Update**: Added a new menu option to export portfolios directly from reports, aligning the user flow with the existing resume export process.
+- **Testing & Stabilization**: Updated automated tests around exporter behavior and data persistence, and manually verified the full report → resume → portfolio path.
+
+### Weekly Goals Recap:
+My goal this week was to complete the portfolio generation implementation that was blocked last week. That goal was achieved: the new template and export path now work end‑to‑end, and the workflow has been integrated into the main menu. I also ensured tests were updated and validated manually.
+
+### PRs I reviewed this week:
+- **PR #373**: Reviewed the portfolio generation feature PR.
+
+### PRs I opened this week:
+- **PR #373**: Opened a pull request for the portfolio generation feature, including the new LaTeX template and menu integration.
+
+### Problems Encountered:
+This was a continuation from last week, where the earlier branch had become difficult to maintain. Rebuilding the work cleanly took some time, but it removed blockers and allowed the feature to be completed without additional regressions.
+
+### Looking Ahead:
+As next week is reading week I'm aiming to address some of our finalizing pieces for this milestone that we discussed in our latest team meeting.
