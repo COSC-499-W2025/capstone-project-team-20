@@ -714,6 +714,121 @@ class ProjectAnalyzer:
                 ResumeInsightsGenerator.display_insights(
                     project.bullets, project.summary, project.portfolio_entry
                 )
+    
+    def update_score_and_date(self) -> None:
+        
+        items = self._get_projects()
+        sorted_items = sorted(items, key=lambda project: project.resume_score, reverse=True)
+
+        refresh = self.helper_score_and_date(False, sorted_items)
+
+        while refresh != -1:
+            refresh = sorted(refresh, key=lambda project: project.resume_score, reverse=True)
+
+            refresh = self.helper_score_and_date(True, refresh)
+
+    def helper_score_and_date(self, refresh:bool, sorted_items:list): #returns list if refreshing, -1 if exiting
+        '''Ability to modify scores and dates of projects while displaying a list of all projects ordered by score'''
+
+        hr = (f"{'':{'─'}>{83}}")   #horizontal rule
+        RED = '\033[91m'
+        GREEN = '\033[92m'
+        GREY = '\033[97m'
+        ENDC = '\033[0m'
+
+        COMMANDS = (
+            '[COMMANDS]\n'+
+            '| Alter Score |'+
+            GREY+"  '[IDX]"+ENDC+' score '+GREY+"[VALUE]'"+ENDC+'                                         |\n'+
+            '| Alter Date  |'+
+            GREY+"  '[IDX]"+ENDC+' created '+GREY+"[YYYY-MM-DD]'"+ENDC+' / '+GREY+"'[IDX]"+ENDC+' modified '+GREY+"[YYYY-MM-DD]'"+ENDC+'  |\n'+
+            '\n'+
+            "|  Save  |  's'  |\n"+
+            "|  Exit  |  'x'  |\n"+hr+'\n'
+            )
+        idx=0
+
+        #print list of projects
+        print("Projects by resume score:")
+        print(hr)
+        for project in sorted_items:
+            print(
+                f'[{(idx+1):02d}] | 'f'score: [{(project.resume_score):05.2f}] | 'f'{project.name:<10.10} | 'f'created: [{str(project.date_created):<10.10}] | 'f'modified: [{str(project.last_modified):<10.10}]'
+            )
+            idx+=1
+        print(hr)
+
+        #print commands
+        print(COMMANDS)
+
+        #loop for project selection:
+        valid = False
+
+        #Displays success message on refresh
+        if refresh:
+            prompt = GREEN+"Changes successful, don't forget to save!. Input Command:"+ENDC
+        else:
+            prompt = 'Please input command:'
+        
+        while not valid:
+            print(prompt)
+            choice = input()
+
+            if choice == 'x':
+                return -1
+            
+            elif choice == 's':
+                for project in sorted_items:
+                    self.project_manager.set(project)
+                prompt = GREEN+"Changes Saved. Input Command:"+ENDC
+
+            else:
+                words = choice.strip().lower().split(' ')
+                if len(words) == 3:
+                    if words[0].isdigit():
+                        if int(words[0])>=1 and int(words[0])<=len(sorted_items):
+                            if words[1]=='score':
+                                try:
+                                    newscore = float(words[2])
+                                    idx = int(words[0])-1
+                                    sorted_items[int(idx)].resume_score = newscore
+
+                                    return sorted_items
+
+                                except ValueError:
+                                    prompt = RED+"'"+words[2]+"' is not a valid score. Please try again:"+ENDC
+
+                            elif words[1]=='created':
+                                try:
+                                    newdate = datetime.strptime(words[2],'%Y-%m-%d').date()
+                                    idx = int(words[0])-1
+                                    sorted_items[int(idx)].date_created = newdate
+
+                                    return sorted_items
+
+                                except ValueError:
+                                    prompt = RED+"'"+words[2]+"' is not a valid date. Please try again:"+ENDC
+
+                            elif words[1]=='modified':
+                                try:
+                                    newdate = datetime.strptime(words[2],'%Y-%m-%d').date()
+                                    idx = int(words[0])-1
+                                    sorted_items[int(idx)].last_modified = newdate
+
+                                    return sorted_items
+                                
+                                except ValueError:
+                                    prompt = RED+"'"+words[2]+"' is not a valid date. Please try again:"+ENDC
+                            else:
+                                prompt = RED+"'"+words[1]+"' is not a valid command. Please try again:"+ENDC
+                        else:
+                            prompt = RED+'Index provided is not in range. Please try again:'+ENDC
+                    else:
+                        prompt = RED+'Index provided is not in range. Please try again:'+ENDC
+                else:
+                    prompt = RED+'Incorrect command format. Please try again:'+ENDC
+            #clear last two lines
+            sys.stdout.write("\033[1A"+f"{'':{' '}>{100}}\n"+"\033[2A"+f"{'':{' '}>{100}}\n"+"\033[1A")
 
     def retrieve_full_portfolio(self) -> None:
         """
@@ -1425,6 +1540,7 @@ class ProjectAnalyzer:
                 20. Generate Resume (Export From Report as pdf)
                 21. Edit Report
                 22. Select Thumbnail for a Given Project
+                99. Edit project information (Scores & Dates)
                   """)
 
             choice = input("Selection: ").strip()
@@ -1444,7 +1560,7 @@ class ProjectAnalyzer:
                 "15": self.analyze_badges, "16": self.retrieve_full_portfolio,
                 "18": self.configure_personal_info, "19": self.create_report,
                 "20": self.trigger_resume_generation, "21": self.trigger_report_editing,
-                "22": self.select_thumbnail,
+                "22": self.select_thumbnail, "99": self.update_score_and_date,
             }
 
             if choice == "17":
