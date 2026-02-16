@@ -2,6 +2,7 @@
 
 ### **Table of Contents:**
 
+- [Term 2 Week 6: February 9th - February 15th](#term-2-week-6-february-9th---february-15th)
 - [Term 2 Week 5: February 2nd - February 8th](#term-2-week-5-february-2nd---february-8th)
 - [Term 2 Week 4: January 26th - February 1st](#term-2-week-4-january-26th---february-1st)
 - [Term 2 Week 3: January 19th - January 26th](#term-2-week-3-january-19th---january-25th)
@@ -420,6 +421,45 @@ In the upcoming week, I intend to add features that will allow for the deletion 
 **Any issues or Blockers That I Encountered This Week and How I Addressed/Plan to Address Them:**
 
 N/A
+
+
+### Term 2 Week 6: February 9th - February 15th
+
+**Coding Tasks:**
+
+This week, I made two PRs. One implemented an integrated test suite to fully test the resume generation feature (including full LaTeX resume generation). The other implemented the deletion of report items.
+
+[tests/create test_resume_gen_integration.py](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/369)
+
+[Feature/delete report](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/373)
+
+**Testing or Debugging Tasks:**
+
+I wrote extensive unit tests for my PR this week, linked above.
+
+**Reviewing or Collaboration Tasks:**
+
+I manually tested and reviewed the following PRs this week. 
+
+[Incremental ZIP Overriding Creation date fix](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/374)
+
+[ability to edit rankings and dates](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/341)
+
+
+**Brief Description of Last Week Connecting This Week:**
+
+Last week, I tidied up the resume generation process, allowing users to create reports and select thumbnails for a project.
+
+This week, I  implemented an integrated test suite to fully test the resume generation feature and the deletion of report items.
+
+**Plan/Goals for Upcoming Week:**
+
+As we have just about hit the requirements for Milestone 2, my plan for this week is to address some bugs that have been put on the backburner to try and polish our system.
+
+**Any issues or Blockers That I Encountered This Week and How I Addressed/Plan to Address Them:**
+
+N/A
+
 
 
 
