@@ -2,6 +2,7 @@
 
 ### **Table of Contents:**
 
+- [Term 2 Week 6: February 9th - February 15th](#term-2-week-6-february-9th---february-15th)
 - [Term 2 Week 5: February 2nd - February 8th](#term-2-week-5-february-2nd---february-8th)
 - [Term 2 Week 4: January 26th - February 1st](#term-2-week-4-january-26th---february-1st)
 - [Term 2 Week 3: January 19th - January 26th](#term-2-week-3-january-19th---january-25th)
