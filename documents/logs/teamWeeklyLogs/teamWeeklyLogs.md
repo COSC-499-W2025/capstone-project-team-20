@@ -560,4 +560,4 @@ Our frontend is now setup! We will work away at improving that before that befor
 
 **Test Report:**
 
-[Term 2 Week 6 Test Report](teamWeeklyLogsImages/)
+[Term 2 Week 6 Test Report](teamWeeklyLogsImages/T2_W6_tests.png)
