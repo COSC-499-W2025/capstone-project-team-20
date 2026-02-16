@@ -875,6 +875,59 @@ class ProjectAnalyzer:
 
         self.report_manager.create_report(report)
     
+    def delete_report(self) -> None:
+        """Deletes a user-selected report and all its associated projects."""
+        reports_summary = self.report_manager.list_reports_summary()
+        print("\n--- Delete Report ---")
+        if not reports_summary:
+            print("\nYou don't have any stored reports!")
+            return
+
+        print(f"{'ID':<5} {'Title':<35} {'Created':<20} {'Projects':<10}")
+        print("-" * 75)
+
+        valid_ids = []
+        for rs in reports_summary:
+            valid_ids.append(rs["id"])
+            date_str = datetime.fromisoformat(rs["date_created"]).strftime("%Y-%m-%d %H:%M")
+            print(f"{rs['id']:<5} {rs['title']:<35} {date_str:<20} {rs['project_count']:<10}")
+
+        print("-" * 75)
+
+        while True:
+            choice = input("\nEnter Report ID to delete (or 'q' to cancel): \n").strip().lower()
+            if choice == "q":
+                print("Cancelled.")
+                return
+            if not choice.isdigit():
+                print("Please enter a valid number or 'q' to cancel.")
+                continue
+
+            report_id = int(choice)
+            if report_id not in valid_ids:
+                print(f"Invalid ID. Please choose from: {', '.join(map(str, valid_ids))}")
+                continue
+            break
+
+        # Load the report so we can show a confirmation prompt
+        report = self.report_manager.get_report(report_id)
+        if not report:
+            print(f"Error loading report {report_id}.")
+            return
+
+        print(f"\nYou are about to delete: '{report.title}' ({len(report.projects)} project(s))\n")
+        confirm = input("Are you sure? This cannot be undone. (y/n): ").strip().lower()
+
+        if confirm != "y":
+            print("Deletion cancelled.")
+            return
+
+        success = self.report_manager.delete_report(report_id)
+        if success:
+            print(f"\nReport '{report.title}' has been deleted.")
+        else:
+            print(f"\nFailed to delete report {report_id}. It may have already been removed.")
+        
     def _select_single_project(self, sorted_projects: List[Project]) -> Optional[Project]:
         print("\nPlease enter the id of the project you'd like to select.\n")
         print("Enter 'q' to cancel.\n")
@@ -1425,7 +1478,8 @@ class ProjectAnalyzer:
                 20. Generate Resume (Export From Report as pdf)
                 21. Edit Report
                 22. Select Thumbnail for a Given Project
-                  """)
+                23. Delete Report
+                """)
 
             choice = input("Selection: ").strip()
 
@@ -1444,7 +1498,7 @@ class ProjectAnalyzer:
                 "15": self.analyze_badges, "16": self.retrieve_full_portfolio,
                 "18": self.configure_personal_info, "19": self.create_report,
                 "20": self.trigger_resume_generation, "21": self.trigger_report_editing,
-                "22": self.select_thumbnail,
+                "22": self.select_thumbnail, "23": self.delete_report,
             }
 
             if choice == "17":
