@@ -313,3 +313,27 @@ Next week, I will be continuuing on with Milestone 2 requirements. I believe ill
 **Any issues or Blockers That I Encountered This Week and How I Addressed/Plan to Address Them:**
 none as of right now. Things seem to be getting back on track!
 
+
+### **Term 2 Week 6: February 9th - February 15th**
+**Screenshot of Tasks Worked On:**
+
+**No evaluation this week**
+
+**Coding Tasks:**
+This week, I was very busy with 3 midterms. For a task, I only was able to get the test files done for Milestone 2 requirement 33. It is just a snapshot of our capstone project on December 25th, 2025 and one on February 15th, 2026. 
+
+**Testing or Debugging Tasks:**
+I tested during my PR reviews this week. I didnt do very much coding or debugging of my own code.
+
+**Reviewing or Collaboration Tasks:**
+I did PR reviews on [Kaans PR](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/376), another one of [Kaan's PR's](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/374), [Lex's PR](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/377), and [Dylan's PR](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/369). I manually reviewed all code, tested it manually, and ensured tests in their respective test suites passed.
+
+**Brief Description of Last Week Connecting This Week:**
+I was able to complete the test files for a snapshot of a project to two different projects. I wasnt able to get to refactoring with the focus I had on my other classes this week.
+
+**Plan/Goals for Upcoming Week:**
+Next week, we want to finish off milestone 2. I will be working on Issue [COSC-499-W2025/capstone-project-team-20#293](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/293), which is a big requirement in Milestone 2 (Requirement 24). I think this issue will take up a lot of time. Once I am finished that, I do either want to start helping with the frontend and connecting the API endpoints, or start on the refactoring that I've been wanting to do!
+
+**Any issues or Blockers That I Encountered This Week and How I Addressed/Plan to Address Them:**
+None this week!
+
