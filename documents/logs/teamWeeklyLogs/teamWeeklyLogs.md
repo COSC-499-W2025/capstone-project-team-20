@@ -536,7 +536,7 @@ Plan for the next week is to decide on a front end framework/GUI and get the bas
 
 - Lex Nash (84668540): 
 
-- Dylan Alexander (16394025): 
+- Dylan Alexander (16394025): This week, I made two PRs. One implemented an integrated test suite to fully test the resume generation feature (including full LaTeX resume generation). The other implemented the deletion of report items. I also reviewed 2 PRs.
 
 - Sven Annist (42486720): This week I completed the portfolio LaTeX generation workflow that was carried over from last week’s difficulties. The new flow now supports structured portfolio details, a dedicated `portfolio.tex` template, and a new menu option for exporting portfolios from reports. I also updated and ran tests to cover the new exporter behavior and verified the full report → resume → portfolio workflow manually. I opened PR #381 and reviewed PR #373
 
