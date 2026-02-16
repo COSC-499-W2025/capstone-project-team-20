@@ -3,7 +3,7 @@ from datetime import datetime
 import sqlite3
 
 from src.managers.StorageManager import StorageManager
-from src.models.ReportProject import ReportProject
+from src.models.ReportProject import ReportProject, PortfolioDetails
 
 
 class ReportProjectManager(StorageManager):
@@ -11,6 +11,15 @@ class ReportProjectManager(StorageManager):
     # uses same db file as reports to allow for foreign key constraints
     def __init__(self, db_path: str = "reports.db") -> None:
         super().__init__(db_path)
+        self._ensure_portfolio_details_column()
+
+    def _ensure_portfolio_details_column(self) -> None:
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("PRAGMA table_info(report_projects)")
+            existing = {row[1] for row in cursor.fetchall()}
+            if "portfolio_details" not in existing:
+                cursor.execute("ALTER TABLE report_projects ADD COLUMN portfolio_details TEXT")
 
     def _retrieve_id(self, cursor: sqlite3.Cursor, row: Dict[str, Any]) -> None:
         """
@@ -19,7 +28,7 @@ class ReportProjectManager(StorageManager):
         """
         if "id" not in row or row["id"] is None:
             row["id"] = cursor.lastrowid
-    
+
     @property
     def create_table_query(self) -> str:
         """
@@ -33,6 +42,7 @@ class ReportProjectManager(StorageManager):
             resume_score REAL DEFAULT 0.0,
             bullets TEXT,
             summary TEXT,
+            portfolio_details TEXT,
             languages TEXT,
             language_share TEXT,
             frameworks TEXT,
@@ -41,34 +51,34 @@ class ReportProjectManager(StorageManager):
             collaboration_status TEXT DEFAULT 'individual',
             FOREIGN KEY (report_id) REFERENCES reports(id) ON DELETE CASCADE
         )"""
-    
+
     @property
     def table_name(self) -> str:
         return "report_projects"
-    
+
     @property
     def primary_key(self) -> str:
         return "id"
-    
+
     @property
     def columns(self) -> str:
         return (
             "id, report_id, project_name, resume_score, bullets, summary, "
-            "languages, language_share, frameworks, date_created, "
+            "portfolio_details, languages, language_share, frameworks, date_created, "
             "last_modified, collaboration_status"
         )
-    
+
     def set(self, row: Dict[str, Any]) -> None:
         """
         Store a ReportProject row.
         Expects a dict with all column values.
         """
         super().set(row)
-    
+
     def set_from_report_project(self, report_id: int, report_project: ReportProject) -> None:
         """
         Store a ReportProject object for a given report.
-        
+
         Args:
             report_id: id of the parent report
             report_project: ReportProject object to store
@@ -80,6 +90,7 @@ class ReportProjectManager(StorageManager):
             "resume_score": report_project.resume_score,
             "bullets": report_project.bullets,
             "summary": report_project.summary,
+            "portfolio_details": report_project.portfolio_details.to_dict(),
             "languages": report_project.languages,
             "language_share": report_project.language_share,
             "frameworks": report_project.frameworks,
@@ -88,21 +99,21 @@ class ReportProjectManager(StorageManager):
             "collaboration_status": report_project.collaboration_status,
         }
         self.set(row)
-    
+
     def get(self, id: int) -> Optional[ReportProject]:
         """Retrieve a ReportProject by its primary key"""
         row_dict = super().get(id)
         if row_dict is None:
             return None
         return self._dict_to_report_project(row_dict)
-    
+
     def get_all_for_report(self, report_id: int) -> List[ReportProject]:
         """
         Retrieve all ReportProjects for a given report.
-        
+
         Args:
             report_id: ID of the parent report
-            
+
         Returns:
             List of ReportProject objects
         """
@@ -111,22 +122,22 @@ class ReportProjectManager(StorageManager):
             cursor = conn.cursor()
             query = f"SELECT {self.columns} FROM {self.table_name} WHERE report_id = ? ORDER BY id"
             cursor.execute(query, (report_id,))
-            
+
             for row in cursor.fetchall():
                 row_dict = dict(zip(self.columns_list, row))
                 row_dict = self._deserialize_row(row_dict)
                 projects.append(self._dict_to_report_project(row_dict))
-        
+
         return projects
-    
+
     def delete_by_name(self, report_id: int, project_name: str) -> bool:
         """
         Delete a ReportProject by project name within a specific report.
-        
+
         Args:
             report_id: id of the parent report
             project_name: Name of the project to delete
-            
+
         Returns:
             True if deleted successfully
         """
@@ -135,14 +146,14 @@ class ReportProjectManager(StorageManager):
             query = f"DELETE FROM {self.table_name} WHERE report_id = ? AND project_name = ?"
             cursor.execute(query, (report_id, project_name))
             return cursor.rowcount > 0
-    
+
     def delete_all_for_report(self, report_id: int) -> int:
         """
         Delete all ReportProjects for a given report.
-        
+
         Args:
             report_id: id of the parent report
-            
+
         Returns:
             Number of projects deleted
         """
@@ -151,34 +162,40 @@ class ReportProjectManager(StorageManager):
             query = f"DELETE FROM {self.table_name} WHERE report_id = ?"
             cursor.execute(query, (report_id,))
             return cursor.rowcount
-    
+
     def get_all(self) -> Generator[ReportProject, None, None]:
         """Yield all ReportProjects across all reports"""
         for row_dict in super().get_all():
             yield self._dict_to_report_project(row_dict)
-    
+
     def _dict_to_report_project(self, row_dict: Dict[str, Any]) -> ReportProject:
         """Convert database row dict to ReportProject object"""
-        # Convert datetime strings back to datetime objects
         date_created = None
         if row_dict.get("date_created"):
             try:
                 date_created = datetime.fromisoformat(row_dict["date_created"])
             except (ValueError, TypeError):
                 pass
-        
+
         last_modified = None
         if row_dict.get("last_modified"):
             try:
                 last_modified = datetime.fromisoformat(row_dict["last_modified"])
             except (ValueError, TypeError):
                 pass
-        
+
+        portfolio_details = row_dict.get("portfolio_details")
+        if isinstance(portfolio_details, dict):
+            portfolio_details = PortfolioDetails.from_dict(portfolio_details)
+        else:
+            portfolio_details = PortfolioDetails()
+
         return ReportProject(
             project_name=row_dict["project_name"],
             resume_score=row_dict.get("resume_score", 0.0),
             bullets=row_dict.get("bullets", []),
             summary=row_dict.get("summary", ""),
+            portfolio_details=portfolio_details,
             languages=row_dict.get("languages", []),
             language_share=row_dict.get("language_share", {}),
             frameworks=row_dict.get("frameworks", []),

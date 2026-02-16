@@ -3,7 +3,7 @@ from unittest.mock import MagicMock
 from datetime import datetime
 
 from src.managers.ReportProjectManager import ReportProjectManager
-from src.models.ReportProject import ReportProject
+from src.models.ReportProject import ReportProject, PortfolioDetails
 
 
 @pytest.fixture
@@ -27,6 +27,7 @@ def make_project(name="ProjA"):
         resume_score=1.0,
         bullets=[],
         summary="",
+        portfolio_details=PortfolioDetails(project_name=name),
         languages=[],
         language_share={},
         frameworks=[],
@@ -47,6 +48,7 @@ def test_set_from_report_project(rpm):
 
     assert row["report_id"] == 10
     assert row["project_name"] == "Alpha"
+    assert row["portfolio_details"]["project_name"] == "Alpha"
 
 
 def test_get_success(rpm, monkeypatch):
@@ -59,6 +61,7 @@ def test_get_success(rpm, monkeypatch):
             "resume_score": 2.0,
             "bullets": [],
             "summary": "test",
+            "portfolio_details": {"project_name": "ProjA"},
             "languages": [],
             "language_share": {},
             "frameworks": [],
@@ -73,6 +76,7 @@ def test_get_success(rpm, monkeypatch):
     assert proj.project_name == "ProjA"
     assert proj.resume_score == 2.0
     assert proj.collaboration_status == "team"
+    assert proj.portfolio_details.project_name == "ProjA"
 
 
 def test_get_not_found(rpm, monkeypatch):
@@ -88,8 +92,8 @@ def test_get_all_for_report(rpm, monkeypatch):
     mock_cursor = MagicMock()
 
     rows = [
-        (1, 10, "A", 1.0, "[]", "sum", "[]", "{}", "[]", None, None, "individual"),
-        (2, 10, "B", 2.0, "[]", "sum2", "[]", "{}", "[]", None, None, "team"),
+        (1, 10, "A", 1.0, "[]", "sum", "{}", "[]", "{}", "[]", None, None, "individual"),
+        (2, 10, "B", 2.0, "[]", "sum2", "{}", "[]", "{}", "[]", None, None, "team"),
     ]
 
     mock_cursor.fetchall.return_value = rows
@@ -154,6 +158,7 @@ def test_get_all_generator(rpm, monkeypatch):
                 "resume_score": 1.0,
                 "bullets": [],
                 "summary": "",
+                "portfolio_details": {"project_name": "A"},
                 "languages": [],
                 "language_share": {},
                 "frameworks": [],
@@ -166,6 +171,7 @@ def test_get_all_generator(rpm, monkeypatch):
                 "resume_score": 2.0,
                 "bullets": [],
                 "summary": "",
+                "portfolio_details": {"project_name": "B"},
                 "languages": [],
                 "language_share": {},
                 "frameworks": [],

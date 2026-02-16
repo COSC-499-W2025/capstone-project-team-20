@@ -5,6 +5,7 @@ from src.managers.ConfigManager import ConfigManager
 from src.managers.ProjectManager import ProjectManager
 from src.managers.FileHashManager import FileHashManager
 from src.models.Project import Project
+from src.models.ReportProject import PortfolioDetails
 from src.ZipParser import parse_zip_to_project_folders
 from src.ProjectFolder import ProjectFolder
 from pathlib import Path
@@ -37,7 +38,6 @@ def test_load_zip_success(tmp_path):
     with patch("builtins.input", return_value=str(zip_location)):
         root_folders, _ = ProjectAnalyzer.load_zip()
 
-    # FIX: Assert against the real, expected outcome
     assert len(root_folders) == 1
     assert isinstance(root_folders[0], ProjectFolder)
     assert root_folders[0].name == 'project-a'
@@ -55,7 +55,6 @@ def test_load_zip_retry_then_success(tmp_path):
     with patch("builtins.input", side_effect=inputs):
         root_folders, _ = ProjectAnalyzer.load_zip()
 
-    # FIX: Assert against the real, expected outcome from parsing the good zip
     assert len(root_folders) == 1
     assert isinstance(root_folders[0], ProjectFolder)
     assert root_folders[0].name == 'project-b'
@@ -175,3 +174,14 @@ def test_register_project_files_dedupes_across_uploads(tmp_path, mock_config_man
 
     all_hashes = list(analyzer.file_hash_manager.get_all())
     assert len(all_hashes) == 1
+
+def test_delete_previous_insights_clears_portfolio_details(analyzer):
+    project = Project(name="demo", file_path="/tmp/demo")
+    project.portfolio_details = PortfolioDetails(project_name="demo")
+    analyzer.project_manager = MagicMock()
+    analyzer.project_manager.get_all.return_value = [project]
+
+    with patch.object(analyzer, "_select_project", return_value=project):
+        analyzer.delete_previous_insights()
+
+    assert project.portfolio_details.project_name == ""
