@@ -538,7 +538,7 @@ Plan for the next week is to decide on a front end framework/GUI and get the bas
 
 - Dylan Alexander (16394025): 
 
-- Sven Annist (42486720): 
+- Sven Annist (42486720): This week I completed the portfolio LaTeX generation workflow that was carried over from last week’s difficulties. The new flow now supports structured portfolio details, a dedicated `portfolio.tex` template, and a new menu option for exporting portfolios from reports. I also updated and ran tests to cover the new exporter behavior and verified the full report → resume → portfolio workflow manually. I opened PR #381 and reviewed PR #373
 
 **Features included in the project plan for this milestone are:**
 Every issue up to and including Issue #358. Features included are going further into developing our frontend, and completing all other requirements for milestone 2.
