@@ -530,7 +530,7 @@ Plan for the next week is to decide on a front end framework/GUI and get the bas
 ### Term 2 Week 6 (February 9th - February 15th)
 
 **Work Performed:**
-- Branden Kennedy (42474551): 
+- Branden Kennedy (42474551): This week, I was very busy with 3 midterms. For a task, I only was able to get the test files done for Milestone 2 requirement 33. It is just a snapshot of our capstone project on December 25th, 2025 and one on February 15th, 2026. I also did PR reviews on [Kaans PR](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/376), another one of [Kaan's PR's](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/374), [Lex's PR](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/377), and [Dylan's PR](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/369). I manually reviewed all code, tested it manually, and ensured tests in their respective test suites passed.
 
 - Necmi Kaan Sapoglu (17014796): 
 
