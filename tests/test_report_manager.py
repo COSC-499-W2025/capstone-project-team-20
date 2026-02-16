@@ -4,7 +4,7 @@ from datetime import datetime
 
 from src.managers.ReportManager import ReportManager
 from src.models.Report import Report
-from src.models.ReportProject import ReportProject
+from src.models.ReportProject import ReportProject, PortfolioDetails
 
 
 @pytest.fixture
@@ -35,6 +35,7 @@ def make_project(name="ProjA"):
         resume_score=1.0,
         bullets=[],
         summary="",
+        portfolio_details=PortfolioDetails(project_name=name),
         languages=[],
         language_share={},
         frameworks=[],
@@ -74,7 +75,6 @@ def test_create_report(rm, mock_project_manager):
 def test_get_report(rm, mock_project_manager, monkeypatch):
     now = datetime.now().isoformat()
 
-    # ✅ Correct: mock StorageManager.get, not rm.get
     monkeypatch.setattr(
         "src.managers.ReportManager.StorageManager.get",
         MagicMock(return_value={
@@ -96,6 +96,7 @@ def test_get_report(rm, mock_project_manager, monkeypatch):
     assert report.id == 10
     assert report.title == "My Report"
     assert len(report.projects) == 2
+    assert report.projects[0].portfolio_details.project_name == "X"
 
 def test_set_title(rm):
     mock_conn = MagicMock()
@@ -114,7 +115,7 @@ def test_set_title(rm):
 def test_set_title_not_found(rm):
     mock_conn = MagicMock()
     mock_cursor = MagicMock()
-    mock_cursor.rowcount = 0  # No rows updated
+    mock_cursor.rowcount = 0
 
     mock_conn.cursor.return_value = mock_cursor
     rm._get_connection.return_value.__enter__.return_value = mock_conn
@@ -190,7 +191,6 @@ def test_delete_report(rm):
 def test_list_reports(rm, mock_project_manager, monkeypatch):
     now = datetime.now().isoformat()
 
-    # ✅ Correct: mock StorageManager.get_all, not rm.get_all
     monkeypatch.setattr(
         "src.managers.ReportManager.StorageManager.get_all",
         MagicMock(return_value=[
@@ -209,6 +209,7 @@ def test_list_reports(rm, mock_project_manager, monkeypatch):
     assert len(reports) == 2
     assert len(reports[0].projects) == 1
     assert len(reports[1].projects) == 2
+    assert reports[1].projects[0].portfolio_details.project_name == "B"
 
 
 def test_list_reports_summary(rm):
