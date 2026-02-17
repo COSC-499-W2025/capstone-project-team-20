@@ -1,6 +1,7 @@
 ## Team 20 Weekly Log
 
 ### Table of contents
+- [Term 2 Week 6(February 9th - February 15th)](#term-2-week-6-february-9th---february-15th)
 - [Term 2 Week 5(February 2nd - February 8th)](#term-2-week-5-february-2nd---february-8th)
 - [Term 2 Week 4(January 25th - February 1st)](#term-2-week-4-january-26th---february-1st)
 - [Term 2 Week 3(January 19th - January 25th)](#term-2-week-3-january-19th---january-25th)
@@ -525,3 +526,38 @@ Plan for the next week is to decide on a front end framework/GUI and get the bas
 **Test Report:**
 
 [Term 2 Week 5 Test Report](teamWeeklyLogsImages/Tests_S2_W5.png)
+
+### Term 2 Week 6 (February 9th - February 15th)
+
+**Work Performed:**
+- Branden Kennedy (42474551): This week, I was very busy with 3 midterms. For a task, I only was able to get the test files done for Milestone 2 requirement 33. It is just a snapshot of our capstone project on December 25th, 2025 and one on February 15th, 2026. I also did PR reviews on [Kaans PR](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/376), another one of [Kaan's PR's](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/374), [Lex's PR](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/377), and [Dylan's PR](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/369). I manually reviewed all code, tested it manually, and ensured tests in their respective test suites passed.
+
+- Necmi Kaan Sapoglu (17014796): This week I worked on getting some changes done to the incremental file updates as a teammate had pointed out that it was doing some unnecessary changes, and I added an evidence system so that the skills in the project could be backed by the evidence we collect from the project titles. I also reviewed some PRs that were assigned to me through the bot that we had setup. All of the reviews I did passed succesfully.
+
+- Lex Nash (84668540): 
+
+- Dylan Alexander (16394025): This week, I made two PRs. One implemented an integrated test suite to fully test the resume generation feature (including full LaTeX resume generation). The other implemented the deletion of report items. I also reviewed 2 PRs.
+
+- Sven Annist (42486720): This week I completed the portfolio LaTeX generation workflow that was carried over from last week’s difficulties. The new flow now supports structured portfolio details, a dedicated `portfolio.tex` template, and a new menu option for exporting portfolios from reports. I also updated and ran tests to cover the new exporter behavior and verified the full report → resume → portfolio workflow manually. I opened PR #381 and reviewed PR #373
+
+**Features included in the project plan for this milestone are:**
+Every issue up to and including Issue #358. Features included are going further into developing our frontend, and completing all other requirements for milestone 2.
+
+**Continuing tasks from last week and plan for the next week:**
+Our frontend is now setup! We will work away at improving that before that before Milestone 2 is due. We are also going to wire in all of our existing endpoints, as well as add others that are needed. We only have a couple requirements left to do for Milestone 2, so this week we will be working on completing all of those.
+
+**Burnup chart:**
+
+[Term 2 Week 6 burnup chart](teamWeeklyLogsImages/T2_W6_burnup.png)
+
+**Table View of Completed Tasks on Project Board:**
+
+[Term 2 Week 6 completed tasks](teamWeeklyLogsImages/T2_W6_completed.png)
+
+**Table View of In-Progress Tasks on Project Board:**
+
+[Term 2 Week 6 In-Progress tasks](teamWeeklyLogsImages/T2_W6_in_progress.png)
+
+**Test Report:**
+
+[Term 2 Week 6 Test Report](teamWeeklyLogsImages/T2_W6_tests.png)
