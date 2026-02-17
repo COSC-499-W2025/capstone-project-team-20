@@ -60,5 +60,8 @@ zipped_repos/
 # Resumes and Resume artifacts
 resumes/
 
+# Portfolios and Portfolio artifacts
+portfolios/
+
 # project thumbnails
 thumbnails/
