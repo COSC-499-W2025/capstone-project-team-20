@@ -3,10 +3,7 @@ from pathlib import Path
 from typing import List, Dict, Set, Any
 from git import Repo, GitCommandError
 from src.FileCategorizer import FileCategorizer
-
-class ContributionAnalyzer:
-    def __init__(self):
-        self.file_categorizer = FileCategorizer()
+from src.analyzers.language_detector import detect_language_per_file
 
 @dataclass
 class ContributionStats:
@@ -100,9 +97,10 @@ class ContributionAnalyzer:
                         stats.contribution_by_type[category] += lines_changed
 
                         # YAML driven category for role inference
+                        lang = detect_language_per_file(Path(file_path)) or ""
                         yaml_cat = self.file_categorizer.classify_file({
                             "path": file_path,
-                            "language": ""
+                            "language": lang
                         })
                         if yaml_cat != "ignored":
                             stats.contribution_by_category[yaml_cat] = (
@@ -124,9 +122,10 @@ class ContributionAnalyzer:
                                     category = self._categorize_file_path(blob.path)
                                     stats.contribution_by_type[category] += lines
 
+                                    lang = detect_language_per_file(Path(blob.path)) or ""
                                     yaml_cat = self.file_categorizer.classify_file({
                                         "path": blob.path,
-                                        "language": ""
+                                        "language": lang
                                     })
                                     if yaml_cat != "ignored":
                                         stats.contribution_by_category[yaml_cat] = (
