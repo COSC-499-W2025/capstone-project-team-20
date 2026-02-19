@@ -1,0 +1,106 @@
+\documentclass[a4paper,11pt]{article}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{geometry}
+\usepackage{titlesec}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{parskip}
+
+% --- Page Layout ---
+\geometry{a4paper, margin=0.8in, top=0.7in, bottom=0.7in}
+\pagestyle{empty}
+\setlength{\parindent}{0pt}
+
+% --- Hyperlinks and Colors ---
+\hypersetup{
+    colorlinks=true,
+    urlcolor=blue!50!black,
+    linkcolor=blue!50!black,
+    pdftitle={Project Portfolio for \VAR{name}},
+    pdfauthor={\VAR{name}},
+}
+\urlstyle{same}
+
+% --- Font and Color Definitions ---
+\definecolor{TitleColor}{HTML}{2c3e50}
+\definecolor{MetaColor}{HTML}{34495e}
+\definecolor{TextColor}{HTML}{212121}
+
+\renewcommand{\familydefault}{\sfdefault}
+\color{TextColor}
+
+% --- Section Formatting ---
+\titleformat{\section}{\Large\bfseries\scshape\raggedright\color{TitleColor}}{}{0em}{}[\vspace{-4pt}\titlerule\vspace{8pt}]
+\titleformat{\subsection}{\large\bfseries\color{MetaColor}}{}{0em}{}
+\titlespacing*{\subsection}{0pt}{8pt}{2pt}
+
+% --- Header ---
+\newcommand{\makeheader}{
+    \begin{center}
+        {\Huge\bfseries\color{TitleColor} \VAR{name | escape_latex}} \\
+        \vspace{4pt}
+        \large
+        \href{mailto:\VAR{email}}{\VAR{email | escape_latex}}
+        \BLOCK{if github} $|$ \href{https://github.com/\VAR{github}}{github.com/\VAR{github | escape_latex}}\BLOCK{endif}
+        \BLOCK{if linkedin} $|$ \href{https://linkedin.com/in/\VAR{linkedin}}{linkedin.com/in/\VAR{linkedin | escape_latex}}\BLOCK{endif}
+    \end{center}
+}
+
+\begin{document}
+
+\makeheader
+\vspace{12pt}
+
+\section*{Project Portfolio}
+
+% --- Loop through each project ---
+\BLOCK{for project in projects}
+
+    % --- Project Title ---
+    \subsection*{\VAR{project.portfolio_details.project_name | escape_latex}}
+
+    % --- Metadata: Role, Timeline, Technologies ---
+    \small\textit{\color{MetaColor}
+        \BLOCK{if project.portfolio_details.role}
+            \textbf{Role:} \VAR{project.portfolio_details.role | escape_latex}
+        \BLOCK{endif}
+        \BLOCK{if project.portfolio_details.timeline}
+            \hfill \textbf{Timeline:} \VAR{project.portfolio_details.timeline | escape_latex}
+        \BLOCK{endif}
+    } \\
+    \small\textit{\color{MetaColor}
+        \BLOCK{if project.portfolio_details.technologies}
+            \textbf{Technologies:} \VAR{project.portfolio_details.technologies | escape_latex}
+        \BLOCK{endif}
+    }
+    \vspace{6pt}
+
+    % --- Overview Section ---
+    \BLOCK{if project.portfolio_details.overview}
+        \textbf{Project Overview} \\
+        \VAR{project.portfolio_details.overview | escape_latex}
+        \vspace{6pt}
+    \BLOCK{endif}
+
+    % --- Achievements Section ---
+    \BLOCK{if project.portfolio_details.achievements}
+        \textbf{Key Technical Achievements}
+        \begin{itemize}[leftmargin=*, topsep=3pt, itemsep=0pt, partopsep=0pt, parsep=2pt]
+            \BLOCK{for achievement in project.portfolio_details.achievements}
+                \item \VAR{achievement | escape_latex}
+            \BLOCK{endfor}
+        \end{itemize}
+    \BLOCK{endif}
+
+    % --- Separator for all but the last project ---
+    \BLOCK{if not loop.last}
+        \vspace{12pt}
+        \centerline{\color{black!20} \rule{0.5\textwidth}{0.4pt}}
+        \vspace{12pt}
+    \BLOCK{endif}
+
+\BLOCK{endfor}
+
+\end{document}

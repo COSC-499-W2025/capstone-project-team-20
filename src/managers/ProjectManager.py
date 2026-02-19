@@ -16,6 +16,15 @@ class ProjectManager(StorageManager):
     """
     def __init__(self, db_path="projects.db") -> None:
         super().__init__(db_path)
+        self._ensure_portfolio_details_column()
+
+    def _ensure_portfolio_details_column(self) -> None:
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("PRAGMA table_info(projects)")
+            existing = {row[1] for row in cursor.fetchall()}
+            if "portfolio_details" not in existing:
+                cursor.execute("ALTER TABLE projects ADD COLUMN portfolio_details TEXT")
 
     def _retrieve_id(self, cursor: sqlite3.Cursor, row: Dict[str, Any]) -> None:
         """
@@ -74,6 +83,7 @@ class ProjectManager(StorageManager):
         bullets TEXT,
         summary TEXT,
         portfolio_entry TEXT,
+        portfolio_details TEXT,
         thumbnail TEXT,
         resume_score REAL,
         date_created TEXT,
@@ -99,7 +109,7 @@ class ProjectManager(StorageManager):
         """
         return (
             "id, name, file_path, root_folder, num_files, size_kb, author_count, "
-            "authors, author_contributions, languages, frameworks, skills_used, "
+            "authors, author_contributions, languages, language_share, frameworks, skills_used, "
             "dependencies_list, dependency_files_list, build_tools, "
             "individual_contributions, collaboration_status, categories, "
             "total_loc, comment_ratio, test_file_ratio, "
@@ -110,7 +120,7 @@ class ProjectManager(StorageManager):
             "language_depth_level, language_depth_score, "
             "has_dockerfile, has_database, has_frontend, has_backend, "
             "has_test_files, has_readme, readme_keywords, "
-            "bullets, summary, portfolio_entry, thumbnail, resume_score, "
+            "bullets, summary, portfolio_entry, portfolio_details, thumbnail, resume_score, "
             "date_created, last_modified, last_accessed"
         )
 

@@ -3,6 +3,7 @@ from dataclasses import dataclass, asdict, field
 from typing import List, Literal, Optional, Dict, Any
 from datetime import datetime
 import json
+from src.models.ReportProject import PortfolioDetails
 
 # This helper remains useful for creating default lists.
 list_field = lambda: field(default_factory=list)
@@ -34,7 +35,8 @@ class Project:
 
     DICT_FIELDS = [
             "categories",
-            "language_share"
+            "language_share",
+            "portfolio_details"
     ]
 
     id: Optional[int] = None
@@ -94,7 +96,8 @@ class Project:
     # Resume Insights - generated from ResumeInsightsGenerator
     bullets: List[str] = list_field()
     summary: str = ""
-    portfolio_entry: str = ""  # Narrative style entry for portfolios
+    portfolio_entry: str = ""
+    portfolio_details: PortfolioDetails = field(default_factory=PortfolioDetails)
     thumbnail: Optional[str] = None # Path to thumbnail image
 
     # Scoring for ranking projects against one another
@@ -111,6 +114,9 @@ class Project:
         This method serializes list and datetime fields into JSON-compatible formats.
         """
         proj_dict = asdict(self)
+
+        if isinstance(proj_dict.get("portfolio_details"), PortfolioDetails):
+            proj_dict["portfolio_details"] = proj_dict["portfolio_details"].to_dict()
 
         # Declare all list-based and dict-based fields that must be serialized to JSON strings.
 
@@ -153,6 +159,11 @@ class Project:
                 proj_dict_copy[field_name] = json.loads(value)
             elif value is None:
                 proj_dict_copy[field_name] = {}
+
+        if isinstance(proj_dict_copy.get("portfolio_details"), dict):
+            proj_dict_copy["portfolio_details"] = PortfolioDetails.from_dict(proj_dict_copy["portfolio_details"])
+        else:
+            proj_dict_copy["portfolio_details"] = PortfolioDetails()
 
         # Deserialize ISO 8601 strings back into datetime objects.
         for field_name in ["date_created", "last_modified", "last_accessed"]:
