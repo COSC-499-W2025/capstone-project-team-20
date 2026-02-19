@@ -332,6 +332,22 @@ class ProjectAnalyzer:
         else:
             print("\nNo changes made to user selection.")
 
+    def _pretty_role(self, role_key: str) -> str:
+        if not role_key or role_key in ("role_none", "none"):
+            return "None"
+
+        role_key = role_key.replace("role_", "")
+
+        mapping = {
+            "devops": "DevOps",
+            "qa": "QA",
+            "backend": "Backend",
+            "frontend": "Frontend",
+            "docs": "Documentation",
+        }
+
+        return mapping.get(role_key, role_key.capitalize())
+
     def analyze_git_and_contributions(self) -> None:
         """
         Analyze contributions for each project:
@@ -393,7 +409,10 @@ class ProjectAnalyzer:
             if project.contributor_roles:
                 print(" - Inferred Roles:")
                 for user, info in project.contributor_roles.items():
-                    print(f"    - {user}: {info['primary_role']} ({info['confidence']:.2f})")
+                    pretty = self._pretty_role(info.get("primary_role", "none"))
+                    confidence_pct = int(float(info.get("confidence", 0.0)) * 100)
+                    print(f"    - {user} → User Role: {pretty} ({confidence_pct}%)")
+
             print(f"  - Saved data for '{project.name}'.")
 
     def analyze_metadata(self, projects: Optional[List[Project]] = None) -> None:
