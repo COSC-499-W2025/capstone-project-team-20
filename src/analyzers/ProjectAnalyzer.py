@@ -37,6 +37,7 @@ from src.exporters.ReportExporter import ReportExporter
 from src.managers.ReportManager import ReportManager
 from src.services.ReportEditor import ReportEditor
 from src.services.InsightEditor import InsightEditor
+from src.analyzers.role_inference_analyzer import RoleInferenceAnalyzer
 
 MIN_DISPLAY_CONFIDENCE = 0.5  # only show skills with at least this confidence
 
@@ -60,6 +61,8 @@ class ProjectAnalyzer:
 
         self.report_manager = ReportManager()
         self.report_exporter = ReportExporter()
+
+        self.role_inference_analyzer = RoleInferenceAnalyzer()
 
         if threading.current_thread() is threading.main_thread():
             signal.signal(signal.SIGINT, self._signal_cleanup)
@@ -347,6 +350,7 @@ class ProjectAnalyzer:
                 continue
 
             print(f"\n--- Analyzing contributions for: {project.name} ---")
+
             with self.suppress_output():
                 repo_authors = self.contribution_analyzer.get_all_authors(str(repo_path))
 
@@ -357,6 +361,20 @@ class ProjectAnalyzer:
 
             with self.suppress_output():
                 all_author_stats = self.contribution_analyzer.analyze(str(repo_path))
+
+            project.contributor_roles = {}
+
+            if all_author_stats:
+                roles_obj = self.role_inference_analyzer.analyze(all_author_stats)
+                project.contributor_roles = {
+                    user: {
+                        "primary_role": r.primary_role.value,
+                        "confidence": float(r.confidence),
+                        "secondary_roles": [sr.value for sr in (r.secondary_roles or [])],
+                        "evidence": r.evidence or {},
+                    }
+                    for user, r in roles_obj.items()
+                }
 
             project.authors = sorted([name for name in selected_usernames if name in (all_author_stats.keys() if all_author_stats else repo_authors)])
 
@@ -372,6 +390,10 @@ class ProjectAnalyzer:
             self.project_manager.set(project)
             print(f"  - Total Contributors: {project.author_count}")
             print(f"  - Collaboration Status: {project.collaboration_status}")
+            if project.contributor_roles:
+                print(" - Inferred Roles:")
+                for user, info in project.contributor_roles.items():
+                    print(f"    - {user}: {info['primary_role']} ({info['confidence']:.2f})")
             print(f"  - Saved data for '{project.name}'.")
 
     def analyze_metadata(self, projects: Optional[List[Project]] = None) -> None:

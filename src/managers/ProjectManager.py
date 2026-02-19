@@ -50,6 +50,7 @@ class ProjectManager(StorageManager):
         author_count INTEGER,
         authors TEXT,
         author_contributions TEXT,
+        contributor_roles TEXT,
         languages TEXT,
         language_share TEXT,
         frameworks TEXT,
@@ -109,7 +110,7 @@ class ProjectManager(StorageManager):
         """
         return (
             "id, name, file_path, root_folder, num_files, size_kb, author_count, "
-            "authors, author_contributions, languages, language_share, frameworks, skills_used, "
+            "authors, author_contributions, contributor_roles, languages, language_share, frameworks, skills_used, "
             "dependencies_list, dependency_files_list, build_tools, "
             "individual_contributions, collaboration_status, categories, "
             "total_loc, comment_ratio, test_file_ratio, "

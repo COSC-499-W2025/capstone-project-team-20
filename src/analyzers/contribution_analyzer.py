@@ -38,6 +38,10 @@ class ContributionAnalyzer:
     """
     Analyzes all author contributions in a Git repository.
     """
+
+    def __init__(self):
+        self.file_categorizer = FileCategorizer()
+
     def _categorize_file_path(self, path: str) -> str:
         """Categorizes a file path into 'code', 'docs', or 'test'."""
         p = Path(path.lower())
