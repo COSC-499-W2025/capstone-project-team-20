@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import MagicMock, patch
-from src.analyzers.ContributionAnalyzer import ContributionAnalyzer, ContributionStats
+from src.analyzers.contribution_analyzer import ContributionAnalyzer, ContributionStats
 
 @pytest.fixture
 def analyzer():

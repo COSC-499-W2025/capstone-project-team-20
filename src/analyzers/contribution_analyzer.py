@@ -2,6 +2,11 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List, Dict, Set, Any
 from git import Repo, GitCommandError
+from src.FileCategorizer import FileCategorizer
+
+class ContributionAnalyzer:
+    def __init__(self):
+        self.file_categorizer = FileCategorizer()
 
 @dataclass
 class ContributionStats:
@@ -13,7 +18,15 @@ class ContributionStats:
     lines_deleted: int = 0
     total_commits: int = 0
     files_touched: Set[str] = field(default_factory=set)
-    contribution_by_type: Dict[str, int] = field(default_factory=lambda: {"code": 0, "docs": 0, "test": 0, "other": 0})
+
+    contribution_by_type: Dict[str, int] = field(default_factory=lambda: {
+        "code": 0,
+        "docs": 0,
+        "test": 0,
+        "other": 0
+    })
+
+    contribution_by_category: Dict[str, int] = field(default_factory=dict)
 
     def to_dict(self) -> Dict:
         """Serializes the dataclass to a dictionary, converting set to list."""
@@ -82,6 +95,16 @@ class ContributionAnalyzer:
                         category = self._categorize_file_path(file_path)
                         stats.contribution_by_type[category] += lines_changed
 
+                        # YAML driven category for role inference
+                        yaml_cat = self.file_categorizer.classify_file({
+                            "path": file_path,
+                            "language": ""
+                        })
+                        if yaml_cat != "ignored":
+                            stats.contribution_by_category[yaml_cat] = (
+                                stats.contribution_by_category.get(yaml_cat, 0) + lines_changed
+                            )
+
                 except (GitCommandError, ValueError) as e:
                     # This block catches errors from `commit.stats`, which can happen if a parent is missing
                     # (e.g., in a shallow clone) or for the very first commit.
@@ -96,6 +119,15 @@ class ContributionAnalyzer:
                                     stats.files_touched.add(blob.path)
                                     category = self._categorize_file_path(blob.path)
                                     stats.contribution_by_type[category] += lines
+
+                                    yaml_cat = self.file_categorizer.classify_file({
+                                        "path": blob.path,
+                                        "language": ""
+                                    })
+                                    if yaml_cat != "ignored":
+                                        stats.contribution_by_category[yaml_cat] = (
+                                            stats.contribution_by_category.get(yaml_cat, 0) + lines
+                                        )
                                 except Exception:
                                     pass # Ignore files that can't be decoded
                     # If it has parents but still failed, it's likely a shallow clone boundary.

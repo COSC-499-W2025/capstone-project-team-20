@@ -18,7 +18,7 @@ from src.ZipParser import parse_zip_to_project_folders, toString, extract_zip
 from src.analyzers.ProjectMetadataExtractor import ProjectMetadataExtractor
 from src.FileCategorizer import FileCategorizer
 from src.analyzers.language_detector import detect_language_per_file, analyze_language_share
-from src.analyzers.ContributionAnalyzer import ContributionAnalyzer, ContributionStats
+from src.analyzers.contribution_analyzer import ContributionAnalyzer, ContributionStats
 from utils.RepoFinder import RepoFinder
 from src.managers.ProjectManager import ProjectManager
 from src.managers.FileHashManager import FileHashManager
