@@ -140,6 +140,15 @@ class ContributionAnalyzer:
                     for file_path, file_stat_values in commit_stats.items():
                         lines_changed = file_stat_values['insertions'] + file_stat_values['deletions']
                         
+                        # YAML driven category for role inference
+                        lang = self._language_from_extension(file_path)
+                        yaml_cat = self.file_categorizer.classify_file({
+                            "path": file_path,
+                            "language": lang
+                        })
+                        if yaml_cat == "ignored":
+                            continue
+
                         stats.lines_added += file_stat_values['insertions']
                         stats.lines_deleted += file_stat_values['deletions']
                         stats.files_touched.add(file_path)
@@ -148,16 +157,6 @@ class ContributionAnalyzer:
                         stats.contribution_by_type[coarse_type] = (
                             stats.contribution_by_type.get(coarse_type, 0) + lines_changed
                         )
-
-                        # YAML driven category for role inference
-                        lang = self._language_from_extension(file_path)
-                        
-                        yaml_cat = self.file_categorizer.classify_file({
-                            "path": file_path,
-                            "language": lang
-                        })
-                        if yaml_cat == "ignored":
-                            continue
 
                         if lang:
                             stats.contribution_by_language[lang] = (
@@ -183,13 +182,6 @@ class ContributionAnalyzer:
                             if blob.type == 'blob':
                                 try:
                                     lines = blob.data_stream.read().decode(errors='ignore').count('\n') + 1
-                                    stats.lines_added += lines
-                                    stats.files_touched.add(blob.path)
-
-                                    coarse_type = self._categorize_file_path(blob.path)
-                                    stats.contribution_by_type[coarse_type] = (
-                                        stats.contribution_by_type.get(coarse_type, 0) + lines
-                                    )
 
                                     lang = self._language_from_extension(blob.path)
                                 
@@ -199,6 +191,14 @@ class ContributionAnalyzer:
                                     })
                                     if yaml_cat == "ignored":
                                         continue
+
+                                    stats.lines_added += lines
+                                    stats.files_touched.add(blob.path)
+
+                                    coarse_type = self._categorize_file_path(blob.path)
+                                    stats.contribution_by_type[coarse_type] = (
+                                        stats.contribution_by_type.get(coarse_type, 0) + lines
+                                    )
 
                                     if lang:
                                         stats.contribution_by_language[lang] = (

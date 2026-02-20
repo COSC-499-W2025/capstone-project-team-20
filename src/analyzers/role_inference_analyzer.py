@@ -8,11 +8,11 @@ from src.analyzers.contribution_analyzer import ContributionStats
 
 class RoleInferenceAnalyzer:
     
-    FRONTEND_CATS = {"template"}        
-    BACKEND_CATS = {"code"}
-    QA_CATS = {"test"}
+    FRONTEND_CATS = {"frontend"}        
+    BACKEND_CATS = {"backend"}
+    QA_CATS = {"qa"}
     DOCS_CATS = {"docs"}
-    DEVOPS_CATS = {"config", "script", "manifest", "ignore", "logs"} 
+    DEVOPS_CATS = {"devops"} 
 
     def analyze(self, author_stats: Dict[str, ContributionStats]) -> Dict[str, RoleInference]:
         total_commits = sum(s.total_commits for s in author_stats.values()) or 1
@@ -24,7 +24,7 @@ class RoleInferenceAnalyzer:
                 commit_share=stats.total_commits / total_commits,
                 category_summary={
                     # YAML-driven categories 
-                    "contribution_by_category": dict(getattr(stats, "contribution_by_category", {}) or {}),
+                    "contribution_by_category": dict(getattr(stats, "contribution_by_role_signal", {}) or {}),
 
                     "contribution_by_type": dict(stats.contribution_by_type),
                     "lines_added": stats.lines_added,
