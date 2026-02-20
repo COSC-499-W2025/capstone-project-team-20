@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useEffect } from "react";
+import { listProjects, getProject, getPortfolio, listSkills } from "./api/client";
 import './App.css'
 
 function App() {
@@ -78,20 +79,128 @@ function Settings(){
     );
 }
 
-function Projects(){
-    return(
-        <>
-        <h3>This is the Projects page.</h3>
-        </>
-    );
+function Projects() {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const [projects, setProjects] = useState([]);
+  const [selected, setSelected] = useState(null);
+
+  async function loadProjects() {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await listProjects();
+      setProjects(data.projects ?? []);
+    } catch (e) {
+      setError(e.message ?? "Failed to load projects");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleSelect(id) {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await getProject(id); // { project: {...} }
+      setSelected(data.project ?? null);
+    } catch (e) {
+      setError(e.message ?? "Failed to load project");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    loadProjects();
+  }, []);
+
+  return (
+    <>
+      <h3>Projects</h3>
+
+      <button onClick={loadProjects} disabled={loading}>
+        {loading ? "Loading..." : "Refresh Projects"}
+      </button>
+
+      {error && <pre style={{ color: "crimson" }}>{error}</pre>}
+
+      <div style={{ display: "flex", gap: 16, marginTop: 12 }}>
+        <div style={{ minWidth: 260 }}>
+          <ul>
+            {projects.map((p) => (
+              <li key={p.id}>
+                <button
+                  onClick={() => handleSelect(p.id)}
+                  disabled={loading}
+                  style={{ background: "transparent", border: "none", cursor: "pointer", padding: 0 }}
+                >
+                  {p.name} (#{p.id})
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div style={{ flex: 1 }}>
+          <h4>Selected Project</h4>
+          {selected ? (
+            <pre>{JSON.stringify(selected, null, 2)}</pre>
+          ) : (
+            <p>Click a project to view details.</p>
+          )}
+        </div>
+      </div>
+    </>
+  );
 }
 
-function Badges(){
-    return(
-        <>
-        <h3>This is the Badges page.</h3>
-        </>
-    );
+function Badges() {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [skills, setSkills] = useState([]);
+
+  async function loadSkills() {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await listSkills(); // { skills: [{name, project_count}, ...] }
+      setSkills(data.skills ?? []);
+    } catch (e) {
+      setError(e.message ?? "Failed to load skills");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    loadSkills();
+  }, []);
+
+  return (
+    <>
+      <h3>Badges</h3>
+
+      <button onClick={loadSkills} disabled={loading}>
+        {loading ? "Loading..." : "Refresh Skills"}
+      </button>
+
+      {error && <pre style={{ color: "crimson" }}>{error}</pre>}
+
+      {skills.length === 0 ? (
+        <p>No skills found yet. Upload a project first.</p>
+      ) : (
+        <ul>
+          {skills.map((s) => (
+            <li key={s.name}>
+              {s.name} — used in {s.project_count} project{s.project_count === 1 ? "" : "s"}
+            </li>
+          ))}
+        </ul>
+      )}
+    </>
+  );
 }
 
 function Resume(){
