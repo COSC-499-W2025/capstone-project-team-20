@@ -852,6 +852,9 @@ class ProjectAnalyzer:
             print("\nReturning to main menu.")
             return
 
+        if not self._validate_resume_insights(selected_projects):
+            return
+
         print("\nEnter a title for your report (or press Enter for default):")
         title = input("Title: ").strip()
         if not title:
@@ -892,6 +895,7 @@ class ProjectAnalyzer:
         print(f"  Included Projects: {[p.project_name for p in report_projects]}\n")
 
         self.report_manager.create_report(report)
+
 
     def delete_report(self) -> None:
         """Deletes a user-selected report and all its associated projects."""
@@ -1045,6 +1049,31 @@ class ProjectAnalyzer:
             print(f"❌ Error loading report {report_id}")
             return None
         return report
+    
+    def _validate_resume_insights(self, projects: List[Project]) -> bool:
+        """Return True if all projects have resume insights; otherwise print errors and return False."""
+        missing = []
+
+        for p in projects:
+            if not p.bullets or not isinstance(p.bullets, list):
+                missing.append((p.name, "bullets"))
+            if not p.summary:
+                missing.append((p.name, "summary"))
+            if not p.portfolio_entry:
+                missing.append((p.name, "portfolio_entry"))
+            if not p.portfolio_details:
+                missing.append((p.name, "portfolio_details"))
+
+        if not missing:
+            return True
+
+        print("\n❌ Cannot create report. Some projects are missing resume insights:")
+        for proj, field in missing:
+            print(f"  - {proj}: missing {field}")
+
+        print("\nPlease run 'Generate Resume Insights' (Option 10) before creating a report.")
+        return False
+
 
     def trigger_resume_generation(self) -> Optional[Path]:
         """
