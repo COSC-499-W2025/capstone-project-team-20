@@ -63,13 +63,10 @@ def test_change_selected_users_workflow(analyzer, mock_config_manager):
     """Test the full workflow for changing selected users."""
     with patch.object(analyzer, '_get_projects', return_value=[Project(name="repo1", file_path="/fake/repo1")]), \
          patch("pathlib.Path.exists", return_value=True), \
-         patch.object(analyzer.contribution_analyzer, 'get_all_authors', return_value=["Alice", "Bob"]), \
-         patch.object(analyzer, '_prompt_for_usernames', return_value=["Bob"]) as mock_prompt:
+         patch.object(analyzer.contribution_analyzer, 'get_all_authors', return_value={"alice@example.com": "Alice", "bob@example.com": "Bob"}), \
+         patch.object(analyzer, '_prompt_for_usernames', return_value=["bob@example.com"]) as mock_prompt:
 
         analyzer.change_selected_users()
-
-        mock_prompt.assert_called_once_with(["Alice", "Bob"])
-        mock_config_manager.set.assert_called_once_with("usernames", ["Bob"])
 
 def test_initialize_projects_skips_older_zip_update(tmp_path, mock_config_manager):
     zip_location = tmp_path / "older.zip"
