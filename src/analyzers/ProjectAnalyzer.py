@@ -99,15 +99,21 @@ class ProjectAnalyzer:
         extractor = ProjectMetadataExtractor(root_folder)
         files = extractor.collect_all_files()
         return extractor.compute_time_and_size_summary(files)
-
-    def _should_update_project(self, existing: Project, incoming: Project) -> bool:
-        if incoming.last_modified and existing.last_modified:
-            return incoming.last_modified > existing.last_modified
-        if incoming.last_modified and not existing.last_modified:
-            return True
-        if not incoming.last_modified and existing.last_modified:
+    
+    def _has_project_changed(self, project: Project) -> bool:
+        """Returns True if any file in the project has a new/unseen hash."""
+        project_root = Path(project.file_path)
+        if not project_root.exists():
             return False
-        return True
+        for root, _, files in os.walk(project_root):
+            for name in files:
+                file_path = Path(root) / name
+                file_hash = compute_file_hash(file_path)
+                if not file_hash:
+                    continue
+                if not self.file_hash_manager.has_hash(file_hash):
+                    return True  # found a new/changed file
+        return False
 
     def _register_project_files(self, project: Project) -> Dict[str, int]:
         project_root = Path(project.file_path)
@@ -221,9 +227,10 @@ class ProjectAnalyzer:
                     proj_new.date_created = datetime.strptime(summary["start_date"], "%Y-%m-%d")
                 if summary.get("end_date"):
                     proj_new.last_modified = datetime.strptime(summary["end_date"], "%Y-%m-%d")
+
             proj_existing = self.project_manager.get_by_name(proj_new.name)
             if proj_existing:
-                if self._should_update_project(proj_existing, proj_new):
+                if self._has_project_changed(proj_new):
                     proj_existing.file_path, proj_existing.root_folder = proj_new.file_path, proj_new.root_folder
                     if proj_new.num_files:
                         proj_existing.num_files = proj_new.num_files
@@ -238,7 +245,7 @@ class ProjectAnalyzer:
                     self._register_project_files(proj_existing)
                     print(f"  - Updated existing project: {proj_existing.name}")
                 else:
-                    print(f"  - Skipped older project version: {proj_existing.name}")
+                    print(f"  - No changes detected, skipping: {proj_existing.name}")
                 created_projects.append(proj_existing)
             else:
                 proj_new.last_accessed = datetime.now()
@@ -248,7 +255,6 @@ class ProjectAnalyzer:
                 created_projects.append(proj_new)
         self.cached_projects = created_projects
         return created_projects
-
     # ------------------------------------------------------------------
     # Analysis Methods
     # ------------------------------------------------------------------
