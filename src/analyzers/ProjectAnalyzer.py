@@ -253,29 +253,36 @@ class ProjectAnalyzer:
     # Analysis Methods
     # ------------------------------------------------------------------
 
-    def _prompt_for_usernames(self, authors: List[str]) -> Optional[List[str]]:
+    def _prompt_for_usernames(self, author_map: Dict[str, str]) -> Optional[List[str]]:
+        """
+        author_map: {email: display_name}
+        Returns list of selected emails (canonical identities).
+        """
         print("\nPlease select your username(s) from the list of project contributors:")
-        if not authors:
+        if not author_map:
             print("No authors found in the commit history.")
             return None
-        for i, author in enumerate(authors):
-            print(f"  {i + 1}: {author}")
+
+        entries = sorted(author_map.items(), key=lambda x: x[1].lower())  # sort by display name
+        for i, (email, name) in enumerate(entries):
+            print(f"  {i + 1}: {name} <{email}>")
+
         print("\nYou can select multiple authors by entering numbers separated by commas (e.g., 1, 3).")
         try:
             choice_str = input("Enter your choice(s) (or 'q' to quit): ").strip()
             if choice_str.lower() == "q":
                 return None
-            selected_authors = []
+            selected_emails = []
             for choice in [c.strip() for c in choice_str.split(",")]:
                 index = int(choice) - 1
-                if not (0 <= index < len(authors)):
+                if not (0 <= index < len(entries)):
                     print(f"Invalid number '{choice}'. Please try again.")
-                    return self._prompt_for_usernames(authors)
-                selected_authors.append(authors[index])
-            return sorted(list(set(selected_authors)))
+                    return self._prompt_for_usernames(author_map)
+                selected_emails.append(entries[index][0])  # append email
+            return sorted(list(set(selected_emails)))
         except (ValueError, IndexError):
             print("Invalid input format. Please enter numbers separated by commas.")
-            return self._prompt_for_usernames(authors)
+            return self._prompt_for_usernames(author_map)
         except KeyboardInterrupt:
             print("\nOperation cancelled by user.")
             return None
@@ -314,15 +321,19 @@ class ProjectAnalyzer:
         projects = self._get_projects()
         if not projects:
             return
-        all_authors = set()
+
+        all_author_map: Dict[str, str] = {}
         for project in projects:
             if (Path(project.file_path) / ".git").exists():
                 with self.suppress_output():
-                    all_authors.update(self.contribution_analyzer.get_all_authors(str(project.file_path)))
-        if not all_authors:
+                    project_author_map = self.contribution_analyzer.get_all_authors(str(project.file_path))
+                all_author_map.update(project_author_map)
+
+        if not all_author_map:
             print("No Git authors found in any project.")
             return
-        new_usernames = self._prompt_for_usernames(sorted(list(all_authors)))
+
+        new_usernames = self._prompt_for_usernames(all_author_map)
         if new_usernames:
             self._config_manager.set("usernames", new_usernames)
             print(f"\nSuccessfully updated selected users to: {', '.join(new_usernames)}")
@@ -348,20 +359,24 @@ class ProjectAnalyzer:
 
             print(f"\n--- Analyzing contributions for: {project.name} ---")
             with self.suppress_output():
-                repo_authors = self.contribution_analyzer.get_all_authors(str(repo_path))
+                author_map = self.contribution_analyzer.get_all_authors(str(repo_path))
 
-            project.author_count = len(repo_authors)
+            # Detect duplicates and optionally write .mailmap
+            author_map = self.contribution_analyzer.detect_and_write_mailmap(str(repo_path), author_map)
+
+            project.author_count = len(author_map)
             project.collaboration_status = "Collaborative" if project.author_count > 1 else "Individual"
 
-            selected_usernames = self._get_or_select_usernames(sorted(repo_authors)) or []
+            selected_emails = self._get_or_select_usernames(author_map) or []
 
             with self.suppress_output():
                 all_author_stats = self.contribution_analyzer.analyze(str(repo_path))
 
-            project.authors = sorted([name for name in selected_usernames if name in (all_author_stats.keys() if all_author_stats else repo_authors)])
+            # Resolve display names for selected emails
+            project.authors = sorted([author_map[e] for e in selected_emails if e in author_map])
 
             if all_author_stats:
-                selected_stats = self._aggregate_stats(all_author_stats, selected_usernames)
+                selected_stats = self._aggregate_stats(all_author_stats, selected_emails)
                 total_stats = self._aggregate_stats(all_author_stats)
                 project.author_contributions = [stats.to_dict() for stats in all_author_stats.values()]
                 project.individual_contributions = self.contribution_analyzer.calculate_share(selected_stats, total_stats)
