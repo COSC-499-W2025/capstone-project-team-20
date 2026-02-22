@@ -80,7 +80,7 @@ py -m src.main
 python -m src.main
 ```
 
-Once running, the command-line interface will present this menu:
+Once running, the command-line interface will present you with several analysis options:
 ```
 ========================
 Project Analyzer
@@ -101,15 +101,7 @@ Choose an option:
 13. Display Previous Results
 14. Show Project Timeline (Projects & Skills)
 15. Analyze Badges
-16. Retrieve Full Portfolio (Aggregated)
-17. Exit
-18. Enter Resume Personal Information
-19. Create Report (For Use With Resume Generation)
-20. Generate Resume (Export From Report as pdf)
-21. Generate Portfolio (Export From Report as pdf)
-22. Edit Report
-23. Delete Report
-24. Select Thumbnail for a Given Project
+16. Exit
 ```
 
 ---
