@@ -23,6 +23,15 @@ async function request(path, options = {}) {
   return body;
 }
 
+//upload file via absolute path
+export function uploadProjectFromPath(path) {
+  return request("/projects/upload-path", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ path }),
+  });
+}
+
 // Projects
 
 export function listProjects() {

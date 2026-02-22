@@ -7,6 +7,8 @@ import {
   createReport,
   exportResume,
   exportPortfolio,
+  uploadProjectZip,
+  uploadProjectFromPath
 } from "./api/client";
 import './App.css'
 
@@ -89,10 +91,13 @@ function Settings(){
 
 function Projects() {
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState(null);
 
   const [projects, setProjects] = useState([]);
   const [selected, setSelected] = useState(null);
+  const [zipFile, setZipFile] = useState(null);
+  const [pathInput, setPathInput] = useState("");
 
   async function loadProjects() {
     setLoading(true);
@@ -120,6 +125,66 @@ function Projects() {
     }
   }
 
+  async function handleUploadPath() {
+  if (!pathInput.trim()) {
+    setError("Enter a path first (example: TestResources/sample.zip)");
+    return;
+  }
+
+  setUploading(true);
+  setError(null);
+
+  try {
+    await setPrivacyConsent(true);
+
+    const res = await uploadProjectFromPath(pathInput.trim());
+
+    await loadProjects();
+
+    if (res?.projects?.length) {
+      await handleSelect(res.projects[0].id);
+    }
+
+    setPathInput("");
+  } catch (e) {
+    setError(e.message ?? "Path upload failed");
+  } finally {
+    setUploading(false);
+  }
+}
+
+  async function handleUpload() {
+  if (!zipFile) {
+    setError("Pick a .zip file first.");
+    return;
+  }
+
+  setUploading(true);
+  setError(null);
+
+  try {
+    // consent first
+    await setPrivacyConsent(true);
+
+    // upload zip, backend creates projects
+    const res = await uploadProjectZip(zipFile);
+
+    // refresh list
+    await loadProjects();
+
+    // auto-select first created project
+    if (res?.projects?.length) {
+      await handleSelect(res.projects[0].id);
+    }
+
+    setZipFile(null);
+  } catch (e) {
+    setError(e.message ?? "Upload failed");
+  } finally {
+    setUploading(false);
+  }
+}
+
   useEffect(() => {
     loadProjects();
   }, []);
@@ -131,6 +196,70 @@ function Projects() {
       <button onClick={loadProjects} disabled={loading}>
         {loading ? "Loading..." : "Refresh Projects"}
       </button>
+      <div style={{ marginTop: 12, padding: 12, border: "1px solid #ddd", borderRadius: 8 }}>
+      <h4>Add Project (Upload ZIP)</h4>
+
+      <input
+        type="file"
+        accept=".zip"
+        onChange={(e) => setZipFile(e.target.files?.[0] ?? null)}
+        disabled={loading}
+      />
+
+      <button
+        onClick={handleUpload}
+        disabled={uploading || !zipFile}
+        style={{ marginLeft: 8 }}
+      >
+        {loading ? "Uploading..." : "Upload ZIP"}
+      </button>
+
+      {zipFile && (
+        <p style={{ marginTop: 8, opacity: 0.8 }}>
+          Selected: {zipFile.name}
+        </p>
+      )}
+    </div>
+
+      <div style={{ marginTop: 12, padding: 12, border: "1px solid #ddd", borderRadius: 8 }}>
+        <h4>Quick Load Test Projects</h4>
+
+        {[
+          "testResources/testMultiFileAndRepos.zip",
+          "testResources/testMultiRepo.zip",
+          "testResources/earlyProject.zip",
+          "testResources/lateProject.zip",
+        ].map((p) => (
+          <div key={p} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+            <code style={{ flex: 1 }}>{p}</code>
+
+            <button onClick={() => setPathInput(p)} disabled={uploading}>
+              Use
+            </button>
+          </div>
+        ))}
+      </div>
+
+    <div style={{ marginTop: 12, padding: 12, border: "1px solid #ddd", borderRadius: 8 }}>
+      <h4>Or Load from Local Path (Dev)</h4>
+
+      <input
+        type="text"
+        placeholder="TestResources/sample.zip"
+        value={pathInput}
+        onChange={(e) => setPathInput(e.target.value)}
+        disabled={loading}
+        style={{ width: 320 }}
+      />
+
+      <button
+        onClick={handleUploadPath}
+        disabled={uploading || !pathInput.trim()}
+        style={{ marginLeft: 8 }}
+      >
+        {uploading ? "Loading..." : "Load From Path"}
+      </button>
+    </div>
 
       {error && <pre style={{ color: "crimson" }}>{error}</pre>}
 

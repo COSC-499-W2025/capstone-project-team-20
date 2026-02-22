@@ -4,6 +4,7 @@ from pathlib import Path
 from collections import Counter
 import tempfile, shutil
 from uuid import uuid4
+from pydantic import BaseModel
 
 from src.analyzers.ProjectAnalyzer import ProjectAnalyzer
 from src.managers.ConfigManager import ConfigManager
@@ -38,6 +39,34 @@ def require_consent():
             detail="User consent required before generating reports or exports."
         )
     return True
+
+class UploadPathRequest(BaseModel):
+    path: str
+
+@router.post("/projects/upload-path", dependencies=[Depends(require_consent)])
+def upload_project_from_path(req: UploadPathRequest):
+    """
+    Dev-only endpoint: load a ZIP file from a local path on the backend.
+    Mirrors CLI behavior.
+    """
+    zip_path = Path(req.path)
+
+    if not zip_path.exists():
+        raise HTTPException(status_code=404, detail="File not found at given path.")
+
+    root_folders = parse_zip_to_project_folders(str(zip_path))
+    if not root_folders:
+        raise HTTPException(status_code=400, detail="Zip parsed no projects.")
+
+    analyzer = ProjectAnalyzer(ConfigManager(), root_folders, zip_path)
+    created_projects = analyzer.initialize_projects()
+
+    return {
+        "projects": [
+            {"id": p.id, "name": p.name}
+            for p in created_projects
+        ]
+    }
 
 @router.post("/projects/upload", response_model=UploadProjectResponse, status_code=status.HTTP_201_CREATED)
 def upload_project(zip_file: UploadFile = File(...)):
