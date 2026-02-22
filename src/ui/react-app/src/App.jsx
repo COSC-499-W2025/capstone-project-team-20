@@ -1,5 +1,17 @@
 import { useState, useEffect } from "react";
-import { listProjects, getProject, getPortfolio, listSkills, getBadgeProgress, getYearlyWrapped, } from "./api/client";
+import {
+  listProjects,
+  getProject,
+  listSkills,
+  getBadgeProgress, 
+  getYearlyWrapped,
+  setPrivacyConsent,
+  createReport,
+  exportResume,
+  exportPortfolio,
+  uploadProjectZip,
+  uploadProjectFromPath
+} from "./api/client";
 import './App.css'
 
 function App() {
@@ -81,10 +93,13 @@ function Settings(){
 
 function Projects() {
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState(null);
 
   const [projects, setProjects] = useState([]);
   const [selected, setSelected] = useState(null);
+  const [zipFile, setZipFile] = useState(null);
+  const [pathInput, setPathInput] = useState("");
 
   async function loadProjects() {
     setLoading(true);
@@ -112,6 +127,66 @@ function Projects() {
     }
   }
 
+  async function handleUploadPath() {
+  if (!pathInput.trim()) {
+    setError("Enter a path first (example: TestResources/sample.zip)");
+    return;
+  }
+
+  setUploading(true);
+  setError(null);
+
+  try {
+    await setPrivacyConsent(true);
+
+    const res = await uploadProjectFromPath(pathInput.trim());
+
+    await loadProjects();
+
+    if (res?.projects?.length) {
+      await handleSelect(res.projects[0].id);
+    }
+
+    setPathInput("");
+  } catch (e) {
+    setError(e.message ?? "Path upload failed");
+  } finally {
+    setUploading(false);
+  }
+}
+
+  async function handleUpload() {
+  if (!zipFile) {
+    setError("Pick a .zip file first.");
+    return;
+  }
+
+  setUploading(true);
+  setError(null);
+
+  try {
+    // consent first
+    await setPrivacyConsent(true);
+
+    // upload zip, backend creates projects
+    const res = await uploadProjectZip(zipFile);
+
+    // refresh list
+    await loadProjects();
+
+    // auto-select first created project
+    if (res?.projects?.length) {
+      await handleSelect(res.projects[0].id);
+    }
+
+    setZipFile(null);
+  } catch (e) {
+    setError(e.message ?? "Upload failed");
+  } finally {
+    setUploading(false);
+  }
+}
+
   useEffect(() => {
     loadProjects();
   }, []);
@@ -123,6 +198,70 @@ function Projects() {
       <button onClick={loadProjects} disabled={loading}>
         {loading ? "Loading..." : "Refresh Projects"}
       </button>
+      <div style={{ marginTop: 12, padding: 12, border: "1px solid #ddd", borderRadius: 8 }}>
+      <h4>Add Project (Upload ZIP)</h4>
+
+      <input
+        type="file"
+        accept=".zip"
+        onChange={(e) => setZipFile(e.target.files?.[0] ?? null)}
+        disabled={loading}
+      />
+
+      <button
+        onClick={handleUpload}
+        disabled={uploading || !zipFile}
+        style={{ marginLeft: 8 }}
+      >
+        {loading ? "Uploading..." : "Upload ZIP"}
+      </button>
+
+      {zipFile && (
+        <p style={{ marginTop: 8, opacity: 0.8 }}>
+          Selected: {zipFile.name}
+        </p>
+      )}
+    </div>
+
+      <div style={{ marginTop: 12, padding: 12, border: "1px solid #ddd", borderRadius: 8 }}>
+        <h4>Quick Load Test Projects</h4>
+
+        {[
+          "testResources/testMultiFileAndRepos.zip",
+          "testResources/testMultiRepo.zip",
+          "testResources/earlyProject.zip",
+          "testResources/lateProject.zip",
+        ].map((p) => (
+          <div key={p} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+            <code style={{ flex: 1 }}>{p}</code>
+
+            <button onClick={() => setPathInput(p)} disabled={uploading}>
+              Use
+            </button>
+          </div>
+        ))}
+      </div>
+
+    <div style={{ marginTop: 12, padding: 12, border: "1px solid #ddd", borderRadius: 8 }}>
+      <h4>Or Load from Local Path (Dev)</h4>
+
+      <input
+        type="text"
+        placeholder="TestResources/sample.zip"
+        value={pathInput}
+        onChange={(e) => setPathInput(e.target.value)}
+        disabled={loading}
+        style={{ width: 320 }}
+      />
+
+      <button
+        onClick={handleUploadPath}
+        disabled={uploading || !pathInput.trim()}
+        style={{ marginLeft: 8 }}
+      >
+        {uploading ? "Loading..." : "Load From Path"}
+      </button>
+    </div>
 
       {error && <pre style={{ color: "crimson" }}>{error}</pre>}
 
@@ -266,20 +405,112 @@ function Badges() {
   );
 }
 
-function Resume(){
-    return(
-        <>
-        <h3>This is the Resume page.</h3>
-        </>
-    );
+function Resume() {
+  const [loading, setLoading] = useState(false);
+  const [msg, setMsg] = useState("");
+
+  async function handleExport() {
+    setLoading(true);
+    setMsg("");
+    try {
+      await setPrivacyConsent(true);
+
+      // TEMP: create a report from all projects in DB
+      const { projects } = await listProjects();
+      const ids = (projects ?? []).map((p) => p.id);
+
+      if (ids.length === 0) {
+        setMsg("No projects found. Upload a project first.");
+        return;
+      }
+
+      const created = await createReport({
+        title: "Resume Report",
+        sort_by: "resume_score",
+        notes: "Generated from UI",
+        project_ids: ids,
+      });
+
+      const reportId = created.report.id;
+
+      const exp = await exportResume({
+        report_id: reportId,
+        template: "jake",
+        output_name: "resume.pdf",
+      });
+
+      window.open(`http://localhost:8000${exp.download_url}`, "_blank");
+      setMsg("Resume export started — opened download in a new tab.");
+    } catch (e) {
+      setMsg(e.message ?? "Failed to export resume");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <>
+      <h3>Resume</h3>
+      <button onClick={handleExport} disabled={loading}>
+        {loading ? "Exporting..." : "Export Resume PDF"}
+      </button>
+      {msg && <p>{msg}</p>}
+    </>
+  );
 }
 
-function Portfolio(){
-    return(
-        <>
-        <h3>This is the Portfolio page.</h3>
-        </>
-    );
+function Portfolio() {
+  const [loading, setLoading] = useState(false);
+  const [msg, setMsg] = useState("");
+
+  async function handleExport() {
+    setLoading(true);
+    setMsg("");
+    try {
+      await setPrivacyConsent(true);
+
+      const { projects } = await listProjects();
+      const ids = (projects ?? []).map((p) => p.id);
+
+      if (ids.length === 0) {
+        setMsg("No projects found. Upload a project first.");
+        return;
+      }
+
+      const created = await createReport({
+        title: "Portfolio Report",
+        sort_by: "resume_score",
+        notes: "Generated from UI",
+        project_ids: ids,
+      });
+
+      const reportId = created.report.id;
+
+      // NOTE: portfolio export will fail unless portfolio_details exist for each report project
+      // If you haven’t generated them yet, add that step later.
+      const exp = await exportPortfolio({
+        report_id: reportId,
+        output_name: "portfolio.pdf",
+      });
+
+      window.open(`http://localhost:8000${exp.download_url}`, "_blank");
+      setMsg("Portfolio export started — opened download in a new tab.");
+    } catch (e) {
+      setMsg(e.message ?? "Failed to export portfolio");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <>
+      <h3>Portfolio</h3>
+      <button onClick={handleExport} disabled={loading}>
+        {loading ? "Exporting..." : "Export Portfolio PDF"}
+      </button>
+      {msg && <p>{msg}</p>}
+    </>
+  );
 }
 
 function Help(){

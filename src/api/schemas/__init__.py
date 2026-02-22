@@ -1,6 +1,5 @@
-from .consent import ConsentResponse
-from .resume import TodoResponse
-from .portfolio import Portfolio, PortfolioResponse
+from .consent import ConsentRequest, ConsentResponse
+
 from .skills import SkillItem, SkillsListResponse
 from .projects import ProjectSummary, UploadProjectResponse, ProjectsListResponse, ProjectDetail, ProjectDetailResponse
 from .badges import (
@@ -10,4 +9,27 @@ from .badges import (
     WrappedMilestone,
     WrappedYear,
     YearlyWrappedResponse,
+
+from .projects import (
+    ProjectSummary,
+    UploadProjectResponse,
+    ProjectsListResponse,
+    ProjectDetail,
+    ProjectDetailResponse,
+)
+
+from .resume import (
+    ReportCreateRequest,
+    ReportSummary,
+    ReportsListResponse,
+    ReportDetailResponse,
+    ResumeExportRequest,
+    ResumeExportResponse,
+)
+
+from .portfolio import (
+    PortfolioDetailsGenerateRequest,
+    PortfolioDetailsGenerateResponse,
+    PortfolioExportRequest,
+    PortfolioExportResponse,
 )

@@ -31,21 +31,22 @@ class FakeProject:
         self.last_modified = last_modified
 
 
-# /privacy-consent test. calling POST /privacy-consent?consent=true returns 200
 def test_privacy_consent_sets_value(client, monkeypatch):
     calls = {}
 
     class FakeConsentManager:
+        def has_user_consented(self):
+            return True  # not needed here but safe
+
         def set_consent(self, consent: bool):
             calls["consent"] = consent
 
     monkeypatch.setattr(routes, "ConsentManager", FakeConsentManager)
 
-    res = client.post("/privacy-consent", params={"consent": "true"})
+    res = client.post("/privacy-consent", json={"consent": True})
     assert res.status_code == 200
 
     data = res.json()
-    assert data["ok"] is True
     assert data["consent"] is True
     assert calls["consent"] is True
 
