@@ -3,7 +3,7 @@ const BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 /**
  * Basic request helper:
  * - parses JSON when available
- * - throws a useful Error message on non-2xx
+ * - throws an Error message on non-2xx
  */
 async function request(path, options = {}) {
   const res = await fetch(`${BASE_URL}${path}`, options);
@@ -14,7 +14,6 @@ async function request(path, options = {}) {
   const body = isJson ? await res.json() : await res.text();
 
   if (!res.ok) {
-    // FastAPI commonly returns {"detail": "..."} on errors
     const message =
       (isJson && body && body.detail) ? body.detail :
       (typeof body === "string" && body.trim() ? body : `HTTP ${res.status}`);
@@ -22,6 +21,15 @@ async function request(path, options = {}) {
   }
 
   return body;
+}
+
+//upload file via absolute path
+export function uploadProjectFromPath(path) {
+  return request("/projects/upload-path", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ path }),
+  });
 }
 
 // Projects
@@ -55,38 +63,64 @@ export function listSkills() {
 }
 
 // Privacy Consent
-
 export function setPrivacyConsent(consent) {
-  // Your endpoint signature is: def upload_consent(consent: bool)
-  // FastAPI will accept it as a query parameter:
-  // POST /privacy-consent?consent=true
-  return request(`/privacy-consent?consent=${consent}`, {
+  return request("/privacy-consent", {
     method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ consent }),
   });
 }
 
-// Resume / Portfolio placeholders
+// Reports
 
-export function getResume(id) {
-  return request(`/resume/${id}`);
+export function createReport({ title = null, sort_by = "resume_score", notes = null, project_ids = [] }) {
+  return request("/reports", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ title, sort_by, notes, project_ids }),
+  });
 }
 
-export function generateResume() {
-  return request("/resume/generate", { method: "POST" });
+export function listReports() {
+  return request("/reports");
 }
 
-export function editResume(id) {
-  return request(`/resume/${id}/edit`, { method: "POST" });
+export function getReport(id) {
+  return request(`/reports/${id}`);
 }
 
-export function getPortfolio(id) {
-  return request(`/portfolio/${id}`);
+// Portfolio details generation (for a report)
+
+export function generatePortfolioDetailsForReport({ report_id, project_names }) {
+  return request(`/reports/${report_id}/portfolio-details/generate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ report_id, project_names }),
+  });
 }
 
-export function generatePortfolio() {
-  return request("/portfolio/generate", { method: "POST" });
+// Exports
+
+export function exportResume({ report_id, template = "jake", output_name = "resume.pdf" }) {
+  return request("/resume/export", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ report_id, template, output_name }),
+  });
 }
 
-export function editPortfolio(id) {
-  return request(`/portfolio/${id}/edit`, { method: "POST" });
+export function downloadResumeUrl(export_id) {
+  return `${BASE_URL}/resume/exports/${export_id}/download`;
+}
+
+export function exportPortfolio({ report_id, output_name = "portfolio.pdf" }) {
+  return request("/portfolio/export", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ report_id, output_name }),
+  });
+}
+
+export function downloadPortfolioUrl(export_id) {
+  return `${BASE_URL}/portfolio/exports/${export_id}/download`;
 }
