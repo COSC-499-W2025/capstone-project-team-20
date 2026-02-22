@@ -2,6 +2,7 @@
 
 ### **Table of Contents:**
 
+- [Term 2 Week 7: February 16th - February 22nd](#term-2-week-7-february-16th---february-22nd)
 - [Term 2 Week 6: February 9th - February 15th](#term-2-week-6-february-9th---february-15th)
 - [Term 2 Week 5: February 2nd - February 8th](#term-2-week-5-february-2nd---february-8th)
 - [Term 2 Week 4: January 26th - February 1st](#term-2-week-4-january-26th---february-1st)
@@ -459,6 +460,55 @@ As we have just about hit the requirements for Milestone 2, my plan for this wee
 **Any issues or Blockers That I Encountered This Week and How I Addressed/Plan to Address Them:**
 
 N/A
+
+
+### Term 2 Week 7: February 16th - February 22nd
+
+**Coding Tasks:**
+
+This week, I made four PRs. Each addressed pre-existing bugs in our system. This includes a fix for the progress bar, consolidating git contributors by email (removing duplicates), a check that reports cannot be created without previously generated resume insights for each project, and a fix that ensures and tests that projects are incrementally analyzed and not overwritten.
+
+[fix: fix progress bar behaviour](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/397)
+
+[Fix/consolidate git contributors](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/394)
+
+[Fix/reports enforce resume insights](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/392)
+
+[Fix/incremental zips](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/391)
+
+**Testing or Debugging Tasks:**
+
+I wrote extensive unit tests for my PR this week, linked above.
+
+**Reviewing or Collaboration Tasks:**
+
+I manually tested and reviewed the following PRs this week. 
+
+[Frontend to backend integration for Projects (also deleted streamlit)](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/389)
+
+[Implement LaTex Portfolio Generator](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/381)
+
+
+**Brief Description of Last Week Connecting This Week:**
+
+Last week, I implemented an integrated test suite to fully test the resume generation feature and the deletion of report items.
+
+This week, I went bug hunting in preparation for Milestone 2 and it's presentation.
+
+**Plan/Goals for Upcoming Week:**
+
+As Milestone 2 approaches, I will look to remain flexible and help out however I can in finalizing our system for the Milestone. I believe some substantial PRs are coming tonight, so I'm not quite sure what this will look like yet. If nothing else jumps out at me, perhaps I'll help out integrating our React frontend with our backend.
+
+**Any issues or Blockers That I Encountered This Week and How I Addressed/Plan to Address Them:**
+
+N/A
+
+
+
+
+
+
+
 
 
 
