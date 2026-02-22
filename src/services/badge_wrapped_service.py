@@ -11,7 +11,7 @@ BADGE_PROGRESS_RULES = {
         "label": "Test Pilot",
         "metric": "Test file ratio",
         "target": 0.15,
-        "extractor": lambda p: float(getattr(p, "test_file_ratio", 0.0) or 0.0),
+        "extractor": lambda p: _test_ratio(p),
     },
     "docs_guardian": {
         "label": "Docs Guardian",
@@ -23,13 +23,13 @@ BADGE_PROGRESS_RULES = {
         "label": "Polyglot",
         "metric": "Languages used",
         "target": 3.0,
-        "extractor": lambda p: float(len(getattr(p, "languages", []) or [])),
+        "extractor": lambda p: float(_language_count(p)),
     },
     "team_effort": {
         "label": "Team Effort",
         "metric": "Contributors",
         "target": 3.0,
-        "extractor": lambda p: float(getattr(p, "author_count", 0) or 0),
+        "extractor": lambda p: float(_author_count(p)),
     },
     "code_cruncher": {
         "label": "Code Cruncher",
@@ -39,14 +39,66 @@ BADGE_PROGRESS_RULES = {
     },
 }
 
+def _project_total_files(project) -> float:
+    total = float(getattr(project, "num_files", 0) or 0)
+    if total > 0:
+        return total
+
+    categories = getattr(project, "categories", {}) or {}
+    counts = categories.get("counts") if isinstance(categories, dict) else None
+    if isinstance(counts, dict):
+        return float(sum(v for v in counts.values() if isinstance(v, (int, float))))
+
+    if isinstance(categories, dict):
+        return float(sum(v for v in categories.values() if isinstance(v, (int, float))))
+    return 0.0
 
 def _category_ratio(project, category: str) -> float:
     categories = getattr(project, "categories", {}) or {}
-    count = categories.get(category, 0)
-    total = float(getattr(project, "num_files", 0) or 0)
+    count = 0.0
+
+    if isinstance(categories, dict):
+        counts = categories.get("counts")
+        if isinstance(counts, dict):
+            count = float(counts.get(category, 0) or 0)
+        else:
+            count = float(categories.get(category, 0) or 0)
+
+    total = _project_total_files(project)
+
     if total <= 0:
         return 0.0
-    return float(count) / total
+    return count / total
+
+
+def _language_count(project) -> int:
+    language_share = getattr(project, "language_share", {}) or {}
+    if isinstance(language_share, dict) and len(language_share) > 0:
+        return len(language_share)
+    return len(getattr(project, "languages", []) or [])
+
+
+def _author_count(project) -> int:
+    count = int(getattr(project, "author_count", 0) or 0)
+    if count > 0:
+        return count
+    return len(getattr(project, "authors", []) or [])
+
+
+def _test_ratio(project) -> float:
+    explicit_ratio = float(getattr(project, "test_file_ratio", 0.0) or 0.0)
+    category_ratio = _category_ratio(project, "test")
+    return max(explicit_ratio, category_ratio)
+
+
+def _category_counts(project) -> dict:
+    categories = getattr(project, "categories", {}) or {}
+    if not isinstance(categories, dict):
+        return {}
+    counts = categories.get("counts")
+    if isinstance(counts, dict):
+        return counts
+    return categories
 
 
 def _project_badges(project) -> list[str]:
@@ -56,15 +108,15 @@ def _project_badges(project) -> list[str]:
 
     snapshot = ProjectAnalyticsSnapshot(
         name=project.name,
-        total_files=project.num_files,
-        total_size_kb=project.size_kb,
-        total_size_mb=(project.size_kb / 1024) if project.size_kb else 0.0,
+        total_files=getattr(project, "num_files", 0) or 0,
+        total_size_kb=getattr(project, "size_kb", 0) or 0,
+        total_size_mb=((getattr(project, "size_kb", 0) or 0) / 1024),
         duration_days=duration_days,
-        category_summary={"counts": project.categories or {}},
-        languages=project.language_share or {},
-        skills=set(project.skills_used or []),
-        author_count=project.author_count,
-        collaboration_status=project.collaboration_status,
+        category_summary={"counts": _category_counts(project)},
+        languages=getattr(project, "language_share", {}) or {},
+        skills=set(getattr(project, "skills_used", []) or []),
+        author_count=_author_count(project),
+        collaboration_status=getattr(project, "collaboration_status", "individual") or "individual",
     )
     return assign_badges(snapshot)
 
@@ -110,7 +162,7 @@ def build_badge_progress(projects) -> Dict[str, Any]:
     responses = []
     for badge_id, rule in BADGE_PROGRESS_RULES.items():
         closest_project = None
-        closest_progress = 0.0
+        closest_progress = -1.0
         current_value = 0.0
 
         for p in projects:
@@ -120,6 +172,9 @@ def build_badge_progress(projects) -> Dict[str, Any]:
                 closest_progress = progress
                 closest_project = p
                 current_value = metric_value
+
+        if closest_progress < 0:
+            closest_progress = 0.0
 
         responses.append({
             "badge_id": badge_id,

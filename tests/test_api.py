@@ -182,6 +182,33 @@ def test_badge_progress_returns_closest_project(client, monkeypatch):
     assert as_map["test_pilot"]["project"]["name"] == "TestsHeavy"
     assert as_map["docs_guardian"]["project"]["name"] == "DocsHeavy"
 
+def test_badge_progress_uses_fallback_fields(client, monkeypatch):
+    class FakeProjectManager:
+        def get_all(self):
+            return [
+                FakeProject(
+                    9,
+                    "NestedCounts",
+                    categories={"counts": {"test": 8, "docs": 12, "code": 35}},
+                    num_files=50,
+                    language_share={"Python": 70.0, "TypeScript": 20.0, "SQL": 10.0},
+                    author_count=0,
+                ),
+            ]
+
+    monkeypatch.setattr(routes, "ProjectManager", FakeProjectManager)
+
+    res = client.get("/badges/progress")
+    assert res.status_code == 200
+
+    data = res.json()
+    as_map = {item["badge_id"]: item for item in data["badges"]}
+
+    assert as_map["test_pilot"]["earned"] is True
+    assert as_map["docs_guardian"]["earned"] is True
+    assert as_map["code_cruncher"]["earned"] is True
+    assert as_map["polyglot"]["earned"] is True
+    assert as_map["team_effort"]["project"]["name"] == "NestedCounts"
 
 def test_yearly_wrapped_contains_milestones_with_project_names(client, monkeypatch):
     import datetime as dt
