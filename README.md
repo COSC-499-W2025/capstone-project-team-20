@@ -106,6 +106,117 @@ Choose an option:
 
 ---
 
+## API Documentation
+
+This project provides an HTTP API built with **FastAPI**, which automatically generates OpenAPI documentation.
+
+When the API server is running, interactive documentation is available at:
+
+- **Swagger UI:** http://127.0.0.1:8000/docs
+- **ReDoc:** http://127.0.0.1:8000/redoc
+- **OpenAPI JSON:** http://127.0.0.1:8000/openapi.json
+
+OpenAPI is the authoritative source for request and response schemas as well as interactive testing.
+
+---
+
+## Project Run Modes
+
+The repository supports three workflows:
+
+1. CLI application — menu-based analyzer
+2. FastAPI backend — HTTP API with OpenAPI docs
+3. React UI — frontend development server
+
+---
+
+## Running the CLI
+
+```sh
+python -m src.main
+```
+
+---
+
+## Running the API Backend
+
+```sh
+uvicorn src.api.api_main:app --reload
+```
+
+Base URL:
+http://127.0.0.1:8000
+
+---
+
+## Running the React Frontend
+
+```sh
+cd src/ui/react-app
+npm install
+npm run dev
+```
+
+The development server typically runs at:
+http://localhost:5173
+
+---
+
+## API Route Map
+
+| Method | Path | Description | Status |
+|--------|------|-------------|--------|
+| POST | /projects/upload | Upload a .zip file, analyze it, and store project records | Implemented |
+| POST | /privacy-consent | Save the user's privacy consent choice | Implemented |
+| GET | /projects | List stored projects (id, name) | Implemented |
+| GET | /projects/{id} | Retrieve full details for a specific project | Implemented |
+| GET | /skills | Return detected skills with project counts | Implemented |
+| GET | /resume/{id} | Retrieve generated resume output | Placeholder |
+| POST | /resume/generate | Generate resume output | Placeholder |
+| POST | /resume/{id}/edit | Edit resume output | Placeholder |
+| GET | /portfolio/{id} | Retrieve generated portfolio output | Placeholder |
+| POST | /portfolio/generate | Generate portfolio output | Placeholder |
+| POST | /portfolio/{id}/edit | Edit portfolio output | Placeholder |
+
+---
+
+## Example Requests
+
+Upload a Project Archive:
+
+```bash
+curl -X POST "http://127.0.0.1:8000/projects/upload" \
+  -H "accept: application/json" \
+  -H "Content-Type: multipart/form-data" \
+  -F "zip_file=@/path/to/project.zip;type=application/zip"
+```
+
+Save Privacy Consent:
+
+```bash
+curl -X POST "http://127.0.0.1:8000/privacy-consent?consent=true"
+```
+
+List Projects:
+
+```bash
+curl "http://127.0.0.1:8000/projects"
+```
+
+Get Project Details by ID:
+
+```bash
+curl "http://127.0.0.1:8000/projects/1"
+```
+
+Get Skills Summary:
+
+```bash
+curl "http://127.0.0.1:8000/skills"
+```
+
+---
+
 ## System Architecture
 
 ![System Architecture Diagram](media/system_architecture.png)
