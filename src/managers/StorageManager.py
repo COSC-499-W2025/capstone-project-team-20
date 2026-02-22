@@ -2,12 +2,12 @@ import sqlite3
 import json
 from contextlib import contextmanager
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Generator
+from typing import Any, Dict, Generator, Optional
 
-class StorageManager(ABC): 
+class StorageManager(ABC):
     """
     Abstract base class for handling database reads and writes.
-    
+
     Defines: set, get, get_all, delete, clear.
 
     Child classes need to define their table schema and structure, and optionally, override set, get and get_all in order to unpack the return types of it’s base class. (For example, StorageManager’s set() method expects a dict.
@@ -32,7 +32,7 @@ class StorageManager(ABC):
             except (json.JSONDecodeError, TypeError):
                 row_dict[col] = val
         return row_dict
-    
+
     def _retrieve_id(self, cursor: sqlite3.Cursor, row: Dict[str, Any]) -> None:
         """To be overidden in child classes if needed, for use with schema that include autoincremented ids."""
         pass
@@ -82,7 +82,7 @@ class StorageManager(ABC):
     def primary_key(self) -> str:
         """Return the primary key of a table for use in SQL queries."""
         pass
-    
+
     @property
     @abstractmethod
     def columns(self) -> str:
@@ -91,7 +91,7 @@ class StorageManager(ABC):
 
     def set(self, row: Dict[str, Any]) -> None:
         """
-        Insert or update a row, expects a dictionary with column names as keys and values to store. 
+        Insert or update a row, expects a dictionary with column names as keys and values to store.
 
         Key-value pairs must be set in the order defined in the child class’s columns property.
         """
@@ -105,12 +105,12 @@ class StorageManager(ABC):
             query = f"INSERT OR REPLACE INTO {self.table_name} ({self.columns}) VALUES ({self.placeholders})"
             cursor.execute(query, serialized_values)
             self._retrieve_id(cursor, row)
-            
+
     # default param can be used as a fallback, in case the value you're looking for doesn't exist
-    def get(self, key: str, default: Any = None) -> Dict[str, Any]:
+    def get(self, key: str, default: Any = None) -> Optional[Dict[str, Any]]:
         """
         Retrieve a row by primary key.
-        
+
         default is an optional fallback value to be used if the key doesn't exist. Defaults to None.
         """
 
@@ -123,9 +123,9 @@ class StorageManager(ABC):
                 row_dict = dict(zip(self.columns_list, result))
                 return self._deserialize_row(row_dict)
         return default
-    
+
     def delete(self, key: str) -> bool:
-        """ 
+        """
         Delete a row associated with a primary key value from the database.
 
         Returns `True` if the delete operation is successful.
@@ -135,7 +135,7 @@ class StorageManager(ABC):
             query = f"DELETE FROM {self.table_name} WHERE {self.primary_key} = ?"
             cursor.execute(query, (key,))
             return cursor.rowcount > 0
-    
+
     def get_all(self) -> Generator[Dict[str, Any], None, None]:
         """
         Retrieve all rows from a table as a Generator.
@@ -148,7 +148,7 @@ class StorageManager(ABC):
             cursor = conn.cursor()
             query = f"SELECT {self.columns} FROM {self.table_name}"
             cursor.execute(query)
-            while True: 
+            while True:
                 row = cursor.fetchone()
                 if row is None:
                     break

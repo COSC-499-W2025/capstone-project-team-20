@@ -71,3 +71,25 @@ def test_mixed_files_and_folders_at_root():
     assert len(single_root.children) == 1
     assert single_root.children[0].file_name == 'main.py'
     assert len(single_root.subdir) == 0
+
+def test_parse_zip_with_invalid_path_returns_empty_list():
+    """
+    Tests that calling parse_zip_to_project_folders with a non-existent
+    or invalid zip file path gracefully returns an empty list.
+    """
+    # Test with a path that does not exist
+    invalid_path = "non_existent_path.zip"
+    roots = ZipParser.parse_zip_to_project_folders(invalid_path)
+    assert roots == [], "Should return an empty list for a non-existent file"
+
+    # Test with a path that is not a zip file
+    with tempfile.NamedTemporaryFile(mode='w', delete=False) as temp_file:
+        temp_file.write("This is not a zip file")
+        not_a_zip_path = temp_file.name
+
+    roots = ZipParser.parse_zip_to_project_folders(not_a_zip_path)
+    assert roots == [], "Should return an empty list for a file that is not a zip archive"
+
+    # Clean up the temporary file
+    import os
+    os.remove(not_a_zip_path)
