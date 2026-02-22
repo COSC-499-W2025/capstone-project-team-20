@@ -88,38 +88,28 @@ class Bar:
         if self.current_total>=self.TOTAL_BYTES or self.stages_completed >= self.STAGES:
             self.current_total = self.TOTAL_BYTES
             self.sub_stage_idx = 8 #empty character so that the bar still looks full
+            self.stages_remaining = 0  # ensure stages_remaining hits 0 on completion
         
     def update(self, sizeB:int):
         '''takes the size of the file just analyzed and updates the progress bar'''
-
-        # add the analyzed bytes to current stage:
-        if sizeB>0:
+        if sizeB > 0:
             self.stage_progress += sizeB
-            self.current_total += sizeB #add the size of stage to running current_total
+            self.current_total += sizeB
 
-        #finishes progress bar if it is complete but not at the right current_total
         if self.current_total >= self.STAGE_SIZE*8*self.STAGES or self.current_total >= self.TOTAL_BYTES:
             self.current_total = self.TOTAL_BYTES
             self.sub_stage_idx = 8
             self.stage_progress = 0
+            self.stages_remaining = 0  # ensure stages_remaining hits 0 on completion
             while (len(self.bar_complete) < self.STAGES):
                 self.bar_complete += '█'
+            self.output()  # output once on completion
 
-        # check if stage(s) completed:
-        if (self.stage_progress >= self.STAGE_SIZE):
-            while (self.stage_progress >= self.STAGE_SIZE): #while amount progressed > bytes per stage:
-                #subtract bytes per stage from new bytes analyzed
+        elif self.stage_progress >= self.STAGE_SIZE:
+            while self.stage_progress >= self.STAGE_SIZE:
                 self.stage_progress -= self.STAGE_SIZE
-
-                #increase stage:
                 self.stageup()
-
-                #print:
-                #(\r returns cursor to the start of the line, end="" prevents newline, so essentially the string will keep replacing itself)
-                self.output()
-                #time.sleep(0.0001)
-        else:
-            self.output()
+            self.output()  # output once after all stage increments, not inside the loop
 
     def output(self):
 

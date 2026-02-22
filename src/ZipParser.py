@@ -123,17 +123,17 @@ def ignore_file_criteria(file: ZipInfo) -> bool:
     return False
 
 
-def parse_zip_to_project_folders(path: str) -> list[ProjectFolder]:
+def parse_zip_to_project_folders(zip_path: str) -> list[ProjectFolder]:
     """
     Parses a zip file and creates a ProjectFolder tree for each top-level
     directory. Returns a list of root ProjectFolder objects.
     """
-    if not path or not Path(path).exists() or not zipfile.is_zipfile(path):
-        print(f"Warning: Invalid or non-existent zip file path provided: {path}")
+    if not zip_path or not Path(zip_path).exists() or not zipfile.is_zipfile(zip_path):
+        print(f"Warning: Invalid or non-existent zip file path provided: {zip_path}")
         return []
 
     try:
-        with ZipFile(path, "r") as z:
+        with ZipFile(zip_path, "r") as z:
             total_bytes = sum(file.file_size for file in z.infolist())
             my_bar = Bar(total_bytes)
             infolist = sorted(z.infolist(), key=lambda f: f.filename)
@@ -141,13 +141,10 @@ def parse_zip_to_project_folders(path: str) -> list[ProjectFolder]:
             roots: dict[str, ProjectFolder] = {}
             dirs: dict[str, ProjectFolder] = {}
 
-            # First pass: identify all top-level folders and create roots
             for file in infolist:
                 if ignore_file_criteria(file):
                     continue
-
                 path_parts = PurePosixPath(file.filename).parts
-                # A file/folder needs to be in a directory to have a root.
                 if len(path_parts) > 1:
                     root_name = path_parts[0] + "/"
                     if root_name not in roots:
@@ -155,39 +152,37 @@ def parse_zip_to_project_folders(path: str) -> list[ProjectFolder]:
                         root_folder = ProjectFolder(synthetic_info, parent=None)
                         roots[root_name] = root_folder
                         dirs[root_name] = root_folder
-
             # If no subdirectories are found, treat the whole zip as one project.
             if not roots:
-                synthetic_info = ZipInfo(filename=Path(path).stem + "/")
+                synthetic_info = ZipInfo(filename=Path(zip_path).stem + "/")
                 root_folder = ProjectFolder(synthetic_info, parent=None)
                 roots[root_folder.name] = root_folder
                 dirs[root_folder.name] = root_folder
 
                 for file in infolist:
                     if ignore_file_criteria(file):
+                        my_bar.update(file.file_size)  # ← count ignored bytes too
                         continue
                     parent_path_str = str(PurePosixPath(file.filename).parent)
                     # Normalize parent path for root files
                     if parent_path_str == '.':
-                         parent_path_str = root_folder.name
+                        parent_path_str = root_folder.name
                     else:
                         parent_path_str = root_folder.name + parent_path_str + "/"
-
                     add_to_tree(file, parent_path_str, dirs, roots)
                     my_bar.update(file.file_size)
                 return list(roots.values())
 
-            # Second pass: build the tree for projects within subdirectories
+            # Second pass — use file_path, not path (avoid shadowing)
             for file in infolist:
                 if ignore_file_criteria(file):
+                    my_bar.update(file.file_size)  # ← count ignored bytes too
                     continue
-
-                path = PurePosixPath(file.filename)
+                file_path = PurePosixPath(file.filename)
                 # We only need to add files that are not roots themselves
-                if len(path.parts) > 1:
-                    parent_path = str(path.parent) + "/"
+                if len(file_path.parts) > 1:
+                    parent_path = str(file_path.parent) + "/"
                     add_to_tree(file, parent_path, dirs, roots)
-
                 my_bar.update(file.file_size)
 
             return list(roots.values())
@@ -208,17 +203,12 @@ def extract_zip(zip_path: str) -> Path:
     """
     # Create the temporary directory path as a string first.
     temp_dir_str = tempfile.mkdtemp()
-    print(f"Extracting {zip_path} to {temp_dir_str}...")
     try:
         with zipfile.ZipFile(zip_path, 'r') as zip_ref:
             zip_ref.extractall(temp_dir_str)
     except (zipfile.BadZipFile, FileNotFoundError) as e:
-        # If extraction fails, ensure the created temp directory is cleaned up.
         shutil.rmtree(temp_dir_str)
         raise ValueError(f"Error processing zip file: {e}")
-
-    print("Extraction complete.")
-    # Return the path as a Path object to ensure type consistency.
     return Path(temp_dir_str)
 
 def toString(root: ProjectFolder) -> str:

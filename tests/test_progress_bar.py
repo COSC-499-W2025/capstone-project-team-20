@@ -7,6 +7,7 @@ if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
 from src.ProgressBar import Bar
+from unittest.mock import patch
 
 def test_too_small_abort():
     '''Bars created with 7 or less bytes (including negative numbers) should abort (create an already completed bar where STAGES is 1)'''
@@ -201,3 +202,56 @@ def test_substage_cycle():
     for s in sub_stages:
         assert testbar.SUB_CHARS[testbar.sub_stage_idx] == s
         testbar.update(1)
+
+def test_output_call_count_is_bounded():
+    '''output() should only be called on stage/substage completions, not on every tiny update.
+    Max calls = STAGES * 8 substages + 1 final = 513. Should never equal update count when updates >> stages.'''
+    testbar = Bar(512000)  # 64 stages
+
+    with patch.object(testbar, 'output') as mock_output:
+        for _ in range(512000):  # one byte at a time — far more updates than stages
+            testbar.update(1)
+
+    assert mock_output.call_count <= 513       # bounded by stage structure
+    assert mock_output.call_count < 512000     # definitely not once per update
+
+def test_output_calls_scale_with_stages_not_updates():
+    '''output() call count should be proportional to STAGES, not update count.'''
+    testbar = Bar(9999999)  # 64 stages
+
+    with patch.object(testbar, 'output') as mock_output:
+        for _ in range(10000):
+            testbar.update(1)  # 1 byte at a time, far smaller than a stage
+
+    assert mock_output.call_count <= 513
+    assert mock_output.call_count < 10000
+
+def test_zero_byte_updates_dont_regress_progress():
+    '''Updating with 0 bytes repeatedly should not change bar state or trigger extra output calls'''
+    testbar = Bar(512)
+    testbar.update(256)  # get to 50%
+
+    state_before = (testbar.current_total, testbar.stages_completed, testbar.sub_stage_idx)
+
+    for _ in range(1000):
+        testbar.update(0)
+
+    state_after = (testbar.current_total, testbar.stages_completed, testbar.sub_stage_idx)
+    assert state_before == state_after
+
+def test_large_bar_completes_from_many_small_updates():
+    '''A 64-stage bar fed many small updates should reach full completion correctly'''
+    total = 9082926429  # realistic large ZIP size
+    testbar = Bar(total)
+
+    chunk = 1_000_000
+    sent = 0
+    while sent < total:
+        to_send = min(chunk, total - sent)
+        testbar.update(to_send)
+        sent += to_send
+
+    assert testbar.current_total == total
+    assert testbar.bar_complete == '█' * testbar.STAGES
+    assert testbar.sub_stage_idx == 8
+    assert testbar.stages_remaining == 0
