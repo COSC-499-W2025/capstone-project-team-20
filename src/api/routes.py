@@ -52,6 +52,16 @@ def require_consent():
 class UploadPathRequest(BaseModel):
     path: str
 
+def _run_post_upload_analyses(analyzer: ProjectAnalyzer, projects):
+    """Run non-interactive analyses so uploaded projects have usable dashboard data."""
+    for method_name in ("analyze_metadata", "analyze_categories", "analyze_languages", "analyze_skills"):
+        method = getattr(analyzer, method_name, None)
+        if callable(method):
+            if method_name == "analyze_skills":
+                method(projects=projects, silent=True)
+            else:
+                method(projects=projects)
+
 @router.post("/projects/upload-path", dependencies=[Depends(require_consent)])
 def upload_project_from_path(req: UploadPathRequest):
     """
@@ -69,6 +79,7 @@ def upload_project_from_path(req: UploadPathRequest):
 
     analyzer = ProjectAnalyzer(ConfigManager(), root_folders, zip_path)
     created_projects = analyzer.initialize_projects()
+    _run_post_upload_analyses(analyzer, created_projects)
 
     return {
         "projects": [
@@ -89,6 +100,7 @@ def upload_project(zip_file: UploadFile = File(...)):
         raise HTTPException(status_code=400, detail="Zip parsed no projects (invalid or empty zip.)")
     analyzer = ProjectAnalyzer(ConfigManager(), root_folders, tmp_path)
     created_projects = analyzer.initialize_projects()
+    _run_post_upload_analyses(analyzer, created_projects)
 
     tmp_path.unlink(missing_ok=True)
 
