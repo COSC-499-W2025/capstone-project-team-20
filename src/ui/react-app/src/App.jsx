@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { listProjects, getProject, getPortfolio, listSkills } from "./api/client";
+import { listProjects, getProject, getPortfolio, listSkills, getBadgeProgress, getYearlyWrapped, } from "./api/client";
 import './App.css'
 
 function App() {
@@ -160,33 +160,96 @@ function Badges() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [skills, setSkills] = useState([]);
+  const [progress, setProgress] = useState([]);
+  const [wrapped, setWrapped] = useState([]);
 
-  async function loadSkills() {
+  async function loadBadgeData() {
     setLoading(true);
     setError(null);
     try {
-      const data = await listSkills(); // { skills: [{name, project_count}, ...] }
-      setSkills(data.skills ?? []);
-    } catch (e) {
-      setError(e.message ?? "Failed to load skills");
-    } finally {
+      const [skillsData, progressData, wrappedData] = await Promise.all([
+          listSkills(),
+          getBadgeProgress(),
+          getYearlyWrapped(),
+        ]);
+        setSkills(skillsData.skills ?? []);
+        setProgress(progressData.badges ?? []);
+        setWrapped(wrappedData.wrapped ?? []);
+      } catch (e) {
+        setError(e.message ?? "Failed to load badges and wrapped stats");
+      } finally {
       setLoading(false);
     }
   }
 
   useEffect(() => {
-    loadSkills();
+    loadBadgeData();
   }, []);
 
   return (
     <>
       <h3>Badges</h3>
 
-      <button onClick={loadSkills} disabled={loading}>
-        {loading ? "Loading..." : "Refresh Skills"}
+      <button onClick={loadBadgeData} disabled={loading}>
+        {loading ? "Loading..." : "Refresh Badge Data"}
       </button>
 
       {error && <pre style={{ color: "crimson" }}>{error}</pre>}
+
+      <h4>🎯 Badge Progress Tracker</h4>
+      {progress.length === 0 ? (
+        <p>No badge progress data yet. Upload projects to start earning badges.</p>
+      ) : (
+        <ul style={{ listStyle: "none", paddingLeft: 0 }}>
+          {progress.map((b) => (
+            <li key={b.badge_id} style={{ marginBottom: 12, border: "1px solid #2f4d6f", borderRadius: 8, padding: 10 }}>
+              <strong>{b.label}</strong> — {Math.round((b.progress ?? 0) * 100)}%
+              <div style={{ height: 10, borderRadius: 999, background: "#21344a", marginTop: 8, overflow: "hidden" }}>
+                <div style={{ width: `${Math.round((b.progress ?? 0) * 100)}%`, height: "100%", background: b.earned ? "#29c77d" : "#55BDCA" }} />
+              </div>
+              <small>
+                {b.metric}: {(b.current ?? 0).toFixed(2)} / {b.target} • Closest project: {b.project?.name ?? "N/A"}
+                {b.earned ? " • ✅ Earned" : " • ⏳ In progress"}
+              </small>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <h4>🎉 Yearly Wrapped</h4>
+      {wrapped.length === 0 ? (
+        <p>No yearly wrapped history available yet.</p>
+      ) : (
+        wrapped.map((yearBlock) => (
+          <div key={yearBlock.year} style={{ marginBottom: 14, border: "1px solid #3f638c", borderRadius: 12, padding: 12, background: "linear-gradient(135deg, rgba(85,189,202,0.12), rgba(242,125,66,0.10))" }}>
+            <h5>{yearBlock.vibe_title}</h5>
+            <p>
+              Projects: {yearBlock.projects_count} • LOC: {yearBlock.total_loc} • Files: {yearBlock.total_files} • Avg test ratio: {(yearBlock.avg_test_file_ratio * 100).toFixed(1)}%
+            </p>
+            {yearBlock.highlights?.length ? (
+              <ul>
+                {yearBlock.highlights.map((line, idx) => (
+                  <li key={`${yearBlock.year}-highlight-${idx}`}>{line}</li>
+                ))}
+              </ul>
+            ) : null}
+            <p><strong>Milestones:</strong></p>
+            {yearBlock.milestones?.length ? (
+              <ul>
+                {yearBlock.milestones.map((m, idx) => (
+                  <li key={`${yearBlock.year}-${m.badge_id}-${idx}`}>
+                    🏅 {m.badge_id} earned in <strong>{m.project}</strong>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p>No badge milestones recorded for this year.</p>
+            )}
+          </div>
+        ))
+      )}
+
+      <h4>🔥 Skill Heatmap</h4>
 
       {skills.length === 0 ? (
         <p>No skills found yet. Upload a project first.</p>

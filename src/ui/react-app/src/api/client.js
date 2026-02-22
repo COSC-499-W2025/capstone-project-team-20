@@ -54,6 +54,14 @@ export function listSkills() {
   return request("/skills");
 }
 
+export function getBadgeProgress() {
+  return request("/badges/progress");
+}
+
+export function getYearlyWrapped() {
+  return request("/wrapped/yearly");
+}
+
 // Privacy Consent
 
 export function setPrivacyConsent(consent) {

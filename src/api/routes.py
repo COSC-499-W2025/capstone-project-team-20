@@ -1,13 +1,15 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException, status
 from pathlib import Path
 from collections import Counter
+from datetime import datetime
 import tempfile, shutil
-from src.api.schemas import SkillsListResponse, SkillItem, PortfolioResponse, ConsentResponse, UploadProjectResponse, ProjectsListResponse, ProjectSummary, ProjectDetailResponse, ProjectDetail, TodoResponse
+from src.api.schemas import SkillsListResponse, SkillItem, PortfolioResponse, ConsentResponse, UploadProjectResponse, ProjectsListResponse, ProjectSummary, ProjectDetailResponse, ProjectDetail, TodoResponse, BadgeProgressResponse, YearlyWrappedResponse
 from src.analyzers.ProjectAnalyzer import ProjectAnalyzer
 from src.managers.ConfigManager import ConfigManager
 from src.managers.ConsentManager import ConsentManager
 from src.managers.ProjectManager import ProjectManager
 from src.ZipParser import parse_zip_to_project_folders
+from src.services.badge_wrapped_service import build_badge_progress, build_yearly_wrapped
 
 """For all our routes. Requirement 32, endpoints"""
 router = APIRouter()
@@ -75,6 +77,17 @@ def get_skills_list():
     ]
 
     return SkillsListResponse(skills=skills)
+
+@router.get("/badges/progress", response_model=BadgeProgressResponse)
+def get_badge_progress():
+    pm = ProjectManager()
+    return build_badge_progress(list(pm.get_all()))
+
+
+@router.get("/wrapped/yearly", response_model=YearlyWrappedResponse)
+def get_yearly_wrapped():
+    pm = ProjectManager()
+    return build_yearly_wrapped(list(pm.get_all()))
 
 # Note: Resume endpoints are placeholders.
 # The system only currently generates resume insights (As of Jan 18)
