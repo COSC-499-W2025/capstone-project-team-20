@@ -175,3 +175,67 @@ def test_register_project_files_dedupes_across_uploads(tmp_path, mock_config_man
 
     all_hashes = list(analyzer.file_hash_manager.get_all())
     assert len(all_hashes) == 1
+
+def test_update_score_and_date(analyzer, monkeypatch):
+
+    date1='2001-01-01'
+    date2='2002-02-02'
+    date3='2003-03-03'
+    date4='2004-04-04'
+
+    p1 = Project()
+    p1.name='p1'
+    p1.resume_score=5.0
+    p1.date_created=datetime.strptime(date1,'%Y-%m-%d').date()
+    p1.last_modified=datetime.strptime(date2,'%Y-%m-%d').date()
+
+    #version of p1 that has the intended final state for comparsion
+    p1_final = Project()
+    p1_final.name='p1'
+    p1_final.resume_score=20.0
+    p1_final.date_created=datetime.strptime(date3,'%Y-%m-%d').date()
+    p1_final.last_modified=datetime.strptime(date4,'%Y-%m-%d').date()
+
+    items =  []
+    items.append(p1)
+
+    #Start function
+    with patch.object(analyzer, '_get_projects', return_value=items):
+        inputs = ['oops', 'g score 10.0', '01 scobe 20.0', '01 created thisisadate', '01 modified 2004-04-04','s','x']
+        monkeypatch.setattr('builtins.input', lambda prompt: inputs.pop(0))
+        with patch('builtins.input', side_effect=['oops', 'g score 10.0', '01 scobe 20.0', '01 created thisisadate', '01 modified 2004-04-04','s','x']):
+            analyzer.update_score_and_date()
+            assert p1.last_modified == p1_final.last_modified
+    #What this tests:
+        #1) incorrect command length
+        #2) incorrect index
+        #3) incorrect command name
+        #4) invalid score
+        #5) invalid date
+        #6) valid last modified [2004-04-04]
+        #7) save
+        #8) exit
+
+    #Start function
+    with patch.object(analyzer, '_get_projects', return_value=items):
+        inputs = ['01 created 2003-03-03','s','x']
+        monkeypatch.setattr('builtins.input', lambda prompt: inputs.pop(0))
+        with patch('builtins.input', side_effect=['01 created 2003-03-03','s','x']):
+            analyzer.update_score_and_date()
+            assert p1.date_created == p1_final.date_created
+    #What this tests:
+        #1) valid last created [2003-03-03]
+        #2) save
+        #3) exit
+    
+    #Start function
+    with patch.object(analyzer, '_get_projects', return_value=items):
+        inputs = ['01 created 2003-03-03','s','x']
+        monkeypatch.setattr('builtins.input', lambda prompt: inputs.pop(0))
+        with patch('builtins.input', side_effect=['01 score 20.0','s','x']):
+            analyzer.update_score_and_date()
+            assert p1.date_created == p1_final.date_created
+    #What this tests:
+        #1) valid score 20.0
+        #2) save
+        #3) exit
