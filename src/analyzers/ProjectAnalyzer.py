@@ -780,7 +780,7 @@ class ProjectAnalyzer:
                 for project in sorted_items:
                     try:
                         self.project_manager.set(project)
-                    except AttributeError:
+                    except:
                         print('Error in project manager SET method')
                 prompt = GREEN+"Changes Saved. Input Command:"+ENDC
 
