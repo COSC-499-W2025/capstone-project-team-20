@@ -2,9 +2,7 @@ from fastapi import APIRouter, UploadFile, File, HTTPException, status, Depends
 from fastapi.responses import FileResponse
 from pathlib import Path
 from collections import Counter
-from datetime import datetime
 import tempfile, shutil
-from src.api.schemas import SkillsListResponse, SkillItem, PortfolioResponse, ConsentResponse, UploadProjectResponse, ProjectsListResponse, ProjectSummary, ProjectDetailResponse, ProjectDetail, TodoResponse, BadgeProgressResponse, YearlyWrappedResponse
 from uuid import uuid4
 from pydantic import BaseModel
 
@@ -19,8 +17,16 @@ from src.ZipParser import parse_zip_to_project_folders
 from src.services.badge_wrapped_service import build_badge_progress, build_yearly_wrapped
 
 from src.api.schemas.skills import SkillsListResponse, SkillItem
-from src.api.schemas.projects import UploadProjectResponse, ProjectsListResponse, ProjectSummary, ProjectDetailResponse, ProjectDetail
+from src.api.schemas.projects import (
+    UploadProjectResponse,
+    ProjectsListResponse,
+    ProjectSummary,
+    ProjectDetailResponse,
+    ProjectDetail,
+)
 from src.api.schemas.consent import ConsentResponse, ConsentRequest
+
+from src.api.schemas.badges import BadgeProgressResponse, YearlyWrappedResponse
 
 from src.api.schemas.resume import (
     ResumeExportRequest, ResumeExportResponse,
