@@ -88,6 +88,7 @@ class Bar:
         if self.current_total>=self.TOTAL_BYTES or self.stages_completed >= self.STAGES:
             self.current_total = self.TOTAL_BYTES
             self.sub_stage_idx = 8 #empty character so that the bar still looks full
+            self.stages_remaining = 0  # ensure stages_remaining hits 0 on completion
         
     def update(self, sizeB:int):
         '''takes the size of the file just analyzed and updates the progress bar'''
@@ -99,15 +100,16 @@ class Bar:
             self.current_total = self.TOTAL_BYTES
             self.sub_stage_idx = 8
             self.stage_progress = 0
+            self.stages_remaining = 0  # ensure stages_remaining hits 0 on completion
             while (len(self.bar_complete) < self.STAGES):
                 self.bar_complete += '█'
-            self.output()  # only output once on completion
+            self.output()  # output once on completion
 
         elif self.stage_progress >= self.STAGE_SIZE:
             while self.stage_progress >= self.STAGE_SIZE:
                 self.stage_progress -= self.STAGE_SIZE
                 self.stageup()
-                self.output()
+            self.output()  # output once after all stage increments, not inside the loop
 
     def output(self):
 
