@@ -1,16 +1,20 @@
-from pydantic import BaseModel
-from typing import Optional, List
+from pydantic import BaseModel, Field
+from typing import List
 
-class Portfolio(BaseModel):
-    """Placeholder schema for (future) portfolio entity.
-    does NOT represent a fully generated portfolio yet.
-    will need to update once we have in place."""
-    id: Optional[int] = None
-    project_ids:List[int] = []
-    title: Optional[str] = None
-    description: Optional[str] = None
+class PortfolioDetailsGenerateRequest(BaseModel):
+    report_id: int
+    project_names: List[str] = Field(..., min_length=1)  # report snapshot uses names
 
-class PortfolioResponse(BaseModel):
-    ok: bool = False
-    portfolio: Optional[Portfolio] = None
-    message: str
+class PortfolioDetailsGenerateResponse(BaseModel):
+    ok: bool = True
+    updated_project_names: List[str]
+
+class PortfolioExportRequest(BaseModel):
+    report_id: int
+    output_name: str = "portfolio.pdf"
+
+class PortfolioExportResponse(BaseModel):
+    ok: bool = True
+    export_id: str
+    filename: str
+    download_url: str
