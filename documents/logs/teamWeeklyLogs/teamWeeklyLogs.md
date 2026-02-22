@@ -1,6 +1,7 @@
 ## Team 20 Weekly Log
 
 ### Table of contents
+- [Term 2 Week 7(February 16th - February 22nd)](#term-2-week-7-february-16th---february-22nd)
 - [Term 2 Week 6(February 9th - February 15th)](#term-2-week-6-february-9th---february-15th)
 - [Term 2 Week 5(February 2nd - February 8th)](#term-2-week-5-february-2nd---february-8th)
 - [Term 2 Week 4(January 25th - February 1st)](#term-2-week-4-january-26th---february-1st)
@@ -561,3 +562,40 @@ Our frontend is now setup! We will work away at improving that before that befor
 **Test Report:**
 
 [Term 2 Week 6 Test Report](teamWeeklyLogsImages/T2_W6_tests.png)
+
+
+### Term 2 Week 7 (February 16th - February 22nd)
+
+**Work Performed:**
+- Branden Kennedy (42474551):
+
+- Necmi Kaan Sapoglu (17014796):
+
+- Lex Nash (84668540): 
+
+- Dylan Alexander (16394025): This week, I made four PRs. Each addressed pre-existing bugs in our system. This includes a fix for the progress bar, consolidating git contributors by email (removing duplicates), a check that reports cannot be created without previously generated resume insights for each project, and a fix that ensures and tests that projects are incrementally analyzed and not overwritten.
+
+- Sven Annist (42486720):
+
+**Features included in the project plan for this milestone are:**
+Every issue up to and including Issue #358. Features included are going further into developing our frontend, and completing all other requirements for milestone 2.
+
+**Continuing tasks from last week and plan for the next week:**
+Our frontend is now setup! We will work away at improving that before that before Milestone 2 is due. We are also going to wire in all of our existing endpoints, as well as add others that are needed. We only have a couple requirements left to do for Milestone 2, so this week we will be working on completing all of those.
+
+**Burnup chart:**
+
+[Term 2 Week 6 burnup chart](teamWeeklyLogsImages/T2_W6_burnup.png)
+
+**Table View of Completed Tasks on Project Board:**
+
+[Term 2 Week 6 completed tasks](teamWeeklyLogsImages/T2_W6_completed.png)
+
+**Table View of In-Progress Tasks on Project Board:**
+
+[Term 2 Week 6 In-Progress tasks](teamWeeklyLogsImages/T2_W6_in_progress.png)
+
+**Test Report:**
+
+[Term 2 Week 6 Test Report](teamWeeklyLogsImages/T2_W6_tests.png)
+
