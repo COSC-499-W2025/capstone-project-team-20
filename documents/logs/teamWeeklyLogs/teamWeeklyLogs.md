@@ -575,7 +575,7 @@ Our frontend is now setup! We will work away at improving that before that befor
 
 - Dylan Alexander (16394025): This week, I made four PRs. Each addressed pre-existing bugs in our system. This includes a fix for the progress bar, consolidating git contributors by email (removing duplicates), a check that reports cannot be created without previously generated resume insights for each project, and a fix that ensures and tests that projects are incrementally analyzed and not overwritten.
 
-- Sven Annist (42486720):
+- Sven Annist (42486720): This week I integrated portfolio role data into the portfolio generation flow and updated the portfolio PDF output to utilize our YAML-based roles in portfolio generation. I also implemented report-backed portfolio API endpoints for retrieval, generation, and metadata updates, and expanded schemas and tests to cover the new responses. These updates follow FastAPI routing conventions and Pydantic schema patterns (per FastAPI/Pydantic documentation), keeping the API consistent with the rest of the service. I opened a PR (#403) for the portfolio API and role updates and reviewed 2 PRs (#385) (#391) and prepared materials for the Milestone 2 presentation slides.
 
 **Features included in the project plan for this milestone are:**
 Every issue up to and including Issue #358. Features included are going further into developing our frontend, and completing all other requirements for milestone 2.
