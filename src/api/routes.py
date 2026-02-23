@@ -40,6 +40,17 @@ from src.api.schemas.portfolio import (
 """For all our routes. Requirement 32, endpoints"""
 router = APIRouter()
 
+def _copy_upload_to_temp_zip(upload: UploadFile) -> Path:
+    """Persist an uploaded ZIP to a temp file, resetting stream position first."""
+    if getattr(upload, "file", None) and hasattr(upload.file, "seek"):
+        upload.file.seek(0)
+
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".zip") as tmp:
+        tmp_path = Path(tmp.name)
+        shutil.copyfileobj(upload.file, tmp)
+
+    return tmp_path
+
 def require_consent():
     cm = ConsentManager()
     if not cm.has_user_consented():
@@ -92,9 +103,7 @@ def upload_project_from_path(req: UploadPathRequest):
 
 @router.post("/projects/upload", response_model=UploadProjectResponse, status_code=status.HTTP_201_CREATED)
 def upload_project(zip_file: UploadFile = File(...)):
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".zip") as tmp:
-        tmp_path = Path(tmp.name)
-        shutil.copyfileobj(zip_file.file, tmp)
+    tmp_path = _copy_upload_to_temp_zip(zip_file)
 
     root_folders = parse_zip_to_project_folders(str(tmp_path))
     if not root_folders:
