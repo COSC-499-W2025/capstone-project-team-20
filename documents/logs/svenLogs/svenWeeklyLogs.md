@@ -363,3 +363,26 @@ This was a continuation from last week, where the earlier branch had become diff
 
 ### Looking Ahead:
 As next week is reading week I'm aiming to address some of our finalizing pieces for this milestone that we discussed in our latest team meeting.
+
+# Term 2 Week 7: Feb 17 - Feb 23
+
+### Tasks worked on:
+- **Portfolio Role Integration:** Integrated inferred contributor roles into portfolio details and updated the PDF output so the role is displayed directly under each project title (with team size retained).
+- **Portfolio API Wiring:** Implemented report-backed portfolio API endpoints (retrieve, generate PDF, and update metadata) following FastAPI conventions and Pydantic schema patterns documented in the FastAPI/Pydantic guides.
+- **Schema & Test Updates:** Expanded portfolio and project schemas to include role data and added/updated API tests for the new endpoints.
+
+### Weekly Goals Recap:
+My primary goal was to connect the portfolio workflow to the API while ensuring role data is surfaced cleanly in the portfolio output. This was achieved by replacing placeholder endpoints with report-backed implementations and updating the LaTeX output formatting.
+
+### PRs I reviewed this week:
+- Reviewed [User key role PR](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/385)
+- Reviewed [Incremental ZIPs PR](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/391)
+
+### PRs I opened this week:
+- Opened [PR 403](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/403) for the portfolio API endpoints and role-aware portfolio output updates.
+
+### Problems Encountered:
+Balancing API schema changes with existing data structures required careful adjustments to avoid breaking the report export pipeline. This was managed by aligning with FastAPI/Pydantic documentation and adding targeted tests.
+
+### Looking Ahead:
+I plan to incorporate additional portfolio enhancements (e.g., optional highlights based on badges) and refine and prepare our materials for the Milestone 2 presentation.
