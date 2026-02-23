@@ -308,6 +308,19 @@ class ProjectAnalyzer:
                     aggregated.contribution_by_type[category] += count
         return aggregated
 
+    @staticmethod
+    def _resolve_selected_authors(requested_authors: List[str], available_authors: List[str]) -> List[str]:
+        """Match requested usernames to available author names, case-insensitively."""
+        available_map = {name.casefold(): name for name in available_authors}
+        resolved = []
+
+        for requested in requested_authors:
+            match = available_map.get((requested or "").casefold())
+            if match and match not in resolved:
+                resolved.append(match)
+
+        return sorted(resolved)
+
     def change_selected_users(self) -> None:
         """Allows the user to change their configured username selection."""
         print("\n--- Change Selected Users ---")
@@ -353,15 +366,23 @@ class ProjectAnalyzer:
             project.author_count = len(repo_authors)
             project.collaboration_status = "collaborative" if project.author_count > 1 else "individual"
 
-            selected_usernames = (self._get_or_select_usernames(sorted(repo_authors)) or []) if interactive else sorted(repo_authors)
+            if interactive:
+                selected_usernames = self._get_or_select_usernames(sorted(repo_authors)) or []
+            else:
+                configured_usernames = self._config_manager.get("usernames")
+                if isinstance(configured_usernames, list) and configured_usernames:
+                    selected_usernames = configured_usernames
+                else:
+                    selected_usernames = sorted(repo_authors)
 
             with self.suppress_output():
                 all_author_stats = self.contribution_analyzer.analyze(str(repo_path))
 
-            project.authors = sorted([name for name in selected_usernames if name in (all_author_stats.keys() if all_author_stats else repo_authors)])
+            available_authors = list(all_author_stats.keys()) if all_author_stats else sorted(repo_authors)
+            project.authors = self._resolve_selected_authors(selected_usernames, available_authors)
 
             if all_author_stats:
-                selected_stats = self._aggregate_stats(all_author_stats, selected_usernames)
+                selected_stats = self._aggregate_stats(all_author_stats, project.authors)
                 total_stats = self._aggregate_stats(all_author_stats)
                 project.author_contributions = [stats.to_dict() for stats in all_author_stats.values()]
                 project.individual_contributions = self.contribution_analyzer.calculate_share(selected_stats, total_stats)
@@ -476,7 +497,9 @@ class ProjectAnalyzer:
                         project.documentation_habits_score, project.documentation_habits_level = doc.get("score", 0.0), doc.get("level", "")
 
                 if overall := result.get("stats", {}).get("overall"):
-                    project.total_loc, project.comment_ratio = overall.get("total_lines_of_code", 0), overall.get("comment_ratio", 0.0)
+                    project.total_loc = overall.get("total_lines_of_code", 0)
+                    project.comment_ratio = overall.get("comment_ratio", 0.0)
+                    project.test_file_ratio = overall.get("test_file_ratio", 0.0)
 
                 ranker = ProjectRanker(project)
                 ranker.calculate_resume_score()
