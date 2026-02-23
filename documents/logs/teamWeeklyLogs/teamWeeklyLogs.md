@@ -567,7 +567,7 @@ Our frontend is now setup! We will work away at improving that before that befor
 ### Term 2 Week 7 (February 16th - February 22nd)
 
 **Work Performed:**
-- Branden Kennedy (42474551):
+- Branden Kennedy (42474551): This week, I made three PRs. They addressed frontend to backend integration and implementing a "key role" feature in our system. These were [PR 1](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/389), [PR 2](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/385), and [PR 3](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/400). This implemented real data fetching, creating an API layer, and configuring CORS. This included extending the system to support our flow of upload zip to analyze to export through the web interface. For a users "key role", I implemented a contributor role inference engine using Git contribution signals with YAML-driven logic and created unit tests for it.
 
 - Necmi Kaan Sapoglu (17014796):
 
