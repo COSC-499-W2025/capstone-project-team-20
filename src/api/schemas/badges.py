@@ -26,6 +26,7 @@ class BadgeProgressResponse(BaseModel):
 class WrappedMilestone(BaseModel):
     badge_id: str
     project: str
+    achieved_on: Optional[str] = None
 
 
 class WrappedYear(BaseModel):

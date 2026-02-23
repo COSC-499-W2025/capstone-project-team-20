@@ -341,7 +341,7 @@ class ProjectAnalyzer:
         if not target_projects:
             return
 
-        for project in projects:
+        for project in target_projects:
             repo_path = Path(project.file_path)
             if not (repo_path / ".git").exists():
                 continue

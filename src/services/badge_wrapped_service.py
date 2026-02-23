@@ -157,6 +157,11 @@ def _project_year(project) -> int | None:
         return stamp.year
     return None
 
+def _project_badge_date(project) -> str | None:
+    stamp = getattr(project, "last_modified", None) or getattr(project, "date_created", None)
+    if isinstance(stamp, datetime):
+        return stamp.date().isoformat()
+    return None
 
 def build_badge_progress(projects) -> Dict[str, Any]:
     responses = []
@@ -218,7 +223,11 @@ def build_yearly_wrapped(projects) -> Dict[str, Any]:
 
         earned_badges = _project_badges(project)
         for badge in earned_badges:
-            bucket["milestones"].append({"badge_id": badge, "project": project.name})
+            bucket["milestones"].append({
+                "badge_id": badge,
+                "project": project.name,
+                "achieved_on": _project_badge_date(project),
+            })
 
     payload = []
     for year in sorted(yearly.keys(), reverse=True):

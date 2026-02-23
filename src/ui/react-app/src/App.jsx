@@ -328,17 +328,42 @@ function Badges() {
   const inProgress = progress.filter((b) => !b.earned);
     const achievedProgressBadges = progress.filter((b) => b.earned);
 
-    const achievedFromWrapped = [];
-    const seenMilestones = new Set();
+    const achievedBadgeMap = new Map();
     wrapped.forEach((yearBlock) => {
       (yearBlock.milestones ?? []).forEach((m) => {
-        const key = `${m.badge_id}::${m.project}`;
-        if (!seenMilestones.has(key)) {
-          seenMilestones.add(key);
-          achievedFromWrapped.push(m);
+        if (!achievedBadgeMap.has(m.badge_id)) {
+          achievedBadgeMap.set(m.badge_id, { badge_id: m.badge_id, projects: [] });
+        }
+        const badge = achievedBadgeMap.get(m.badge_id);
+        const projectKey = `${m.project}::${m.achieved_on ?? ""}`;
+        const alreadyListed = badge.projects.some((p) => `${p.project}::${p.achieved_on ?? ""}` === projectKey);
+        if (!alreadyListed) {
+          badge.projects.push({
+            project: m.project,
+            achieved_on: m.achieved_on,
+          });
         }
       });
     });
+
+    achievedProgressBadges.forEach((b) => {
+    const projectName = b.project?.name ?? "Unknown project";
+    if (!achievedBadgeMap.has(b.badge_id)) {
+      achievedBadgeMap.set(b.badge_id, { badge_id: b.badge_id, label: b.label, projects: [] });
+    }
+    const badge = achievedBadgeMap.get(b.badge_id);
+    if (!badge.label) {
+      badge.label = b.label;
+    }
+    const alreadyListed = badge.projects.some((p) => p.project === projectName);
+    if (!alreadyListed) {
+      badge.projects.push({ project: projectName, achieved_on: null });
+    }
+  });
+
+  const achievedBadges = Array.from(achievedBadgeMap.values()).sort((a, b) =>
+    (a.label ?? a.badge_id).localeCompare(b.label ?? b.badge_id)
+  );
 
   return (
     <>
@@ -370,18 +395,21 @@ function Badges() {
       )}
 
       <h4>🏅 Achieved Badges</h4>
-      {(achievedFromWrapped.length + achievedProgressBadges.length) === 0 ? (
+      {achievedBadges.length === 0 ? (
         <p>No achieved badges yet. Upload and analyze projects to start earning them.</p>
       ) : (
         <ul>
-          {achievedFromWrapped.map((m, idx) => (
-            <li key={`achieved-${m.badge_id}-${m.project}-${idx}`}>
-              ✅ <strong>{m.badge_id}</strong> achieved in <strong>{m.project}</strong>
-            </li>
-          ))}
-          {achievedProgressBadges.map((b) => (
-            <li key={`progress-achieved-${b.badge_id}`}>
-              ✅ <strong>{b.label}</strong> achieved in <strong>{b.project?.name ?? "Unknown project"}</strong>
+          {achievedBadges.map((badge) => (
+            <li key={`achieved-${badge.badge_id}`}>
+              ✅ <strong>{badge.label ?? badge.badge_id}</strong>
+              <ul>
+                {badge.projects.map((projectEntry, idx) => (
+                  <li key={`achieved-${badge.badge_id}-${projectEntry.project}-${idx}`}>
+                    <strong>{projectEntry.project}</strong>
+                    {projectEntry.achieved_on ? ` — ${projectEntry.achieved_on}` : ""}
+                  </li>
+                ))}
+              </ul>
             </li>
           ))}
         </ul>
@@ -410,7 +438,7 @@ function Badges() {
               <ul>
                 {yearBlock.milestones.map((m, idx) => (
                   <li key={`${yearBlock.year}-${m.badge_id}-${idx}`}>
-                    🏅 {m.badge_id} earned in <strong>{m.project}</strong>
+                    🏅 {m.badge_id} earned in <strong>{m.project}</strong>{m.achieved_on ? ` on ${m.achieved_on}` : ""}
                   </li>
                 ))}
               </ul>
