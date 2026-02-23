@@ -72,15 +72,19 @@ def test_change_selected_users_workflow(analyzer, mock_config_manager):
         mock_config_manager.set.assert_called_once_with("usernames", ["Bob"])
 
 def test_initialize_projects_skips_older_zip_update(tmp_path, mock_config_manager):
+    # Create a real file on disk so _has_project_changed can walk it
+    project_dir = tmp_path / "project-a"
+    project_dir.mkdir()
+    (project_dir / "file.txt").write_text("original content")
+
     zip_location = tmp_path / "older.zip"
     with zipfile.ZipFile(zip_location, 'w') as zf:
-        info = zipfile.ZipInfo("project-a/file.txt")
-        info.date_time = datetime(2023, 1, 1).timetuple()[:6]
-        zf.writestr(info, "content")
+        zf.writestr("project-a/file.txt", "original content")
 
     root_folders = parse_zip_to_project_folders(str(zip_location))
     analyzer = ProjectAnalyzer(mock_config_manager, root_folders, zip_location)
     analyzer.project_manager = ProjectManager(db_path=str(tmp_path / "projects.db"))
+    analyzer.file_hash_manager = FileHashManager(db_path=str(tmp_path / "files.db"))
 
     existing = Project(
         name="project-a",
@@ -90,9 +94,12 @@ def test_initialize_projects_skips_older_zip_update(tmp_path, mock_config_manage
     )
     analyzer.project_manager.set(existing)
 
+    # Pre-register the file hashes so it looks already seen
+    analyzer._register_project_files(Project(name="project-a", file_path=str(project_dir)))
+
     with patch.object(analyzer, "ensure_cached_dir", return_value=tmp_path), \
          patch("src.analyzers.ProjectAnalyzer.RepoProjectBuilder.scan", return_value=[
-             Project(name="project-a", file_path="/new/path", root_folder="project-a")
+             Project(name="project-a", file_path=str(project_dir), root_folder="project-a")
          ]):
         analyzer.initialize_projects()
 
@@ -100,16 +107,21 @@ def test_initialize_projects_skips_older_zip_update(tmp_path, mock_config_manage
     assert updated.file_path == "/old/path"
     assert updated.last_modified == datetime(2024, 1, 1)
 
+
 def test_initialize_projects_updates_newer_zip(tmp_path, mock_config_manager):
+    # Create a real file on disk with NEW content that hasn't been hashed before
+    project_dir = tmp_path / "project-b"
+    project_dir.mkdir()
+    (project_dir / "file.txt").write_text("brand new content")
+
     zip_location = tmp_path / "newer.zip"
     with zipfile.ZipFile(zip_location, 'w') as zf:
-        info = zipfile.ZipInfo("project-b/file.txt")
-        info.date_time = datetime(2024, 1, 1).timetuple()[:6]
-        zf.writestr(info, "content")
+        zf.writestr("project-b/file.txt", "brand new content")
 
     root_folders = parse_zip_to_project_folders(str(zip_location))
     analyzer = ProjectAnalyzer(mock_config_manager, root_folders, zip_location)
     analyzer.project_manager = ProjectManager(db_path=str(tmp_path / "projects.db"))
+    analyzer.file_hash_manager = FileHashManager(db_path=str(tmp_path / "files.db"))
 
     existing = Project(
         name="project-b",
@@ -119,15 +131,17 @@ def test_initialize_projects_updates_newer_zip(tmp_path, mock_config_manager):
     )
     analyzer.project_manager.set(existing)
 
+    # Do NOT pre-register hashes — simulates new/changed files
+
     with patch.object(analyzer, "ensure_cached_dir", return_value=tmp_path), \
          patch("src.analyzers.ProjectAnalyzer.RepoProjectBuilder.scan", return_value=[
-             Project(name="project-b", file_path="/new/path", root_folder="project-b")
+             Project(name="project-b", file_path=str(project_dir), root_folder="project-b")
          ]):
         analyzer.initialize_projects()
 
     updated = analyzer.project_manager.get_by_name("project-b")
-    assert updated.file_path == "/new/path"
-    assert updated.last_modified.date() == datetime(2024, 1, 1).date()
+    assert updated.file_path == str(project_dir)
+
 
 def test_initialize_projects_does_not_duplicate_projects(tmp_path, mock_config_manager):
     zip_location = tmp_path / "same.zip"
@@ -137,11 +151,13 @@ def test_initialize_projects_does_not_duplicate_projects(tmp_path, mock_config_m
     root_folders = parse_zip_to_project_folders(str(zip_location))
     analyzer = ProjectAnalyzer(mock_config_manager, root_folders, zip_location)
     analyzer.project_manager = ProjectManager(db_path=str(tmp_path / "projects.db"))
+    analyzer.file_hash_manager = FileHashManager(db_path=str(tmp_path / "files.db"))
 
     with patch.object(analyzer, "ensure_cached_dir", return_value=tmp_path), \
          patch("src.analyzers.ProjectAnalyzer.RepoProjectBuilder.scan", return_value=[
              Project(name="project-c", file_path="/path", root_folder="project-c")
-         ]):
+         ]), \
+         patch.object(analyzer, "_has_project_changed", return_value=False):
         analyzer.initialize_projects()
         analyzer.initialize_projects()
 

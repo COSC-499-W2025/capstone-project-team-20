@@ -147,7 +147,7 @@ class ProjectMetadataExtractor:
                     earliest, latest = git_dates
                     duration = (latest - earliest).days
 
-                    summary["start date"] = earliest.strftime("%Y-%m-%d")
+                    summary["start_date"] = earliest.strftime("%Y-%m-%d")
                     summary["end_date"] = latest.strftime("%Y-%m-%d")
                     summary["duration_days"] = duration
 
