@@ -569,7 +569,7 @@ Our frontend is now setup! We will work away at improving that before that befor
 **Work Performed:**
 - Branden Kennedy (42474551): This week, I made three PRs. They addressed frontend to backend integration and implementing a "key role" feature in our system. These were [PR 1](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/389), [PR 2](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/385), and [PR 3](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/400). This implemented real data fetching, creating an API layer, and configuring CORS. This included extending the system to support our flow of upload zip to analyze to export through the web interface. For a users "key role", I implemented a contributor role inference engine using Git contribution signals with YAML-driven logic and created unit tests for it.
 
-- Necmi Kaan Sapoglu (17014796):
+- Necmi Kaan Sapoglu (17014796): This week I worked on implementing the yearly wrapped feature that I had been working on, as well as connecting the badges system with the existing API, as well as the react frontend to have a functioning frontend for that feature. I also updated the README with documentation regarding the APIs and update some information on the README that was outdated. My PRs links are as follows: [README Update] (https://github.com/COSC-499-W2025/capstone-project-team-20/pull/395), [Badges Implementation and Wrapped Feature] (https://github.com/COSC-499-W2025/capstone-project-team-20/pull/398).
 
 - Lex Nash (84668540): 
 
