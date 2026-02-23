@@ -1,6 +1,8 @@
 ## **Branden Weekly Logs**
 ### **Table of contents:**
 
+- [Term 2 Week 7](#term-2-week-7-february-16th---february-22nd)
+- [Term 2 Week 6](#term-2-week-6-february-9th---february-15th)
 - [Term 2 Week 5](#term-2-week-5-february-2nd---february-8th)
 - [Term 2 Week 4](#term-2-week-4-january-26th-february-1st)
 - [Term 2 Week 3](#term-2-week-3-january-19th-january-25th)
@@ -336,4 +338,26 @@ Next week, we want to finish off milestone 2. I will be working on Issue [COSC-4
 
 **Any issues or Blockers That I Encountered This Week and How I Addressed/Plan to Address Them:**
 None this week!
+
+### **Term 2 Week 7: February 16th - February 22nd**
+**Screenshot of Tasks Worked On:**
+**No evaluation this week**
+
+**Coding Tasks:**
+This week, I worked on establishing full frontend to backend integration. I connected the frontend to the FastAPI backend, implemented data fetching for projects and skills, created a frontend API layer, and configured CORS to enable full-stack communication. This replaced our "mini frontend" and is laying the foundation for our frontend. It currently supports a complete upload to analyze to export workflow through react. This includes ZIP uploads, a local path that my teammates can use to test our test folders, resume and portfolio exporting flows, and consent handling. I also improved the UI state management and added scrolling on our webpages. Additionally, I implemented a contributor role inference system that uses Git contribution signals. This included a new YAML, with a YAML-driven role pipeline. This added weighted role detected between backend, frontend, DevOps, QA, Docs, Fullstack, and Tech Lead. Theres also a full test suite for this addition. The inference engine is currently only in the CLI but will be added to the frontend. These additions came in 3 PRs, which are [PR 1](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/389), [PR 2](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/385), and [PR 3](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/400).
+
+**Testing or Debugging Tasks:**
+I manually tested my teammates code while doing PR reviews. I also wrote extensive tests for [user key role PR](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/385).
+
+**Reviewing or Collaboration Tasks:**
+I manually tested and did code review on [Kaan's PR](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/395), [Dylan's PR](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/397), [Dylan's other PR](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/391), and [Kaan's other PR](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/398).
+
+**Brief Description of Last Week Connecting This Week:**
+Last week, I wanted to work on Issue [COSC-499-W2025/capstone-project-team-20#293](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/293), which is now complete. I was hoping to get to working on the frontend and this frontend to backend integration, which i was also fully able to accomplish! Very happy with how the week went.
+
+**Plan/Goals for Upcoming Week:**
+Work on our presentation that will be on wednesday, as well as finishing off the last couple small parts for Milestone 2! Also supporting teammates where needed if any remaining issues for Milestone 2 need extra hands. 
+
+**Any issues or Blockers That I Encountered This Week and How I Addressed/Plan to Address Them:**
+None this week, it was a great week to work on the project with reading week!
 
