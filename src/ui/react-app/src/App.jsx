@@ -325,6 +325,21 @@ function Badges() {
     loadBadgeData();
   }, []);
 
+  const inProgress = progress.filter((b) => !b.earned);
+    const achievedProgressBadges = progress.filter((b) => b.earned);
+
+    const achievedFromWrapped = [];
+    const seenMilestones = new Set();
+    wrapped.forEach((yearBlock) => {
+      (yearBlock.milestones ?? []).forEach((m) => {
+        const key = `${m.badge_id}::${m.project}`;
+        if (!seenMilestones.has(key)) {
+          seenMilestones.add(key);
+          achievedFromWrapped.push(m);
+        }
+      });
+    });
+
   return (
     <>
       <h3>Badges</h3>
@@ -335,25 +350,43 @@ function Badges() {
 
       {error && <pre style={{ color: "crimson" }}>{error}</pre>}
 
-      <h4>🎯 Badge Progress Tracker</h4>
-      {progress.length === 0 ? (
-        <p>No badge progress data yet. Upload projects to start earning badges.</p>
+      <h4>🎯 Badge Progress Tracker (Uncompleted)</h4>
+      {inProgress.length === 0 ? (
+        <p>All tracked progress badges are complete 🎉</p>
       ) : (
         <ul style={{ listStyle: "none", paddingLeft: 0 }}>
-          {progress.map((b) => (
+          {inProgress.map((b) => (
             <li key={b.badge_id} style={{ marginBottom: 12, border: "1px solid #2f4d6f", borderRadius: 8, padding: 10 }}>
               <strong>{b.label}</strong> — {Math.round((b.progress ?? 0) * 100)}%
               <div style={{ height: 10, borderRadius: 999, background: "#21344a", marginTop: 8, overflow: "hidden" }}>
-                <div style={{ width: `${Math.round((b.progress ?? 0) * 100)}%`, height: "100%", background: b.earned ? "#29c77d" : "#55BDCA" }} />
+                <div style={{ width: `${Math.round((b.progress ?? 0) * 100)}%`, height: "100%", background: "#55BDCA" }} />
               </div>
               <small>
-                {b.metric}: {(b.current ?? 0).toFixed(2)} / {b.target} • Closest project: {b.project?.name ?? "N/A"}
-                {b.earned ? " • ✅ Earned" : " • ⏳ In progress"}
+                {b.metric}: {(b.current ?? 0).toFixed(2)} / {b.target} • Closest project: {b.project?.name ?? "N/A"} • ⏳ In progress
               </small>
             </li>
           ))}
         </ul>
       )}
+
+      <h4>🏅 Achieved Badges</h4>
+      {(achievedFromWrapped.length + achievedProgressBadges.length) === 0 ? (
+        <p>No achieved badges yet. Upload and analyze projects to start earning them.</p>
+      ) : (
+        <ul>
+          {achievedFromWrapped.map((m, idx) => (
+            <li key={`achieved-${m.badge_id}-${m.project}-${idx}`}>
+              ✅ <strong>{m.badge_id}</strong> achieved in <strong>{m.project}</strong>
+            </li>
+          ))}
+          {achievedProgressBadges.map((b) => (
+            <li key={`progress-achieved-${b.badge_id}`}>
+              ✅ <strong>{b.label}</strong> achieved in <strong>{b.project?.name ?? "Unknown project"}</strong>
+            </li>
+          ))}
+        </ul>
+      )}
+
 
       <h4>🎉 Yearly Wrapped</h4>
       {wrapped.length === 0 ? (

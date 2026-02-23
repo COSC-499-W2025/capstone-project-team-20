@@ -152,6 +152,50 @@ def test_upload_project_success(client, monkeypatch):
         {"id": 2, "name": "Proj2"},
     ]
 
+def test_upload_project_triggers_analyses(client, monkeypatch):
+    monkeypatch.setattr(routes, "parse_zip_to_project_folders", lambda _: ["root1"])
+
+    calls = []
+
+    class FakeAnalyzer:
+        def __init__(self, config, root_folders, tmp_path):
+            self.config = config
+            self.root_folders = root_folders
+            self.tmp_path = tmp_path
+
+        def initialize_projects(self):
+            return [FakeProject(1, "Proj1")]
+
+        def analyze_git_and_contributions(self, projects=None, interactive=True):
+            calls.append(("git", len(projects or []), interactive))
+
+        def analyze_metadata(self, projects=None):
+            calls.append(("metadata", len(projects or [])))
+
+        def analyze_categories(self, projects=None):
+            calls.append(("categories", len(projects or [])))
+
+        def analyze_languages(self, projects=None):
+            calls.append(("languages", len(projects or [])))
+
+        def analyze_skills(self, projects=None, silent=False):
+            calls.append(("skills", len(projects or []), silent))
+
+    monkeypatch.setattr(routes, "ProjectAnalyzer", FakeAnalyzer)
+
+    files = {"zip_file": ("test.zip", io.BytesIO(b"fake zip bytes"), "application/zip")}
+    res = client.post("/projects/upload", files=files)
+
+    assert res.status_code == 201
+    assert calls == [
+        ("git", 1, False),
+        ("metadata", 1),
+        ("categories", 1),
+        ("languages", 1),
+        ("skills", 1, True),
+    ]
+
+
 def test_upload_project_invalid_zip_returns_400(client, monkeypatch):
     # Simulate invalid zip (no root folders)
     monkeypatch.setattr(routes, "parse_zip_to_project_folders", lambda _: [])

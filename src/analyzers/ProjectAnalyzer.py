@@ -329,16 +329,16 @@ class ProjectAnalyzer:
         else:
             print("\nNo changes made to user selection.")
 
-    def analyze_git_and_contributions(self) -> None:
+    def analyze_git_and_contributions(self, projects: Optional[List[Project]] = None, interactive: bool = True) -> None:
         """
         Analyze contributions for each project:
         - Use get_all_authors() to set total author_count reliably
-        - Prompt for selected usernames if not configured
+        - Optionally prompt for selected usernames if not configured
         - Compute detailed stats where possible
         """
         print("\n--- Git Repository & Contribution Analysis ---")
-        projects = self._get_projects()
-        if not projects:
+        target_projects = projects or self._get_projects()
+        if not target_projects:
             return
 
         for project in projects:
@@ -351,9 +351,9 @@ class ProjectAnalyzer:
                 repo_authors = self.contribution_analyzer.get_all_authors(str(repo_path))
 
             project.author_count = len(repo_authors)
-            project.collaboration_status = "Collaborative" if project.author_count > 1 else "Individual"
+            project.collaboration_status = "collaborative" if project.author_count > 1 else "individual"
 
-            selected_usernames = self._get_or_select_usernames(sorted(repo_authors)) or []
+            selected_usernames = (self._get_or_select_usernames(sorted(repo_authors)) or []) if interactive else sorted(repo_authors)
 
             with self.suppress_output():
                 all_author_stats = self.contribution_analyzer.analyze(str(repo_path))
@@ -557,7 +557,7 @@ class ProjectAnalyzer:
                     repo_authors = self.contribution_analyzer.get_all_authors(str(repo_path))
                 if repo_authors:
                     project.author_count = len(repo_authors)
-                    project.collaboration_status = "Collaborative" if project.author_count > 1 else "Individual"
+                    project.collaboration_status = "collaborative" if project.author_count > 1 else "individual"
                     self.project_manager.set(project)
         except Exception:
             pass
