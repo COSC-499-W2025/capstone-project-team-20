@@ -2,15 +2,43 @@ from fastapi import APIRouter, UploadFile, File, HTTPException, status
 from pathlib import Path
 from collections import Counter
 import tempfile, shutil
-from src.api.schemas import SkillsListResponse, SkillItem, PortfolioResponse, ConsentResponse, UploadProjectResponse, ProjectsListResponse, ProjectSummary, ProjectDetailResponse, ProjectDetail, TodoResponse
+from src.api.schemas import SkillsListResponse, SkillItem, PortfolioResponse, ConsentResponse, UploadProjectResponse, ProjectsListResponse, ProjectSummary, ProjectDetailResponse, ProjectDetail, TodoResponse, PortfolioGenerateRequest, PortfolioGenerateResponse, PortfolioUpdateRequest, PortfolioReport, PortfolioProject, PortfolioDetailsResponse
 from src.analyzers.ProjectAnalyzer import ProjectAnalyzer
 from src.managers.ConfigManager import ConfigManager
 from src.managers.ConsentManager import ConsentManager
 from src.managers.ProjectManager import ProjectManager
+from src.managers.ReportManager import ReportManager
+from src.exporters.ReportExporter import ReportExporter
 from src.ZipParser import parse_zip_to_project_folders
 
 """For all our routes. Requirement 32, endpoints"""
 router = APIRouter()
+
+def _build_portfolio_project(project) -> PortfolioProject:
+    details = project.portfolio_details
+    details_payload = details.to_dict() if hasattr(details, "to_dict") else {}
+    return PortfolioProject(
+        project_name=project.project_name,
+        resume_score=project.resume_score,
+        portfolio_details=PortfolioDetailsResponse(**details_payload),
+        languages=list(project.languages or []),
+        language_share=dict(project.language_share or {}),
+        frameworks=list(project.frameworks or []),
+        date_created=project.date_created,
+        last_modified=project.last_modified,
+        collaboration_status=project.collaboration_status,
+    )
+
+def _build_portfolio_report(report) -> PortfolioReport:
+    projects = [_build_portfolio_project(p) for p in (report.projects or [])]
+    return PortfolioReport(
+        id=report.id,
+        title=report.title,
+        date_created=report.date_created,
+        sort_by=report.sort_by,
+        notes=report.notes,
+        projects=projects,
+    )
 
 @router.post("/projects/upload", response_model=UploadProjectResponse, status_code=status.HTTP_201_CREATED)
 def upload_project(zip_file: UploadFile = File(...)):
@@ -52,7 +80,7 @@ def get_project(id: int):
 
     if not project:
         raise HTTPException(status_code=404, detail="Project not found.")
-    
+
     return ProjectDetailResponse(
         project=ProjectDetail(**project.__dict__)
     )
@@ -68,7 +96,7 @@ def get_skills_list():
         for s in (p.skills_used or []):
             if s:
                 counts[s.strip()] += 1
-    
+
     skills = [
         SkillItem(name=name, project_count=count)
         for name, count in sorted(counts.items(), key=lambda x: (-x[1], x[0].lower()))
@@ -92,23 +120,39 @@ def generate_resume():
 def edit_resume(id: int):
     return TodoResponse(message="Resume editing not implemented yet.")
 
-# Note: Portfolio endpoints are placeholders.
-# same idea as our resume endpoints...
-# TODO: Full portfolio generation then we edit these endpoints
-
 @router.get("/portfolio/{id}", response_model=PortfolioResponse)
 def get_portfolio(id: int):
-    return PortfolioResponse(
-        message="Portfolio retrieval not implemented yet."
-    )
-@router.post("/portfolio/generate", response_model=PortfolioResponse)
-def generate_portfolio():
-    return PortfolioResponse(
-        message="Portfolio generation not implemented yet."
-    )
+    report_manager = ReportManager()
+    report = report_manager.get_report(id)
+    if not report:
+        raise HTTPException(status_code=404, detail="Portfolio report not found.")
+    portfolio = _build_portfolio_report(report)
+    return PortfolioResponse(ok=True, portfolio=portfolio, message="Portfolio retrieved.")
 
-@router.post("/portfolio/{id}/edit")
-def edit_portfolio(id: int):
-    return PortfolioResponse(
-        message="Portfolio editing not implemented yet."
-    )
+@router.post("/portfolio/generate", response_model=PortfolioGenerateResponse)
+def generate_portfolio(payload: PortfolioGenerateRequest):
+    report_manager = ReportManager()
+    report = report_manager.get_report(payload.report_id)
+    if not report:
+        raise HTTPException(status_code=404, detail="Portfolio report not found.")
+    filename = payload.output_filename or f"{report.title.replace(' ', '_').lower()}_portfolio.pdf"
+    if not filename.endswith(".pdf"):
+        filename += ".pdf"
+    output_path = str(Path("portfolios") / filename)
+    exporter = ReportExporter()
+    exporter.export_to_pdf(report=report, config_manager=ConfigManager(), output_path=output_path, template="portfolio")
+    return PortfolioGenerateResponse(ok=True, report_id=report.id, output_path=output_path, message="Portfolio generated.")
+
+@router.post("/portfolio/{id}/edit", response_model=PortfolioResponse)
+def edit_portfolio(id: int, payload: PortfolioUpdateRequest):
+    report_manager = ReportManager()
+    report = report_manager.get_report(id)
+    if not report:
+        raise HTTPException(status_code=404, detail="Portfolio report not found.")
+    if payload.title:
+        report.title = payload.title.strip()
+    if payload.notes is not None:
+        report.notes = payload.notes
+    report_manager.update_report(report)
+    portfolio = _build_portfolio_report(report)
+    return PortfolioResponse(ok=True, portfolio=portfolio, message="Portfolio updated.")

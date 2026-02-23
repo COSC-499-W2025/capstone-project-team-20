@@ -1,5 +1,5 @@
 """API data model for project related responses"""
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 
@@ -18,22 +18,23 @@ class ProjectsListResponse(BaseModel):
 class ProjectDetail(BaseModel):
     id: Optional[int] = None
     name: str
-    
+
     file_path: str = ""
     root_folder: str = ""
 
     num_files: int = 0
     size_kb: int = 0
 
-    categories: Dict[str, Any] = {}
-    authors: List[str] = []
+    categories: Dict[str, Any] = Field(default_factory=dict)
+    authors: List[str] = Field(default_factory=list)
+    contributor_roles: Dict[str, Any] = Field(default_factory=dict)
 
-    languages: List[str] = []
-    language_share: Dict[str, float] = {}
-    frameworks: List[str] = []
-    skills_used: List[str] = []
+    languages: List[str] = Field(default_factory=list)
+    language_share: Dict[str, float] = Field(default_factory=dict)
+    frameworks: List[str] = Field(default_factory=list)
+    skills_used: List[str] = Field(default_factory=list)
 
-    bullets: List[str] = []
+    bullets: List[str] = Field(default_factory=list)
     summary: str = ""
     resume_score: float = 0.0
 
