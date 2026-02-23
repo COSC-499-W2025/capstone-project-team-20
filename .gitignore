@@ -51,9 +51,10 @@ coverage.xml
 *.whl
 dist/
 build/
-
-# Resumes and Resume artifacts
+# 
 resumes/
+portfolios/
+src/ui/
 
 # project thumbnails
 thumbnails/

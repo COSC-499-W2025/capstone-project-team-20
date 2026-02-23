@@ -1,6 +1,7 @@
 ## Team 20 Weekly Log
 
 ### Table of contents
+- [Term 2 Week 7(February 16th - February 22nd)](#term-2-week-7-february-16th---february-22nd)
 - [Term 2 Week 6(February 9th - February 15th)](#term-2-week-6-february-9th---february-15th)
 - [Term 2 Week 5(February 2nd - February 8th)](#term-2-week-5-february-2nd---february-8th)
 - [Term 2 Week 4(January 25th - February 1st)](#term-2-week-4-january-26th---february-1st)
@@ -561,3 +562,40 @@ Our frontend is now setup! We will work away at improving that before that befor
 **Test Report:**
 
 [Term 2 Week 6 Test Report](teamWeeklyLogsImages/T2_W6_tests.png)
+
+
+### Term 2 Week 7 (February 16th - February 22nd)
+
+**Work Performed:**
+- Branden Kennedy (42474551): This week, I made three PRs. They addressed frontend to backend integration and implementing a "key role" feature in our system. These were [PR 1](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/389), [PR 2](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/385), and [PR 3](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/400). This implemented real data fetching, creating an API layer, and configuring CORS. This included extending the system to support our flow of upload zip to analyze to export through the web interface. For a users "key role", I implemented a contributor role inference engine using Git contribution signals with YAML-driven logic and created unit tests for it.
+
+- Necmi Kaan Sapoglu (17014796):
+
+- Lex Nash (84668540): 
+
+- Dylan Alexander (16394025): This week, I made four PRs. Each addressed pre-existing bugs in our system. This includes a fix for the progress bar, consolidating git contributors by email (removing duplicates), a check that reports cannot be created without previously generated resume insights for each project, and a fix that ensures and tests that projects are incrementally analyzed and not overwritten.
+
+- Sven Annist (42486720): This week I integrated portfolio role data into the portfolio generation flow and updated the portfolio PDF output to utilize our YAML-based roles in portfolio generation. I also implemented report-backed portfolio API endpoints for retrieval, generation, and metadata updates, and expanded schemas and tests to cover the new responses. These updates follow FastAPI routing conventions and Pydantic schema patterns (per FastAPI/Pydantic documentation), keeping the API consistent with the rest of the service. I opened a PR (#403) for the portfolio API and role updates and reviewed 2 PRs (#385) (#391) and prepared materials for the Milestone 2 presentation slides.
+
+**Features included in the project plan for this milestone are:**
+Every issue up to and including Issue #358. Features included are going further into developing our frontend, and completing all other requirements for milestone 2.
+
+**Continuing tasks from last week and plan for the next week:**
+Our frontend is now setup! We will work away at improving that before that before Milestone 2 is due. We are also going to wire in all of our existing endpoints, as well as add others that are needed. We only have a couple requirements left to do for Milestone 2, so this week we will be working on completing all of those.
+
+**Burnup chart:**
+
+[Term 2 Week 7 burnup chart](teamWeeklyLogsImages/T2W7-Burnup.png)
+
+**Table View of Completed Tasks on Project Board:**
+
+[Term 2 Week 7 completed tasks](teamWeeklyLogsImages/T2W7-Closed.png)
+
+**Table View of In-Progress Tasks on Project Board:**
+
+[Term 2 Week 7 In-Progress tasks](teamWeeklyLogsImages/T2W7-In-Progress.png)
+
+**Test Report:**
+
+[Term 2 Week 7 Test Report](teamWeeklyLogsImages/T2W7-Tests.png)
+
