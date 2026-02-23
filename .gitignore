@@ -51,3 +51,9 @@ coverage.xml
 *.whl
 dist/
 build/
+
+# 
+resumes/
+portfolios/
+src/ui/
+

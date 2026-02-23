@@ -585,17 +585,17 @@ Our frontend is now setup! We will work away at improving that before that befor
 
 **Burnup chart:**
 
-[Term 2 Week 6 burnup chart](teamWeeklyLogsImages/T2_W6_burnup.png)
+[Term 2 Week 7 burnup chart](teamWeeklyLogsImages/T2W7-Burnup.png)
 
 **Table View of Completed Tasks on Project Board:**
 
-[Term 2 Week 6 completed tasks](teamWeeklyLogsImages/T2_W6_completed.png)
+[Term 2 Week 7 completed tasks](teamWeeklyLogsImages/T2W7-Closed.png)
 
 **Table View of In-Progress Tasks on Project Board:**
 
-[Term 2 Week 6 In-Progress tasks](teamWeeklyLogsImages/T2_W6_in_progress.png)
+[Term 2 Week 7 In-Progress tasks](teamWeeklyLogsImages/T2W7-In-Progress.png)
 
 **Test Report:**
 
-[Term 2 Week 6 Test Report](teamWeeklyLogsImages/T2_W6_tests.png)
+[Term 2 Week 7 Test Report](teamWeeklyLogsImages/T2W7-Tests.png)
 
