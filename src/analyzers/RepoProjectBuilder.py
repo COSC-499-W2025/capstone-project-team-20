@@ -3,7 +3,7 @@ from typing import List
 from src.models.Project import Project
 from src.ProjectFolder import ProjectFolder
 from src.analyzers.ProjectMetadataExtractor import ProjectMetadataExtractor
-from src.analyzers.ContributionAnalyzer import ContributionAnalyzer
+from src.analyzers.contribution_analyzer import ContributionAnalyzer
 from utils.RepoFinder import RepoFinder
 import io
 import contextlib

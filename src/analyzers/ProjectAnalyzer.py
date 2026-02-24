@@ -18,7 +18,7 @@ from src.ZipParser import parse_zip_to_project_folders, toString, extract_zip
 from src.analyzers.ProjectMetadataExtractor import ProjectMetadataExtractor
 from src.FileCategorizer import FileCategorizer
 from src.analyzers.language_detector import detect_language_per_file, analyze_language_share
-from src.analyzers.ContributionAnalyzer import ContributionAnalyzer, ContributionStats
+from src.analyzers.contribution_analyzer import ContributionAnalyzer, ContributionStats
 from utils.RepoFinder import RepoFinder
 from src.managers.ProjectManager import ProjectManager
 from src.managers.FileHashManager import FileHashManager
@@ -37,6 +37,7 @@ from src.exporters.ReportExporter import ReportExporter
 from src.managers.ReportManager import ReportManager
 from src.services.ReportEditor import ReportEditor
 from src.services.InsightEditor import InsightEditor
+from src.analyzers.role_inference_analyzer import RoleInferenceAnalyzer
 
 MIN_DISPLAY_CONFIDENCE = 0.5  # only show skills with at least this confidence
 
@@ -60,6 +61,8 @@ class ProjectAnalyzer:
 
         self.report_manager = ReportManager()
         self.report_exporter = ReportExporter()
+
+        self.role_inference_analyzer = RoleInferenceAnalyzer()
 
         if threading.current_thread() is threading.main_thread():
             signal.signal(signal.SIGINT, self._signal_cleanup)
@@ -335,6 +338,22 @@ class ProjectAnalyzer:
         else:
             print("\nNo changes made to user selection.")
 
+    def _pretty_role(self, role_key: str) -> str:
+        if not role_key or role_key in ("role_none", "none"):
+            return "None"
+
+        role_key = role_key.replace("role_", "")
+
+        mapping = {
+            "devops": "DevOps",
+            "qa": "QA",
+            "backend": "Backend",
+            "frontend": "Frontend",
+            "docs": "Documentation",
+        }
+
+        return mapping.get(role_key, role_key.capitalize())
+
     def analyze_git_and_contributions(self) -> None:
         """
         Analyze contributions for each project:
@@ -353,6 +372,7 @@ class ProjectAnalyzer:
                 continue
 
             print(f"\n--- Analyzing contributions for: {project.name} ---")
+
             with self.suppress_output():
                 repo_authors = self.contribution_analyzer.get_all_authors(str(repo_path))
 
@@ -363,6 +383,20 @@ class ProjectAnalyzer:
 
             with self.suppress_output():
                 all_author_stats = self.contribution_analyzer.analyze(str(repo_path))
+
+            project.contributor_roles = {}
+
+            if all_author_stats:
+                roles_obj = self.role_inference_analyzer.analyze(all_author_stats)
+                project.contributor_roles = {
+                    user: {
+                        "primary_role": r.primary_role.value,
+                        "confidence": float(r.confidence),
+                        "secondary_roles": [sr.value for sr in (r.secondary_roles or [])],
+                        "evidence": r.evidence or {},
+                    }
+                    for user, r in roles_obj.items()
+                }
 
             project.authors = sorted([name for name in selected_usernames if name in (all_author_stats.keys() if all_author_stats else repo_authors)])
 
@@ -378,6 +412,13 @@ class ProjectAnalyzer:
             self.project_manager.set(project)
             print(f"  - Total Contributors: {project.author_count}")
             print(f"  - Collaboration Status: {project.collaboration_status}")
+            if project.contributor_roles:
+                print(" - Inferred Roles:")
+                for user, info in project.contributor_roles.items():
+                    pretty = self._pretty_role(info.get("primary_role", "none"))
+                    confidence_pct = int(float(info.get("confidence", 0.0)) * 100)
+                    print(f"    - {user} → User Role: {pretty} ({confidence_pct}%)")
+
             print(f"  - Saved data for '{project.name}'.")
 
     def analyze_metadata(self, projects: Optional[List[Project]] = None) -> None:

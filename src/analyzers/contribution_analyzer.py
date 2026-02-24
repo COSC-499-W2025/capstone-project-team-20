@@ -2,6 +2,48 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List, Dict, Set, Any
 from git import Repo, GitCommandError
+from src.FileCategorizer import FileCategorizer
+import yaml
+
+
+CONFIG_DIR = Path(__file__).parent.parent / "config"
+ROLE_SIGNALS_FILE = CONFIG_DIR / "role_signals.yml"
+
+class RoleSignals:
+    def __init__(self):
+        with open(ROLE_SIGNALS_FILE, "r", encoding="utf-8") as f:
+            self.conf = (yaml.safe_load(f) or {}).get("roles", {})
+    
+    def infer_role_bucket(self, path: str, language: str, category: str) -> str:
+        path_l = path.lower()
+        lang = (language or "").strip()
+        cat = (category or "").strip()
+
+        best_role = "none"
+        best_score = 0
+
+        for role, rules in self.conf.items():
+            score = 0
+
+            # categories
+            if cat and cat in set(rules.get("categories", [])):
+                score += 2
+
+            # languages
+            if lang and lang in set(rules.get("languages", [])):
+                score += 2
+
+            # path patterns
+            for p in rules.get("path_patterns", []):
+                if p.lower() in path_l:
+                    score += 1
+
+            if score > best_score:
+                best_score = score
+                best_role = role
+
+        # Require at least some evidence
+        return best_role if best_score >= 2 else "none"
 
 @dataclass
 class ContributionStats:
@@ -13,7 +55,17 @@ class ContributionStats:
     lines_deleted: int = 0
     total_commits: int = 0
     files_touched: Set[str] = field(default_factory=set)
-    contribution_by_type: Dict[str, int] = field(default_factory=lambda: {"code": 0, "docs": 0, "test": 0, "other": 0})
+
+    contribution_by_type: Dict[str, int] = field(default_factory=lambda: {
+        "code": 0,
+        "docs": 0,
+        "test": 0,
+        "other": 0
+    })
+
+    contribution_by_category: Dict[str, int] = field(default_factory=dict)
+    contribution_by_language: Dict[str, int] = field(default_factory=dict)
+    contribution_by_role_signal: Dict[str, int] = field(default_factory=dict)
 
     def to_dict(self) -> Dict:
         """Serializes the dataclass to a dictionary, converting set to list."""
@@ -25,6 +77,15 @@ class ContributionAnalyzer:
     """
     Analyzes all author contributions in a Git repository.
     """
+
+    def __init__(self):
+        self.file_categorizer = FileCategorizer()
+        self.role_signals = RoleSignals()
+
+    def _language_from_extension(self, path: str) -> str:
+        ext = Path(path).suffix.lstrip(".").lower()
+        return self.file_categorizer.language_map.get(ext, "")
+
     def _categorize_file_path(self, path: str) -> str:
         """Categorizes a file path into 'code', 'docs', or 'test'."""
         p = Path(path.lower())
@@ -63,11 +124,13 @@ class ContributionAnalyzer:
             author_stats: Dict[str, ContributionStats] = {}
 
             for commit in repo.iter_commits():
-                if not commit.author: continue
+                if not commit.author: 
+                    continue
+                
                 author_name = commit.author.name
-
                 if author_name not in author_stats:
                     author_stats[author_name] = ContributionStats()
+
                 stats = author_stats[author_name]
                 stats.total_commits += 1
 
@@ -76,11 +139,38 @@ class ContributionAnalyzer:
                     commit_stats = commit.stats.files
                     for file_path, file_stat_values in commit_stats.items():
                         lines_changed = file_stat_values['insertions'] + file_stat_values['deletions']
+                        
+                        # YAML driven category for role inference
+                        lang = self._language_from_extension(file_path)
+                        yaml_cat = self.file_categorizer.classify_file({
+                            "path": file_path,
+                            "language": lang
+                        })
+                        if yaml_cat == "ignored":
+                            continue
+
                         stats.lines_added += file_stat_values['insertions']
                         stats.lines_deleted += file_stat_values['deletions']
                         stats.files_touched.add(file_path)
-                        category = self._categorize_file_path(file_path)
-                        stats.contribution_by_type[category] += lines_changed
+
+                        coarse_type = self._categorize_file_path(file_path)
+                        stats.contribution_by_type[coarse_type] = (
+                            stats.contribution_by_type.get(coarse_type, 0) + lines_changed
+                        )
+
+                        if lang:
+                            stats.contribution_by_language[lang] = (
+                                stats.contribution_by_language.get(lang, 0) + lines_changed
+                            )
+                        stats.contribution_by_category[yaml_cat] = (
+                            stats.contribution_by_category.get(yaml_cat, 0) + lines_changed
+                            )
+                        
+                        role_bucket = self.role_signals.infer_role_bucket(file_path, lang, yaml_cat)
+                        if role_bucket != "none":
+                            stats.contribution_by_role_signal[role_bucket] = (
+                                stats.contribution_by_role_signal.get(role_bucket, 0) + lines_changed
+                            )
 
                 except (GitCommandError, ValueError) as e:
                     # This block catches errors from `commit.stats`, which can happen if a parent is missing
@@ -92,10 +182,38 @@ class ContributionAnalyzer:
                             if blob.type == 'blob':
                                 try:
                                     lines = blob.data_stream.read().decode(errors='ignore').count('\n') + 1
+
+                                    lang = self._language_from_extension(blob.path)
+                                
+                                    yaml_cat = self.file_categorizer.classify_file({
+                                        "path": blob.path,
+                                        "language": lang
+                                    })
+                                    if yaml_cat == "ignored":
+                                        continue
+
                                     stats.lines_added += lines
                                     stats.files_touched.add(blob.path)
-                                    category = self._categorize_file_path(blob.path)
-                                    stats.contribution_by_type[category] += lines
+
+                                    coarse_type = self._categorize_file_path(blob.path)
+                                    stats.contribution_by_type[coarse_type] = (
+                                        stats.contribution_by_type.get(coarse_type, 0) + lines
+                                    )
+
+                                    if lang:
+                                        stats.contribution_by_language[lang] = (
+                                            stats.contribution_by_language.get(lang, 0) + lines
+                                        )
+                                    stats.contribution_by_category[yaml_cat] = (
+                                        stats.contribution_by_category.get(yaml_cat, 0) + lines
+                                        )
+                                    
+                                    role_bucket = self.role_signals.infer_role_bucket(blob.path, lang, yaml_cat)
+                                    if role_bucket != "none":
+                                        stats.contribution_by_role_signal[role_bucket] = (
+                                            stats.contribution_by_role_signal.get(role_bucket, 0) + lines
+                                        )
+                                    
                                 except Exception:
                                     pass # Ignore files that can't be decoded
                     # If it has parents but still failed, it's likely a shallow clone boundary.
