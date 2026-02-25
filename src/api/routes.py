@@ -28,7 +28,7 @@ from src.api.schemas.portfolio import (
 
 from src.api.schemas import (
   SkillsListResponse, SkillItem, PortfolioResponse, ConsentResponse, UploadProjectResponse, ProjectsListResponse, ProjectSummary, 
-  ProjectDetailResponse, ProjectDetail, TodoResponse, PortfolioGenerateRequest, PortfolioGenerateResponse, PortfolioUpdateRequest, 
+  ProjectDetailResponse, ProjectDetail, PortfolioGenerateRequest, PortfolioGenerateResponse, PortfolioUpdateRequest, 
   PortfolioReport, PortfolioProject, PortfolioDetailsResponse
 )
 
