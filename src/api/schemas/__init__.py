@@ -5,6 +5,16 @@ from .projects import ProjectSummary, UploadProjectResponse, ProjectsListRespons
 from .consent import ConsentRequest, ConsentResponse
 
 from .skills import SkillItem, SkillsListResponse
+from .projects import ProjectSummary, UploadProjectResponse, ProjectsListResponse, ProjectDetail, ProjectDetailResponse
+
+from .badges import (
+    BadgeProjectRef,
+    BadgeProgressItem,
+    BadgeProgressResponse,
+    WrappedMilestone,
+    WrappedYear,
+    YearlyWrappedResponse,
+)
 
 from .projects import (
     ProjectSummary,

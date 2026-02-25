@@ -78,9 +78,22 @@ class ContributionAnalyzer:
     Analyzes all author contributions in a Git repository.
     """
 
+
     def __init__(self):
         self.file_categorizer = FileCategorizer()
         self.role_signals = RoleSignals()
+    
+    def _normalize_author_identity(self, name: str | None, email: str | None) -> str | None:
+        normalized_name = (name or "").strip()
+        normalized_email = (email or "").strip().lower()
+
+        if normalized_name:
+            return " ".join(normalized_name.split())
+
+        if normalized_email and "@" in normalized_email:
+            return normalized_email.split("@", 1)[0]
+
+        return None
 
     def _language_from_extension(self, path: str) -> str:
         ext = Path(path).suffix.lstrip(".").lower()
@@ -99,16 +112,29 @@ class ContributionAnalyzer:
 
     def get_all_authors(self, repo_path: str) -> List[str]:
         """
-        Scans a repository to get a unique list of all author names.
+        Scans a repository to get a unique list of all contributor identities.
         This is a lightweight operation focused solely on retrieving contributors.
         """
         try:
             repo = Repo(repo_path)
-            author_names: Set[str] = set()
+            author_names: Dict[str, str] = {}
             for commit in repo.iter_commits():
-                if commit.author:
-                    author_names.add(commit.author.name)
-            return sorted(list(author_names))
+                for identity in [getattr(commit, "author", None), getattr(commit, "committer", None)]:
+                    if not identity:
+                        continue
+                    normalized = self._normalize_author_identity(
+                        getattr(identity, "name", None),
+                        getattr(identity, "email", None),
+                    )
+                    if not normalized:
+                        continue
+
+                    identity_key = normalized.casefold()
+                    current = author_names.get(identity_key)
+                    if current is None or (current.islower() and any(ch.isupper() for ch in normalized)):
+                        author_names[identity_key] = normalized
+
+            return sorted(list(author_names.values()), key=lambda n: n.lower())
         except (GitCommandError, ValueError) as e:
             print(f"  - Warning: Could not read Git authors from '{repo_path}'. Error: {e}")
             return []
@@ -124,10 +150,14 @@ class ContributionAnalyzer:
             author_stats: Dict[str, ContributionStats] = {}
 
             for commit in repo.iter_commits():
-                if not commit.author: 
+                if not commit.author: continue
+                author_name = self._normalize_author_identity(
+                    getattr(commit.author, "name", None),
+                    getattr(commit.author, "email", None),
+                )
+                if not author_name:
                     continue
-                
-                author_name = commit.author.name
+
                 if author_name not in author_stats:
                     author_stats[author_name] = ContributionStats()
 

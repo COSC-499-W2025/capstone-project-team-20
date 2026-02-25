@@ -14,8 +14,18 @@ from src.managers.ReportManager import ReportManager
 from src.exporters.ReportExporter import ReportExporter
 from src.generators.PortfolioGenerator import PortfolioGenerator
 from src.ZipParser import parse_zip_to_project_folders
-from src.api.schemas.projects import UploadProjectResponse, ProjectsListResponse, ProjectSummary, ProjectDetailResponse, ProjectDetail
+from src.services.badge_wrapped_service import build_badge_progress, build_yearly_wrapped
+from src.api.schemas.skills import SkillsListResponse, SkillItem
+from src.api.schemas.projects import (
+    UploadProjectResponse,
+    ProjectsListResponse,
+    ProjectSummary,
+    ProjectDetailResponse,
+    ProjectDetail,
+)
 from src.api.schemas.consent import ConsentResponse, ConsentRequest
+
+from src.api.schemas.badges import BadgeProgressResponse, YearlyWrappedResponse
 
 from src.api.schemas.resume import (
     ResumeExportRequest, ResumeExportResponse,
@@ -60,6 +70,17 @@ def _build_portfolio_report(report) -> PortfolioReport:
         notes=report.notes,
         projects=projects,
     )
+def _copy_upload_to_temp_zip(upload: UploadFile) -> Path:
+    """Persist an uploaded ZIP to a temp file, resetting stream position first."""
+    if getattr(upload, "file", None) and hasattr(upload.file, "seek"):
+        upload.file.seek(0)
+
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".zip") as tmp:
+        tmp_path = Path(tmp.name)
+        shutil.copyfileobj(upload.file, tmp)
+
+    return tmp_path
+
 def require_consent():
     cm = ConsentManager()
     if not cm.has_user_consented():
@@ -71,6 +92,18 @@ def require_consent():
 
 class UploadPathRequest(BaseModel):
     path: str
+
+def _run_post_upload_analyses(analyzer: ProjectAnalyzer, projects):
+    """Run non-interactive analyses so uploaded projects have usable dashboard data."""
+    for method_name in ("analyze_git_and_contributions", "analyze_metadata", "analyze_categories", "analyze_languages", "analyze_skills"):
+        method = getattr(analyzer, method_name, None)
+        if callable(method):
+            if method_name == "analyze_skills":
+                method(projects=projects, silent=True)
+            elif method_name == "analyze_git_and_contributions":
+                method(projects=projects, interactive=False)
+            else:
+                method(projects=projects)
 
 @router.post("/projects/upload-path", dependencies=[Depends(require_consent)])
 def upload_project_from_path(req: UploadPathRequest):
@@ -89,6 +122,7 @@ def upload_project_from_path(req: UploadPathRequest):
 
     analyzer = ProjectAnalyzer(ConfigManager(), root_folders, zip_path)
     created_projects = analyzer.initialize_projects()
+    _run_post_upload_analyses(analyzer, created_projects)
 
     return {
         "projects": [
@@ -99,9 +133,7 @@ def upload_project_from_path(req: UploadPathRequest):
 
 @router.post("/projects/upload", response_model=UploadProjectResponse, status_code=status.HTTP_201_CREATED)
 def upload_project(zip_file: UploadFile = File(...)):
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".zip") as tmp:
-        tmp_path = Path(tmp.name)
-        shutil.copyfileobj(zip_file.file, tmp)
+    tmp_path = _copy_upload_to_temp_zip(zip_file)
 
     root_folders = parse_zip_to_project_folders(str(tmp_path))
     if not root_folders:
@@ -109,6 +141,7 @@ def upload_project(zip_file: UploadFile = File(...)):
         raise HTTPException(status_code=400, detail="Zip parsed no projects (invalid or empty zip.)")
     analyzer = ProjectAnalyzer(ConfigManager(), root_folders, tmp_path)
     created_projects = analyzer.initialize_projects()
+    _run_post_upload_analyses(analyzer, created_projects)
 
     tmp_path.unlink(missing_ok=True)
 
@@ -197,6 +230,17 @@ def get_skills_list():
     ]
 
     return SkillsListResponse(skills=skills)
+
+@router.get("/badges/progress", response_model=BadgeProgressResponse)
+def get_badge_progress():
+    pm = ProjectManager()
+    return build_badge_progress(list(pm.get_all()))
+
+
+@router.get("/wrapped/yearly", response_model=YearlyWrappedResponse)
+def get_yearly_wrapped():
+    pm = ProjectManager()
+    return build_yearly_wrapped(list(pm.get_all()))
 
 # ---------------------------
 # Reports (saved templates)
