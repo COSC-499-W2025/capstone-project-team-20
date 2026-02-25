@@ -36,7 +36,8 @@ class Project:
     DICT_FIELDS = [
             "categories",
             "language_share",
-            "portfolio_details"
+            "portfolio_details",
+            "contributor_roles"
     ]
 
     id: Optional[int] = None
@@ -62,6 +63,7 @@ class Project:
 
     individual_contributions: List[str] = list_field()
     author_contributions: List[Dict[str, Any]] = list_field()
+    contributor_roles: Dict[str, Any] = field(default_factory=dict)
     collaboration_status: Literal["individual", "collaborative"] = "individual"
 
     # Overall code metrics (from CodeMetricsAnalyzer.summarize()["overall"])
@@ -148,9 +150,9 @@ class Project:
                 try:
                     proj_dict_copy[field_name] = json.loads(value)
                 except json.JSONDecodeError:
-                    proj_dict_copy[field_name] = {} if field_name == "categories" else []
+                    proj_dict_copy[field_name] = []
             elif value is None:
-                proj_dict_copy[field_name] = {} if field_name == "categories" else []
+                proj_dict_copy[field_name] = []
 
         #de-serialize dicts from JSON strings
         for field_name in Project.DICT_FIELDS:
@@ -233,6 +235,13 @@ class Project:
                 else:
                     value_str = str(value)
                 print(f"    - {key}: {value_str}")
+        
+        if self.contributor_roles:
+            print("\n  Contributor roles:")
+            for user, info in self.contributor_roles.items():
+                role = info.get("primary_role", "role_none")
+                conf = info.get("confidence", 0.0)
+                print(f"    - {user}: {role} ({conf:.2f})")
 
         # Tech/profile flags (Docker, DB, frontend/backend, tests, README)
         tech_flags = []
