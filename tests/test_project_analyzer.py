@@ -1,7 +1,7 @@
 from datetime import datetime
 from unittest.mock import patch, MagicMock
 from src.analyzers.ProjectAnalyzer import ProjectAnalyzer
-from src.analyzers.ContributionAnalyzer import ContributionStats
+from src.analyzers.contribution_analyzer import ContributionStats
 from src.managers.ConfigManager import ConfigManager
 from src.managers.ProjectManager import ProjectManager
 from src.managers.FileHashManager import FileHashManager
