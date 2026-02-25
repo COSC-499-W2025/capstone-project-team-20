@@ -108,7 +108,7 @@ class RoleInferenceAnalyzer:
             return RoleInference(primary_role=RoleID.FULLSTACK, confidence=conf, evidence=evidence)
 
         # Frontend / Backend dominance
-        if frontend_r >= 0.45 and backend <= 0.20:
+        if frontend_r >= 0.45 and backend_r <= 0.20:
             return RoleInference(primary_role=RoleID.FRONTEND, confidence=frontend_r, evidence=evidence)
 
         if backend_r >= 0.45 and backend_r > frontend_r:
