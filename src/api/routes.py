@@ -474,7 +474,7 @@ def export_portfolio(req: PortfolioExportRequest):
 
 @router.get("/portfolio/exports/{export_id}/download", dependencies=[Depends(require_consent)])
 def download_portfolio(export_id: str):
-    out_dir = Path("resumes")
+    out_dir = Path("portfolios")
     matches = list(out_dir.glob(f"{export_id}-*.pdf"))
     if not matches:
         raise HTTPException(status_code=404, detail="Export not found.")
