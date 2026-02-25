@@ -77,6 +77,12 @@ class ContributionAnalyzer:
     """
     Analyzes all author contributions in a Git repository.
     """
+
+
+    def __init__(self):
+        self.file_categorizer = FileCategorizer()
+        self.role_signals = RoleSignals()
+    
     def _normalize_author_identity(self, name: str | None, email: str | None) -> str | None:
         normalized_name = (name or "").strip()
         normalized_email = (email or "").strip().lower()
@@ -88,11 +94,6 @@ class ContributionAnalyzer:
             return normalized_email.split("@", 1)[0]
 
         return None
-    
-
-    def __init__(self):
-        self.file_categorizer = FileCategorizer()
-        self.role_signals = RoleSignals()
 
     def _language_from_extension(self, path: str) -> str:
         ext = Path(path).suffix.lstrip(".").lower()
