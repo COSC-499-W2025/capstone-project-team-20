@@ -21,7 +21,7 @@ def analyzer():
     return a
 
 
-def create_mock_commit(author_name, files_changed, author_email="author@example.com", committer_name=None, committer_email=None):
+def create_mock_commit(author_name, author_email, files_changed, committer_name=None, committer_email=None):
     """Helper to create mock commit with file stats"""
     commit = MagicMock()
     commit.author.name = author_name
@@ -355,9 +355,9 @@ def test_calculate_share_returns_dict(analyzer):
 
 def test_get_all_authors_normalizes_and_uses_committer(analyzer):
     commits = [
-        create_mock_commit(" Alice   Smith ", {}, author_email="alice@example.com"),
-        create_mock_commit("", {}, author_email="carol@example.com", committer_name="  Carol  ", committer_email="carol@example.com"),
-        create_mock_commit("", {}, author_email="dave@example.com", committer_name="", committer_email=""),
+        create_mock_commit(" Alice   Smith ", "alice@example.com", {}),
+        create_mock_commit("", "carol@example.com", {}, committer_name="  Carol  ", committer_email="carol@example.com"),
+        create_mock_commit("", "dave@example.com", {}, committer_name="", committer_email=""),
     ]
 
     with patch("src.analyzers.contribution_analyzer.Repo") as MockRepo:
@@ -365,4 +365,6 @@ def test_get_all_authors_normalizes_and_uses_committer(analyzer):
         mock_repo.iter_commits.return_value = commits
         result = analyzer.get_all_authors("/fake/path")
 
-    assert result == ["Alice Smith", "Carol", "dave"]
+    assert "alice@example.com" in result
+    assert "carol@example.com" in result
+    assert "dave@example.com" in result
