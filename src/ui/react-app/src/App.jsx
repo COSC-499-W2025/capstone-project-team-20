@@ -3,6 +3,8 @@ import {
   listProjects,
   getProject,
   listSkills,
+  getBadgeProgress, 
+  getYearlyWrapped,
   setPrivacyConsent,
   createReport,
   exportResume,
@@ -297,33 +299,157 @@ function Badges() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [skills, setSkills] = useState([]);
+  const [progress, setProgress] = useState([]);
+  const [wrapped, setWrapped] = useState([]);
 
-  async function loadSkills() {
+  async function loadBadgeData() {
     setLoading(true);
     setError(null);
     try {
-      const data = await listSkills(); // { skills: [{name, project_count}, ...] }
-      setSkills(data.skills ?? []);
-    } catch (e) {
-      setError(e.message ?? "Failed to load skills");
-    } finally {
+      const [skillsData, progressData, wrappedData] = await Promise.all([
+          listSkills(),
+          getBadgeProgress(),
+          getYearlyWrapped(),
+        ]);
+        setSkills(skillsData.skills ?? []);
+        setProgress(progressData.badges ?? []);
+        setWrapped(wrappedData.wrapped ?? []);
+      } catch (e) {
+        setError(e.message ?? "Failed to load badges and wrapped stats");
+      } finally {
       setLoading(false);
     }
   }
 
   useEffect(() => {
-    loadSkills();
+    loadBadgeData();
   }, []);
+
+  const inProgress = progress.filter((b) => !b.earned);
+    const achievedProgressBadges = progress.filter((b) => b.earned);
+
+    const achievedBadgeMap = new Map();
+    wrapped.forEach((yearBlock) => {
+      (yearBlock.milestones ?? []).forEach((m) => {
+        if (!achievedBadgeMap.has(m.badge_id)) {
+          achievedBadgeMap.set(m.badge_id, { badge_id: m.badge_id, projects: [] });
+        }
+        const badge = achievedBadgeMap.get(m.badge_id);
+        const projectKey = `${m.project}::${m.achieved_on ?? ""}`;
+        const alreadyListed = badge.projects.some((p) => `${p.project}::${p.achieved_on ?? ""}` === projectKey);
+        if (!alreadyListed) {
+          badge.projects.push({
+            project: m.project,
+            achieved_on: m.achieved_on,
+          });
+        }
+      });
+    });
+
+    achievedProgressBadges.forEach((b) => {
+    const projectName = b.project?.name ?? "Unknown project";
+    if (!achievedBadgeMap.has(b.badge_id)) {
+      achievedBadgeMap.set(b.badge_id, { badge_id: b.badge_id, label: b.label, projects: [] });
+    }
+    const badge = achievedBadgeMap.get(b.badge_id);
+    if (!badge.label) {
+      badge.label = b.label;
+    }
+    const alreadyListed = badge.projects.some((p) => p.project === projectName);
+    if (!alreadyListed) {
+      badge.projects.push({ project: projectName, achieved_on: null });
+    }
+  });
+
+  const achievedBadges = Array.from(achievedBadgeMap.values()).sort((a, b) =>
+    (a.label ?? a.badge_id).localeCompare(b.label ?? b.badge_id)
+  );
 
   return (
     <>
       <h3>Badges</h3>
 
-      <button onClick={loadSkills} disabled={loading}>
-        {loading ? "Loading..." : "Refresh Skills"}
+      <button onClick={loadBadgeData} disabled={loading}>
+        {loading ? "Loading..." : "Refresh Badge Data"}
       </button>
 
       {error && <pre style={{ color: "crimson" }}>{error}</pre>}
+
+      <h4>🎯 Badge Progress Tracker (Uncompleted)</h4>
+      {inProgress.length === 0 ? (
+        <p>All tracked progress badges are complete 🎉</p>
+      ) : (
+        <ul style={{ listStyle: "none", paddingLeft: 0 }}>
+          {inProgress.map((b) => (
+            <li key={b.badge_id} style={{ marginBottom: 12, border: "1px solid #2f4d6f", borderRadius: 8, padding: 10 }}>
+              <strong>{b.label}</strong> — {Math.round((b.progress ?? 0) * 100)}%
+              <div style={{ height: 10, borderRadius: 999, background: "#21344a", marginTop: 8, overflow: "hidden" }}>
+                <div style={{ width: `${Math.round((b.progress ?? 0) * 100)}%`, height: "100%", background: "#55BDCA" }} />
+              </div>
+              <small>
+                {b.metric}: {(b.current ?? 0).toFixed(2)} / {b.target} • Closest project: {b.project?.name ?? "N/A"} • ⏳ In progress
+              </small>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <h4>🏅 Achieved Badges</h4>
+      {achievedBadges.length === 0 ? (
+        <p>No achieved badges yet. Upload and analyze projects to start earning them.</p>
+      ) : (
+        <ul>
+          {achievedBadges.map((badge) => (
+            <li key={`achieved-${badge.badge_id}`}>
+              ✅ <strong>{badge.label ?? badge.badge_id}</strong>
+              <ul>
+                {badge.projects.map((projectEntry, idx) => (
+                  <li key={`achieved-${badge.badge_id}-${projectEntry.project}-${idx}`}>
+                    <strong>{projectEntry.project}</strong>
+                    {projectEntry.achieved_on ? ` — ${projectEntry.achieved_on}` : ""}
+                  </li>
+                ))}
+              </ul>
+            </li>
+          ))}
+        </ul>
+      )}
+
+
+      <h4>🎉 Yearly Wrapped</h4>
+      {wrapped.length === 0 ? (
+        <p>No yearly wrapped history available yet.</p>
+      ) : (
+        wrapped.map((yearBlock) => (
+          <div key={yearBlock.year} style={{ marginBottom: 14, border: "1px solid #3f638c", borderRadius: 12, padding: 12, background: "linear-gradient(135deg, rgba(85,189,202,0.12), rgba(242,125,66,0.10))" }}>
+            <h5>{yearBlock.vibe_title}</h5>
+            <p>
+              Projects: {yearBlock.projects_count} • LOC: {yearBlock.total_loc} • Files: {yearBlock.total_files} • Avg test ratio: {(yearBlock.avg_test_file_ratio * 100).toFixed(1)}%
+            </p>
+            {yearBlock.highlights?.length ? (
+              <ul>
+                {yearBlock.highlights.map((line, idx) => (
+                  <li key={`${yearBlock.year}-highlight-${idx}`}>{line}</li>
+                ))}
+              </ul>
+            ) : null}
+            <p><strong>Milestones:</strong></p>
+            {yearBlock.milestones?.length ? (
+              <ul>
+                {yearBlock.milestones.map((m, idx) => (
+                  <li key={`${yearBlock.year}-${m.badge_id}-${idx}`}>
+                    🏅 {m.badge_id} earned in <strong>{m.project}</strong>{m.achieved_on ? ` on ${m.achieved_on}` : ""}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p>No badge milestones recorded for this year.</p>
+            )}
+          </div>
+        ))
+      )}
+
+      <h4>🔥 Skill Heatmap</h4>
 
       {skills.length === 0 ? (
         <p>No skills found yet. Upload a project first.</p>

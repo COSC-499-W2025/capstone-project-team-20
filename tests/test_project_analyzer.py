@@ -1,6 +1,7 @@
 from datetime import datetime
 from unittest.mock import patch, MagicMock
 from src.analyzers.ProjectAnalyzer import ProjectAnalyzer
+from src.analyzers.contribution_analyzer import ContributionStats
 from src.managers.ConfigManager import ConfigManager
 from src.managers.ProjectManager import ProjectManager
 from src.managers.FileHashManager import FileHashManager
@@ -198,3 +199,30 @@ def test_delete_previous_insights_clears_portfolio_details(analyzer):
         analyzer.delete_previous_insights()
 
     assert project.portfolio_details.project_name == ""
+
+def test_resolve_selected_authors_matches_case_insensitively(analyzer):
+    resolved = analyzer._resolve_selected_authors(
+        requested_authors=["alice", "BOB", "missing"],
+        available_authors=["Alice", "Bob"],
+    )
+
+    assert resolved == ["Alice", "Bob"]
+
+
+def test_analyze_git_and_contributions_non_interactive_uses_configured_usernames(analyzer, mock_config_manager):
+    project = Project(name="repo1", file_path="/fake/repo1")
+    analyzer.project_manager = MagicMock()
+    mock_config_manager.get.return_value = ["alice"]
+
+    fake_stats = {
+        "Alice": ContributionStats(lines_added=10, lines_deleted=0, total_commits=1),
+        "Bob": ContributionStats(lines_added=10, lines_deleted=0, total_commits=1),
+    }
+
+    with patch("pathlib.Path.exists", return_value=True), \
+         patch.object(analyzer.contribution_analyzer, "get_all_authors", return_value=["Alice", "Bob"]), \
+         patch.object(analyzer.contribution_analyzer, "analyze", return_value=fake_stats):
+        analyzer.analyze_git_and_contributions(projects=[project], interactive=False)
+
+    assert project.authors == ["Alice"]
+    assert project.individual_contributions["contribution_share_percent"] == 50.0

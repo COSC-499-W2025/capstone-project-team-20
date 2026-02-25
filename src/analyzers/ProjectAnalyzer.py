@@ -324,6 +324,19 @@ class ProjectAnalyzer:
                     aggregated.contribution_by_type[category] += count
         return aggregated
 
+    @staticmethod
+    def _resolve_selected_authors(requested_authors: List[str], available_authors: List[str]) -> List[str]:
+        """Match requested usernames to available author names, case-insensitively."""
+        available_map = {name.casefold(): name for name in available_authors}
+        resolved = []
+
+        for requested in requested_authors:
+            match = available_map.get((requested or "").casefold())
+            if match and match not in resolved:
+                resolved.append(match)
+
+        return sorted(resolved)
+
     def change_selected_users(self) -> None:
         """Allows the user to change their configured username selection."""
         print("\n--- Change Selected Users ---")
@@ -364,76 +377,81 @@ class ProjectAnalyzer:
         }
 
         return mapping.get(role_key, role_key.capitalize())
+    def analyze_git_and_contributions(self, projects: Optional[List[Project]] = None, interactive: bool = True) -> None:
+      """
+      Analyze contributions for each project:
+      - Use get_all_authors() to set total author_count reliably
+      - Optionally prompt for selected usernames if not configured
+      - Compute detailed stats where possible
+      """
+      print("\n--- Git Repository & Contribution Analysis ---")
+      target_projects = projects or self._get_projects()
+      if not target_projects:
+          return
 
-    def analyze_git_and_contributions(self) -> None:
-        """
-        Analyze contributions for each project:
-        - Use get_all_authors() to set total author_count reliably
-        - Prompt for selected usernames if not configured
-        - Compute detailed stats where possible
-        """
-        print("\n--- Git Repository & Contribution Analysis ---")
-        projects = self._get_projects()
-        if not projects:
-            return
+      for project in target_projects:
+          repo_path = Path(project.file_path)
+          if not (repo_path / ".git").exists():
+              continue
 
-        for project in projects:
-            repo_path = Path(project.file_path)
-            if not (repo_path / ".git").exists():
-                continue
+          print(f"\n--- Analyzing contributions for: {project.name} ---")
 
-            print(f"\n--- Analyzing contributions for: {project.name} ---")
+          with self.suppress_output():
+              author_map = self.contribution_analyzer.get_all_authors(str(repo_path))
 
-            with self.suppress_output():
-                author_map = self.contribution_analyzer.get_all_authors(str(repo_path))
+          # Detect duplicates and optionally write .mailmap
+          author_map = self.contribution_analyzer.detect_and_write_mailmap(str(repo_path), author_map)
 
-            # Detect duplicates and optionally write .mailmap
-            author_map = self.contribution_analyzer.detect_and_write_mailmap(str(repo_path), author_map)
+          project.author_count = len(author_map)
+          project.collaboration_status = "Collaborative" if project.author_count > 1 else "Individual"
 
-            project.author_count = len(author_map)
-            project.collaboration_status = "Collaborative" if project.author_count > 1 else "Individual"
+          if interactive:
+              selected_emails = self._get_or_select_usernames(author_map) or []
+          else:
+              configured_usernames = self._config_manager.get("usernames")
+              if isinstance(configured_usernames, list) and configured_usernames:
+                  selected_emails = configured_usernames
+              else:
+                  selected_emails = list(author_map.keys())
 
-            selected_emails = self._get_or_select_usernames(author_map) or []
+          with self.suppress_output():
+              all_author_stats = self.contribution_analyzer.analyze(str(repo_path))
 
-            with self.suppress_output():
-                all_author_stats = self.contribution_analyzer.analyze(str(repo_path))
+          project.authors = sorted([author_map[e] for e in selected_emails if e in author_map])
+          project.contributor_roles = {}
 
-            # Resolve display names for selected emails
-            project.authors = sorted([author_map[e] for e in selected_emails if e in author_map])
-            project.contributor_roles = {}
+          if all_author_stats:
+              roles_obj = self.role_inference_analyzer.analyze(all_author_stats)
+              project.contributor_roles = {
+                  user: {
+                      "primary_role": r.primary_role.value,
+                      "confidence": float(r.confidence),
+                      "secondary_roles": [sr.value for sr in (r.secondary_roles or [])],
+                      "evidence": r.evidence or {},
+                  }
+                  for user, r in roles_obj.items()
+              }
 
-            if all_author_stats:
-                roles_obj = self.role_inference_analyzer.analyze(all_author_stats)
-                project.contributor_roles = {
-                    user: {
-                        "primary_role": r.primary_role.value,
-                        "confidence": float(r.confidence),
-                        "secondary_roles": [sr.value for sr in (r.secondary_roles or [])],
-                        "evidence": r.evidence or {},
-                    }
-                    for user, r in roles_obj.items()
-                }
+          if all_author_stats:
+              selected_stats = self._aggregate_stats(all_author_stats, selected_emails)
+              total_stats = self._aggregate_stats(all_author_stats)
+              project.author_contributions = [stats.to_dict() for stats in all_author_stats.values()]
+              project.individual_contributions = self.contribution_analyzer.calculate_share(selected_stats, total_stats)
+          else:
+              print("  - No detailed contribution stats available; using author list for collaboration status.")
 
-            if all_author_stats:
-                selected_stats = self._aggregate_stats(all_author_stats, selected_emails)
-                total_stats = self._aggregate_stats(all_author_stats)
-                project.author_contributions = [stats.to_dict() for stats in all_author_stats.values()]
-                project.individual_contributions = self.contribution_analyzer.calculate_share(selected_stats, total_stats)
-            else:
-                print("  - No detailed contribution stats available; using author list for collaboration status.")
+          project.last_accessed = datetime.now()
+          self.project_manager.set(project)
+          print(f"  - Total Contributors: {project.author_count}")
+          print(f"  - Collaboration Status: {project.collaboration_status}")
+          if project.contributor_roles:
+              print(" - Inferred Roles:")
+              for user, info in project.contributor_roles.items():
+                  pretty = self._pretty_role(info.get("primary_role", "none"))
+                  confidence_pct = int(float(info.get("confidence", 0.0)) * 100)
+                  print(f"    - {user} → User Role: {pretty} ({confidence_pct}%)")
 
-            project.last_accessed = datetime.now()
-            self.project_manager.set(project)
-            print(f"  - Total Contributors: {project.author_count}")
-            print(f"  - Collaboration Status: {project.collaboration_status}")
-            if project.contributor_roles:
-                print(" - Inferred Roles:")
-                for user, info in project.contributor_roles.items():
-                    pretty = self._pretty_role(info.get("primary_role", "none"))
-                    confidence_pct = int(float(info.get("confidence", 0.0)) * 100)
-                    print(f"    - {user} → User Role: {pretty} ({confidence_pct}%)")
-
-            print(f"  - Saved data for '{project.name}'.")
+          print(f"  - Saved data for '{project.name}'.")
 
     def analyze_metadata(self, projects: Optional[List[Project]] = None) -> None:
         """Extracts and saves metadata for all projects or a specific list of them."""
@@ -537,7 +555,9 @@ class ProjectAnalyzer:
                         project.documentation_habits_score, project.documentation_habits_level = doc.get("score", 0.0), doc.get("level", "")
 
                 if overall := result.get("stats", {}).get("overall"):
-                    project.total_loc, project.comment_ratio = overall.get("total_lines_of_code", 0), overall.get("comment_ratio", 0.0)
+                    project.total_loc = overall.get("total_lines_of_code", 0)
+                    project.comment_ratio = overall.get("comment_ratio", 0.0)
+                    project.test_file_ratio = overall.get("test_file_ratio", 0.0)
 
                 ranker = ProjectRanker(project)
                 ranker.calculate_resume_score()
@@ -618,7 +638,7 @@ class ProjectAnalyzer:
                     repo_authors = self.contribution_analyzer.get_all_authors(str(repo_path))
                 if repo_authors:
                     project.author_count = len(repo_authors)
-                    project.collaboration_status = "Collaborative" if project.author_count > 1 else "Individual"
+                    project.collaboration_status = "collaborative" if project.author_count > 1 else "individual"
                     self.project_manager.set(project)
         except Exception:
             pass
