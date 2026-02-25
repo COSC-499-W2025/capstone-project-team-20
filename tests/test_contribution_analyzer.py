@@ -81,7 +81,7 @@ def test_get_all_authors_same_name_different_emails(analyzer):
         create_mock_commit("Alice", "alice@example.com", {}),
         create_mock_commit("Alice", "alice@users.noreply.github.com", {}),
     ]
-    with patch("src.analyzers.ContributionAnalyzer.Repo") as MockRepo:
+    with patch("src.analyzers.contribution_analyzer.Repo") as MockRepo:
         mock_repo = MockRepo.return_value
         mock_repo.iter_commits.return_value = commits
         result = analyzer.get_all_authors("/fake/path")
@@ -101,7 +101,7 @@ def test_get_all_authors_email_normalized_to_lowercase(analyzer):
     commits = [
         create_mock_commit("Alice", "Alice@Example.COM", {}),
     ]
-    with patch("src.analyzers.ContributionAnalyzer.Repo") as MockRepo:
+    with patch("src.analyzers.contribution_analyzer.Repo") as MockRepo:
         mock_repo = MockRepo.return_value
         mock_repo.iter_commits.return_value = commits
         result = analyzer.get_all_authors("/fake/path")
@@ -168,7 +168,7 @@ def test_analyze_same_name_different_emails_tracked_separately(analyzer):
         create_mock_commit("Alice", "alice@example.com", {"file1.py": {"insertions": 10, "deletions": 0}}),
         create_mock_commit("Alice", "alice@users.noreply.github.com", {"file2.py": {"insertions": 3, "deletions": 0}})
     ]
-    with patch("src.analyzers.ContributionAnalyzer.Repo") as MockRepo:
+    with patch("src.analyzers.contribution_analyzer.Repo") as MockRepo:
         mock_repo = MockRepo.return_value
         mock_repo.iter_commits.return_value = commits
         result = analyzer.analyze("/fake/path")
