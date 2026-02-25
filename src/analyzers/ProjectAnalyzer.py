@@ -18,7 +18,7 @@ from src.ZipParser import parse_zip_to_project_folders, toString, extract_zip
 from src.analyzers.ProjectMetadataExtractor import ProjectMetadataExtractor
 from src.FileCategorizer import FileCategorizer
 from src.analyzers.language_detector import detect_language_per_file, analyze_language_share
-from src.analyzers.ContributionAnalyzer import ContributionAnalyzer, ContributionStats
+from src.analyzers.contribution_analyzer import ContributionAnalyzer, ContributionStats
 from utils.RepoFinder import RepoFinder
 from src.managers.ProjectManager import ProjectManager
 from src.managers.FileHashManager import FileHashManager
@@ -37,6 +37,7 @@ from src.exporters.ReportExporter import ReportExporter
 from src.managers.ReportManager import ReportManager
 from src.services.ReportEditor import ReportEditor
 from src.services.InsightEditor import InsightEditor
+from src.analyzers.role_inference_analyzer import RoleInferenceAnalyzer
 
 MIN_DISPLAY_CONFIDENCE = 0.5  # only show skills with at least this confidence
 
@@ -60,6 +61,8 @@ class ProjectAnalyzer:
 
         self.report_manager = ReportManager()
         self.report_exporter = ReportExporter()
+
+        self.role_inference_analyzer = RoleInferenceAnalyzer()
 
         if threading.current_thread() is threading.main_thread():
             signal.signal(signal.SIGINT, self._signal_cleanup)
@@ -99,15 +102,21 @@ class ProjectAnalyzer:
         extractor = ProjectMetadataExtractor(root_folder)
         files = extractor.collect_all_files()
         return extractor.compute_time_and_size_summary(files)
-
-    def _should_update_project(self, existing: Project, incoming: Project) -> bool:
-        if incoming.last_modified and existing.last_modified:
-            return incoming.last_modified > existing.last_modified
-        if incoming.last_modified and not existing.last_modified:
-            return True
-        if not incoming.last_modified and existing.last_modified:
+    
+    def _has_project_changed(self, project: Project) -> bool:
+        """Returns True if any file in the project has a new/unseen hash."""
+        project_root = Path(project.file_path)
+        if not project_root.exists():
             return False
-        return True
+        for root, _, files in os.walk(project_root):
+            for name in files:
+                file_path = Path(root) / name
+                file_hash = compute_file_hash(file_path)
+                if not file_hash:
+                    continue
+                if not self.file_hash_manager.has_hash(file_hash):
+                    return True  # found a new/changed file
+        return False
 
     def _register_project_files(self, project: Project) -> Dict[str, int]:
         project_root = Path(project.file_path)
@@ -221,9 +230,10 @@ class ProjectAnalyzer:
                     proj_new.date_created = datetime.strptime(summary["start_date"], "%Y-%m-%d")
                 if summary.get("end_date"):
                     proj_new.last_modified = datetime.strptime(summary["end_date"], "%Y-%m-%d")
+
             proj_existing = self.project_manager.get_by_name(proj_new.name)
             if proj_existing:
-                if self._should_update_project(proj_existing, proj_new):
+                if self._has_project_changed(proj_new):
                     proj_existing.file_path, proj_existing.root_folder = proj_new.file_path, proj_new.root_folder
                     if proj_new.num_files:
                         proj_existing.num_files = proj_new.num_files
@@ -238,7 +248,7 @@ class ProjectAnalyzer:
                     self._register_project_files(proj_existing)
                     print(f"  - Updated existing project: {proj_existing.name}")
                 else:
-                    print(f"  - Skipped older project version: {proj_existing.name}")
+                    print(f"  - No changes detected, skipping: {proj_existing.name}")
                 created_projects.append(proj_existing)
             else:
                 proj_new.last_accessed = datetime.now()
@@ -248,7 +258,6 @@ class ProjectAnalyzer:
                 created_projects.append(proj_new)
         self.cached_projects = created_projects
         return created_projects
-
     # ------------------------------------------------------------------
     # Analysis Methods
     # ------------------------------------------------------------------
@@ -340,6 +349,22 @@ class ProjectAnalyzer:
         else:
             print("\nNo changes made to user selection.")
 
+    def _pretty_role(self, role_key: str) -> str:
+        if not role_key or role_key in ("role_none", "none"):
+            return "None"
+
+        role_key = role_key.replace("role_", "")
+
+        mapping = {
+            "devops": "DevOps",
+            "qa": "QA",
+            "backend": "Backend",
+            "frontend": "Frontend",
+            "docs": "Documentation",
+        }
+
+        return mapping.get(role_key, role_key.capitalize())
+
     def analyze_git_and_contributions(self) -> None:
         """
         Analyze contributions for each project:
@@ -358,6 +383,7 @@ class ProjectAnalyzer:
                 continue
 
             print(f"\n--- Analyzing contributions for: {project.name} ---")
+
             with self.suppress_output():
                 author_map = self.contribution_analyzer.get_all_authors(str(repo_path))
 
@@ -374,6 +400,19 @@ class ProjectAnalyzer:
 
             # Resolve display names for selected emails
             project.authors = sorted([author_map[e] for e in selected_emails if e in author_map])
+            project.contributor_roles = {}
+
+            if all_author_stats:
+                roles_obj = self.role_inference_analyzer.analyze(all_author_stats)
+                project.contributor_roles = {
+                    user: {
+                        "primary_role": r.primary_role.value,
+                        "confidence": float(r.confidence),
+                        "secondary_roles": [sr.value for sr in (r.secondary_roles or [])],
+                        "evidence": r.evidence or {},
+                    }
+                    for user, r in roles_obj.items()
+                }
 
             if all_author_stats:
                 selected_stats = self._aggregate_stats(all_author_stats, selected_emails)
@@ -387,6 +426,13 @@ class ProjectAnalyzer:
             self.project_manager.set(project)
             print(f"  - Total Contributors: {project.author_count}")
             print(f"  - Collaboration Status: {project.collaboration_status}")
+            if project.contributor_roles:
+                print(" - Inferred Roles:")
+                for user, info in project.contributor_roles.items():
+                    pretty = self._pretty_role(info.get("primary_role", "none"))
+                    confidence_pct = int(float(info.get("confidence", 0.0)) * 100)
+                    print(f"    - {user} → User Role: {pretty} ({confidence_pct}%)")
+
             print(f"  - Saved data for '{project.name}'.")
 
     def analyze_metadata(self, projects: Optional[List[Project]] = None) -> None:

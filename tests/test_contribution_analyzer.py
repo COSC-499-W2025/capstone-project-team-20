@@ -1,16 +1,25 @@
 import pytest
 from unittest.mock import MagicMock, patch
-from src.analyzers.ContributionAnalyzer import ContributionAnalyzer, ContributionStats
+
+from src.analyzers.contribution_analyzer import ContributionAnalyzer, ContributionStats
+
 
 @pytest.fixture
 def analyzer():
-    return ContributionAnalyzer()
+    a = ContributionAnalyzer()
 
-@pytest.fixture
-def mock_repo():
-    """Create a mock Git repository with commits"""
-    repo = MagicMock()
-    return repo
+    # ✅ Make tests deterministic: never ignore files unless a test explicitly wants that.
+    a.file_categorizer.classify_file = MagicMock(return_value="code")
+
+    # Optional but helpful: make language detection deterministic too
+    a.file_categorizer.language_map = {
+        "py": "Python",
+        "md": "Markdown",
+        "js": "JavaScript",
+        "yml": "YAML",
+    }
+    return a
+
 
 def create_mock_commit(author_name, author_email, files_changed):
     """Helper to create mock commit with file stats"""
@@ -18,16 +27,22 @@ def create_mock_commit(author_name, author_email, files_changed):
     commit.author.name = author_name
     commit.author.email = author_email
     commit.stats.files = files_changed
+    commit.parents = [MagicMock()]  # ✅ ensures it is NOT treated as initial commit
     return commit
 
+
+# -------------------------
 # Tests for get_all_authors
+# -------------------------
+
 def test_get_all_authors_single_author(analyzer):
     mock_commit = create_mock_commit("Alice", "alice@example.com", {})
-    with patch("src.analyzers.ContributionAnalyzer.Repo") as MockRepo:
+    with patch("src.analyzers.contribution_analyzer.Repo") as MockRepo:
         mock_repo = MockRepo.return_value
         mock_repo.iter_commits.return_value = [mock_commit]
         result = analyzer.get_all_authors("/fake/path")
     assert result == {"alice@example.com": "Alice"}
+
 
 def test_get_all_authors_multiple_authors(analyzer):
     commits = [
@@ -35,7 +50,7 @@ def test_get_all_authors_multiple_authors(analyzer):
         create_mock_commit("Alice", "alice@example.com", {}),
         create_mock_commit("Charlie", "charlie@example.com", {})
     ]
-    with patch("src.analyzers.ContributionAnalyzer.Repo") as MockRepo:
+    with patch("src.analyzers.contribution_analyzer.Repo") as MockRepo:
         mock_repo = MockRepo.return_value
         mock_repo.iter_commits.return_value = commits
         result = analyzer.get_all_authors("/fake/path")
@@ -52,7 +67,7 @@ def test_get_all_authors_duplicate_emails_deduped(analyzer):
         create_mock_commit("Alice Old", "alice@example.com", {}),
         create_mock_commit("Bob", "bob@example.com", {})
     ]
-    with patch("src.analyzers.ContributionAnalyzer.Repo") as MockRepo:
+    with patch("src.analyzers.contribution_analyzer.Repo") as MockRepo:
         mock_repo = MockRepo.return_value
         mock_repo.iter_commits.return_value = commits
         result = analyzer.get_all_authors("/fake/path")
@@ -74,8 +89,9 @@ def test_get_all_authors_same_name_different_emails(analyzer):
     assert "alice@example.com" in result
     assert "alice@users.noreply.github.com" in result
 
+
 def test_get_all_authors_empty_repo(analyzer):
-    with patch("src.analyzers.ContributionAnalyzer.Repo") as MockRepo:
+    with patch("src.analyzers.contribution_analyzer.Repo") as MockRepo:
         mock_repo = MockRepo.return_value
         mock_repo.iter_commits.return_value = []
         result = analyzer.get_all_authors("/fake/path")
@@ -91,14 +107,18 @@ def test_get_all_authors_email_normalized_to_lowercase(analyzer):
         result = analyzer.get_all_authors("/fake/path")
     assert "alice@example.com" in result
 
+
+# -------------------------
 # Tests for analyze
+# -------------------------
+
 def test_analyze_single_author(analyzer):
     files_changed = {
         "src/main.py": {"insertions": 10, "deletions": 5},
-        "README.md": {"insertions": 3, "deletions": 1}
+        "README.md": {"insertions": 3, "deletions": 1},
     }
     commit = create_mock_commit("Alice", "alice@example.com", files_changed)
-    with patch("src.analyzers.ContributionAnalyzer.Repo") as MockRepo:
+    with patch("src.analyzers.contribution_analyzer.Repo") as MockRepo:
         mock_repo = MockRepo.return_value
         mock_repo.iter_commits.return_value = [commit]
         result = analyzer.analyze("/fake/path")
@@ -110,12 +130,13 @@ def test_analyze_single_author(analyzer):
     assert alice_stats.total_commits == 1
     assert len(alice_stats.files_touched) == 2
 
+
 def test_analyze_multiple_authors(analyzer):
     commits = [
         create_mock_commit("Alice", "alice@example.com", {"file1.py": {"insertions": 10, "deletions": 2}}),
         create_mock_commit("Bob", "bob@example.com", {"file2.py": {"insertions": 5, "deletions": 3}})
     ]
-    with patch("src.analyzers.ContributionAnalyzer.Repo") as MockRepo:
+    with patch("src.analyzers.contribution_analyzer.Repo") as MockRepo:  # ✅ FIXED PATCH PATH
         mock_repo = MockRepo.return_value
         mock_repo.iter_commits.return_value = commits
         result = analyzer.analyze("/fake/path")
@@ -126,12 +147,13 @@ def test_analyze_multiple_authors(analyzer):
     assert result["alice@example.com"].lines_added == 10
     assert result["bob@example.com"].lines_added == 5
 
+
 def test_analyze_accumulates_multiple_commits(analyzer):
     commits = [
         create_mock_commit("Alice", "alice@example.com", {"file1.py": {"insertions": 10, "deletions": 2}}),
         create_mock_commit("Alice", "alice@example.com", {"file2.py": {"insertions": 5, "deletions": 1}})
     ]
-    with patch("src.analyzers.ContributionAnalyzer.Repo") as MockRepo:
+    with patch("src.analyzers.contribution_analyzer.Repo") as MockRepo:
         mock_repo = MockRepo.return_value
         mock_repo.iter_commits.return_value = commits
         result = analyzer.analyze("/fake/path")
@@ -155,34 +177,44 @@ def test_analyze_same_name_different_emails_tracked_separately(analyzer):
     assert result["alice@example.com"].lines_added == 10
     assert result["alice@users.noreply.github.com"].lines_added == 3
 
+
+# -------------------------
 # Tests for file categorization
+# -------------------------
+
 def test_categorize_file_path_code(analyzer):
     assert analyzer._categorize_file_path("src/main.py") == "code"
 
+
 def test_categorize_file_path_other_code(analyzer):
     assert analyzer._categorize_file_path("lib/utils.js") == "code"
+
 
 def test_categorize_file_path_test(analyzer):
     assert analyzer._categorize_file_path("test/test_main.py") == "test"
     assert analyzer._categorize_file_path("tests/unit/test_utils.py") == "test"
 
+
 def test_categorize_file_path_docs(analyzer):
     assert analyzer._categorize_file_path("doc/README.md") == "docs"
     assert analyzer._categorize_file_path("docs/guide.md") == "docs"
 
+
 def test_categorize_file_path_case_insensitive(analyzer):
     assert analyzer._categorize_file_path("TEST/file.py") == "test"
     assert analyzer._categorize_file_path("DOCS/file.md") == "docs"
+
 
 def test_analyze_categorizes_contributions(analyzer):
     files_changed = {
         "src/main.py": {"insertions": 10, "deletions": 0},
         "test/test_main.py": {"insertions": 5, "deletions": 0},
         "docs/README.md": {"insertions": 3, "deletions": 0},
-        "config.yml": {"insertions": 2, "deletions": 0}
+        "config.yml": {"insertions": 2, "deletions": 0},
     }
     commit = create_mock_commit("Alice", "alice@example.com", files_changed)
-    with patch("src.analyzers.ContributionAnalyzer.Repo") as MockRepo:
+
+    with patch("src.analyzers.contribution_analyzer.Repo") as MockRepo:
         mock_repo = MockRepo.return_value
         mock_repo.iter_commits.return_value = [commit]
         result = analyzer.analyze("/fake/path")
@@ -286,18 +318,21 @@ def test_detect_and_write_mailmap_does_not_duplicate_existing_entries(analyzer, 
     assert content.count(existing) == 1
 
 # Tests for ContributionStats
+# -------------------------
+
 def test_contribution_stats_to_dict():
     stats = ContributionStats(
         lines_added=10,
         lines_deleted=5,
         total_commits=3,
         files_touched={"file1.py", "file2.py"},
-        contribution_by_type={"code": 15, "test": 5, "docs": 0}
+        contribution_by_type={"code": 15, "test": 5, "docs": 0, "other": 0},  # ✅ include other to match model
     )
     result = stats.to_dict()
     assert result["lines_added"] == 10
     assert result["files_touched"] == ["file1.py", "file2.py"]
     assert isinstance(result["files_touched"], list)
+
 
 def test_contribution_stats_empty():
     stats = ContributionStats()
@@ -306,6 +341,7 @@ def test_contribution_stats_empty():
     assert stats.total_commits == 0
     assert len(stats.files_touched) == 0
     assert stats.contribution_by_type == {"code": 0, "docs": 0, "test": 0, "other": 0}
+
 
 def test_calculate_share_returns_dict(analyzer):
     selected_stats = ContributionStats(lines_added=50, lines_deleted=10)
