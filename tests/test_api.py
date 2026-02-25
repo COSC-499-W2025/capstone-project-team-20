@@ -17,7 +17,7 @@ def client():
 
 # Fake Project
 class FakeProject:
-    def __init__(self, id, name, skills_used=None, categories=None, num_files=0, test_file_ratio=0.0, languages=None, language_share=None, author_count=1, collaboration_status="individual", size_kb=0, total_loc=0, date_created=None, last_modified=None,):
+    def __init__(self, id, name, skills_used=None, categories=None, num_files=0, test_file_ratio=0.0, languages=None, language_share=None, author_count=1, collaboration_status="individual", size_kb=0, total_loc=0, date_created=None, last_modified=None,contributor_roles=None,):
         self.id = id
         self.name = name
         self.skills_used = skills_used or []
