@@ -9,10 +9,6 @@ from src.models.ReportProject import ReportProject
 from src.models.Report import Report
 
 
-# ============================================================
-# Fixtures
-# ============================================================
-
 @pytest.fixture
 def mock_config_manager():
     return MagicMock(spec=ConfigManager)
@@ -61,11 +57,6 @@ def sample_report():
 
     return R()
 
-
-# ============================================================
-# _generate_resume tests
-# ============================================================
-
 def test_generate_resume_success(tmp_path, sample_report, mock_config_manager):
     analyzer = ProjectAnalyzer(mock_config_manager, [], Path("/dummy.zip"))
     analyzer._config_manager.get.return_value = "value"
@@ -111,10 +102,6 @@ def test_generate_resume_runtime_error_from_exporter(sample_report, mock_config_
         with pytest.raises(RuntimeError):
             analyzer._generate_resume(sample_report, "resume.pdf")
 
-
-# ============================================================
-# trigger_resume_generation tests
-# ============================================================
 
 def test_trigger_resume_generation_no_reports(analyzer_resume, monkeypatch):
     analyzer_resume.report_manager.list_reports_summary.return_value = []
@@ -256,6 +243,7 @@ def test_create_report_success():
         )
     ]
 
+    analyzer._validate_resume_insights.return_value = True
     analyzer.report_manager = MagicMock()
 
     with patch("builtins.input", side_effect=["My Report", "1"]):
@@ -273,12 +261,10 @@ def test_create_report_cancel_selection():
     analyzer = MagicMock()
     analyzer.get_projects_sorted_by_score.return_value = [MagicMock()]
     analyzer._select_multiple_projects.return_value = None
-
     with patch("builtins.input", return_value=""):
         ProjectAnalyzer.create_report(analyzer)
 
     analyzer.report_manager.create_report.assert_not_called()
-
 
 @pytest.fixture
 def analyzer_base():
@@ -288,6 +274,31 @@ def analyzer_base():
         zip_path=Path("/dummy.zip")
     )
 
+def test_create_report_missing_insights_blocks_creation():
+    analyzer = MagicMock()
+    analyzer.get_projects_sorted_by_score.return_value = [MagicMock()]
+    analyzer._select_multiple_projects.return_value = [MagicMock()]
+    analyzer._validate_resume_insights.return_value = False
+    analyzer.report_manager = MagicMock()
+
+    with patch("builtins.input", return_value="My Report"):
+        ProjectAnalyzer.create_report(analyzer)
+
+    analyzer.report_manager.create_report.assert_not_called()
+
+def test_create_report_missing_insights_no_snapshot_created():
+    analyzer = MagicMock()
+    analyzer.get_projects_sorted_by_score.return_value = [MagicMock()]
+    bad_project = MagicMock()
+    analyzer._select_multiple_projects.return_value = [bad_project]
+    analyzer._validate_resume_insights.return_value = False
+    analyzer.report_manager = MagicMock()
+
+    with patch("src.models.ReportProject.ReportProject.from_project") as mock_snapshot:
+        with patch("builtins.input", return_value="My Report"):
+            ProjectAnalyzer.create_report(analyzer)
+
+    mock_snapshot.assert_not_called()
 
 def test_select_multiple_projects_success(analyzer_base):
     projects = [
@@ -319,5 +330,3 @@ def test_select_multiple_projects_invalid_then_valid(analyzer_base):
         selected = analyzer_base._select_multiple_projects(projects)
 
     assert selected == [projects[0]]
-
-
