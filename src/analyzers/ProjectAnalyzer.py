@@ -1604,6 +1604,7 @@ class ProjectAnalyzer:
         print("Resume personal information saved.\n")
     
     def compare_projects(self):
+        '''Compares projects by sorting the list of all projects based on different variables stored in Project objects'''
         projects = self._get_projects()
         pro_amt = len(projects)
         exiting = False
@@ -1685,6 +1686,7 @@ Projects:
                 print('Command does not exist. Please try again:')
 
     def sort_projects(self, projects: List[Project], sort_by:str, width:str):
+        '''Sorts projects based on input from user. Intended to be ran from compare_projects()'''
 
         b = ' │ '
         h = '#'
