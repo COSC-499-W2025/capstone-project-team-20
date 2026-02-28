@@ -87,7 +87,7 @@ class ReportExporter:
         unanalyzed_projects = []
 
         for proj in report.projects:
-            if not proj.bullets or (not proj.languages and not proj.frameworks):
+            if not proj.bullets:
                 unanalyzed_projects.append(proj.project_name)
 
         if unanalyzed_projects:

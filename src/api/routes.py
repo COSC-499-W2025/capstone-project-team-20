@@ -15,6 +15,7 @@ from src.exporters.ReportExporter import ReportExporter
 from src.generators.PortfolioGenerator import PortfolioGenerator
 from src.ZipParser import parse_zip_to_project_folders
 from src.services.badge_wrapped_service import build_badge_progress, build_yearly_wrapped
+from src.managers.ConfigManager import ConfigManager
 
 from src.api.schemas.skills import SkillsListResponse, SkillItem
 from src.api.schemas.projects import (
@@ -65,7 +66,7 @@ class UploadPathRequest(BaseModel):
 
 def _run_post_upload_analyses(analyzer: ProjectAnalyzer, projects):
     """Run non-interactive analyses so uploaded projects have usable dashboard data."""
-    for method_name in ("analyze_git_and_contributions", "analyze_metadata", "analyze_categories", "analyze_languages", "analyze_skills"):
+    for method_name in ("analyze_git_and_contributions", "analyze_metadata", "analyze_categories", "analyze_languages", "analyze_skills", "generate_insights_noninteractive"):
         method = getattr(analyzer, method_name, None)
         if callable(method):
             if method_name == "analyze_skills":
@@ -209,6 +210,11 @@ def create_report(req: ReportCreateRequest):
             pd = PortfolioDetails.from_dict(pd)
         elif pd is None:
             pd = PortfolioDetails()
+
+        if not p.bullets or not p.summary:
+            analyzer = ProjectAnalyzer(ConfigManager(), root_folders=[], zip_path=Path(p.file_path))
+            analyzer.generate_insights_noninteractive(projects=[p])
+            p = pm.get(pid)
 
         rp = ReportProject(
             project_name=p.name,
