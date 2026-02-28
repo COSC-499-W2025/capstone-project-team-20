@@ -34,14 +34,15 @@ class PortfolioGenerator:
         days = self._compute_days()
         duration_str = self._format_duration(days)
 
-        langs = ", ".join(self.language_list[:4]) if self.language_list else "various technologies"
+        langs = ", ".join(self.language_list) if self.language_list else "various technologies"
 
         team_count = getattr(self.project, "author_count", 0)
+        contributor_roles = self._build_contributor_roles()
+        role = self._select_project_role(team_count, contributor_roles)
+
         if team_count > 1:
-            role = f"Team Contributor (Team of {team_count})"
             collaboration_text = f"collaborated with {team_count-1} other developers to build"
         else:
-            role = "Solo Developer"
             collaboration_text = "independently designed and implemented"
 
         project_name = getattr(self.project, "name", "Project")
@@ -73,7 +74,8 @@ class PortfolioGenerator:
             timeline=duration_str,
             technologies=langs,
             overview=overview,
-            achievements=achievements
+            achievements=achievements,
+            contributor_roles=contributor_roles,
         )
 
     def _get_category_counts(self) -> tuple[int, int, int, int]:
@@ -102,3 +104,52 @@ class PortfolioGenerator:
         if rem == 0:
             return f"{months} month" + ("s" if months > 1 else "")
         return f"{months} month" + ("s" if months > 1 else "") + f" and {rem} days"
+
+    def _pretty_role(self, role_key: str) -> str:
+        if not role_key or role_key in ("role_none", "none"):
+            return "None"
+        role_key = role_key.replace("role_", "")
+        mapping = {
+            "devops": "DevOps",
+            "qa": "QA",
+            "backend": "Backend",
+            "frontend": "Frontend",
+            "docs": "Documentation",
+            "fullstack": "Fullstack",
+            "tech_lead": "Tech Lead",
+        }
+        return mapping.get(role_key, role_key.replace("_", " ").title())
+
+    def _build_contributor_roles(self) -> List[Dict[str, Any]]:
+        roles = getattr(self.project, "contributor_roles", {}) or {}
+        if not roles:
+            return []
+        selected_users = list(getattr(self.project, "authors", []) or [])
+        role_users = selected_users if selected_users else list(roles.keys())
+        entries = []
+        for user in role_users:
+            info = roles.get(user)
+            if not info:
+                continue
+            role_key = info.get("primary_role", "role_none")
+            role_name = self._pretty_role(role_key)
+            confidence = float(info.get("confidence", 0.0) or 0.0)
+            entries.append({
+                "name": user,
+                "role": role_name if role_name != "None" else "Contributor",
+                "confidence": confidence,
+                "confidence_pct": int(round(confidence * 100)),
+            })
+        entries.sort(key=lambda item: (-item["confidence"], item["name"].lower()))
+        return entries
+
+    def _select_project_role(self, team_count: int, contributor_roles: List[Dict[str, Any]]) -> str:
+        if contributor_roles:
+            primary_role = contributor_roles[0].get("role", "")
+            if primary_role and primary_role != "Contributor":
+                if team_count > 1:
+                    return f"{primary_role} Contributor (Team of {team_count})"
+                return f"{primary_role} Developer"
+        if team_count > 1:
+            return f"Team Contributor (Team of {team_count})"
+        return "Solo Developer"

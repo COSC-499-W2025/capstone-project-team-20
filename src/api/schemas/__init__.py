@@ -1,3 +1,7 @@
+from .consent import ConsentResponse
+from .portfolio import PortfolioResponse, PortfolioGenerateRequest, PortfolioGenerateResponse, PortfolioUpdateRequest, PortfolioReport, PortfolioProject, PortfolioDetailsResponse, PortfolioContributorRole
+from .skills import SkillItem, SkillsListResponse
+from .projects import ProjectSummary, UploadProjectResponse, ProjectsListResponse, ProjectDetail, ProjectDetailResponse
 from .consent import ConsentRequest, ConsentResponse
 
 from .skills import SkillItem, SkillsListResponse
