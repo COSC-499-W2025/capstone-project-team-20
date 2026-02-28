@@ -1602,6 +1602,309 @@ class ProjectAnalyzer:
             self._config_manager.set("experience", experience_entries)
 
         print("Resume personal information saved.\n")
+    
+    def compare_projects(self):
+        projects = self._get_projects()
+        pro_amt = len(projects)
+        exiting = False
+
+        b = ' │ '
+        h = '#'
+
+        print('''
+┌─────────────────────────────────────────┐
+│Please select which attribute to sort by:│
+└─────────────────────────────────────────┘
+    Stats:
+        [1]  Size of project (kb)
+        [2]  # of files
+        [3]  # of Authors
+        [4]  # of languages
+        [5]  # of frameworks
+        [6]  # of skills
+        [7]  # of dependencies
+        [8]  # of lines of code
+    
+    Ratios:
+        [9]  Comments/lines of codex
+        [10] Test file/code file
+        [11] Average functions/code file
+
+    Scores:
+        [12] Testing Discipline Score
+        [13] Documentation Habits Score
+        [14] Modularity Score
+        [15] Language Depth Score
+        [16] Resume Score
+    
+    Chronology:
+        [17] Date Created
+        [18] Last Modified
+
+        [x] Exit
+    
+Projects:
+┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄''')
+
+        width = 0
+        for p in projects:
+            width = max(width, len(p.name))
+
+        for i,p in enumerate(projects):
+            print(h+str(i+1) +b+ '[Name]: ' + f'{p.name[:width]:<{width}}' + b)
+
+        print("┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄")
+        print("Your Selection (You may need to scroll up to see the list of sorting methods):")
+
+        while (not exiting):
+            choice = input()
+            if choice in ['1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18']:
+                #clear everything
+                for _ in range((3+pro_amt)):
+                    sys.stdout.write('\033[1A') # terminal cursor up one line
+                    sys.stdout.write('\033[2K') # terminal clear current line
+
+                #sort and print list of projects
+                projects = self.sort_projects(projects, choice, width)
+
+                print("┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄")
+                print("Successfully sorted using method "+choice+". Your Selection:")
+            
+            elif choice == 'flush': #return projects list for testing purposes
+                return projects
+            
+            elif choice == 'x': #exit this menu
+                return -1
+            
+            else:
+                # clear input and print error message before asking for new input
+                sys.stdout.write('\033[1A') # terminal cursor up one line
+                sys.stdout.write('\033[2K') # terminal clear current line
+                sys.stdout.write('\033[1A') # terminal cursor up one line
+                sys.stdout.write('\033[2K') # terminal clear current line
+                print('Command does not exist. Please try again:')
+
+    def sort_projects(self, projects: List[Project], sort_by:str, width:str):
+
+        b = ' │ '
+        h = '#'
+
+        match sort_by:
+            case '1':
+                sorted_items = sorted(projects, key=lambda project: project.size_kb, reverse=True)
+
+                sorted_width = 0
+                for p in sorted_items:
+                    sorted_width = max(sorted_width, len(str(p.size_kb)))
+
+                for i,p in enumerate(sorted_items):
+                    print(h+str(i+1) +b+ '[Name]: ' + f'{p.name[:width]:<{width}}' +b+ '[Size (kb)]: ' + f'{str(p.size_kb)[:sorted_width]:<{sorted_width}}' +b)
+
+                return sorted_items
+
+            case '2':
+                sorted_items = sorted(projects, key=lambda project: project.num_files, reverse=True)
+
+                sorted_width = 0
+                for p in sorted_items:
+                    sorted_width = max(sorted_width, len(str(p.num_files)))
+
+                for i,p in enumerate(sorted_items):
+                    print(h+str(i+1) +b+ '[Name]: ' + f'{p.name[:width]:<{width}}' +b+ '[# of Files]: ' + f'{str(p.num_files)[:sorted_width]:<{sorted_width}}' +b)
+
+                return sorted_items
+
+            case '3':
+                sorted_items = sorted(projects, key=lambda project: project.author_count, reverse=True)
+
+                sorted_width = 0
+                for p in sorted_items:
+                    sorted_width = max(sorted_width, len(str(p.author_count)))
+
+                for i,p in enumerate(sorted_items):
+                    print(h+str(i+1) +b+ '[Name]: ' + f'{p.name[:width]:<{width}}' +b+ '[# of Authors]: ' + f'{str(p.author_count)[:sorted_width]:<{sorted_width}}' +b)
+
+                return sorted_items
+
+            case '4':
+                sorted_items = sorted(projects, key=lambda project: len(project.languages), reverse=True)
+
+                sorted_width = 0
+                for p in sorted_items:
+                    sorted_width = max(sorted_width, len(str(len(p.languages))))
+
+                for i,p in enumerate(sorted_items):
+                    print(h+str(i+1) +b+ '[Name]: ' + f'{p.name[:width]:<{width}}' +b+ '[# of Languages]: ' + f'{str(len(p.languages))[:sorted_width]:<{sorted_width}}' +b)
+
+                return sorted_items
+
+            case '5':
+                sorted_items = sorted(projects, key=lambda project: len(project.frameworks), reverse=True)
+
+                sorted_width = 0
+                for p in sorted_items:
+                    sorted_width = max(sorted_width, len(str(len(p.frameworks))))
+
+                for i,p in enumerate(sorted_items):
+                    print(h+str(i+1) +b+ '[Name]: ' + f'{p.name[:width]:<{width}}' +b+ '[# of Frameworks]: ' + f'{str(len(p.frameworks))[:sorted_width]:<{sorted_width}}' +b)
+
+                return sorted_items
+
+            case '6':
+                sorted_items = sorted(projects, key=lambda project: len(project.skills_used), reverse=True)
+
+                sorted_width = 0
+                for p in sorted_items:
+                    sorted_width = max(sorted_width, len(str(len(p.skills_used))))
+
+                for i,p in enumerate(sorted_items):
+                    print(h+str(i+1) +b+ '[Name]: ' + f'{p.name[:width]:<{width}}' +b+ '[# of Skills Used]: ' + f'{str(len(p.skills_used))[:sorted_width]:<{sorted_width}}' +b)
+
+                return sorted_items
+
+            case '7':
+                sorted_items = sorted(projects, key=lambda project: len(project.dependencies_list), reverse=True)
+
+                sorted_width = 0
+                for p in sorted_items:
+                    sorted_width = max(sorted_width, len(str(len(p.dependencies_list))))
+
+                for i,p in enumerate(sorted_items):
+                    print(h+str(i+1) +b+ '[Name]: ' + f'{p.name[:width]:<{width}}' +b+ '[# of Dependencies]: ' + f'{str(len(p.dependencies_list))[:sorted_width]:<{sorted_width}}' +b)
+
+                return sorted_items
+
+            case '8':
+                sorted_items = sorted(projects, key=lambda project: project.total_loc, reverse=True)
+
+                sorted_width = 0
+                for p in sorted_items:
+                    sorted_width = max(sorted_width, len(str(p.total_loc)))
+
+                for i,p in enumerate(sorted_items):
+                    print(h+str(i+1) +b+ '[Name]: ' + f'{p.name[:width]:<{width}}' +b+ '[# of Lines of Code]: ' + f'{str(p.total_loc)[:sorted_width]:<{sorted_width}}' +b)
+
+                return sorted_items
+
+            case '9':
+                sorted_items = sorted(projects, key=lambda project: project.comment_ratio, reverse=True)
+
+                sorted_width = 0
+                for p in sorted_items:
+                    sorted_width = max(sorted_width, len(str(p.comment_ratio)))
+
+                for i,p in enumerate(sorted_items):
+                    print(h+str(i+1) +b+ '[Name]: ' + f'{p.name[:width]:<{width}}' +b+ '[Comments per Lines of Code]: ' + f'{str(p.comment_ratio)[:sorted_width]:<{sorted_width}}' +b)
+
+                return sorted_items
+
+            case '10':
+                sorted_items = sorted(projects, key=lambda project: project.test_file_ratio, reverse=True)
+
+                sorted_width = 0
+                for p in sorted_items:
+                    sorted_width = max(sorted_width, len(str(p.test_file_ratio)))
+
+                for i,p in enumerate(sorted_items):
+                    print(h+str(i+1) +b+ '[Name]: ' + f'{p.name[:width]:<{width}}' +b+ '[Test files per Code Files]: ' + f'{str(p.test_file_ratio)[:sorted_width]:<{sorted_width}}' +b)
+
+                return sorted_items
+
+            case '11':
+                sorted_items = sorted(projects, key=lambda project: project.avg_functions_per_file, reverse=True)
+
+                sorted_width = 0
+                for p in sorted_items:
+                    sorted_width = max(sorted_width, len(str(p.avg_functions_per_file)))
+
+                for i,p in enumerate(sorted_items):
+                    print(h+str(i+1) +b+ '[Name]: ' + f'{p.name[:width]:<{width}}' +b+ '[Average Functions per Code File]: ' + f'{str(p.avg_functions_per_file)[:sorted_width]:<{sorted_width}}' +b)
+
+                return sorted_items
+
+            case '12':
+                sorted_items = sorted(projects, key=lambda project: project.testing_discipline_score, reverse=True)
+
+                sorted_width = 0
+                for p in sorted_items:
+                    sorted_width = max(sorted_width, len(str(p.testing_discipline_score)))
+
+                for i,p in enumerate(sorted_items):
+                    print(h+str(i+1) +b+ '[Name]: ' + f'{p.name[:width]:<{width}}' +b+ '[Testing Discipline Score]: ' + f'{str(p.testing_discipline_score)[:sorted_width]:<{sorted_width}}' +b)
+
+                return sorted_items          
+
+            case '13':
+                sorted_items = sorted(projects, key=lambda project: project.documentation_habits_score, reverse=True)
+
+                sorted_width = 0
+                for p in sorted_items:
+                    sorted_width = max(sorted_width, len(str(p.documentation_habits_score)))
+
+                for i,p in enumerate(sorted_items):
+                    print(h+str(i+1) +b+ '[Name]: ' + f'{p.name[:width]:<{width}}' +b+ '[Documentation Habits Score]: ' + f'{str(p.documentation_habits_score)[:sorted_width]:<{sorted_width}}' +b)
+
+                return sorted_items
+
+            case '14':
+                sorted_items = sorted(projects, key=lambda project: project.modularity_score, reverse=True)
+
+                sorted_width = 0
+                for p in sorted_items:
+                    sorted_width = max(sorted_width, len(str(p.modularity_score)))
+
+                for i,p in enumerate(sorted_items):
+                    print(h+str(i+1) +b+ '[Name]: ' + f'{p.name[:width]:<{width}}' +b+ '[Modularity Score]: ' + f'{str(p.modularity_score)[:sorted_width]:<{sorted_width}}' +b)
+
+                return sorted_items
+
+            case '15':
+                sorted_items = sorted(projects, key=lambda project: project.language_depth_score, reverse=True)
+
+                sorted_width = 0
+                for p in sorted_items:
+                    sorted_width = max(sorted_width, len(str(p.language_depth_score)))
+
+                for i,p in enumerate(sorted_items):
+                    print(h+str(i+1) +b+ '[Name]: ' + f'{p.name[:width]:<{width}}' +b+ '[Language Depth Score]: ' + f'{str(p.language_depth_score)[:sorted_width]:<{sorted_width}}' +b)
+
+                return sorted_items  
+
+            case '16':
+                sorted_items = sorted(projects, key=lambda project: project.resume_score, reverse=True)
+
+                sorted_width = 0
+                for p in sorted_items:
+                    sorted_width = max(sorted_width, len(str(p.resume_score)))
+
+                for i,p in enumerate(sorted_items):
+                    print(h+str(i+1) +b+ '[Name]: ' + f'{p.name[:width]:<{width}}' +b+ '[Resume Score]: ' + f'{str(p.resume_score)[:sorted_width]:<{sorted_width}}' +b)
+
+                return sorted_items
+
+            case '17':
+                sorted_items = sorted(projects, key=lambda project: project.date_created, reverse=True)
+
+                sorted_width = 0
+                for p in sorted_items:
+                    sorted_width = max(sorted_width, len(str(p.date_created)))
+
+                for i,p in enumerate(sorted_items):
+                    print(h+str(i+1) +b+ '[Name]: ' + f'{p.name[:width]:<{width}}' +b+ '[Date Created]: ' + f'{str(p.date_created)[:sorted_width]:<{sorted_width}}' +b)
+
+                return sorted_items
+
+            case '18':
+                sorted_items = sorted(projects, key=lambda project: project.last_modified, reverse=True)
+
+                sorted_width = 0
+                for p in sorted_items:
+                    sorted_width = max(sorted_width, len(str(p.last_modified)))
+
+                for i,p in enumerate(sorted_items):
+                    print(h+str(i+1) +b+ '[Name]: ' + f'{p.name[:width]:<{width}}' +b+ '[Last Modified]: ' + f'{str(p.last_modified)[:sorted_width]:<{sorted_width}}' +b)
+
+                return sorted_items
 
     def run(self) -> None:
         """The main interactive menu loop."""
@@ -1637,6 +1940,7 @@ class ProjectAnalyzer:
                 22. Edit Report
                 23. Delete Report
                 24. Select Thumbnail for a Given Project
+                98. Compare projects
                   """)
 
             choice = input("Selection: ").strip()
@@ -1657,6 +1961,7 @@ class ProjectAnalyzer:
                 "18": self.configure_personal_info, "19": self.create_report,
                 "20": self.trigger_resume_generation, "21": self.trigger_portfolio_generation,
                 "22": self.trigger_report_editing,"23": self.delete_report, "24": self.select_thumbnail,
+                "98": self.compare_projects,
             }
 
             if choice == "17":
