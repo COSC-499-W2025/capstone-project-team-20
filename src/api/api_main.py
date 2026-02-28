@@ -1,8 +1,18 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from src.api.routes import router
-"""Creating an api_main for now. once we get a front end (Or once it becomes API
-only, we can delete this and have this in main.) Requirement 31"""
 
 app = FastAPI(title="Project Analyzer API")
-app.include_router(router)
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173",
+        "http://localhost:5175",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:5175",],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.include_router(router)

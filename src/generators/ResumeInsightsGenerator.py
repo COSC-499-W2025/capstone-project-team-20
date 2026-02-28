@@ -92,6 +92,18 @@ class ResumeInsightsGenerator:
                 f"Produced {doc_files}+ documentation files and implemented {test_files} automated tests, {impact}."
             )
 
+        # Bullet 2b — Evidence of project success
+        evidence = self._build_evidence_signals()
+        if evidence:
+            bullets.append(
+                "Demonstrated measurable impact through " + ", ".join(evidence[:3]) + "."
+            )
+
+        skill_evidence = self._build_skill_evidence_map()
+        if skill_evidence:
+            first_skill, first_fact = next(iter(skill_evidence.items()))
+            bullets.append(f"Backed {first_skill} skill with evidence: {first_fact}.")
+
         # Bullet 3 — Duration in months/days
         days = self._compute_days()
         if days > 0:
@@ -149,6 +161,15 @@ class ResumeInsightsGenerator:
                 "implementation, testing, and documentation."
             )
 
+        evidence = self._build_evidence_signals()
+        if evidence:
+            summary += " Evidence of success includes " + ", ".join(evidence[:3]) + "."
+
+        skill_evidence = self._build_skill_evidence_map()
+        if skill_evidence:
+            skill_pairs = [f"{skill}: {fact}" for skill, fact in list(skill_evidence.items())[:3]]
+            summary += " Skill evidence: " + "; ".join(skill_pairs) + "."
+
         return summary
 
     def generate_portfolio_entry(self) -> str:
@@ -203,6 +224,14 @@ class ResumeInsightsGenerator:
         if not achievements:
             achievements.append("Delivered a functional codebase using modern development practices.")
 
+        evidence = self._build_evidence_signals()
+        if evidence:
+            achievements.append("Evidence of impact: " + ", ".join(evidence[:3]) + ".")
+
+        skill_evidence = self._build_skill_evidence_map()
+        for skill, fact in list(skill_evidence.items())[:3]:
+            achievements.append(f"{skill} evidence: {fact}.")
+
         # Entry
         entry = f"### {project_name}\n"
         entry += f"**Role:** {role} | **Timeline:** {duration_str}\n"
@@ -236,6 +265,70 @@ class ResumeInsightsGenerator:
             end = datetime.strptime(end, "%Y-%m-%d")
 
         return max((end - start).days, 0)
+
+    def _build_evidence_signals(self) -> List[str]:
+        """Collect evidence signals from previously computed project analytics.
+
+        Data sources are populated upstream by analyzers:
+        - `individual_contributions`: from Git contribution analysis
+        - `total_loc`, `test_file_ratio`, `documentation_habits_score`: from skill analysis
+        - `resume_score`: from project ranking/evaluation
+        """
+        evidence: List[str] = []
+
+        contributions = getattr(self.project, "individual_contributions", {}) or {}
+        if isinstance(contributions, dict):
+            share = contributions.get("contribution_share_percent")
+            commits = contributions.get("total_commits")
+            if share is not None and share > 0:
+                evidence.append(f"{share:.1f}% contribution share")
+            if commits is not None and commits > 0:
+                evidence.append(f"{commits} commits delivered")
+
+        resume_score = getattr(self.project, "resume_score", 0)
+        if resume_score > 0:
+            evidence.append(f"overall project evaluation score of {resume_score:.1f}/100")
+
+        loc = getattr(self.project, "total_loc", 0)
+        if loc > 0:
+            evidence.append(f"{loc:,} lines of code maintained")
+
+        test_ratio = getattr(self.project, "test_file_ratio", 0)
+        if test_ratio > 0:
+            evidence.append(f"{test_ratio:.0%} test coverage by file mix")
+
+        doc_score = getattr(self.project, "documentation_habits_score", 0)
+        if doc_score > 0:
+            evidence.append(f"documentation quality score of {doc_score:.1f}/100")
+
+        return evidence
+
+    def _build_skill_evidence_map(self) -> Dict[str, str]:
+        """Return direct skill-to-evidence mappings for clearer resume claims."""
+        skill_evidence: Dict[str, str] = {}
+
+        test_ratio = getattr(self.project, "test_file_ratio", 0)
+        if test_ratio > 0:
+            skill_evidence["Testing"] = f"{test_ratio:.0%} test file ratio"
+
+        doc_score = getattr(self.project, "documentation_habits_score", 0)
+        if doc_score > 0:
+            skill_evidence["Documentation"] = f"documentation score {doc_score:.1f}/100"
+
+        contributions = getattr(self.project, "individual_contributions", {}) or {}
+        if isinstance(contributions, dict):
+            share = contributions.get("contribution_share_percent")
+            commits = contributions.get("total_commits")
+            if share is not None and share > 0:
+                skill_evidence["Collaboration"] = f"{share:.1f}% contribution share"
+            elif commits is not None and commits > 0:
+                skill_evidence["Delivery"] = f"{commits} commits"
+
+        loc = getattr(self.project, "total_loc", 0)
+        if loc > 0:
+            skill_evidence["Code Ownership"] = f"{loc:,} LOC maintained"
+
+        return skill_evidence
 
     # formatting for days if less than 1 month
     # or _ months and _ days if longer than 1 month

@@ -18,16 +18,17 @@ from src.ZipParser import parse_zip_to_project_folders, toString, extract_zip
 from src.analyzers.ProjectMetadataExtractor import ProjectMetadataExtractor
 from src.FileCategorizer import FileCategorizer
 from src.analyzers.language_detector import detect_language_per_file, analyze_language_share
-from src.analyzers.ContributionAnalyzer import ContributionAnalyzer, ContributionStats
+from src.analyzers.contribution_analyzer import ContributionAnalyzer, ContributionStats
 from utils.RepoFinder import RepoFinder
 from src.managers.ProjectManager import ProjectManager
 from src.managers.FileHashManager import FileHashManager
 from src.models.Project import Project
 from src.models.Report import Report
-from src.models.ReportProject import ReportProject
+from src.models.ReportProject import ReportProject, PortfolioDetails
 from src.ProjectFolder import ProjectFolder
 from src.analyzers.SkillAnalyzer import SkillAnalyzer
 from src.generators.ResumeInsightsGenerator import ResumeInsightsGenerator
+from src.generators.PortfolioGenerator import PortfolioGenerator
 from src.managers.ConfigManager import ConfigManager
 from src.ProjectRanker import ProjectRanker
 from src.analyzers.RepoProjectBuilder import RepoProjectBuilder
@@ -36,6 +37,7 @@ from src.exporters.ReportExporter import ReportExporter
 from src.managers.ReportManager import ReportManager
 from src.services.ReportEditor import ReportEditor
 from src.services.InsightEditor import InsightEditor
+from src.analyzers.role_inference_analyzer import RoleInferenceAnalyzer
 
 MIN_DISPLAY_CONFIDENCE = 0.5  # only show skills with at least this confidence
 
@@ -59,6 +61,8 @@ class ProjectAnalyzer:
 
         self.report_manager = ReportManager()
         self.report_exporter = ReportExporter()
+
+        self.role_inference_analyzer = RoleInferenceAnalyzer()
 
         if threading.current_thread() is threading.main_thread():
             signal.signal(signal.SIGINT, self._signal_cleanup)
@@ -90,7 +94,7 @@ class ProjectAnalyzer:
         if not self.cached_projects:
             self.cached_projects = list(self.project_manager.get_all())
         return self.cached_projects
-    
+
     def _get_zip_project_summary(self, project_name: str) -> Optional[Dict[str, Any]]:
         root_folder = self._find_folder_by_name_recursive(project_name)
         if not root_folder:
@@ -98,15 +102,21 @@ class ProjectAnalyzer:
         extractor = ProjectMetadataExtractor(root_folder)
         files = extractor.collect_all_files()
         return extractor.compute_time_and_size_summary(files)
-
-    def _should_update_project(self, existing: Project, incoming: Project) -> bool:
-        if incoming.last_modified and existing.last_modified:
-            return incoming.last_modified > existing.last_modified
-        if incoming.last_modified and not existing.last_modified:
-            return True
-        if not incoming.last_modified and existing.last_modified:
+    
+    def _has_project_changed(self, project: Project) -> bool:
+        """Returns True if any file in the project has a new/unseen hash."""
+        project_root = Path(project.file_path)
+        if not project_root.exists():
             return False
-        return True
+        for root, _, files in os.walk(project_root):
+            for name in files:
+                file_path = Path(root) / name
+                file_hash = compute_file_hash(file_path)
+                if not file_hash:
+                    continue
+                if not self.file_hash_manager.has_hash(file_hash):
+                    return True  # found a new/changed file
+        return False
 
     def _register_project_files(self, project: Project) -> Dict[str, int]:
         project_root = Path(project.file_path)
@@ -220,15 +230,16 @@ class ProjectAnalyzer:
                     proj_new.date_created = datetime.strptime(summary["start_date"], "%Y-%m-%d")
                 if summary.get("end_date"):
                     proj_new.last_modified = datetime.strptime(summary["end_date"], "%Y-%m-%d")
+
             proj_existing = self.project_manager.get_by_name(proj_new.name)
             if proj_existing:
-                if self._should_update_project(proj_existing, proj_new):
+                if self._has_project_changed(proj_new):
                     proj_existing.file_path, proj_existing.root_folder = proj_new.file_path, proj_new.root_folder
                     if proj_new.num_files:
                         proj_existing.num_files = proj_new.num_files
                     if proj_new.size_kb:
                         proj_existing.size_kb = proj_new.size_kb
-                    if proj_new.date_created:
+                    if proj_new.date_created and not proj_existing.date_created:
                         proj_existing.date_created = proj_new.date_created
                     if proj_new.last_modified:
                         proj_existing.last_modified = proj_new.last_modified
@@ -237,7 +248,7 @@ class ProjectAnalyzer:
                     self._register_project_files(proj_existing)
                     print(f"  - Updated existing project: {proj_existing.name}")
                 else:
-                    print(f"  - Skipped older project version: {proj_existing.name}")
+                    print(f"  - No changes detected, skipping: {proj_existing.name}")
                 created_projects.append(proj_existing)
             else:
                 proj_new.last_accessed = datetime.now()
@@ -247,7 +258,6 @@ class ProjectAnalyzer:
                 created_projects.append(proj_new)
         self.cached_projects = created_projects
         return created_projects
-
     # ------------------------------------------------------------------
     # Analysis Methods
     # ------------------------------------------------------------------
@@ -262,7 +272,8 @@ class ProjectAnalyzer:
         print("\nYou can select multiple authors by entering numbers separated by commas (e.g., 1, 3).")
         try:
             choice_str = input("Enter your choice(s) (or 'q' to quit): ").strip()
-            if choice_str.lower() == "q": return None
+            if choice_str.lower() == "q":
+                return None
             selected_authors = []
             for choice in [c.strip() for c in choice_str.split(",")]:
                 index = int(choice) - 1
@@ -306,11 +317,25 @@ class ProjectAnalyzer:
                     aggregated.contribution_by_type[category] += count
         return aggregated
 
+    @staticmethod
+    def _resolve_selected_authors(requested_authors: List[str], available_authors: List[str]) -> List[str]:
+        """Match requested usernames to available author names, case-insensitively."""
+        available_map = {name.casefold(): name for name in available_authors}
+        resolved = []
+
+        for requested in requested_authors:
+            match = available_map.get((requested or "").casefold())
+            if match and match not in resolved:
+                resolved.append(match)
+
+        return sorted(resolved)
+
     def change_selected_users(self) -> None:
         """Allows the user to change their configured username selection."""
         print("\n--- Change Selected Users ---")
         projects = self._get_projects()
-        if not projects: return
+        if not projects:
+            return
         all_authors = set()
         for project in projects:
             if (Path(project.file_path) / ".git").exists():
@@ -326,42 +351,75 @@ class ProjectAnalyzer:
         else:
             print("\nNo changes made to user selection.")
 
-    def analyze_git_and_contributions(self) -> None:
+    def _pretty_role(self, role_key: str) -> str:
+        if not role_key or role_key in ("role_none", "none"):
+            return "None"
+
+        role_key = role_key.replace("role_", "")
+
+        mapping = {
+            "devops": "DevOps",
+            "qa": "QA",
+            "backend": "Backend",
+            "frontend": "Frontend",
+            "docs": "Documentation",
+        }
+
+        return mapping.get(role_key, role_key.capitalize())
+
+    def analyze_git_and_contributions(self, projects: Optional[List[Project]] = None, interactive: bool = True) -> None:
         """
         Analyze contributions for each project:
         - Use get_all_authors() to set total author_count reliably
-        - Prompt for selected usernames if not configured
+        - Optionally prompt for selected usernames if not configured
         - Compute detailed stats where possible
         """
         print("\n--- Git Repository & Contribution Analysis ---")
-        projects = self._get_projects()
-        if not projects: return
+        target_projects = projects or self._get_projects()
+        if not target_projects:
+            return
 
-        for project in projects:
+        for project in target_projects:
             repo_path = Path(project.file_path)
             if not (repo_path / ".git").exists():
                 continue
 
             print(f"\n--- Analyzing contributions for: {project.name} ---")
-            # Get total authors using the lightweight method
+
             with self.suppress_output():
                 repo_authors = self.contribution_analyzer.get_all_authors(str(repo_path))
 
             project.author_count = len(repo_authors)
-            project.collaboration_status = "Collaborative" if project.author_count > 1 else "Individual"
+            project.collaboration_status = "collaborative" if project.author_count > 1 else "individual"
 
-            # Prompt for usernames if needed (based on authors for this project)
-            selected_usernames = self._get_or_select_usernames(sorted(repo_authors)) or []
+            if interactive:
+                selected_usernames = self._get_or_select_usernames(sorted(repo_authors)) or []
+            else:
+                configured_usernames = self._config_manager.get("usernames")
+                if isinstance(configured_usernames, list) and configured_usernames:
+                    selected_usernames = configured_usernames
+                else:
+                    selected_usernames = sorted(repo_authors)
 
-            # Compute detailed stats; if it fails or returns empty, keep author_count as-is
             with self.suppress_output():
                 all_author_stats = self.contribution_analyzer.analyze(str(repo_path))
 
-            # Map selected usernames to authors present in stats or repo_authors
-            project.authors = sorted([name for name in selected_usernames if name in (all_author_stats.keys() if all_author_stats else repo_authors)])
+            available_authors = list(all_author_stats.keys()) if all_author_stats else sorted(repo_authors)
+            project.authors = self._resolve_selected_authors(selected_usernames, available_authors)
+            if all_author_stats:
+                roles_obj = self.role_inference_analyzer.analyze(all_author_stats)
+                project.contributor_roles = {
+                    user: {
+                        "primary_role": r.primary_role.value,
+                        "confidence": float(r.confidence),
+                        "secondary_roles": [sr.value for sr in (r.secondary_roles or [])],
+                        "evidence": r.evidence or {},
+                    }
+                    for user, r in roles_obj.items()
+                }
 
             if all_author_stats:
-                selected_stats = self._aggregate_stats(all_author_stats, selected_usernames)
+                selected_stats = self._aggregate_stats(all_author_stats, project.authors)
                 total_stats = self._aggregate_stats(all_author_stats)
                 project.author_contributions = [stats.to_dict() for stats in all_author_stats.values()]
                 project.individual_contributions = self.contribution_analyzer.calculate_share(selected_stats, total_stats)
@@ -372,6 +430,13 @@ class ProjectAnalyzer:
             self.project_manager.set(project)
             print(f"  - Total Contributors: {project.author_count}")
             print(f"  - Collaboration Status: {project.collaboration_status}")
+            if project.contributor_roles:
+                print(" - Inferred Roles:")
+                for user, info in project.contributor_roles.items():
+                    pretty = self._pretty_role(info.get("primary_role", "none"))
+                    confidence_pct = int(float(info.get("confidence", 0.0)) * 100)
+                    print(f"    - {user} → User Role: {pretty} ({confidence_pct}%)")
+
             print(f"  - Saved data for '{project.name}'.")
 
     def analyze_metadata(self, projects: Optional[List[Project]] = None) -> None:
@@ -389,10 +454,14 @@ class ProjectAnalyzer:
                 metadata_full = extractor.extract_metadata(repo_path=project.file_path) or {}
 
             project_meta = metadata_full.get("project_metadata", {})
-            if num_files := project_meta.get("total_files"): project.num_files = int(num_files)
-            if size_kb := project_meta.get("total_size_kb"): project.size_kb = int(size_kb)
-            if start_date := project_meta.get("start_date"): project.date_created = datetime.strptime(start_date, "%Y-%m-%d")
-            if end_date := project_meta.get("end_date"): project.last_modified = datetime.strptime(end_date, "%Y-%m-%d")
+            if num_files := project_meta.get("total_files"):
+                project.num_files = int(num_files)
+            if size_kb := project_meta.get("total_size_kb"):
+                project.size_kb = int(size_kb)
+            if start_date := project_meta.get("start_date"):
+                project.date_created = datetime.strptime(start_date, "%Y-%m-%d")
+            if end_date := project_meta.get("end_date"):
+                project.last_modified = datetime.strptime(end_date, "%Y-%m-%d")
 
             project.last_accessed = datetime.now()
             self.project_manager.set(project)
@@ -432,8 +501,11 @@ class ProjectAnalyzer:
             project.language_share = language_share
             self.project_manager.set(project)
 
-            if not language_share: print("  - No languages detected."); continue
-            for lang, share in language_share.items(): print(f"  - {lang}: {share:.1f}%")
+            if not language_share:
+                print("  - No languages detected.")
+                continue
+            for lang, share in language_share.items():
+                print(f"  - {lang}: {share:.1f}%")
 
     def analyze_skills(self, projects: Optional[List[Project]] = None, silent: bool = False) -> None:
         """Runs skill analysis and calculates resume score for projects."""
@@ -448,7 +520,8 @@ class ProjectAnalyzer:
 
             with self.suppress_output():
                 if not Path(project.file_path).exists():
-                    if not silent: print(f"  - Warning: Path not found. Skipping.");
+                    if not silent:
+                        print(f"  - Warning: Path not found. Skipping.")
                     continue
 
                 result = SkillAnalyzer(Path(project.file_path)).analyze()
@@ -462,11 +535,15 @@ class ProjectAnalyzer:
                 project.skills_used = sorted(list(set(filtered_skills)))
 
                 if dimensions := result.get("dimensions", {}):
-                    if td := dimensions.get("testing_discipline"): project.testing_discipline_score, project.testing_discipline_level = td.get("score", 0.0), td.get("level", "")
-                    if doc := dimensions.get("documentation_habits"): project.documentation_habits_score, project.documentation_habits_level = doc.get("score", 0.0), doc.get("level", "")
+                    if td := dimensions.get("testing_discipline"):
+                        project.testing_discipline_score, project.testing_discipline_level = td.get("score", 0.0), td.get("level", "")
+                    if doc := dimensions.get("documentation_habits"):
+                        project.documentation_habits_score, project.documentation_habits_level = doc.get("score", 0.0), doc.get("level", "")
 
                 if overall := result.get("stats", {}).get("overall"):
-                    project.total_loc, project.comment_ratio = overall.get("total_lines_of_code", 0), overall.get("comment_ratio", 0.0)
+                    project.total_loc = overall.get("total_lines_of_code", 0)
+                    project.comment_ratio = overall.get("comment_ratio", 0.0)
+                    project.test_file_ratio = overall.get("test_file_ratio", 0.0)
 
                 ranker = ProjectRanker(project)
                 ranker.calculate_resume_score()
@@ -485,7 +562,6 @@ class ProjectAnalyzer:
         if not project:
             return
 
-        # Ensure we have the necessary data for badge analysis
         if not all([project.num_files, project.date_created, project.last_modified, project.categories, project.languages, project.skills_used]):
             print(f"\n  - Prerequisite data missing for {project.name}. Running required analyses...")
             self.analyze_metadata(projects=[project])
@@ -537,10 +613,10 @@ class ProjectAnalyzer:
         with self.suppress_output():
             root_folder = self._find_folder_by_name_recursive(project.name)
             if not root_folder:
-                print(f"Could not find project '{project.name}' in ZIP structure."); return
+                print(f"Could not find project '{project.name}' in ZIP structure.")
+                return
             metadata = (ProjectMetadataExtractor(root_folder).extract_metadata(repo_path=project.file_path) or {}).get("project_metadata", {})
 
-        # Ensure total author_count is populated using get_all_authors() before generating insights
         try:
             repo_path = Path(project.file_path)
             if (repo_path / ".git").exists():
@@ -548,7 +624,7 @@ class ProjectAnalyzer:
                     repo_authors = self.contribution_analyzer.get_all_authors(str(repo_path))
                 if repo_authors:
                     project.author_count = len(repo_authors)
-                    project.collaboration_status = "Collaborative" if project.author_count > 1 else "Individual"
+                    project.collaboration_status = "collaborative" if project.author_count > 1 else "individual"
                     self.project_manager.set(project)
         except Exception:
             pass
@@ -560,6 +636,11 @@ class ProjectAnalyzer:
         project.bullets = gen.generate_resume_bullet_points()
         project.summary = gen.generate_project_summary()
         project.portfolio_entry = gen.generate_portfolio_entry()
+
+        portfolio_gen = PortfolioGenerator(
+            metadata, project.categories, project.language_share, project, project.languages
+        )
+        project.portfolio_details = portfolio_gen.generate_portfolio_details()
 
         print("\nGenerated Portfolio Entry:\n")
         print(project.portfolio_entry)
@@ -634,7 +715,7 @@ class ProjectAnalyzer:
             except ValueError:
                 print("Invalid input. Please enter a number.")
                 continue
-    
+
     def edit_portfolio_entry_cli(self, entry: str) -> str:
         parts = InsightEditor.parse_portfolio_entry(entry)
 
@@ -703,7 +784,6 @@ class ProjectAnalyzer:
                 print("Invalid choice.")
 
         return InsightEditor.build_portfolio_entry(parts)
-
 
     def retrieve_previous_insights(self) -> None:
         print("\n--- Previous Resume Insights ---")
@@ -890,27 +970,33 @@ class ProjectAnalyzer:
         if not project:
             return
         project.bullets, project.summary, project.portfolio_entry = [], "", ""
+        project.portfolio_details = PortfolioDetails()
         self.project_manager.set(project)
         print(f"Successfully deleted insights for {project.name}.")
 
     def display_project_timeline(self) -> None:
         print("\n--- Project & Skill Timeline ---")
         projects = self._get_projects()
-        if not projects: return
+        if not projects:
+            return
         rows = get_projects_with_skills_timeline_from_projects(projects)
         print("\n=== Project Timeline (Chronological) ===")
-        if not rows: print("No projects with valid dates found.")
-        for when, name, skills in rows: print(f"{when.isoformat()} — {name}: {', '.join(skills) if skills else '(no skills)'}")
+        if not rows:
+            print("No projects with valid dates found.")
+        for when, name, skills in rows:
+            print(f"{when.isoformat()} — {name}: {', '.join(skills) if skills else '(no skills)'}")
         events = get_skill_timeline_from_projects(projects)
-        if not events: return
+        if not events:
+            return
         print("\n=== Skill First-Use Timeline ===")
         first_seen = {ev.skill.lower(): ev for ev in reversed(events)}
-        for ev in sorted(first_seen.values(), key=lambda e: (e.when, e.skill.lower())): print(f"{ev.when.isoformat()} — {ev.skill} (first seen in {ev.project or 'unknown'})")
+        for ev in sorted(first_seen.values(), key=lambda e: (e.when, e.skill.lower())):
+            print(f"{ev.when.isoformat()} — {ev.skill} (first seen in {ev.project or 'unknown'})")
 
     def display_analysis_results(self) -> None:
         print(f"\n{'=' * 30}\n      Analysis Results\n{'=' * 30}")
         self.display_ranked_projects()
-    
+
     def get_projects_sorted_by_score(self) -> List[Project]:
         """Return all projects with ensured resume scores, sorted descending, excluding zero-score projects."""
         projects = self._ensure_scores_are_calculated()
@@ -919,7 +1005,7 @@ class ProjectAnalyzer:
 
     def display_ranked_projects(self,sorted_projects=None) -> None:
         """Display all scored projects sorted by resume score."""
-        if sorted_projects is None: 
+        if sorted_projects is None:
             sorted_projects = self.get_projects_sorted_by_score()
         if not sorted_projects:
             print("\nNo projects with calculated scores to display.")
@@ -930,8 +1016,10 @@ class ProjectAnalyzer:
 
     def print_tree(self) -> None:
         print("\n--- Project Folder Structures ---")
-        if not self.root_folders: print("No project structure loaded.")
-        for root in self.root_folders: print(toString(root))
+        if not self.root_folders:
+            print("No project structure loaded.")
+        for root in self.root_folders:
+            print(toString(root))
 
     def create_report(self):
         """Allow the user to select projects and create a report object."""
@@ -949,13 +1037,14 @@ class ProjectAnalyzer:
             print("\nReturning to main menu.")
             return
 
-        # Title input
+        if not self._validate_resume_insights(selected_projects):
+            return
+
         print("\nEnter a title for your report (or press Enter for default):")
         title = input("Title: ").strip()
         if not title:
             title = "My Project Report"
 
-        # Sort-by selection
         print("\nSelect sorting method for the report:")
         print("  1: Resume Score (default)")
         print("  2: Date Created")
@@ -991,19 +1080,73 @@ class ProjectAnalyzer:
         print(f"  Included Projects: {[p.project_name for p in report_projects]}\n")
 
         self.report_manager.create_report(report)
-    
+
+
+    def delete_report(self) -> None:
+        """Deletes a user-selected report and all its associated projects."""
+        reports_summary = self.report_manager.list_reports_summary()
+        print("\n--- Delete Report ---")
+        if not reports_summary:
+            print("\nYou don't have any stored reports!")
+            return
+
+        print(f"{'ID':<5} {'Title':<35} {'Created':<20} {'Projects':<10}")
+        print("-" * 75)
+
+        valid_ids = []
+        for rs in reports_summary:
+            valid_ids.append(rs["id"])
+            date_str = datetime.fromisoformat(rs["date_created"]).strftime("%Y-%m-%d %H:%M")
+            print(f"{rs['id']:<5} {rs['title']:<35} {date_str:<20} {rs['project_count']:<10}")
+
+        print("-" * 75)
+
+        while True:
+            choice = input("\nEnter Report ID to delete (or 'q' to cancel): \n").strip().lower()
+            if choice == "q":
+                print("Cancelled.")
+                return
+            if not choice.isdigit():
+                print("Please enter a valid number or 'q' to cancel.")
+                continue
+
+            report_id = int(choice)
+            if report_id not in valid_ids:
+                print(f"Invalid ID. Please choose from: {', '.join(map(str, valid_ids))}")
+                continue
+            break
+
+        # Load the report so we can show a confirmation prompt
+        report = self.report_manager.get_report(report_id)
+        if not report:
+            print(f"Error loading report {report_id}.")
+            return
+
+        print(f"\nYou are about to delete: '{report.title}' ({len(report.projects)} project(s))\n")
+        confirm = input("Are you sure? This cannot be undone. (y/n): ").strip().lower()
+
+        if confirm != "y":
+            print("Deletion cancelled.")
+            return
+
+        success = self.report_manager.delete_report(report_id)
+        if success:
+            print(f"\nReport '{report.title}' has been deleted.")
+        else:
+            print(f"\nFailed to delete report {report_id}. It may have already been removed.")
+        
     def _select_single_project(self, sorted_projects: List[Project]) -> Optional[Project]:
         print("\nPlease enter the id of the project you'd like to select.\n")
         print("Enter 'q' to cancel.\n")
-        
+
         for i, proj in enumerate(sorted_projects, 1):
             print(f"  {i}: {proj.name} (Score: {proj.resume_score:.2f})")
-        
+
         choice_str = input("\nYour selection: ").strip().lower()
-        
+
         if choice_str == "q":
             return None
-        
+
         try:
             idx = int(choice_str)
             if 1 <= idx <= len(sorted_projects):
@@ -1039,187 +1182,255 @@ class ProjectAnalyzer:
             return selected
         except ValueError:
             print("Invalid input. Please enter numbers separated by commas.")
-            return self._select_multiple_projects(sorted_projects) 
+            return self._select_multiple_projects(sorted_projects)
 
-    
-    def trigger_resume_generation(self) -> Optional[Path]:
-        """
-        Interactive prompt to generate a resume from a report.
-        Displays all available reports and lets user select one.
-        
-        Returns:
-            Path to generated PDF, or None if cancelled/failed
-        """
-        # 1. Get all reports
+    def _select_report_for_export(self) -> Optional[Report]:
         reports_summary = self.report_manager.list_reports_summary()
-        
+
         if not reports_summary:
-            print("\n❌ No reports found. Create a report first before generating a resume.")
+            print("\n❌ No reports found. Create a report first before exporting.")
             return None
-        
-        # 2. Display reports in a formatted table
+
         print("\n" + "="*90)
         print("Available Reports")
         print("="*90)
         print(f"{'ID':<5} {'Title':<35} {'Created':<20} {'Projects':<10} {'Avg Score':<10}")
         print("-"*90)
-        
+
         for report_summary in reports_summary:
             date_created = datetime.fromisoformat(report_summary['date_created'])
             date_str = date_created.strftime('%Y-%m-%d %H:%M')
-            
-            # Get full report to calculate average score
+
             report = self.report_manager.get_report(report_summary['id'])
             avg_score = f"{report.average_score:.1f}" if report else "N/A"
-            
+
             print(f"{report_summary['id']:<5} {report_summary['title']:<35} {date_str:<20} "
                 f"{report_summary['project_count']:<10} {avg_score:<10}")
-        
+
         print("-"*90)
-        
-        # 3. Prompt for report selection
+
         while True:
             try:
                 choice = input("\nEnter Report ID to export (or 'q' to cancel): ").strip()
-                
+
                 if choice.lower() == 'q':
-                    print("Resume generation cancelled.")
+                    print("Export cancelled.")
                     return None
-                
+
                 report_id = int(choice)
-                
-                # Validate ID exists
+
                 valid_ids = [r['id'] for r in reports_summary]
                 if report_id not in valid_ids:
                     print(f"❌ Invalid ID. Please choose from: {', '.join(map(str, valid_ids))}")
                     continue
-                
+
                 break
-                
+
             except ValueError:
                 print("❌ Please enter a valid number or 'q' to cancel.")
-        
-        # 4. Load the selected report
+
         report = self.report_manager.get_report(report_id)
-        
         if not report:
             print(f"❌ Error loading report {report_id}")
             return None
-        
-        # 5. Display report details
+        return report
+    
+    def _validate_resume_insights(self, projects: List[Project]) -> bool:
+        """Return True if all projects have resume insights; otherwise print errors and return False."""
+        missing = []
+
+        for p in projects:
+            if not p.bullets or not isinstance(p.bullets, list):
+                missing.append((p.name, "bullets"))
+            if not p.summary:
+                missing.append((p.name, "summary"))
+            if not p.portfolio_entry:
+                missing.append((p.name, "portfolio_entry"))
+            if not p.portfolio_details:
+                missing.append((p.name, "portfolio_details"))
+
+        if not missing:
+            return True
+
+        print("\n❌ Cannot create report. Some projects are missing resume insights:")
+        for proj, field in missing:
+            print(f"  - {proj}: missing {field}")
+
+        print("\nPlease run 'Generate Resume Insights' (Option 10) before creating a report.")
+        return False
+
+
+    def trigger_resume_generation(self) -> Optional[Path]:
+        """
+        Interactive prompt to generate a resume from a report.
+        Displays all available reports and lets user select one.
+
+        Returns:
+            Path to generated PDF, or None if cancelled/failed
+        """
+        report = self._select_report_for_export()
+        if not report:
+            return None
+
         print(f"\n{'='*60}")
         print(f"📋 Selected Report: {report.title}")
         print(f"{'='*60}")
         print(f"Created: {report.date_created.strftime('%Y-%m-%d %H:%M')}")
         print(f"Projects: {len(report.projects)}")
         print(f"Average Score: {report.average_score:.1f}")
-        
+
         if report.notes:
             print(f"Notes: {report.notes}")
-        
+
         print(f"\n{'Projects included:':}")
         for i, proj in enumerate(report.projects, 1):
             tech_stack = []
             if proj.languages:
-                tech_stack.extend(proj.languages[:2])  # Show first 2 languages
+                tech_stack.extend(proj.languages[:2])
             if proj.frameworks:
-                tech_stack.extend(proj.frameworks[:2])  # Show first 2 frameworks
-            
+                tech_stack.extend(proj.frameworks[:2])
+
             tech_str = ", ".join(tech_stack) if tech_stack else "No tech stack"
             print(f"  {i}. {proj.project_name} ({tech_str}) - Score: {proj.resume_score:.1f}")
-        
+
         print(f"{'='*60}\n")
-        
-        # 6. Prompt for output filename
+
         default_filename = f"{report.title.replace(' ', '_').lower()}_resume.pdf"
         filename_input = input(f"Output filename (default: '{default_filename}'): ").strip()
-        
+
         filename = filename_input if filename_input else default_filename
-        
-        # Ensure .pdf extension
+
         if not filename.endswith('.pdf'):
             filename += '.pdf'
-        
-        # 7. Confirm generation
+
         confirm = input(f"\n✓ Generate resume as '{filename}'? (y/n): ").strip().lower()
-        
+
         if confirm != 'y':
             print("Resume generation cancelled.")
             return None
-        
-        # 8. Generate the resume using the private method
+
         print("\n⏳ Generating resume...")
-        
+
         try:
             pdf_path = self._generate_resume(report, filename)
             print(f"\n✅ Resume successfully generated!")
             print(f"📄 Saved to: {pdf_path}")
             return pdf_path
-            
+
         except ValueError as e:
             print(f"\n❌ Validation Error: {e}")
             print("💡 Tip: Make sure you've set your name, email, and phone in config.")
             return None
-            
+
         except RuntimeError as e:
             print(f"\n❌ Generation Error: {e}")
             return None
-            
+
         except Exception as e:
             print(f"\n❌ Unexpected error: {e}")
             return None
-    
+
+    def trigger_portfolio_generation(self) -> Optional[Path]:
+        report = self._select_report_for_export()
+        if not report:
+            return None
+        if not report.projects:
+            print("Error: Report contains no projects.")
+            return None
+
+        missing = [p.project_name for p in report.projects if not p.portfolio_details or not p.portfolio_details.project_name]
+        if missing:
+            print(f"\n❌ Cannot generate portfolio. Missing portfolio details for: {', '.join(missing)}")
+            print("Please run 'Generate Resume Insights' (Option 10) first.")
+            return None
+
+        default_filename = f"{report.title.replace(' ', '_').lower()}_portfolio.pdf"
+        filename_input = input(f"Output filename (default: '{default_filename}'): ").strip()
+        filename = filename_input if filename_input else default_filename
+        if not filename.endswith('.pdf'):
+            filename += '.pdf'
+
+        confirm = input(f"\n✓ Generate portfolio as '{filename}'? (y/n): ").strip().lower()
+        if confirm != 'y':
+            print("Portfolio generation cancelled.")
+            return None
+
+        print("\n⏳ Generating portfolio...")
+        try:
+            pdf_path = self._generate_portfolio(report, filename)
+            print(f"\n✅ Portfolio successfully generated!")
+            print(f"📄 Saved to: {pdf_path}")
+            return pdf_path
+        except ValueError as e:
+            print(f"\n❌ Validation Error: {e}")
+            return None
+        except RuntimeError as e:
+            print(f"\n❌ Generation Error: {e}")
+            return None
+        except Exception as e:
+            print(f"\n❌ Unexpected error: {e}")
+            return None
+
     def _generate_resume(self, report, output_filename: str = "resume.pdf") -> Path:
         """
         Generate a PDF resume from a report object.
-        
+
         Args:
             report: Report object to export
             output_filename: Name of the PDF file to generate (default: "resume.pdf")
-            
+
         Returns:
             Path to the generated PDF file
-            
+
         Raises:
             ValueError: If report not found or config incomplete
             RuntimeError: If LaTeX not installed or PDF generation fails
         """
-        # 1. Validate report has projects
         if not report.projects:
             raise ValueError("Cannot generate resume: report has no projects")
-        
-        # 2. Validate required config fields
+
         required_fields = ["name", "email", "phone"]
         missing_fields = [
-            field for field in required_fields 
+            field for field in required_fields
             if not self._config_manager.get(field)
         ]
-        
+
         if missing_fields:
             raise ValueError(
                 f"Cannot generate resume: missing required config fields: {', '.join(missing_fields)}\n"
                 f"Please set these using the config command."
             )
-        
-        # 3. Determine output path
+
         output_path = Path(output_filename)
         if not output_path.is_absolute():
             output_path = Path("resumes") / output_filename
-        
-        # 4. Generate the PDF
+
         exporter = ReportExporter()
         try:
             exporter.export_to_pdf(
                 report=report,
                 config_manager=self._config_manager,
                 output_path=output_filename,
-                template="jake"  # TODO: Make this configurable
+                template="jake"
             )
         except RuntimeError as e:
             raise RuntimeError(f"Failed to generate PDF: {e}")
-        
+
         return Path("resumes") / output_filename
-        
+
+    def _generate_portfolio(self, report, output_filename: str = "portfolio.pdf") -> Path:
+        if not report.projects:
+            raise ValueError("Cannot generate portfolio: report has no projects")
+        output_path = Path("portfolios") / output_filename
+        exporter = ReportExporter()
+        exporter.export_to_pdf(
+            report=report,
+            config_manager=self._config_manager,
+            output_path=str(output_path),
+            template="portfolio"
+        )
+        return output_path
+
 
 
     def trigger_report_editing(self) -> None:
@@ -1276,7 +1487,7 @@ class ProjectAnalyzer:
         self.report_manager.update_report(report)
         print("Report updated and saved.")
 
-        
+
     def _default_updated_filename(self, filename: str) -> str:
         if not filename.lower().endswith(".pdf"):
             filename += ".pdf"
@@ -1284,10 +1495,13 @@ class ProjectAnalyzer:
         return f"{base}_updated.pdf"
 
     def _cleanup_temp(self):
-        if self.cached_extract_dir: shutil.rmtree(self.cached_extract_dir, ignore_errors=True)
+        if self.cached_extract_dir:
+            shutil.rmtree(self.cached_extract_dir, ignore_errors=True)
 
     def _signal_cleanup(self, s, f):
-        print("\n[Interrupted] Cleaning up..."); self._cleanup_temp(); sys.exit(0)
+        print("\n[Interrupted] Cleaning up...")
+        self._cleanup_temp()
+        sys.exit(0)
 
     def _find_folder_by_name_recursive(self, target_name: str) -> Optional[ProjectFolder]:
         """
@@ -1327,48 +1541,45 @@ class ProjectAnalyzer:
         if not sorted_projects:
             print("\nNo scored projects available to include in a report.")
             return
-        
+
         print("\n--- Select Thumbnail for a Given Project  ---")
         print("\nPlease select which project you'd like to add a thumbnail to.")
         project = self._select_single_project(sorted_projects)
-        
+
         if project is None:
             print("\nReturning to main menu.")
             return
-        
+
         print("\nEnter the filepath for the image: ")
         raw_path = input("Path: ")
-        
+
         if not raw_path.strip():
             print("\nNo path provided. Returning to main menu.")
             return
-        
+
         image_path = self.clean_path(raw_path)
-        
-        # Check if file exists
+
         if not image_path.exists():
             print(f"\nError: File not found at '{image_path}'")
             return
-        
+
         if not image_path.is_file():
             print(f"\nError: Path is not a file: '{image_path}'")
             return
-        
-        # Check if it's an image file
+
         valid_extensions = {'.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.heic', '.ico', '.svg'}
         file_ext = image_path.suffix.lower()
         if file_ext not in valid_extensions:
             print(f"\nError: Invalid image format '{file_ext}'")
             print(f"Supported formats: {', '.join(sorted(valid_extensions))}")
             return
-        
-        # Create thumbnails directory if it doesn't exist
+
         thumbnails_dir = Path("thumbnails")
         thumbnails_dir.mkdir(exist_ok=True)
-        
+
         thumbnail_filename = f"project_{project.id}_thumb{file_ext}"
         thumbnail_path = thumbnails_dir / thumbnail_filename
-        
+
         try:
             shutil.copy(image_path, thumbnail_path)
             project.thumbnail = str(thumbnail_path)
@@ -1540,8 +1751,10 @@ class ProjectAnalyzer:
                 18. Enter Resume Personal Information
                 19. Create Report (For Use With Resume Generation)
                 20. Generate Resume (Export From Report as pdf)
-                21. Edit Report
-                22. Select Thumbnail for a Given Project
+                21. Generate Portfolio (Export From Report as pdf)
+                22. Edit Report
+                23. Delete Report
+                24. Select Thumbnail for a Given Project
                 99. Edit project information (Scores & Dates)
                   """)
 
@@ -1561,8 +1774,8 @@ class ProjectAnalyzer:
                 "13": self.display_analysis_results, "14": self.display_project_timeline,
                 "15": self.analyze_badges, "16": self.retrieve_full_portfolio,
                 "18": self.configure_personal_info, "19": self.create_report,
-                "20": self.trigger_resume_generation, "21": self.trigger_report_editing,
-                "22": self.select_thumbnail, "99": self.update_score_and_date,
+                "20": self.trigger_resume_generation, "21": self.trigger_portfolio_generation,
+                "22": self.trigger_report_editing,"23": self.delete_report, "24": self.select_thumbnail, "99": self.update_score_and_date,
             }
 
             if choice == "17":

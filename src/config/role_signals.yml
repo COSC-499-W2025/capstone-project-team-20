@@ -1,0 +1,19 @@
+roles:
+  frontend:
+    languages: ["JavaScript", "TypeScript", "HTML", "CSS", "Svelte"]
+    categories: ["template"]
+    path_patterns: ["ui", "client", "frontend", "web", "components", "pages", "views", "public", "static"]
+
+  backend:
+    languages: ["Python", "Java", "C#", "Go", "Rust", "SQL"]
+    categories: ["code"]
+    path_patterns: ["api", "server", "backend", "services", "controllers", "routes"]
+
+  qa:
+    categories: ["test"]
+
+  docs:
+    categories: ["docs"]
+
+  devops:
+    categories: ["config", "script", "manifest", "ignore", "logs"]

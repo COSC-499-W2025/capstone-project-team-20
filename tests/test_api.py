@@ -1,9 +1,12 @@
 import io
 import pytest
 from fastapi.testclient import TestClient
+from datetime import datetime
 
 import src.api.routes as routes
 from src.api.api_main import app
+from src.models.Report import Report
+from src.models.ReportProject import ReportProject, PortfolioDetails
 
 
 # Shared Test Client, fake HTTP client connected to FastAPI app.
@@ -14,27 +17,40 @@ def client():
 
 # Fake Project
 class FakeProject:
-    def __init__(self, id, name, skills_used=None):
+    def __init__(self, id, name, skills_used=None, categories=None, num_files=0, test_file_ratio=0.0, languages=None, language_share=None, author_count=1, collaboration_status="individual", size_kb=0, total_loc=0, date_created=None, last_modified=None,contributor_roles=None,):
         self.id = id
         self.name = name
         self.skills_used = skills_used or []
+        self.contributor_roles = contributor_roles or {}
+        self.categories = categories or {}
+        self.num_files = num_files
+        self.test_file_ratio = test_file_ratio
+        self.languages = languages or []
+        self.language_share = language_share or {}
+        self.author_count = author_count
+        self.collaboration_status = collaboration_status
+        self.size_kb = size_kb
+        self.total_loc = total_loc
+        self.date_created = date_created
+        self.last_modified = last_modified
 
 
-# /privacy-consent test. calling POST /privacy-consent?consent=true returns 200
 def test_privacy_consent_sets_value(client, monkeypatch):
     calls = {}
 
     class FakeConsentManager:
+        def has_user_consented(self):
+            return True  # not needed here but safe
+
         def set_consent(self, consent: bool):
             calls["consent"] = consent
 
     monkeypatch.setattr(routes, "ConsentManager", FakeConsentManager)
 
-    res = client.post("/privacy-consent", params={"consent": "true"})
+    res = client.post("/privacy-consent", json={"consent": True})
     assert res.status_code == 200
 
     data = res.json()
-    assert data["ok"] is True
     assert data["consent"] is True
     assert calls["consent"] is True
 
@@ -62,7 +78,7 @@ def test_get_projects_list(client, monkeypatch):
 def test_get_project_found(client, monkeypatch):
     class FakeProjectManager:
         def get(self, id: int):
-            return FakeProject(id, "CoolProj", skills_used=["Python"])
+            return FakeProject(id, "CoolProj", skills_used=["Python"], contributor_roles={"alice": {"primary_role": "role_backend"}})
 
     monkeypatch.setattr(routes, "ProjectManager", FakeProjectManager)
 
@@ -73,6 +89,7 @@ def test_get_project_found(client, monkeypatch):
     assert data["ok"] is True
     assert data["project"]["id"] == 5
     assert data["project"]["name"] == "CoolProj"
+    assert data["project"]["contributor_roles"]["alice"]["primary_role"] == "role_backend"
 
 
 # Testing ProjectManager.get(id) returns None
@@ -140,6 +157,50 @@ def test_upload_project_success(client, monkeypatch):
         {"id": 2, "name": "Proj2"},
     ]
 
+def test_upload_project_triggers_analyses(client, monkeypatch):
+    monkeypatch.setattr(routes, "parse_zip_to_project_folders", lambda _: ["root1"])
+
+    calls = []
+
+    class FakeAnalyzer:
+        def __init__(self, config, root_folders, tmp_path):
+            self.config = config
+            self.root_folders = root_folders
+            self.tmp_path = tmp_path
+
+        def initialize_projects(self):
+            return [FakeProject(1, "Proj1")]
+
+        def analyze_git_and_contributions(self, projects=None, interactive=True):
+            calls.append(("git", len(projects or []), interactive))
+
+        def analyze_metadata(self, projects=None):
+            calls.append(("metadata", len(projects or [])))
+
+        def analyze_categories(self, projects=None):
+            calls.append(("categories", len(projects or [])))
+
+        def analyze_languages(self, projects=None):
+            calls.append(("languages", len(projects or [])))
+
+        def analyze_skills(self, projects=None, silent=False):
+            calls.append(("skills", len(projects or []), silent))
+
+    monkeypatch.setattr(routes, "ProjectAnalyzer", FakeAnalyzer)
+
+    files = {"zip_file": ("test.zip", io.BytesIO(b"fake zip bytes"), "application/zip")}
+    res = client.post("/projects/upload", files=files)
+
+    assert res.status_code == 201
+    assert calls == [
+        ("git", 1, False),
+        ("metadata", 1),
+        ("categories", 1),
+        ("languages", 1),
+        ("skills", 1, True),
+    ]
+
+
 def test_upload_project_invalid_zip_returns_400(client, monkeypatch):
     # Simulate invalid zip (no root folders)
     monkeypatch.setattr(routes, "parse_zip_to_project_folders", lambda _: [])
@@ -149,3 +210,188 @@ def test_upload_project_invalid_zip_returns_400(client, monkeypatch):
 
     assert res.status_code == 400
     assert "Zip parsed no projects" in res.json()["detail"]
+
+def test_get_portfolio_report_found(client, monkeypatch):
+    details = PortfolioDetails(
+        project_name="Proj",
+        role="Backend Developer",
+        timeline="1 month",
+        technologies="Python",
+        overview="Overview",
+        achievements=["A"],
+        contributor_roles=[{"name": "alice", "role": "Backend", "confidence": 0.8, "confidence_pct": 80}],
+    )
+    project = ReportProject(
+        project_name="Proj",
+        resume_score=2.5,
+        portfolio_details=details,
+        languages=["Python"],
+        language_share={"Python": 100.0},
+        frameworks=[],
+        date_created=datetime(2025, 1, 1),
+        last_modified=datetime(2025, 2, 1),
+        collaboration_status="individual",
+    )
+    report = Report(
+        id=1,
+        title="Portfolio Report",
+        date_created=datetime(2025, 2, 2),
+        sort_by="resume_score",
+        projects=[project],
+        notes=None,
+    )
+
+    class FakeReportManager:
+        def get_report(self, id: int):
+            return report if id == 1 else None
+
+    monkeypatch.setattr(routes, "ReportManager", FakeReportManager)
+
+    res = client.get("/portfolio/1")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["ok"] is True
+    assert data["portfolio"]["id"] == 1
+    assert data["portfolio"]["projects"][0]["portfolio_details"]["contributor_roles"][0]["role"] == "Backend"
+
+def test_generate_portfolio_success(client, monkeypatch):
+    report = Report(
+        id=2,
+        title="My Report",
+        date_created=datetime(2025, 1, 1),
+        sort_by="resume_score",
+        projects=[],
+        notes=None,
+    )
+
+    class FakeReportManager:
+        def get_report(self, id: int):
+            return report if id == 2 else None
+
+    calls = {}
+
+    class FakeReportExporter:
+        def export_to_pdf(self, report, config_manager, output_path: str, template: str):
+            calls["output_path"] = output_path
+            calls["template"] = template
+
+    monkeypatch.setattr(routes, "ReportManager", FakeReportManager)
+    monkeypatch.setattr(routes, "ReportExporter", FakeReportExporter)
+
+    res = client.post("/portfolio/generate", json={"report_id": 2, "output_filename": "output.pdf"})
+    assert res.status_code == 200
+    data = res.json()
+    assert data["ok"] is True
+    assert data["output_path"].endswith("portfolios/output.pdf")
+    assert calls["template"] == "portfolio"
+
+def test_edit_portfolio_updates_report(client, monkeypatch):
+    report = Report(
+        id=3,
+        title="Old Title",
+        date_created=datetime(2025, 1, 1),
+        sort_by="resume_score",
+        projects=[],
+        notes=None,
+    )
+
+    class FakeReportManager:
+        def get_report(self, id: int):
+            return report if id == 3 else None
+        def update_report(self, updated):
+            report.title = updated.title
+            report.notes = updated.notes
+            return True
+
+    monkeypatch.setattr(routes, "ReportManager", FakeReportManager)
+
+    res = client.post("/portfolio/3/edit", json={"title": "New Title", "notes": "Updated"})
+    assert res.status_code == 200
+    data = res.json()
+    assert data["ok"] is True
+    assert data["portfolio"]["title"] == "New Title"
+    assert data["portfolio"]["notes"] == "Updated"
+def test_badge_progress_returns_closest_project(client, monkeypatch):
+    class FakeProjectManager:
+        def get_all(self):
+            return [
+                FakeProject(1, "DocsHeavy", categories={"docs": 30, "code": 40}, num_files=100, test_file_ratio=0.05),
+                FakeProject(2, "TestsHeavy", categories={"docs": 10, "code": 80}, num_files=100, test_file_ratio=0.2, languages=["Python", "JS", "SQL"]),
+            ]
+
+    monkeypatch.setattr(routes, "ProjectManager", FakeProjectManager)
+
+    res = client.get("/badges/progress")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["ok"] is True
+
+    as_map = {item["badge_id"]: item for item in data["badges"]}
+    assert as_map["test_pilot"]["earned"] is True
+    assert as_map["test_pilot"]["project"]["name"] == "TestsHeavy"
+    assert as_map["docs_guardian"]["project"]["name"] == "DocsHeavy"
+
+def test_badge_progress_uses_fallback_fields(client, monkeypatch):
+    class FakeProjectManager:
+        def get_all(self):
+            return [
+                FakeProject(
+                    9,
+                    "NestedCounts",
+                    categories={"counts": {"test": 8, "docs": 12, "code": 35}},
+                    num_files=50,
+                    language_share={"Python": 70.0, "TypeScript": 20.0, "SQL": 10.0},
+                    author_count=0,
+                ),
+            ]
+
+    monkeypatch.setattr(routes, "ProjectManager", FakeProjectManager)
+
+    res = client.get("/badges/progress")
+    assert res.status_code == 200
+
+    data = res.json()
+    as_map = {item["badge_id"]: item for item in data["badges"]}
+
+    assert as_map["test_pilot"]["earned"] is True
+    assert as_map["docs_guardian"]["earned"] is True
+    assert as_map["code_cruncher"]["earned"] is True
+    assert as_map["polyglot"]["earned"] is True
+    assert as_map["team_effort"]["project"]["name"] == "NestedCounts"
+
+def test_yearly_wrapped_contains_milestones_with_project_names(client, monkeypatch):
+    import datetime as dt
+
+    class FakeProjectManager:
+        def get_all(self):
+            return [
+                FakeProject(
+                    1,
+                    "BigTests",
+                    categories={"test": 30, "code": 80, "docs": 30},
+                    num_files=100,
+                    test_file_ratio=0.2,
+                    languages=["Python", "JS", "SQL"],
+                    language_share={"Python": 70.0, "JavaScript": 20.0, "SQL": 10.0},
+                    author_count=3,
+                    collaboration_status="collaborative",
+                    total_loc=1200,
+                    date_created=dt.datetime(2024, 1, 1),
+                    last_modified=dt.datetime(2024, 10, 1),
+                ),
+            ]
+
+    monkeypatch.setattr(routes, "ProjectManager", FakeProjectManager)
+
+    res = client.get("/wrapped/yearly")
+    assert res.status_code == 200
+    data = res.json()
+
+    assert data["ok"] is True
+    assert data["wrapped"][0]["year"] == 2024
+    assert data["wrapped"][0]["projects_count"] == 1
+    assert "vibe_title" in data["wrapped"][0]
+    assert isinstance(data["wrapped"][0]["highlights"], list)
+    milestones = data["wrapped"][0]["milestones"]
+    assert any(m["project"] == "BigTests" for m in milestones)
+    assert any(m["badge_id"] == "test_pilot" for m in milestones)
