@@ -277,3 +277,53 @@ Next week, I plan to continue developing the yearly wrapped-style summary featur
 
 **Any Issues or Blockers That I Encountered This Week and How I Addressed/Plan to Address Them:**  
 One challenge this week was that I was unable to attend the peer review session, but convened with my group to learn about the feedback that we had received from it, in order to make effective changes in the future.
+
+### Term 2 Week 5: February 2nd – February 8th
+
+![Term 2 Week 5 Log](imagesForKaanLogs/T2_W5_SS.png)
+
+### Weekly Goals
+
+This week, I finished up expanding the badges system, adding more badges, as well as improving the detection of badges to normalize the values used, as to make the system less likely to make mistakes. I also helped in creating a manual editing section for users to add their education, past work experiences, and other information that would be relevant to put into a resume.
+
+**Coding Tasks:**  
+I finished extending the existing badges system by designing additional badge categories and refining the logic behind how users earn achievements. This involved identifying key user actions that should be rewarded and mapping those actions to clear progression milestones. I also implemented a manual editing style for the resume information, so that the users could include their past education and work experiences to their resumes. I connected this to the API that was present in Dylan's work, beforehand, and he helped me make sure that this addition was implemented accurately to his code.
+
+**Testing Tasks:**  
+I performed manual testing on the updated badges logic to confirm that achievements were being triggered correctly under different usage scenarios. And tested the manual profile information addition on the minimal frontend we have right now. As well as testing some PRs that I had reviewed, that were assigned to me this week.
+
+**Reviewing or Collaboration Tasks:**  
+I reviewed PR #340, and #319 focusing on code quality, maintainability, and alignment with existing project conventions. I left feedback on areas that could be simplified or made more consistent with the current architecture.
+
+**Brief Description of Last Week Connecting This Week:**  
+Last week I had started expanding on the badges feature, which I completed this week.
+
+**Plan/Goals for Upcoming Week:**  
+Next week, I plan to continue developing the yearly wrapped-style summary feature. I also aim to address any remaining feedback from PR reviews and assist the team with final integration tasks leading up to Milestone 2 evaluation.
+
+**Any Issues or Blockers That I Encountered This Week and How I Addressed/Plan to Address Them:**  
+
+### Term 2 Week 8: February 23rd – March 1st
+
+![Term 2 Week 8 Log](imagesForKaanLogs/T2_W8_SS.png)
+
+### Weekly Goals
+
+This week we presented our milestone 2 requirements to the class, as well as the TAs and the prof. We had finished up most of our features for the requirements, but I also added some code to freshen up some of the existing features, as well as adding a frontend for the badges/achievements system, and the new yearly wrapped feature that summarizes yearly achievements. I reviewed other people's PR's and helped add more features to make sure we have everything covered for our requirements as well as our Milestone 2 Demo video.
+
+**Coding Tasks:**  
+I created the yearly wrapped feature, as well as making the necessary react frontend changes to implement both the badges/achievements system, and the yearly wrapped feature to our frontend PR #398. I also helped implement a feature that was requested from Branden's changes, where there was a confusion with the current projects being stored, as previous projects would not be distinguished, making it difficult to test. I made the previous projects distinction, as well as adding a delete databases button in the frontend to make future testing much easier PR #417.
+
+**Testing Tasks:**  
+I performed manual testing on the yearly wrapped feature, as well as the new previous projects, and deleting databases features that I had added. I also tested the PRs that I had reviewed, that were assigned to me this week.
+
+**Reviewing or Collaboration Tasks:**  
+I reviewed PR #411, #403, and #409 focusing on code quality, maintainability, and alignment with existing project conventions. I left feedback on areas that could be simplified or made more consistent with the current architecture.
+
+**Brief Description of Last Week Connecting This Week:**  
+Last week, we were getting ready for the presentation, this week we delivered our presentation as well as reviewing other people's presentations, and made some adjustments that we saw were necessary from the presentation of our and others' projects.
+
+**Plan/Goals for Upcoming Week:**  
+Next week, I plan to start planning for milestone 3, and refurbish the badges/achievements in the frontend to make it more clear and easy on the eyes.
+
+**Any Issues or Blockers That I Encountered This Week and How I Addressed/Plan to Address Them:**  
