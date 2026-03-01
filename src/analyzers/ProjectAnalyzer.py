@@ -1723,6 +1723,7 @@ class ProjectAnalyzer:
         print("Resume personal information saved.\n")
 
     def edit_skills(self):
+        '''Ability to toggle which elements in a project's list of skills are used'''
         hr = (f"{'':{'─'}>{83}}")   #horizontal rule
         RED = '\033[91m'
         GREEN = '\033[92m'
