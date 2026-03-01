@@ -233,6 +233,8 @@ class ProjectAnalyzer:
 
             proj_existing = self.project_manager.get_by_name(proj_new.name)
             if proj_existing:
+                proj_existing.file_path = proj_new.file_path
+                proj_existing.root_folder = proj_new.root_folder
                 if self._has_project_changed(proj_new):
                     proj_existing.file_path, proj_existing.root_folder = proj_new.file_path, proj_new.root_folder
                     if proj_new.num_files:
@@ -262,29 +264,36 @@ class ProjectAnalyzer:
     # Analysis Methods
     # ------------------------------------------------------------------
 
-    def _prompt_for_usernames(self, authors: List[str]) -> Optional[List[str]]:
+    def _prompt_for_usernames(self, author_map: Dict[str, str]) -> Optional[List[str]]:
+        """
+        author_map: {email: display_name}
+        Returns list of selected emails (canonical identities).
+        """
         print("\nPlease select your username(s) from the list of project contributors:")
-        if not authors:
+        if not author_map:
             print("No authors found in the commit history.")
             return None
-        for i, author in enumerate(authors):
-            print(f"  {i + 1}: {author}")
+
+        entries = sorted(author_map.items(), key=lambda x: x[1].lower())  # sort by display name
+        for i, (email, name) in enumerate(entries):
+            print(f"  {i + 1}: {name} <{email}>")
+
         print("\nYou can select multiple authors by entering numbers separated by commas (e.g., 1, 3).")
         try:
             choice_str = input("Enter your choice(s) (or 'q' to quit): ").strip()
             if choice_str.lower() == "q":
                 return None
-            selected_authors = []
+            selected_emails = []
             for choice in [c.strip() for c in choice_str.split(",")]:
                 index = int(choice) - 1
-                if not (0 <= index < len(authors)):
+                if not (0 <= index < len(entries)):
                     print(f"Invalid number '{choice}'. Please try again.")
-                    return self._prompt_for_usernames(authors)
-                selected_authors.append(authors[index])
-            return sorted(list(set(selected_authors)))
+                    return self._prompt_for_usernames(author_map)
+                selected_emails.append(entries[index][0])  # append email
+            return sorted(list(set(selected_emails)))
         except (ValueError, IndexError):
             print("Invalid input format. Please enter numbers separated by commas.")
-            return self._prompt_for_usernames(authors)
+            return self._prompt_for_usernames(author_map)
         except KeyboardInterrupt:
             print("\nOperation cancelled by user.")
             return None
@@ -336,15 +345,19 @@ class ProjectAnalyzer:
         projects = self._get_projects()
         if not projects:
             return
-        all_authors = set()
+
+        all_author_map: Dict[str, str] = {}
         for project in projects:
             if (Path(project.file_path) / ".git").exists():
                 with self.suppress_output():
-                    all_authors.update(self.contribution_analyzer.get_all_authors(str(project.file_path)))
-        if not all_authors:
+                    project_author_map = self.contribution_analyzer.get_all_authors(str(project.file_path), config_manager=self._config_manager)
+                all_author_map.update(project_author_map)
+
+        if not all_author_map:
             print("No Git authors found in any project.")
             return
-        new_usernames = self._prompt_for_usernames(sorted(list(all_authors)))
+
+        new_usernames = self._prompt_for_usernames(all_author_map)
         if new_usernames:
             self._config_manager.set("usernames", new_usernames)
             print(f"\nSuccessfully updated selected users to: {', '.join(new_usernames)}")
@@ -366,78 +379,81 @@ class ProjectAnalyzer:
         }
 
         return mapping.get(role_key, role_key.capitalize())
-
     def analyze_git_and_contributions(self, projects: Optional[List[Project]] = None, interactive: bool = True) -> None:
-        """
-        Analyze contributions for each project:
-        - Use get_all_authors() to set total author_count reliably
-        - Optionally prompt for selected usernames if not configured
-        - Compute detailed stats where possible
-        """
-        print("\n--- Git Repository & Contribution Analysis ---")
-        target_projects = projects or self._get_projects()
-        if not target_projects:
-            return
+      """
+      Analyze contributions for each project:
+      - Use get_all_authors() to set total author_count reliably
+      - Optionally prompt for selected usernames if not configured
+      - Compute detailed stats where possible
+      """
+      print("\n--- Git Repository & Contribution Analysis ---")
+      target_projects = projects or self._get_projects()
+      if not target_projects:
+          return
 
-        for project in target_projects:
-            repo_path = Path(project.file_path)
-            if not (repo_path / ".git").exists():
-                continue
+      for project in target_projects:
+          repo_path = Path(project.file_path)
+          if not (repo_path / ".git").exists():
+              continue
 
-            print(f"\n--- Analyzing contributions for: {project.name} ---")
+          print(f"\n--- Analyzing contributions for: {project.name} ---")
 
-            with self.suppress_output():
-                repo_authors = self.contribution_analyzer.get_all_authors(str(repo_path))
+          with self.suppress_output():
+              author_map = self.contribution_analyzer.get_all_authors(str(repo_path), config_manager=self._config_manager)
 
-            project.author_count = len(repo_authors)
-            project.collaboration_status = "collaborative" if project.author_count > 1 else "individual"
+          # Detect duplicates and optionally write .mailmap
+          author_map = self.contribution_analyzer.detect_and_write_mailmap(str(repo_path), author_map, config_manager=self._config_manager)
 
-            if interactive:
-                selected_usernames = self._get_or_select_usernames(sorted(repo_authors)) or []
-            else:
-                configured_usernames = self._config_manager.get("usernames")
-                if isinstance(configured_usernames, list) and configured_usernames:
-                    selected_usernames = configured_usernames
-                else:
-                    selected_usernames = sorted(repo_authors)
+          project.author_count = len(author_map)
+          project.collaboration_status = "Collaborative" if project.author_count > 1 else "Individual"
 
-            with self.suppress_output():
-                all_author_stats = self.contribution_analyzer.analyze(str(repo_path))
+          if interactive:
+              selected_emails = self._get_or_select_usernames(author_map) or []
+          else:
+              configured_usernames = self._config_manager.get("usernames")
+              if isinstance(configured_usernames, list) and configured_usernames:
+                  selected_emails = configured_usernames
+              else:
+                  selected_emails = list(author_map.keys())
 
-            available_authors = list(all_author_stats.keys()) if all_author_stats else sorted(repo_authors)
-            project.authors = self._resolve_selected_authors(selected_usernames, available_authors)
-            if all_author_stats:
-                roles_obj = self.role_inference_analyzer.analyze(all_author_stats)
-                project.contributor_roles = {
-                    user: {
-                        "primary_role": r.primary_role.value,
-                        "confidence": float(r.confidence),
-                        "secondary_roles": [sr.value for sr in (r.secondary_roles or [])],
-                        "evidence": r.evidence or {},
-                    }
-                    for user, r in roles_obj.items()
-                }
+          with self.suppress_output():
+              all_author_stats = self.contribution_analyzer.analyze(str(repo_path))
 
-            if all_author_stats:
-                selected_stats = self._aggregate_stats(all_author_stats, project.authors)
-                total_stats = self._aggregate_stats(all_author_stats)
-                project.author_contributions = [stats.to_dict() for stats in all_author_stats.values()]
-                project.individual_contributions = self.contribution_analyzer.calculate_share(selected_stats, total_stats)
-            else:
-                print("  - No detailed contribution stats available; using author list for collaboration status.")
+          project.authors = sorted([author_map[e] for e in selected_emails if e in author_map])
+          project.contributor_roles = {}
 
-            project.last_accessed = datetime.now()
-            self.project_manager.set(project)
-            print(f"  - Total Contributors: {project.author_count}")
-            print(f"  - Collaboration Status: {project.collaboration_status}")
-            if project.contributor_roles:
-                print(" - Inferred Roles:")
-                for user, info in project.contributor_roles.items():
-                    pretty = self._pretty_role(info.get("primary_role", "none"))
-                    confidence_pct = int(float(info.get("confidence", 0.0)) * 100)
-                    print(f"    - {user} → User Role: {pretty} ({confidence_pct}%)")
+          if all_author_stats:
+              roles_obj = self.role_inference_analyzer.analyze(all_author_stats)
+              project.contributor_roles = {
+                  user: {
+                      "primary_role": r.primary_role.value,
+                      "confidence": float(r.confidence),
+                      "secondary_roles": [sr.value for sr in (r.secondary_roles or [])],
+                      "evidence": r.evidence or {},
+                  }
+                  for user, r in roles_obj.items()
+              }
 
-            print(f"  - Saved data for '{project.name}'.")
+          if all_author_stats:
+              selected_stats = self._aggregate_stats(all_author_stats, selected_emails)
+              total_stats = self._aggregate_stats(all_author_stats)
+              project.author_contributions = [stats.to_dict() for stats in all_author_stats.values()]
+              project.individual_contributions = self.contribution_analyzer.calculate_share(selected_stats, total_stats)
+          else:
+              print("  - No detailed contribution stats available; using author list for collaboration status.")
+
+          project.last_accessed = datetime.now()
+          self.project_manager.set(project)
+          print(f"  - Total Contributors: {project.author_count}")
+          print(f"  - Collaboration Status: {project.collaboration_status}")
+          if project.contributor_roles:
+              print(" - Inferred Roles:")
+              for user, info in project.contributor_roles.items():
+                  pretty = self._pretty_role(info.get("primary_role", "none"))
+                  confidence_pct = int(float(info.get("confidence", 0.0)) * 100)
+                  print(f"    - {user} → User Role: {pretty} ({confidence_pct}%)")
+
+          print(f"  - Saved data for '{project.name}'.")
 
     def analyze_metadata(self, projects: Optional[List[Project]] = None) -> None:
         """Extracts and saves metadata for all projects or a specific list of them."""

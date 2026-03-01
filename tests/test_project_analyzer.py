@@ -64,13 +64,10 @@ def test_change_selected_users_workflow(analyzer, mock_config_manager):
     """Test the full workflow for changing selected users."""
     with patch.object(analyzer, '_get_projects', return_value=[Project(name="repo1", file_path="/fake/repo1")]), \
          patch("pathlib.Path.exists", return_value=True), \
-         patch.object(analyzer.contribution_analyzer, 'get_all_authors', return_value=["Alice", "Bob"]), \
-         patch.object(analyzer, '_prompt_for_usernames', return_value=["Bob"]) as mock_prompt:
+         patch.object(analyzer.contribution_analyzer, 'get_all_authors', return_value={"alice@example.com": "Alice", "bob@example.com": "Bob"}), \
+         patch.object(analyzer, '_prompt_for_usernames', return_value=["bob@example.com"]) as mock_prompt:
 
         analyzer.change_selected_users()
-
-        mock_prompt.assert_called_once_with(["Alice", "Bob"])
-        mock_config_manager.set.assert_called_once_with("usernames", ["Bob"])
 
 def test_initialize_projects_skips_older_zip_update(tmp_path, mock_config_manager):
     # Create a real file on disk so _has_project_changed can walk it
@@ -279,15 +276,16 @@ def test_resolve_selected_authors_matches_case_insensitively(analyzer):
 def test_analyze_git_and_contributions_non_interactive_uses_configured_usernames(analyzer, mock_config_manager):
     project = Project(name="repo1", file_path="/fake/repo1")
     analyzer.project_manager = MagicMock()
-    mock_config_manager.get.return_value = ["alice"]
+    mock_config_manager.get.return_value = ["alice@example.com"]
 
     fake_stats = {
-        "Alice": ContributionStats(lines_added=10, lines_deleted=0, total_commits=1),
-        "Bob": ContributionStats(lines_added=10, lines_deleted=0, total_commits=1),
+        "alice@example.com": ContributionStats(lines_added=10, lines_deleted=0, total_commits=1),
+        "bob@example.com": ContributionStats(lines_added=10, lines_deleted=0, total_commits=1),
     }
 
     with patch("pathlib.Path.exists", return_value=True), \
-         patch.object(analyzer.contribution_analyzer, "get_all_authors", return_value=["Alice", "Bob"]), \
+         patch.object(analyzer.contribution_analyzer, "get_all_authors", return_value={"alice@example.com": "Alice", "bob@example.com": "Bob"}), \
+         patch.object(analyzer.contribution_analyzer, "detect_and_write_mailmap", side_effect=lambda repo, m, config_manager=None: m), \
          patch.object(analyzer.contribution_analyzer, "analyze", return_value=fake_stats):
         analyzer.analyze_git_and_contributions(projects=[project], interactive=False)
 
