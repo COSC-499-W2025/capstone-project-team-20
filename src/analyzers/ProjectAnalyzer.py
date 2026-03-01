@@ -667,6 +667,79 @@ class ProjectAnalyzer:
         print(f"\nGenerated and saved insights for {project.name}:")
         gen.display_insights(project.bullets, project.summary, project.portfolio_entry)
 
+    def generate_insights_noninteractive(self, projects):
+        """
+        API-safe version of insights generation:
+        - generates bullets/summary/portfolio entry/details
+        - does NOT call any CLI editor
+        """
+        for project in projects:
+            self._generate_insights_for_project_noninteractive(project)
+
+
+    def _generate_insights_for_project_noninteractive(self, project: Project):
+        # Ensure prerequisite analyses exist (like CLI)
+        if not project.categories or not project.num_files or not project.languages:
+            self.analyze_metadata(projects=[project])
+            self.analyze_categories(projects=[project])
+            self.analyze_languages(projects=[project])
+            project = self.project_manager.get_by_name(project.name)
+
+        # Ensure contribution info if possible
+        if not project.author_count or project.author_count <= 1:
+            self.analyze_git_and_contributions(projects=[project], interactive=False)
+            project = self.project_manager.get_by_name(project.name)
+        """Generate resume + portfolio insights for a single project (non-interactive)."""
+        # Find the root folder for metadata extraction
+        with self.suppress_output():
+            with self.suppress_output():
+                root_folder = self._find_folder_by_name_recursive(project.name)
+
+                # always try the repo path itself
+                if not root_folder:
+                    root_folder = project.file_path
+
+                extracted = ProjectMetadataExtractor(root_folder).extract_metadata(
+                    repo_path=project.file_path
+                ) or {}
+                metadata = (extracted.get("project_metadata", {}) or {})
+
+            extracted = ProjectMetadataExtractor(root_folder).extract_metadata(
+                repo_path=project.file_path
+            ) or {}
+            metadata = (extracted.get("project_metadata", {}) or {})
+
+        # Update collaboration info if repo has .git
+        try:
+            repo_path = Path(project.file_path)
+            if (repo_path / ".git").exists():
+                with self.suppress_output():
+                    repo_authors = self.contribution_analyzer.get_all_authors(str(repo_path))
+                if repo_authors:
+                    project.author_count = len(repo_authors)
+                    project.collaboration_status = (
+                        "collaborative" if project.author_count > 1 else "individual"
+                    )
+        except Exception:
+            pass
+
+        # Generate resume insights
+        gen = ResumeInsightsGenerator(
+            metadata, project.categories, project.language_share, project, project.languages
+        )
+        project.bullets = gen.generate_resume_bullet_points()
+        project.summary = gen.generate_project_summary()
+        project.portfolio_entry = gen.generate_portfolio_entry()
+
+        # Generate portfolio details
+        portfolio_gen = PortfolioGenerator(
+            metadata, project.categories, project.language_share, project, project.languages
+        )
+        project.portfolio_details = portfolio_gen.generate_portfolio_details()
+
+        # Persist
+        self.project_manager.set(project)
+
     def generate_resume_insights(self) -> None:
         """Presents a menu to generate resume insights, ensuring scores are calculated first."""
         sorted_projects = self.get_projects_sorted_by_score()
