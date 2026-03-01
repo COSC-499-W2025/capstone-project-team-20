@@ -7,6 +7,7 @@ import src.api.routes as routes
 from src.api.api_main import app
 from src.models.Report import Report
 from src.models.ReportProject import ReportProject, PortfolioDetails
+from pathlib import Path
 
 
 # Shared Test Client, fake HTTP client connected to FastAPI app.
@@ -260,6 +261,8 @@ def test_export_portfolio_success(client, monkeypatch):
     Exercise portfolio PDF export endpoint with valid input,
     expects HTTP 200 OK and valid download URL in response.
     """
+    from pathlib import Path
+
     report = Report(
         id=2,
         title="My Report",
@@ -279,18 +282,21 @@ def test_export_portfolio_success(client, monkeypatch):
         def export_to_pdf(self, report, config_manager, output_path: str, template: str):
             calls["output_path"] = output_path
             calls["template"] = template
+            Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+            Path(output_path).write_bytes(b"FAKE PDF DATA")
+            # No ASSERTS inside the fake
 
     monkeypatch.setattr(routes, "ReportManager", FakeReportManager)
     monkeypatch.setattr(routes, "ReportExporter", FakeReportExporter)
 
-    # This is the actual HTTP call (as per milestone requirements)
     res = client.post("/portfolio/export", json={"report_id": 2, "output_name": "output.pdf"})
     assert res.status_code == 200
     data = res.json()
     assert data["ok"] is True
     assert data["download_url"].startswith("/portfolio/exports/")
     assert calls["template"] == "portfolio"
-    assert calls["output_path"].endswith("portfolios/output.pdf")
+    assert calls["output_path"].startswith("portfolios/")
+    assert calls["output_path"].endswith("-output.pdf")
 
 def test_edit_portfolio_updates_report(client, monkeypatch):
     report = Report(
