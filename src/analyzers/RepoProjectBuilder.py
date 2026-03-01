@@ -79,10 +79,19 @@ class RepoProjectBuilder:
 
     def _find_folder_by_name(self, target_name: str) -> ProjectFolder | None:
         """
-        Search through the root folders to find one matching the target name.
+        Search through the full folder tree (not just roots) to find one matching the target name.
+        Uses ProjectFolder.subdir for subfolders.
         """
-        for folder in self.root_folders:
-            # Name comparison should be case-insensitive and ignore trailing slashes
-            if folder.name.strip('/').lower() == target_name.lower():
+        target = target_name.strip("/").lower()
+
+        stack = list(self.root_folders)  # start from roots
+        while stack:
+            folder = stack.pop()
+            if folder.name.strip("/").lower() == target:
                 return folder
+
+            # descend into subfolders
+            if getattr(folder, "subdir", None):
+                stack.extend(folder.subdir)
+
         return None

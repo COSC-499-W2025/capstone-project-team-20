@@ -613,19 +613,15 @@ class TestTemplateRendering:
 
         assert "bad" in str(exc.value)
 
-    def test_validate_projects_analyzed_missing_skills(self):
+    def test_validate_projects_analyzed_allows_missing_stack(self):
         proj = ReportProject(
-            project_name="bad2",
+            project_name="ok2",
             bullets=["x"],
             languages=[],
             frameworks=[]
         )
         report = Report(None, "t", None, "resume_score", [proj], None)
-
-        with pytest.raises(ValueError) as exc:
-            ReportExporter()._validate_projects_analyzed(report)
-
-        assert "bad2" in str(exc.value)
+        ReportExporter()._validate_projects_analyzed(report)
 
     def test_validate_portfolio_ready_success(self):
         proj = ReportProject(

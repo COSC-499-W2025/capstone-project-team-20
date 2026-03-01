@@ -15,6 +15,8 @@ from src.exporters.ReportExporter import ReportExporter
 from src.generators.PortfolioGenerator import PortfolioGenerator
 from src.ZipParser import parse_zip_to_project_folders
 from src.services.badge_wrapped_service import build_badge_progress, build_yearly_wrapped
+from src.managers.ConfigManager import ConfigManager
+
 from src.api.schemas.skills import SkillsListResponse, SkillItem
 from src.api.schemas.projects import (
     UploadProjectResponse,
@@ -24,9 +26,7 @@ from src.api.schemas.projects import (
     ProjectDetail,
 )
 from src.api.schemas.consent import ConsentResponse, ConsentRequest
-
 from src.api.schemas.badges import BadgeProgressResponse, YearlyWrappedResponse
-
 from src.api.schemas.resume import (
     ResumeExportRequest, ResumeExportResponse,
     ReportsListResponse, ReportSummary, ReportDetailResponse, ReportCreateRequest
@@ -37,8 +37,8 @@ from src.api.schemas.portfolio import (
 )
 
 from src.api.schemas import (
-  SkillsListResponse, SkillItem, PortfolioResponse, ConsentResponse, UploadProjectResponse, ProjectsListResponse, ProjectSummary, 
-  ProjectDetailResponse, ProjectDetail, PortfolioGenerateRequest, PortfolioGenerateResponse, PortfolioUpdateRequest, 
+  SkillsListResponse, SkillItem, PortfolioResponse, ConsentResponse, UploadProjectResponse, ProjectsListResponse, ProjectSummary,
+  ProjectDetailResponse, ProjectDetail, PortfolioGenerateRequest, PortfolioGenerateResponse, PortfolioUpdateRequest,
   PortfolioReport, PortfolioProject, PortfolioDetailsResponse
 )
 
@@ -95,7 +95,7 @@ class UploadPathRequest(BaseModel):
 
 def _run_post_upload_analyses(analyzer: ProjectAnalyzer, projects):
     """Run non-interactive analyses so uploaded projects have usable dashboard data."""
-    for method_name in ("analyze_git_and_contributions", "analyze_metadata", "analyze_categories", "analyze_languages", "analyze_skills"):
+    for method_name in ("analyze_git_and_contributions", "analyze_metadata", "analyze_categories", "analyze_languages", "analyze_skills", "generate_insights_noninteractive"):
         method = getattr(analyzer, method_name, None)
         if callable(method):
             if method_name == "analyze_skills":
@@ -109,7 +109,8 @@ def _run_post_upload_analyses(analyzer: ProjectAnalyzer, projects):
 def upload_project_from_path(req: UploadPathRequest):
     """
     Dev-only endpoint: load a ZIP file from a local path on the backend.
-    Mirrors CLI behavior.
+    WARNING: This endpoint is for development/testing only.
+    DO NOT expose in production as it allows arbitrary path access on the API host.
     """
     zip_path = Path(req.path)
 
@@ -133,6 +134,7 @@ def upload_project_from_path(req: UploadPathRequest):
 
 @router.post("/projects/upload", response_model=UploadProjectResponse, status_code=status.HTTP_201_CREATED)
 def upload_project(zip_file: UploadFile = File(...)):
+    """Upload a zip file, analyze projects inside, and persist project records."""
     tmp_path = _copy_upload_to_temp_zip(zip_file)
 
     root_folders = parse_zip_to_project_folders(str(tmp_path))
@@ -151,12 +153,14 @@ def upload_project(zip_file: UploadFile = File(...)):
 
 @router.post("/privacy-consent", response_model=ConsentResponse)
 def upload_consent(req: ConsentRequest):
+    """Set the user's privacy consent flag (required for reporting/export features)."""
     cm = ConsentManager()
     cm.set_consent(req.consent)
     return ConsentResponse(consent=req.consent)
 
 @router.get("/projects", response_model=ProjectsListResponse)
 def get_list_projects():
+    """List all analyzed/uploaded projects."""
     pm = ProjectManager()
     projects = pm.get_all()
     return ProjectsListResponse(
@@ -165,6 +169,7 @@ def get_list_projects():
 
 @router.get("/projects/{id}", response_model=ProjectDetailResponse)
 def get_project(id: int):
+    """Get metadata/details for a project by id."""
     pm = ProjectManager()
     project = pm.get(id)
 
@@ -174,46 +179,27 @@ def get_project(id: int):
     return ProjectDetailResponse(
         project=ProjectDetail(**project.__dict__)
     )
-  
-@router.get("/portfolio/{id}", response_model=PortfolioResponse)
-def get_portfolio(id: int):
-    report_manager = ReportManager()
-    report = report_manager.get_report(id)
-    if not report:
-        raise HTTPException(status_code=404, detail="Portfolio report not found.")
-    portfolio = _build_portfolio_report(report)
-    return PortfolioResponse(ok=True, portfolio=portfolio, message="Portfolio retrieved.")
 
-@router.post("/portfolio/generate", response_model=PortfolioGenerateResponse)
-def generate_portfolio(payload: PortfolioGenerateRequest):
-    report_manager = ReportManager()
-    report = report_manager.get_report(payload.report_id)
-    if not report:
-        raise HTTPException(status_code=404, detail="Portfolio report not found.")
-    filename = payload.output_filename or f"{report.title.replace(' ', '_').lower()}_portfolio.pdf"
-    if not filename.endswith(".pdf"):
-        filename += ".pdf"
-    output_path = str(Path("portfolios") / filename)
-    exporter = ReportExporter()
-    exporter.export_to_pdf(report=report, config_manager=ConfigManager(), output_path=output_path, template="portfolio")
-    return PortfolioGenerateResponse(ok=True, report_id=report.id, output_path=output_path, message="Portfolio generated.")
+@router.delete("/projects/{id}", status_code=204)
+def delete_project(id: int):
+    """
+    Delete a project by id. (Removes record and associated data.)
+    Returns 204 No Content on success.
+    """
+    pm = ProjectManager()
+    project = pm.get(id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found.")
 
-@router.post("/portfolio/{id}/edit", response_model=PortfolioResponse)
-def edit_portfolio(id: int, payload: PortfolioUpdateRequest):
-    report_manager = ReportManager()
-    report = report_manager.get_report(id)
-    if not report:
-        raise HTTPException(status_code=404, detail="Portfolio report not found.")
-    if payload.title:
-        report.title = payload.title.strip()
-    if payload.notes is not None:
-        report.notes = payload.notes
-    report_manager.update_report(report)
-    portfolio = _build_portfolio_report(report)
-    return PortfolioResponse(ok=True, portfolio=portfolio, message="Portfolio updated.")
+    deleted = pm.delete(id)
+    if not deleted:
+        raise HTTPException(status_code=500, detail="Failed to delete project.")
+
+    return None
 
 @router.get("/skills", response_model=SkillsListResponse)
 def get_skills_list():
+    """List unique skills detected across all projects, plus their project usage count."""
     pm = ProjectManager()
     projects = list(pm.get_all())
 
@@ -233,12 +219,14 @@ def get_skills_list():
 
 @router.get("/badges/progress", response_model=BadgeProgressResponse)
 def get_badge_progress():
+    """Return badge progress analytics based on current projects."""
     pm = ProjectManager()
     return build_badge_progress(list(pm.get_all()))
 
 
 @router.get("/wrapped/yearly", response_model=YearlyWrappedResponse)
 def get_yearly_wrapped():
+    """Return 'yearly wrapped' analytics for projects."""
     pm = ProjectManager()
     return build_yearly_wrapped(list(pm.get_all()))
 
@@ -270,12 +258,17 @@ def create_report(req: ReportCreateRequest):
         if not p:
             raise HTTPException(status_code=404, detail=f"Project {pid} not found.")
 
-        # portfolio_details might be dict / None depending on Project serialization
         pd = getattr(p, "portfolio_details", None)
         if isinstance(pd, dict):
             pd = PortfolioDetails.from_dict(pd)
         elif pd is None:
             pd = PortfolioDetails()
+
+        if not p.bullets or not p.summary:
+            analyzer = ProjectAnalyzer(ConfigManager(), root_folders=[], zip_path=Path(p.file_path))
+            analyzer.generate_insights_noninteractive(projects=[p])
+            p = pm.get(pid)
+
         rp = ReportProject(
             project_name=p.name,
             resume_score=getattr(p, "resume_score", 0.0) or 0.0,
@@ -311,6 +304,7 @@ def create_report(req: ReportCreateRequest):
 
 @router.get("/reports", response_model=ReportsListResponse, dependencies=[Depends(require_consent)])
 def list_reports():
+    """List all saved reports (templates) in the system."""
     rm = ReportManager()
     reports = rm.list_reports()
     return ReportsListResponse(
@@ -329,6 +323,7 @@ def list_reports():
 
 @router.get("/reports/{id}", response_model=ReportDetailResponse, dependencies=[Depends(require_consent)])
 def get_report(id: int):
+    """Get a report (by id) and its summary info."""
     rm = ReportManager()
     r = rm.get_report(id)
     if not r:
@@ -344,7 +339,83 @@ def get_report(id: int):
         )
     )
 
-# Portfolio details generation (for a report)
+@router.delete("/reports/{id}", status_code=204, dependencies=[Depends(require_consent)])
+def delete_report(id: int):
+    """
+    Delete a report and all associated report projects.
+    Returns 204 No Content on success.
+    """
+    rm = ReportManager()
+    report = rm.get_report(id)
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found.")
+
+    deleted = rm.delete_report(id)
+    if not deleted:
+        raise HTTPException(status_code=500, detail="Failed to delete report.")
+
+    return None
+
+@router.get("/portfolio/{id}", response_model=PortfolioResponse)
+def get_portfolio(id: int):
+    """Retrieve a generated portfolio report by id."""
+    report_manager = ReportManager()
+    report = report_manager.get_report(id)
+    if not report:
+        raise HTTPException(status_code=404, detail="Portfolio report not found.")
+    portfolio = _build_portfolio_report(report)
+    return PortfolioResponse(ok=True, portfolio=portfolio, message="Portfolio retrieved.")
+
+@router.post("/portfolio/export", response_model=PortfolioExportResponse)
+def export_portfolio(req: PortfolioExportRequest):
+    """
+    Export a portfolio PDF file from a report and return download info.
+    """
+    rm = ReportManager()
+    report = rm.get_report(req.report_id)
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found.")
+
+    try:
+        export_id, out_path = export_report_pdf(report, template="portfolio", output_name=req.output_name)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except RuntimeError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    return PortfolioExportResponse(
+        export_id=export_id,
+        filename=out_path.name,
+        download_url=f"/portfolio/exports/{export_id}/download"
+    )
+
+@router.get("/portfolio/exports/{export_id}/download", dependencies=[Depends(require_consent)])
+def download_portfolio(export_id: str):
+    """Download a previously exported portfolio file."""
+    out_dir = Path("portfolios")
+    matches = list(out_dir.glob(f"{export_id}-*.pdf"))
+    if not matches:
+        raise HTTPException(status_code=404, detail="Export not found.")
+    p = matches[0]
+    return FileResponse(str(p), filename=p.name)
+
+@router.post("/portfolio/{id}/edit", response_model=PortfolioResponse)
+def edit_portfolio(id: int, payload: PortfolioUpdateRequest):
+    """
+    Edit an existing portfolio report's title and notes.
+    """
+    report_manager = ReportManager()
+    report = report_manager.get_report(id)
+    if not report:
+        raise HTTPException(status_code=404, detail="Portfolio report not found.")
+    if payload.title:
+        report.title = payload.title.strip()
+    if payload.notes is not None:
+        report.notes = payload.notes
+    report_manager.update_report(report)
+    portfolio = _build_portfolio_report(report)
+    return PortfolioResponse(ok=True, portfolio=portfolio, message="Portfolio updated.")
+
 @router.post(
     "/reports/{id}/portfolio-details/generate",
     response_model=PortfolioDetailsGenerateResponse,
@@ -399,10 +470,9 @@ def generate_report_portfolio_details(id: int, req: PortfolioDetailsGenerateRequ
     rm.update_report(report)
     return PortfolioDetailsGenerateResponse(updated_project_names=updated)
 
-# Export helpers + endpoints
 def export_report_pdf(report, template: str, output_name: str) -> tuple[str, Path]:
     export_id = uuid4().hex
-    out_dir = Path("resumes")
+    out_dir = Path("resumes") if template != "portfolio" else Path("portfolios")
     out_dir.mkdir(exist_ok=True)
 
     safe_name = output_name.replace("/", "_")
@@ -419,9 +489,11 @@ def export_report_pdf(report, template: str, output_name: str) -> tuple[str, Pat
         raise HTTPException(status_code=500, detail="Export failed: output file not created.")
     return export_id, out_path
 
-
 @router.post("/resume/export", response_model=ResumeExportResponse, dependencies=[Depends(require_consent)])
 def export_resume(req: ResumeExportRequest):
+    """
+    Export a resume PDF file from a report and return download info.
+    """
     rm = ReportManager()
     report = rm.get_report(req.report_id)
     if not report:
@@ -440,9 +512,9 @@ def export_resume(req: ResumeExportRequest):
         download_url=f"/resume/exports/{export_id}/download"
     )
 
-
 @router.get("/resume/exports/{export_id}/download", dependencies=[Depends(require_consent)])
 def download_resume(export_id: str):
+    """Download a previously exported resume file."""
     out_dir = Path("resumes")
     matches = list(out_dir.glob(f"{export_id}-*.pdf"))
     if not matches:
