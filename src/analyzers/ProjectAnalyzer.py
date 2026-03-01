@@ -533,6 +533,7 @@ class ProjectAnalyzer:
                     if name and conf >= MIN_DISPLAY_CONFIDENCE:
                         filtered_skills.append(name.strip())
                 project.skills_used = sorted(list(set(filtered_skills)))
+                project.skills_selected = project.skills_used #Select all skills by default.
 
                 if dimensions := result.get("dimensions", {}):
                     if td := dimensions.get("testing_discipline"):
@@ -1721,6 +1722,112 @@ class ProjectAnalyzer:
 
         print("Resume personal information saved.\n")
 
+    def edit_skills(self):
+        hr = (f"{'':{'─'}>{83}}")   #horizontal rule
+        RED = '\033[91m'
+        GREEN = '\033[92m'
+        GREY = '\033[97m'
+        ENDC = '\033[0m'
+
+        projects = self._get_projects()
+        pro_amt = len(projects)
+
+        saved = False
+        staying = True
+
+        print(hr+'\n[#] Select Project\n'+hr+'\n[x] Exit'+hr+'\nProjects:')
+        for i,p in enumerate(projects):
+            print ('['+str(i+1)+'] - ' + p.name)
+        print(hr+'\nYour Selection:')
+
+        while staying:
+            selection = input()
+            selection = selection.strip()
+
+            if selection.lower() == 'x':
+                return -1
+
+            else:
+                try:
+                    if int(selection)>0 and int(selection)<=pro_amt:
+                        proj = projects[(int(selection)-1)]
+
+                        # if skills used is currently empty, fill it with all skills
+                        if len(proj.skills_selected)==0:
+                            for s in proj.skills_used:
+                                proj.skills_selected.append(s)
+
+                        skill_amt = len(proj.skills_used)
+
+                        msg = "Your Selection:"
+                        while staying:
+                            print(hr+'\n[#] Toggle Skill\n[a] Enable All\n'+hr+'\n[s] Save\n[x] Exit')
+                            print(hr+'\n['+proj.name+"]'s Skills:\n"+hr)
+
+                            for i,s in enumerate(proj.skills_used):
+                                if s in proj.skills_selected:
+                                    print (GREEN+'✓ ['+str(i+1)+'] - ' + s +ENDC)
+
+                                else:
+                                    print (RED+'✗ ['+str(i+1)+'] - ' + s +ENDC)
+                            
+                            print(hr+'\n'+msg)
+
+                            selection = input()
+                            selection = selection.strip()
+
+                            if selection == 'x':
+                                return saved
+                            
+                            elif selection == 's':
+                                try:
+                                    self.project_manager.set(proj)
+                                except:
+                                    print('Error updating the database')
+                                saved = True
+                                msg = GREEN + 'Changes Saved Successfully. Your Selection:' + ENDC
+                            
+                            elif selection == 'a':
+                                for s in proj.skills_used:
+                                    proj.skills_selected.append(s)
+                                msg = "All Skills Enabled. Your Selection:"
+                                saved = False
+                            else:
+                                try:
+                                    if int(selection)>0 and int(selection)<=skill_amt:
+                                        skill = proj.skills_used[(int(selection)-1)]
+                                        #remove if present, add if not
+                                        #.remove() throws ValueError when skill not found.
+                                        try:
+                                            proj.skills_selected.remove(skill)
+                                        except ValueError:
+                                            proj.skills_selected.append(skill)
+                                        msg = "Skill Toggled. Don't Forget To Save! Your Selection:"
+                                        saved=False
+                                    else:
+                                        msg = RED+'Invalid Input. Please try again:'+ENDC
+                                except ValueError:
+                                    msg = RED+'Invalid Input. Please try again:'+ENDC
+                    else:
+                        #clear input
+                        sys.stdout.write('\033[1A') # terminal cursor up one line
+                        sys.stdout.write('\033[2K') # terminal clear current line
+                        #clear prompt message
+                        sys.stdout.write('\033[1A') # terminal cursor up one line
+                        sys.stdout.write('\033[2K') # terminal clear current line
+                        #write error message
+                        sys.stdout.write(RED+'Invalid input. Please try again:'+ENDC+'\n')
+
+                except ValueError:
+                    #clear input
+                    sys.stdout.write('\033[1A') # terminal cursor up one line
+                    sys.stdout.write('\033[2K') # terminal clear current line
+                    #clear prompt message
+                    sys.stdout.write('\033[1A') # terminal cursor up one line
+                    sys.stdout.write('\033[2K') # terminal clear current line
+                    #write error message
+                    sys.stdout.write(RED+'Invalid input. Please try again:'+ENDC+'\n')
+
     def run(self) -> None:
         """The main interactive menu loop."""
         print("\nWelcome to the Project Analyzer.\n")
@@ -1756,6 +1863,7 @@ class ProjectAnalyzer:
                 23. Delete Report
                 24. Select Thumbnail for a Given Project
                 99. Edit project information (Scores & Dates)
+                100. Toggle skills to showcase
                   """)
 
             choice = input("Selection: ").strip()
@@ -1776,6 +1884,7 @@ class ProjectAnalyzer:
                 "18": self.configure_personal_info, "19": self.create_report,
                 "20": self.trigger_resume_generation, "21": self.trigger_portfolio_generation,
                 "22": self.trigger_report_editing,"23": self.delete_report, "24": self.select_thumbnail, "99": self.update_score_and_date,
+                "100": self.edit_skills,
             }
 
             if choice == "17":

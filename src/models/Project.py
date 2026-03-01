@@ -30,7 +30,8 @@ class Project:
             "skills_used",
             "individual_contributions",
             "author_contributions",
-            "bullets"
+            "bullets",
+            "skills_selected"
     ]
 
     DICT_FIELDS = [
@@ -55,6 +56,7 @@ class Project:
     language_share: Dict[str, float] = field(default_factory=dict)
     frameworks: List[str] = list_field()
     skills_used: List[str] = list_field()
+    skills_selected: List[str] = list_field()
 
     # New: dependency and tooling info
     dependencies_list: List[str] = list_field()
@@ -215,6 +217,8 @@ class Project:
             print(f"  Frameworks: {', '.join(self.frameworks)}")
         if self.skills_used:
             print(f"  Other skills/tools: {', '.join(self.skills_used)}")
+        if self.skills_selected:
+            print(f"  Selected skills/tools: {', '.join(self.skills_selected)}")
 
         # Basic project stats
         if self.num_files:
