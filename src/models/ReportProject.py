@@ -34,11 +34,11 @@ class PortfolioDetails:
         }
 
     @classmethod
-    def from_dict(cls, data: dict) -> "PortfolioDetails":
-        data = data.copy() if data else {}
-        if "contributor_roles" not in data:
-            data["contributor_roles"] = []
-        return cls(**data)
+    def from_dict(cls, data):
+        # Only pass keys this class expects to prevent TypeError
+        allowed = {"project_name", "role", "timeline", "technologies", "overview", "achievements", "contributor_roles"}
+        filtered = {k: v for k, v in data.items() if k in allowed}
+        return cls(**filtered)
 
 
 @dataclass
