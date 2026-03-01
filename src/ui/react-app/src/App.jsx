@@ -12,7 +12,8 @@ import {
   exportResume,
   exportPortfolio,
   uploadProjectZip,
-  uploadProjectFromPath
+  uploadProjectFromPath,
+  clearProjects
 } from "./api/client";
 import './App.css'
 
@@ -104,6 +105,8 @@ function Projects() {
   const [error, setError] = useState(null);
 
   const [projects, setProjects] = useState([]);
+  const [currentProjects, setCurrentProjects] = useState([]);
+  const [previousProjects, setPreviousProjects] = useState([]);
   const [selected, setSelected] = useState(null);
   const [zipFile, setZipFile] = useState(null);
   const [pathInput, setPathInput] = useState("");
@@ -113,7 +116,12 @@ function Projects() {
     setError(null);
     try {
       const data = await listProjects();
-      setProjects(data.projects ?? []);
+      const allProjects = data.projects ?? [];
+      const current = data.current_projects ?? allProjects;
+      const previous = data.previous_projects ?? [];
+      setProjects(allProjects);
+      setCurrentProjects(current);
+      setPreviousProjects(previous);
     } catch (e) {
       setError(e.message ?? "Failed to load projects");
     } finally {
@@ -205,6 +213,25 @@ function Projects() {
       <button onClick={loadProjects} disabled={loading}>
         {loading ? "Loading..." : "Refresh Projects"}
       </button>
+      <button
+        onClick={async () => {
+          setLoading(true);
+          setError(null);
+          try {
+            await clearProjects();
+            setSelected(null);
+            await loadProjects();
+          } catch (e) {
+            setError(e.message ?? "Failed to clear database");
+          } finally {
+            setLoading(false);
+          }
+        }}
+        disabled={loading}
+        style={{ marginLeft: 8 }}
+      >
+        {loading ? "Clearing..." : "Clear Database"}
+      </button>
       <div style={{ marginTop: 12, padding: 12, border: "1px solid #ddd", borderRadius: 8 }}>
       <h4>Add Project (Upload ZIP)</h4>
 
@@ -273,20 +300,46 @@ function Projects() {
       {error && <pre style={{ color: "crimson" }}>{error}</pre>}
 
       <div style={{ display: "flex", gap: 16, marginTop: 12 }}>
-        <div style={{ minWidth: 260 }}>
-          <ul>
-            {projects.map((p) => (
-              <li key={p.id}>
-                <button
-                  onClick={() => handleSelect(p.id)}
-                  disabled={loading}
-                  style={{ background: "transparent", border: "none", cursor: "pointer", padding: 0 }}
-                >
-                  {p.name} (#{p.id})
-                </button>
-              </li>
-            ))}
-          </ul>
+        <div style={{ minWidth: 320 }}>
+          <h4>Current Projects</h4>
+          {currentProjects.length === 0 ? (
+            <p>No projects in the current import batch yet.</p>
+          ) : (
+            <ul>
+              {currentProjects.map((p) => (
+                <li key={`current-${p.id}`}>
+                  <button
+                    onClick={() => handleSelect(p.id)}
+                    disabled={loading}
+                    style={{ background: "transparent", border: "none", cursor: "pointer", padding: 0 }}
+                  >
+                    {p.name} (#{p.id})
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          <h4>Previous Projects</h4>
+          {previousProjects.length === 0 ? (
+            <p>No previous projects yet.</p>
+          ) : (
+            <ul>
+              {previousProjects.map((p) => (
+                <li key={`previous-${p.id}`}>
+                  <button
+                    onClick={() => handleSelect(p.id)}
+                    disabled={loading}
+                    style={{ background: "transparent", border: "none", cursor: "pointer", padding: 0 }}
+                  >
+                    {p.name} (#{p.id})
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          <p style={{ opacity: 0.7 }}>Total projects stored: {projects.length}</p>
         </div>
 
         <div style={{ flex: 1 }}>

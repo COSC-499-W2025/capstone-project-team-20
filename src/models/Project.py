@@ -109,6 +109,7 @@ class Project:
     date_created: Optional[datetime] = None
     last_modified: Optional[datetime] = None
     last_accessed: Optional[datetime] = None
+    import_batch_id: Optional[str] = None
 
     def to_dict(self) -> dict:
         """

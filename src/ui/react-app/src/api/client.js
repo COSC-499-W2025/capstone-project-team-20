@@ -55,6 +55,11 @@ export function uploadProjectZip(file) {
   });
 }
 
+export function clearProjects() {
+  // POST /projects/clear -> { ok: true }
+  return request("/projects/clear", { method: "POST" });
+}
+
 // Skills
 
 export function listSkills() {

@@ -14,6 +14,8 @@ class UploadProjectResponse(BaseModel):
 class ProjectsListResponse(BaseModel):
     ok: bool = True
     projects: List[ProjectSummary]
+    current_projects: List[ProjectSummary] = Field(default_factory=list)
+    previous_projects: List[ProjectSummary] = Field(default_factory=list)
 
 class ProjectDetail(BaseModel):
     id: Optional[int] = None
