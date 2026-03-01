@@ -2011,11 +2011,10 @@ Projects:
 
                 sorted_width = 0
                 for p in sorted_items:
-                    sorted_width = max(sorted_width, len(str(p.resume_score)))
-
-                for i,p in enumerate(sorted_items):
-                    print(h+str(i+1) +b+ '[Name]: ' + f'{p.name[:width]:<{width}}' +b+ '[Resume Score]: ' + f'{str(p.resume_score)[:sorted_width]:<{sorted_width}}' +b)
-
+                    sorted_width = max(sorted_width, len(f'{p.resume_score:.2f}'))
+                for i, p in enumerate(sorted_items):
+                    print(h+str(i+1) +b+ '[Name]: ' + f'{p.name[:width]:<{width}}' +b+ '[Resume Score]: ' + f'{p.resume_score:.2f}' +b)
+                    
                 return sorted_items
 
             case '17':
