@@ -480,3 +480,25 @@ def download_portfolio(export_id: str):
         raise HTTPException(status_code=404, detail="Export not found.")
     p = matches[0]
     return FileResponse(str(p), filename=p.name)
+
+class ConfigSaveRequest(BaseModel):
+    name:     str | None = None
+    email:    str | None = None
+    phone:    str | None = None
+    github:   str | None = None
+    linkedin: str | None = None
+
+@router.get("/config")
+def get_config():
+    """Return all stored config values as a flat dict."""
+    cm = ConfigManager()
+    return {"ok": True, "config": cm.get_all()}
+
+@router.post("/config")
+def save_config(req: ConfigSaveRequest):
+    """Persist profile fields. Only non-empty values are written."""
+    cm = ConfigManager()
+    for key, value in req.model_dump().items():
+        if value is not None and str(value).strip():
+            cm.set(key, str(value).strip())
+    return {"ok": True, "config": cm.get_all()}

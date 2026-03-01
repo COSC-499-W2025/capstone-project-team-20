@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react";
+import ProfileSetup from "./ProfileSetup";
 import {
   listProjects,
   getProject,
   listSkills,
   getBadgeProgress, 
   getYearlyWrapped,
+  getConfig,
   setPrivacyConsent,
   createReport,
   exportResume,
@@ -18,7 +20,14 @@ function App() {
   //starts the actual app itself, all pages are gathered here
 
   //creates a variable 'current' with a method 'setcurrent' that updates it, we set to 1 by default here.
+  const [profileReady, setProfileReady] = useState(null);
   const [current, setCurrent] = useState(1);
+
+  useEffect(() => {
+    getConfig()
+      .then((cfg) => setProfileReady(!!(cfg?.name && cfg?.email && cfg?.phone)))
+      .catch(() => setProfileReady(false));
+  }, []);
 
   const buttons = [
     //id for use with 'current', label is a placeholder as of now
@@ -39,21 +48,19 @@ function App() {
   const menuRender = () => {
     //ran on render, renders correct page based on selection
     //menu pages currently stored as individual functions within this file. Scroll down to locate.
+    
     switch(current) {
-      case 0:
-        return <Settings />;
-      case 1:
-        return <Projects />;
-      case 2:
-        return <Badges />;
-      case 3:
-        return <Resume />;
-      case 4:
-        return <Portfolio />;
-      case 5:
-        return <Help />;
+      case 0: return <Settings />;
+      case 1: return <Projects />;
+      case 2: return <Badges />;
+      case 3: return <Resume />;
+      case 4: return <Portfolio />;
+      case 5: return <Help />;
     }
   }
+  // ensure name, phone, email are set
+  if (profileReady === null) return <div className="ps-loading">Loading…</div>;
+  if (!profileReady) return <ProfileSetup onComplete={() => setProfileReady(true)} />;
 
   //on app construction/refresh, builds our UI
   return(
@@ -74,7 +81,6 @@ function App() {
           </button>
         ))}
       </div>
-
       {/* Right Side Content */}
       <div className="menu">
         {menuRender()}
@@ -82,6 +88,7 @@ function App() {
     </div>
   );
 }
+
 
 function Settings(){
     return(
