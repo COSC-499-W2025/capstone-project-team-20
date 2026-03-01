@@ -15,7 +15,6 @@ from src.exporters.ReportExporter import ReportExporter
 from src.generators.PortfolioGenerator import PortfolioGenerator
 from src.ZipParser import parse_zip_to_project_folders
 from src.services.badge_wrapped_service import build_badge_progress, build_yearly_wrapped
-
 from src.api.schemas.skills import SkillsListResponse, SkillItem
 from src.api.schemas.projects import (
     UploadProjectResponse,
@@ -37,9 +36,40 @@ from src.api.schemas.portfolio import (
     PortfolioExportRequest, PortfolioExportResponse
 )
 
+from src.api.schemas import (
+  SkillsListResponse, SkillItem, PortfolioResponse, ConsentResponse, UploadProjectResponse, ProjectsListResponse, ProjectSummary, 
+  ProjectDetailResponse, ProjectDetail, PortfolioGenerateRequest, PortfolioGenerateResponse, PortfolioUpdateRequest, 
+  PortfolioReport, PortfolioProject, PortfolioDetailsResponse
+)
+
 """For all our routes. Requirement 32, endpoints"""
 router = APIRouter()
 
+def _build_portfolio_project(project) -> PortfolioProject:
+    details = project.portfolio_details
+    details_payload = details.to_dict() if hasattr(details, "to_dict") else {}
+    return PortfolioProject(
+        project_name=project.project_name,
+        resume_score=project.resume_score,
+        portfolio_details=PortfolioDetailsResponse(**details_payload),
+        languages=list(project.languages or []),
+        language_share=dict(project.language_share or {}),
+        frameworks=list(project.frameworks or []),
+        date_created=project.date_created,
+        last_modified=project.last_modified,
+        collaboration_status=project.collaboration_status,
+    )
+
+def _build_portfolio_report(report) -> PortfolioReport:
+    projects = [_build_portfolio_project(p) for p in (report.projects or [])]
+    return PortfolioReport(
+        id=report.id,
+        title=report.title,
+        date_created=report.date_created,
+        sort_by=report.sort_by,
+        notes=report.notes,
+        projects=projects,
+    )
 def _copy_upload_to_temp_zip(upload: UploadFile) -> Path:
     """Persist an uploaded ZIP to a temp file, resetting stream position first."""
     if getattr(upload, "file", None) and hasattr(upload.file, "seek"):
@@ -140,10 +170,47 @@ def get_project(id: int):
 
     if not project:
         raise HTTPException(status_code=404, detail="Project not found.")
-    
+
     return ProjectDetailResponse(
         project=ProjectDetail(**project.__dict__)
     )
+  
+@router.get("/portfolio/{id}", response_model=PortfolioResponse)
+def get_portfolio(id: int):
+    report_manager = ReportManager()
+    report = report_manager.get_report(id)
+    if not report:
+        raise HTTPException(status_code=404, detail="Portfolio report not found.")
+    portfolio = _build_portfolio_report(report)
+    return PortfolioResponse(ok=True, portfolio=portfolio, message="Portfolio retrieved.")
+
+@router.post("/portfolio/generate", response_model=PortfolioGenerateResponse)
+def generate_portfolio(payload: PortfolioGenerateRequest):
+    report_manager = ReportManager()
+    report = report_manager.get_report(payload.report_id)
+    if not report:
+        raise HTTPException(status_code=404, detail="Portfolio report not found.")
+    filename = payload.output_filename or f"{report.title.replace(' ', '_').lower()}_portfolio.pdf"
+    if not filename.endswith(".pdf"):
+        filename += ".pdf"
+    output_path = str(Path("portfolios") / filename)
+    exporter = ReportExporter()
+    exporter.export_to_pdf(report=report, config_manager=ConfigManager(), output_path=output_path, template="portfolio")
+    return PortfolioGenerateResponse(ok=True, report_id=report.id, output_path=output_path, message="Portfolio generated.")
+
+@router.post("/portfolio/{id}/edit", response_model=PortfolioResponse)
+def edit_portfolio(id: int, payload: PortfolioUpdateRequest):
+    report_manager = ReportManager()
+    report = report_manager.get_report(id)
+    if not report:
+        raise HTTPException(status_code=404, detail="Portfolio report not found.")
+    if payload.title:
+        report.title = payload.title.strip()
+    if payload.notes is not None:
+        report.notes = payload.notes
+    report_manager.update_report(report)
+    portfolio = _build_portfolio_report(report)
+    return PortfolioResponse(ok=True, portfolio=portfolio, message="Portfolio updated.")
 
 @router.get("/skills", response_model=SkillsListResponse)
 def get_skills_list():
@@ -156,7 +223,7 @@ def get_skills_list():
         for s in (p.skills_used or []):
             if s:
                 counts[s.strip()] += 1
-    
+
     skills = [
         SkillItem(name=name, project_count=count)
         for name, count in sorted(counts.items(), key=lambda x: (-x[1], x[0].lower()))
@@ -209,7 +276,6 @@ def create_report(req: ReportCreateRequest):
             pd = PortfolioDetails.from_dict(pd)
         elif pd is None:
             pd = PortfolioDetails()
-
         rp = ReportProject(
             project_name=p.name,
             resume_score=getattr(p, "resume_score", 0.0) or 0.0,
@@ -408,7 +474,7 @@ def export_portfolio(req: PortfolioExportRequest):
 
 @router.get("/portfolio/exports/{export_id}/download", dependencies=[Depends(require_consent)])
 def download_portfolio(export_id: str):
-    out_dir = Path("resumes")
+    out_dir = Path("portfolios")
     matches = list(out_dir.glob(f"{export_id}-*.pdf"))
     if not matches:
         raise HTTPException(status_code=404, detail="Export not found.")

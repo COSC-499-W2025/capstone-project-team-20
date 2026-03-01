@@ -20,6 +20,7 @@ class PortfolioDetails:
     technologies: str = ""
     overview: str = ""
     achievements: List[str] = field(default_factory=list)
+    contributor_roles: List[Dict[str, object]] = field(default_factory=list)
 
     def to_dict(self) -> dict:
         return {
@@ -29,10 +30,14 @@ class PortfolioDetails:
             "technologies": self.technologies,
             "overview": self.overview,
             "achievements": self.achievements,
+            "contributor_roles": self.contributor_roles,
         }
 
     @classmethod
     def from_dict(cls, data: dict) -> "PortfolioDetails":
+        data = data.copy() if data else {}
+        if "contributor_roles" not in data:
+            data["contributor_roles"] = []
         return cls(**data)
 
 
