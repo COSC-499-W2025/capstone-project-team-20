@@ -2,6 +2,7 @@
 
 ### **Table of Contents:**
 
+- [Term 2 Week 8: February 23rd - March 1st](#term-2-week-8-february-23rd---march-1st)
 - [Term 2 Week 7: February 16th - February 22nd](#term-2-week-7-february-16th---february-22nd)
 - [Term 2 Week 6: February 9th - February 15th](#term-2-week-6-february-9th---february-15th)
 - [Term 2 Week 5: February 2nd - February 8th](#term-2-week-5-february-2nd---february-8th)
@@ -502,6 +503,53 @@ As Milestone 2 approaches, I will look to remain flexible and help out however I
 **Any issues or Blockers That I Encountered This Week and How I Addressed/Plan to Address Them:**
 
 N/A
+
+### Term 2 Week 8: February 23rd - March 1st
+
+**Screenshot of Tasks Worked On:**
+
+![Term 2 Week 5 Log](images/dylan-week-8-term-2-ss.png)
+
+**Coding Tasks:**
+
+This week, I made a PR, implementing a new profile-setup page for the frontend. The feature checks if the user has stored necessary fields for report generation (name, phone, email). If they have, the page is bypassed. If they have not, this page allows them to enter the required information. 
+
+Additionally, there were requested changes for my consolidate git contributors PR, so I spent quite a bit of time fixing that up as well.
+
+[Profile Setup Page](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/415)
+
+[Fix/consolidate git contributors](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/394)
+
+
+**Testing or Debugging Tasks:**
+
+I wrote extensive unit tests for my PR this week, linked above.
+
+**Reviewing or Collaboration Tasks:**
+
+I manually tested and reviewed the following PRs this week. 
+
+[Compare Projects (Req23)](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/410)
+
+[Implemented run all analyzers to the frontend for portfolio/resume generation](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/409)
+
+Additionally, we had the Milestone 2 presentation this week, where I talked about Resume Generation. At the time of writing, we have not filmed our Milestone 2 video as a team. But I'll be helping out there as well.
+
+
+**Brief Description of Last Week Connecting This Week:**
+
+Last week, I went bug hunting in preparation for Milestone 2 and it's presentation.
+
+This week, I added a page to our front-end, allowing the user to set required fields for report generation. (Profile Setup)
+
+**Plan/Goals for Upcoming Week:**
+
+Now that Milestone 2 is upon us, I would like to see the requirements for Milestone 3 before committing to anything in particular. However, I imagine I'll be continuing my work on the Frontend. 
+
+**Any issues or Blockers That I Encountered This Week and How I Addressed/Plan to Address Them:**
+
+N/A
+
 
 
 
