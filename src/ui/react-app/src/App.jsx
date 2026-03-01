@@ -3,14 +3,18 @@ import {
   listProjects,
   getProject,
   listSkills,
-  getBadgeProgress, 
+  getBadgeProgress,
   getYearlyWrapped,
   setPrivacyConsent,
   createReport,
   exportResume,
   exportPortfolio,
   uploadProjectZip,
-  uploadProjectFromPath
+  uploadProjectFromPath,
+  listReports,
+  getReport,
+  generatePortfolioDetailsForReport,
+  generateResumeInsightsForReport,
 } from "./api/client";
 import './App.css'
 
@@ -494,13 +498,34 @@ function Resume() {
 
       const reportId = created.report.id;
 
+      // Get project names from the created report response for resume insights generation
+      const reportResp = await getReport(reportId);
+      let project_names = [];
+      // If reportResp has report.projects, map their names; else fallback to all project names
+      if (reportResp && reportResp.report && Array.isArray(reportResp.report.projects)) {
+        project_names = reportResp.report.projects.map((rp) => rp.project_name);
+      } else {
+        project_names = (projects ?? []).map((p) => p.name);
+      }
+
+      // MUST generate resume insights before exporting!
+      await generateResumeInsightsForReport({
+        report_id: reportId,
+        project_names,
+      });
+
       const exp = await exportResume({
         report_id: reportId,
         template: "jake",
         output_name: "resume.pdf",
       });
 
-      window.open(`http://localhost:8000${exp.download_url}`, "_blank");
+      window.open(
+        exp.download_url.startsWith("http")
+          ? exp.download_url
+          : `http://localhost:8000${exp.download_url}`,
+        "_blank"
+      );
       setMsg("Resume export started — opened download in a new tab.");
     } catch (e) {
       setMsg(e.message ?? "Failed to export resume");
@@ -549,12 +574,30 @@ function Portfolio() {
 
       // NOTE: portfolio export will fail unless portfolio_details exist for each report project
       // If you haven’t generated them yet, add that step later.
+      const reportResp = await getReport(reportId);
+      let project_names = [];
+      if (reportResp && reportResp.report && Array.isArray(reportResp.report.projects)) {
+        project_names = reportResp.report.projects.map((rp) => rp.project_name);
+      } else {
+        project_names = (projects ?? []).map((p) => p.name);
+      }
+
+      await generatePortfolioDetailsForReport({
+        report_id: reportId,
+        project_names,
+      });
+
       const exp = await exportPortfolio({
         report_id: reportId,
         output_name: "portfolio.pdf",
       });
 
-      window.open(`http://localhost:8000${exp.download_url}`, "_blank");
+      window.open(
+        exp.download_url.startsWith("http")
+          ? exp.download_url
+          : `http://localhost:8000${exp.download_url}`,
+        "_blank"
+      );
       setMsg("Portfolio export started — opened download in a new tab.");
     } catch (e) {
       setMsg(e.message ?? "Failed to export portfolio");

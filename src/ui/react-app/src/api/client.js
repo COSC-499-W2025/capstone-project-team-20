@@ -132,3 +132,11 @@ export function exportPortfolio({ report_id, output_name = "portfolio.pdf" }) {
 export function downloadPortfolioUrl(export_id) {
   return `${BASE_URL}/portfolio/exports/${export_id}/download`;
 }
+
+export function generateResumeInsightsForReport({ report_id, project_names }) {
+  return request(`/reports/${report_id}/resume-insights/generate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ report_id, project_names }),
+  });
+}
