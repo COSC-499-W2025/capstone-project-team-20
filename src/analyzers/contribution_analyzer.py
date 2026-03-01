@@ -117,13 +117,22 @@ class ContributionAnalyzer:
             return "code"
         return "other"
     
-    def _load_mailmap(self, repo_path: str) -> Dict[str, str]:
+    def _load_mailmap(self, repo_path: str, config_manager=None) -> Dict[str, str]:
         """
         Returns {raw_email: canonical_email} by parsing .mailmap.
         Falls back to empty dict if no .mailmap exists.
+        If a config_manager is provided, persisted mailmap entries are reapplied
+        into the temp .mailmap before parsing, ensuring merges survive across runs.
         """
         mailmap: Dict[str, str] = {}
         mailmap_path = Path(repo_path) / ".mailmap"
+
+        if config_manager:
+            persisted = config_manager.get("mailmap_entries") or []
+            if persisted:
+                with open(mailmap_path, "a", encoding="utf-8") as f:
+                    f.write("\n".join(persisted) + "\n")
+
         if not mailmap_path.exists():
             return mailmap
         
@@ -153,17 +162,17 @@ class ContributionAnalyzer:
         shared = words_a & words_b
         return len(shared) >= 2
 
-    def detect_and_write_mailmap(self, repo_path: str, author_map: Dict[str, str]) -> Dict[str, str]:
+    def detect_and_write_mailmap(self, repo_path: str, author_map: Dict[str, str], config_manager=None) -> Dict[str, str]:
         """
         Detects likely duplicate contributors and prompts user to merge them.
         Writes a .mailmap file if merges are confirmed, and returns an updated author_map.
         Two heuristics:
         1. Same display name (case-insensitive), different emails
         2. One email is a GitHub no-reply and the name shares >= 2 words with another
+        If a config_manager is provided, confirmed entries are also persisted to config
+        so they survive temp directory cleanup across runs.
         """
         mailmap_path = Path(repo_path) / ".mailmap"
-
-        # Load existing mailmap entries so we don't re-prompt or duplicate them
         existing_entries: set[str] = set()
         if mailmap_path.exists():
             with open(mailmap_path, "r", encoding="utf-8") as f:
@@ -172,7 +181,6 @@ class ContributionAnalyzer:
                     if line and not line.startswith("#"):
                         existing_entries.add(line)
 
-        # --- Heuristic 1: same name, different emails ---
         name_to_emails: Dict[str, List[str]] = {}
         for email, name in author_map.items():
             key = name.lower().strip()
@@ -182,7 +190,6 @@ class ContributionAnalyzer:
             emails for emails in name_to_emails.values() if len(emails) > 1
         ]
 
-        # --- Heuristic 2: noreply email where name shares >= 2 words with another name ---
         noreply_emails = [(e, n) for e, n in author_map.items() if "noreply.github.com" in e]
         personal_emails = [(e, n) for e, n in author_map.items() if "noreply.github.com" not in e]
 
@@ -208,13 +215,11 @@ class ContributionAnalyzer:
         updated_map = dict(author_map)
 
         for emails in duplicate_groups:
-            # Use the longest name as the canonical display name
             display_name = max((author_map[e] for e in emails), key=len)
             print(f"\n  '{display_name}' appears with multiple emails:")
             for i, email in enumerate(emails):
                 print(f"    {i + 1}: {email} ({author_map[email]})")
 
-            # Prefer non-noreply as canonical email
             canonical = next((e for e in emails if "noreply" not in e), emails[0])
             others = [e for e in emails if e != canonical]
 
@@ -231,9 +236,7 @@ class ContributionAnalyzer:
                     if entry not in existing_entries:
                         mailmap_entries.append(entry)
                     updated_map.pop(raw_email, None)
-                    # Update canonical entry to use the longest name
-                    if canonical in updated_map:
-                        updated_map[canonical] = display_name
+                    updated_map[canonical] = display_name
 
         if mailmap_entries:
             with open(mailmap_path, "a", encoding="utf-8") as f:
@@ -243,12 +246,17 @@ class ContributionAnalyzer:
             print(f"\n.mailmap updated at {mailmap_path}")
             print("Future runs will automatically apply these merges.")
 
+            if config_manager:
+                existing_config_entries = config_manager.get("mailmap_entries") or []
+                combined = list(set(existing_config_entries + mailmap_entries))
+                config_manager.set("mailmap_entries", combined)
+
         return updated_map
 
-    def get_all_authors(self, repo_path: str) -> Dict[str, str]:
+    def get_all_authors(self, repo_path: str, config_manager=None) -> Dict[str, str]:
         try:
             repo = Repo(repo_path)
-            mailmap = self._load_mailmap(repo_path)
+            mailmap = self._load_mailmap(repo_path, config_manager=config_manager)
             author_map: Dict[str, str] = {}
             for commit in repo.iter_commits():
                 if commit.author and commit.author.email:

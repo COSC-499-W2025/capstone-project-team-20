@@ -348,7 +348,7 @@ class ProjectAnalyzer:
         for project in projects:
             if (Path(project.file_path) / ".git").exists():
                 with self.suppress_output():
-                    project_author_map = self.contribution_analyzer.get_all_authors(str(project.file_path))
+                    project_author_map = self.contribution_analyzer.get_all_authors(str(project.file_path), config_manager=self._config_manager)
                 all_author_map.update(project_author_map)
 
         if not all_author_map:
@@ -397,10 +397,10 @@ class ProjectAnalyzer:
           print(f"\n--- Analyzing contributions for: {project.name} ---")
 
           with self.suppress_output():
-              author_map = self.contribution_analyzer.get_all_authors(str(repo_path))
+              author_map = self.contribution_analyzer.get_all_authors(str(repo_path), config_manager=self._config_manager)
 
           # Detect duplicates and optionally write .mailmap
-          author_map = self.contribution_analyzer.detect_and_write_mailmap(str(repo_path), author_map)
+          author_map = self.contribution_analyzer.detect_and_write_mailmap(str(repo_path), author_map, config_manager=self._config_manager)
 
           project.author_count = len(author_map)
           project.collaboration_status = "Collaborative" if project.author_count > 1 else "Individual"
