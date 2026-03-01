@@ -462,6 +462,73 @@ def generate_report_portfolio_details(id: int, req: PortfolioDetailsGenerateRequ
     rm.update_report(report)
     return PortfolioDetailsGenerateResponse(updated_project_names=updated)
 
+from src.generators.ResumeInsightsGenerator import ResumeInsightsGenerator
+from src.models.ReportProject import ReportProject
+from src.models.Report import Report
+
+from fastapi import Body
+
+class ResumeInsightsGenerateRequest(BaseModel):
+    report_id: int
+    project_names: list[str]
+
+class ResumeInsightsGenerateResponse(BaseModel):
+    updated_project_names: list[str]
+
+@router.post(
+    "/reports/{id}/resume-insights/generate",
+    response_model=ResumeInsightsGenerateResponse,
+    dependencies=[Depends(require_consent)]
+)
+def generate_report_resume_insights(id: int, req: ResumeInsightsGenerateRequest = Body(...)):
+    """
+    Generate resume bullets and summary for each ReportProject in the report,
+    then save the updated ReportProject in the Report.
+    """
+    if req.report_id != id:
+        raise HTTPException(status_code=400, detail="report_id mismatch.")
+
+    rm = ReportManager()
+    report = rm.get_report(id)
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found.")
+
+    pm = ProjectManager()
+    updated = []
+    targets = set(req.project_names)
+
+    for rp in report.projects:
+        if rp.project_name not in targets:
+            continue
+
+        # Get the real analyzed project from DB
+        p = pm.get_by_name(rp.project_name)
+        if not p:
+            raise HTTPException(status_code=404, detail=f"Project '{rp.project_name}' not found in projects DB.")
+
+        metadata = {
+            "start_date": (p.date_created.isoformat()[:10] if p.date_created else None),
+            "end_date": (p.last_modified.isoformat()[:10] if p.last_modified else None),
+        }
+        categorized_files = p.categories or {}
+        language_share = p.language_share or {}
+        language_list = p.languages or list(language_share.keys())
+
+        generator = ResumeInsightsGenerator(
+            metadata=metadata,
+            categorized_files=categorized_files,
+            language_share=language_share,
+            project=p,
+            language_list=language_list,
+        )
+
+        rp.bullets = generator.generate_resume_bullet_points()
+        rp.summary = generator.generate_project_summary()
+        updated.append(rp.project_name)
+
+    rm.update_report(report)
+    return ResumeInsightsGenerateResponse(updated_project_names=updated)
+
 def export_report_pdf(report, template: str, output_name: str) -> tuple[str, Path]:
     export_id = uuid4().hex
     out_dir = Path("resumes") if template != "portfolio" else Path("portfolios")
