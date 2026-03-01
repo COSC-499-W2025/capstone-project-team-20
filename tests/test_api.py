@@ -254,7 +254,12 @@ def test_get_portfolio_report_found(client, monkeypatch):
     assert data["portfolio"]["id"] == 1
     assert data["portfolio"]["projects"][0]["portfolio_details"]["contributor_roles"][0]["role"] == "Backend"
 
-def test_generate_portfolio_success(client, monkeypatch):
+def test_export_portfolio_success(client, monkeypatch):
+    """
+    HTTP: POST /portfolio/export
+    Exercise portfolio PDF export endpoint with valid input,
+    expects HTTP 200 OK and valid download URL in response.
+    """
     report = Report(
         id=2,
         title="My Report",
@@ -278,12 +283,14 @@ def test_generate_portfolio_success(client, monkeypatch):
     monkeypatch.setattr(routes, "ReportManager", FakeReportManager)
     monkeypatch.setattr(routes, "ReportExporter", FakeReportExporter)
 
-    res = client.post("/portfolio/generate", json={"report_id": 2, "output_filename": "output.pdf"})
+    # This is the actual HTTP call (as per milestone requirements)
+    res = client.post("/portfolio/export", json={"report_id": 2, "output_name": "output.pdf"})
     assert res.status_code == 200
     data = res.json()
     assert data["ok"] is True
-    assert data["output_path"].endswith("portfolios/output.pdf")
+    assert data["download_url"].startswith("/portfolio/exports/")
     assert calls["template"] == "portfolio"
+    assert calls["output_path"].endswith("portfolios/output.pdf")
 
 def test_edit_portfolio_updates_report(client, monkeypatch):
     report = Report(
@@ -395,3 +402,63 @@ def test_yearly_wrapped_contains_milestones_with_project_names(client, monkeypat
     milestones = data["wrapped"][0]["milestones"]
     assert any(m["project"] == "BigTests" for m in milestones)
     assert any(m["badge_id"] == "test_pilot" for m in milestones)
+
+def test_delete_project_success(client, monkeypatch):
+    class FakeProject:
+        def __init__(self, id, name):
+            self.id = id
+            self.name = name
+
+    class FakeProjectManager:
+        def get(self, id):
+            return FakeProject(id, f"Project{id}") if id == 42 else None
+        def delete(self, id):
+            return True
+
+    monkeypatch.setattr(routes, "ProjectManager", FakeProjectManager)
+
+    res = client.delete("/projects/42")
+    assert res.status_code == 204
+
+def test_delete_project_not_found(client, monkeypatch):
+    class FakeProjectManager:
+        def get(self, id):
+            return None
+        def delete(self, id):
+            return False
+
+    monkeypatch.setattr(routes, "ProjectManager", FakeProjectManager)
+
+    res = client.delete("/projects/99")
+    assert res.status_code == 404
+    assert "not found" in res.json()["detail"].lower()
+
+def test_delete_report_success(client, monkeypatch):
+    class FakeReport:
+        def __init__(self, id):
+            self.id = id
+            self.title = "Report"
+
+    class FakeReportManager:
+        def get_report(self, id):
+            return FakeReport(id) if id == 7 else None
+        def delete_report(self, id):
+            return True
+
+    monkeypatch.setattr(routes, "ReportManager", FakeReportManager)
+
+    res = client.delete("/reports/7")
+    assert res.status_code == 204
+
+def test_delete_report_not_found(client, monkeypatch):
+    class FakeReportManager:
+        def get_report(self, id):
+            return None
+        def delete_report(self, id):
+            return False
+
+    monkeypatch.setattr(routes, "ReportManager", FakeReportManager)
+
+    res = client.delete("/reports/99")
+    assert res.status_code == 404
+    assert "not found" in res.json()["detail"].lower()
