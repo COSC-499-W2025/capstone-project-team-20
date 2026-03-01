@@ -168,6 +168,7 @@ npm run dev
 The development server typically runs at:
 http://localhost:5173
 
+> **Note:** the Projects page now includes a **Clear Database** button that removes all stored projects. This is a development convenience and calls the backend `/projects/clear` endpoint.
 ---
 
 ## API Route Map

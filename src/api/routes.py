@@ -170,6 +170,14 @@ def get_list_projects():
         previous_projects=previous_projects,
     )
 
+
+@router.post("/projects/clear", response_model=dict)
+def clear_projects():
+    """Development helper: remove all projects from storage."""
+    pm = ProjectManager()
+    pm.clear()
+    return {"ok": True}
+
 @router.get("/projects/{id}", response_model=ProjectDetailResponse)
 def get_project(id: int):
     pm = ProjectManager()

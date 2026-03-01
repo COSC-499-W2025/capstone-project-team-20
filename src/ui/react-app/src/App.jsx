@@ -10,7 +10,8 @@ import {
   exportResume,
   exportPortfolio,
   uploadProjectZip,
-  uploadProjectFromPath
+  uploadProjectFromPath,
+  clearProjects
 } from "./api/client";
 import './App.css'
 
@@ -204,6 +205,25 @@ function Projects() {
 
       <button onClick={loadProjects} disabled={loading}>
         {loading ? "Loading..." : "Refresh Projects"}
+      </button>
+      <button
+        onClick={async () => {
+          setLoading(true);
+          setError(null);
+          try {
+            await clearProjects();
+            setSelected(null);
+            await loadProjects();
+          } catch (e) {
+            setError(e.message ?? "Failed to clear database");
+          } finally {
+            setLoading(false);
+          }
+        }}
+        disabled={loading}
+        style={{ marginLeft: 8 }}
+      >
+        {loading ? "Clearing..." : "Clear Database"}
       </button>
       <div style={{ marginTop: 12, padding: 12, border: "1px solid #ddd", borderRadius: 8 }}>
       <h4>Add Project (Upload ZIP)</h4>
