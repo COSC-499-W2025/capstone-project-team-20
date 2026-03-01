@@ -160,9 +160,14 @@ def upload_consent(req: ConsentRequest):
 @router.get("/projects", response_model=ProjectsListResponse)
 def get_list_projects():
     pm = ProjectManager()
-    projects = pm.get_all()
+    grouped_projects = pm.get_project_groups()
+
+    current_projects = [ProjectSummary(id=p.id, name=p.name) for p in grouped_projects["current"]]
+    previous_projects = [ProjectSummary(id=p.id, name=p.name) for p in grouped_projects["previous"]]
     return ProjectsListResponse(
-        projects=[ProjectSummary(id=p.id, name=p.name) for p in projects]
+        projects=current_projects + previous_projects,
+        current_projects=current_projects,
+        previous_projects=previous_projects,
     )
 
 @router.get("/projects/{id}", response_model=ProjectDetailResponse)

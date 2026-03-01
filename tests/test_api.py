@@ -58,8 +58,11 @@ def test_privacy_consent_sets_value(client, monkeypatch):
 # /projects (list) test. testing GET /project
 def test_get_projects_list(client, monkeypatch):
     class FakeProjectManager:
-        def get_all(self):
-            return [FakeProject(1, "A"), FakeProject(2, "B")]
+        def get_project_groups(self):
+            return {
+                "current": [FakeProject(2, "B")],
+                "previous": [FakeProject(1, "A")],
+            }
 
     monkeypatch.setattr(routes, "ProjectManager", FakeProjectManager)
 
@@ -72,7 +75,8 @@ def test_get_projects_list(client, monkeypatch):
         {"id": 1, "name": "A"},
         {"id": 2, "name": "B"},
     ]
-
+    assert data["previous_projects"] == [{"id": 1, "name": "A"}]
+    assert data["current_projects"] == [{"id": 2, "name": "B"}]
 
 #/projects/{id} test. GET /projects/5 test.
 def test_get_project_found(client, monkeypatch):
