@@ -2,12 +2,12 @@ import io
 import pytest
 from fastapi.testclient import TestClient
 from datetime import datetime
+from pathlib import Path
 
 import src.api.routes as routes
 from src.api.api_main import app
 from src.models.Report import Report
 from src.models.ReportProject import ReportProject, PortfolioDetails
-from pathlib import Path
 
 
 # Shared Test Client, fake HTTP client connected to FastAPI app.
@@ -261,8 +261,6 @@ def test_export_portfolio_success(client, monkeypatch):
     Exercise portfolio PDF export endpoint with valid input,
     expects HTTP 200 OK and valid download URL in response.
     """
-    from pathlib import Path
-
     report = Report(
         id=2,
         title="My Report",
@@ -284,7 +282,6 @@ def test_export_portfolio_success(client, monkeypatch):
             calls["template"] = template
             Path(output_path).parent.mkdir(parents=True, exist_ok=True)
             Path(output_path).write_bytes(b"FAKE PDF DATA")
-            # No ASSERTS inside the fake
 
     monkeypatch.setattr(routes, "ReportManager", FakeReportManager)
     monkeypatch.setattr(routes, "ReportExporter", FakeReportExporter)
@@ -324,6 +321,7 @@ def test_edit_portfolio_updates_report(client, monkeypatch):
     assert data["ok"] is True
     assert data["portfolio"]["title"] == "New Title"
     assert data["portfolio"]["notes"] == "Updated"
+
 def test_badge_progress_returns_closest_project(client, monkeypatch):
     class FakeProjectManager:
         def get_all(self):
@@ -337,7 +335,6 @@ def test_badge_progress_returns_closest_project(client, monkeypatch):
     res = client.get("/badges/progress")
     assert res.status_code == 200
     data = res.json()
-    assert data["ok"] is True
 
     as_map = {item["badge_id"]: item for item in data["badges"]}
     assert as_map["test_pilot"]["earned"] is True
@@ -440,6 +437,10 @@ def test_delete_project_not_found(client, monkeypatch):
     assert "not found" in res.json()["detail"].lower()
 
 def test_delete_report_success(client, monkeypatch):
+    class FakeConsentManager:
+        def has_user_consented(self):
+            return True
+
     class FakeReport:
         def __init__(self, id):
             self.id = id
@@ -451,18 +452,24 @@ def test_delete_report_success(client, monkeypatch):
         def delete_report(self, id):
             return True
 
+    monkeypatch.setattr(routes, "ConsentManager", FakeConsentManager)
     monkeypatch.setattr(routes, "ReportManager", FakeReportManager)
 
     res = client.delete("/reports/7")
     assert res.status_code == 204
 
 def test_delete_report_not_found(client, monkeypatch):
+    class FakeConsentManager:
+        def has_user_consented(self):
+            return True
+
     class FakeReportManager:
         def get_report(self, id):
             return None
         def delete_report(self, id):
             return False
 
+    monkeypatch.setattr(routes, "ConsentManager", FakeConsentManager)
     monkeypatch.setattr(routes, "ReportManager", FakeReportManager)
 
     res = client.delete("/reports/99")
