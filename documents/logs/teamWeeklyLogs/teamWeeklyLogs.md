@@ -599,3 +599,37 @@ Our frontend is now setup! We will work away at improving that before that befor
 
 [Term 2 Week 7 Test Report](teamWeeklyLogsImages/T2W7-Tests.png)
 
+
+
+### Term 2 Week 8 (February 23rd - March 1st)
+
+**Work Performed:**
+- Branden Kennedy (42474551):
+
+- Necmi Kaan Sapoglu (17014796):
+
+- Lex Nash (84668540): 
+
+- Dylan Alexander (16394025): This week, I made a PR implementing a new profile-setup page for the frontend. The feature checks if the user has stored necessary fields for report generation (name, phone, email). If they have, the page is bypassed. If they have not, this page allows them to enter the required information. Additionally, there were requested changes for my consolidate git contributors PR, so I spent quite a bit of time fixing that up as well. Other than that, I did my assigned code review and my part for the Milestone 2 presentation, and will be filming my part for the Milestone 2 Video Demo this evening.
+
+- Sven Annist (42486720):
+
+**Features included in the project plan for this milestone are:**
+
+
+**Continuing tasks from last week and plan for the next week:**
+
+
+**Burnup chart:**
+
+
+
+**Table View of Completed Tasks on Project Board:**
+
+
+
+**Table View of In-Progress Tasks on Project Board:**
+
+
+
+**Test Report:**
