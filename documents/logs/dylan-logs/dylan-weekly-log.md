@@ -489,6 +489,8 @@ I manually tested and reviewed the following PRs this week.
 
 [Implement LaTex Portfolio Generator](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/381)
 
+Additionally, we had the Milestone 2 presentation this week, where I talked about Resume Generation. At the time of writing, we have not filmed our Milestone 2 video as a team. But I'll be helping out there as well.
+
 
 **Brief Description of Last Week Connecting This Week:**
 
