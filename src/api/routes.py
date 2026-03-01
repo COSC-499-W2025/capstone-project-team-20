@@ -40,6 +40,12 @@ from src.api.schemas import (
   PortfolioReport, PortfolioProject, PortfolioDetailsResponse
 )
 
+
+from src.generators.ResumeInsightsGenerator import ResumeInsightsGenerator
+from src.models.ReportProject import ReportProject
+from src.models.Report import Report
+
+from fastapi import Body
 """For all our routes. Requirement 32, endpoints"""
 router = APIRouter()
 
@@ -462,11 +468,6 @@ def generate_report_portfolio_details(id: int, req: PortfolioDetailsGenerateRequ
     rm.update_report(report)
     return PortfolioDetailsGenerateResponse(updated_project_names=updated)
 
-from src.generators.ResumeInsightsGenerator import ResumeInsightsGenerator
-from src.models.ReportProject import ReportProject
-from src.models.Report import Report
-
-from fastapi import Body
 
 class ResumeInsightsGenerateRequest(BaseModel):
     report_id: int
