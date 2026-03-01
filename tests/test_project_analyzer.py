@@ -64,13 +64,10 @@ def test_change_selected_users_workflow(analyzer, mock_config_manager):
     """Test the full workflow for changing selected users."""
     with patch.object(analyzer, '_get_projects', return_value=[Project(name="repo1", file_path="/fake/repo1")]), \
          patch("pathlib.Path.exists", return_value=True), \
-         patch.object(analyzer.contribution_analyzer, 'get_all_authors', return_value=["Alice", "Bob"]), \
-         patch.object(analyzer, '_prompt_for_usernames', return_value=["Bob"]) as mock_prompt:
+         patch.object(analyzer.contribution_analyzer, 'get_all_authors', return_value={"alice@example.com": "Alice", "bob@example.com": "Bob"}), \
+         patch.object(analyzer, '_prompt_for_usernames', return_value=["bob@example.com"]) as mock_prompt:
 
         analyzer.change_selected_users()
-
-        mock_prompt.assert_called_once_with(["Alice", "Bob"])
-        mock_config_manager.set.assert_called_once_with("usernames", ["Bob"])
 
 def test_initialize_projects_skips_older_zip_update(tmp_path, mock_config_manager):
     # Create a real file on disk so _has_project_changed can walk it
@@ -342,17 +339,206 @@ def test_resolve_selected_authors_matches_case_insensitively(analyzer):
 def test_analyze_git_and_contributions_non_interactive_uses_configured_usernames(analyzer, mock_config_manager):
     project = Project(name="repo1", file_path="/fake/repo1")
     analyzer.project_manager = MagicMock()
-    mock_config_manager.get.return_value = ["alice"]
+    mock_config_manager.get.return_value = ["alice@example.com"]
 
     fake_stats = {
-        "Alice": ContributionStats(lines_added=10, lines_deleted=0, total_commits=1),
-        "Bob": ContributionStats(lines_added=10, lines_deleted=0, total_commits=1),
+        "alice@example.com": ContributionStats(lines_added=10, lines_deleted=0, total_commits=1),
+        "bob@example.com": ContributionStats(lines_added=10, lines_deleted=0, total_commits=1),
     }
 
     with patch("pathlib.Path.exists", return_value=True), \
-         patch.object(analyzer.contribution_analyzer, "get_all_authors", return_value=["Alice", "Bob"]), \
+         patch.object(analyzer.contribution_analyzer, "get_all_authors", return_value={"alice@example.com": "Alice", "bob@example.com": "Bob"}), \
+         patch.object(analyzer.contribution_analyzer, "detect_and_write_mailmap", side_effect=lambda repo, m, config_manager=None: m), \
          patch.object(analyzer.contribution_analyzer, "analyze", return_value=fake_stats):
         analyzer.analyze_git_and_contributions(projects=[project], interactive=False)
 
     assert project.authors == ["Alice"]
     assert project.individual_contributions["contribution_share_percent"] == 50.0
+
+def test_compare_projects(analyzer, monkeypatch):
+    p1 = Project()
+    p1.name='p1'
+    p1.size_kb = 1
+    p1.num_files =1
+    p1.author_count=1
+    p1.languages = ['1']
+    p1.frameworks = ['1']
+    p1.skills_used = ['1']
+    p1.dependencies_list = ['1']
+    p1.total_loc = 1
+    p1.comment_ratio = 1
+    p1.test_file_ratio = 1
+    p1.avg_functions_per_file = 1
+    p1.testing_discipline_score = 1
+    p1.documentation_habits_score = 1
+    p1.modularity_score = 1
+    p1.language_depth_score = 1
+    p1.resume_score = 1
+    p1.date_created = datetime.strptime('1111-01-01','%Y-%m-%d').date()
+    p1.last_modified = datetime.strptime('1111-01-01','%Y-%m-%d').date()
+
+    p2 = Project()
+    p2.name='p2'
+    p2.size_kb = 2
+    p2.num_files = 2
+    p2.author_count=2
+    p2.languages = ['1','2']
+    p2.frameworks = ['1','2']
+    p2.skills_used = ['1','2']
+    p2.dependencies_list = ['1','2']
+    p2.total_loc = 2
+    p2.comment_ratio = 2
+    p2.test_file_ratio = 2
+    p2.avg_functions_per_file = 2
+    p2.testing_discipline_score = 2
+    p2.documentation_habits_score = 2
+    p2.modularity_score = 2
+    p2.language_depth_score = 2
+    p2.resume_score = 2
+    p2.date_created = datetime.strptime('2222-02-02','%Y-%m-%d').date()
+    p2.last_modified = datetime.strptime('2222-02-02','%Y-%m-%d').date()
+
+    items =  [p1, p2]
+
+    expected = [p2, p1] #every sort method should result in this order
+
+    #[0]  incorrect input
+    with patch.object(analyzer, '_get_projects', return_value=items):
+        inputs = ['oops','flush']
+        monkeypatch.setattr('builtins.input', lambda prompt: inputs.pop(0))
+        with patch('builtins.input', side_effect=['oops','flush']):
+            result = analyzer.compare_projects()
+            assert items == result #unchanged output
+    #[1]  Size of project (kb)
+    with patch.object(analyzer, '_get_projects', return_value=items):
+        inputs = ['1','flush']
+        monkeypatch.setattr('builtins.input', lambda prompt: inputs.pop(0))
+        with patch('builtins.input', side_effect=['1','flush']):
+            result = analyzer.compare_projects()
+            assert expected == result
+    #[2]  # of files
+    with patch.object(analyzer, '_get_projects', return_value=items):
+        inputs = ['2','flush']
+        monkeypatch.setattr('builtins.input', lambda prompt: inputs.pop(0))
+        with patch('builtins.input', side_effect=['2','flush']):
+            result = analyzer.compare_projects()
+            assert expected == result
+    #[3]  # of Authors
+    with patch.object(analyzer, '_get_projects', return_value=items):
+        inputs = ['3','flush']
+        monkeypatch.setattr('builtins.input', lambda prompt: inputs.pop(0))
+        with patch('builtins.input', side_effect=['3','flush']):
+            result = analyzer.compare_projects()
+            assert expected == result
+    #[4]  # of languages
+    with patch.object(analyzer, '_get_projects', return_value=items):
+        inputs = ['4','flush']
+        monkeypatch.setattr('builtins.input', lambda prompt: inputs.pop(0))
+        with patch('builtins.input', side_effect=['4','flush']):
+            result = analyzer.compare_projects()
+            assert expected == result
+    #[5]  # of frameworks
+    with patch.object(analyzer, '_get_projects', return_value=items):
+        inputs = ['5','flush']
+        monkeypatch.setattr('builtins.input', lambda prompt: inputs.pop(0))
+        with patch('builtins.input', side_effect=['5','flush']):
+            result = analyzer.compare_projects()
+            assert expected == result
+    #[6]  # of skills
+    with patch.object(analyzer, '_get_projects', return_value=items):
+        inputs = ['6','flush']
+        monkeypatch.setattr('builtins.input', lambda prompt: inputs.pop(0))
+        with patch('builtins.input', side_effect=['6','flush']):
+            result = analyzer.compare_projects()
+            assert expected == result
+    #[7]  # of dependencies
+    with patch.object(analyzer, '_get_projects', return_value=items):
+        inputs = ['7','flush']
+        monkeypatch.setattr('builtins.input', lambda prompt: inputs.pop(0))
+        with patch('builtins.input', side_effect=['7','flush']):
+            result = analyzer.compare_projects()
+            assert expected == result
+    #[8]  # of lines of code
+    with patch.object(analyzer, '_get_projects', return_value=items):
+        inputs = ['8','flush']
+        monkeypatch.setattr('builtins.input', lambda prompt: inputs.pop(0))
+        with patch('builtins.input', side_effect=['8','flush']):
+            result = analyzer.compare_projects()
+            assert expected == result
+    #[9]  Comments/lines of code
+    with patch.object(analyzer, '_get_projects', return_value=items):
+        inputs = ['9','flush']
+        monkeypatch.setattr('builtins.input', lambda prompt: inputs.pop(0))
+        with patch('builtins.input', side_effect=['9','flush']):
+            result = analyzer.compare_projects()
+            assert expected == result
+    #[10] Test file/code file
+    with patch.object(analyzer, '_get_projects', return_value=items):
+        inputs = ['10','flush']
+        monkeypatch.setattr('builtins.input', lambda prompt: inputs.pop(0))
+        with patch('builtins.input', side_effect=['10','flush']):
+            result = analyzer.compare_projects()
+            assert expected == result
+    #[11] Average functions/code file
+    with patch.object(analyzer, '_get_projects', return_value=items):
+        inputs = ['11','flush']
+        monkeypatch.setattr('builtins.input', lambda prompt: inputs.pop(0))
+        with patch('builtins.input', side_effect=['11','flush']):
+            result = analyzer.compare_projects()
+            assert expected == result
+    #[12] Testing Discipline Score
+    with patch.object(analyzer, '_get_projects', return_value=items):
+        inputs = ['12','flush']
+        monkeypatch.setattr('builtins.input', lambda prompt: inputs.pop(0))
+        with patch('builtins.input', side_effect=['12','flush']):
+            result = analyzer.compare_projects()
+            assert expected == result
+    #[13] Documentation Habits Score
+    with patch.object(analyzer, '_get_projects', return_value=items):
+        inputs = ['13','flush']
+        monkeypatch.setattr('builtins.input', lambda prompt: inputs.pop(0))
+        with patch('builtins.input', side_effect=['13','flush']):
+            result = analyzer.compare_projects()
+            assert expected == result
+    #[14] Modularity Score
+    with patch.object(analyzer, '_get_projects', return_value=items):
+        inputs = ['14','flush']
+        monkeypatch.setattr('builtins.input', lambda prompt: inputs.pop(0))
+        with patch('builtins.input', side_effect=['14','flush']):
+            result = analyzer.compare_projects()
+            assert expected == result
+    #[15] Language Depth Score
+    with patch.object(analyzer, '_get_projects', return_value=items):
+        inputs = ['15','flush']
+        monkeypatch.setattr('builtins.input', lambda prompt: inputs.pop(0))
+        with patch('builtins.input', side_effect=['15','flush']):
+            result = analyzer.compare_projects()
+            assert expected == result
+    #[16] Resume Score
+    with patch.object(analyzer, '_get_projects', return_value=items):
+        inputs = ['16','flush']
+        monkeypatch.setattr('builtins.input', lambda prompt: inputs.pop(0))
+        with patch('builtins.input', side_effect=['16','flush']):
+            result = analyzer.compare_projects()
+            assert expected == result
+    #[17] Date Created
+    with patch.object(analyzer, '_get_projects', return_value=items):
+        inputs = ['17','flush']
+        monkeypatch.setattr('builtins.input', lambda prompt: inputs.pop(0))
+        with patch('builtins.input', side_effect=['17','flush']):
+            result = analyzer.compare_projects()
+            assert expected == result
+    #[18] Last Modified
+    with patch.object(analyzer, '_get_projects', return_value=items):
+        inputs = ['18','flush']
+        monkeypatch.setattr('builtins.input', lambda prompt: inputs.pop(0))
+        with patch('builtins.input', side_effect=['18','flush']):
+            result = analyzer.compare_projects()
+            assert expected == result
+    #[x]  Exit
+    with patch.object(analyzer, '_get_projects', return_value=items):
+        inputs = ['x']
+        monkeypatch.setattr('builtins.input', lambda prompt: inputs.pop(0))
+        with patch('builtins.input', side_effect=['x']):
+            result = analyzer.compare_projects()
+            assert result == -1

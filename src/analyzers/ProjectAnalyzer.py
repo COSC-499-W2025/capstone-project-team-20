@@ -233,6 +233,8 @@ class ProjectAnalyzer:
 
             proj_existing = self.project_manager.get_by_name(proj_new.name)
             if proj_existing:
+                proj_existing.file_path = proj_new.file_path
+                proj_existing.root_folder = proj_new.root_folder
                 if self._has_project_changed(proj_new):
                     proj_existing.file_path, proj_existing.root_folder = proj_new.file_path, proj_new.root_folder
                     if proj_new.num_files:
@@ -262,29 +264,36 @@ class ProjectAnalyzer:
     # Analysis Methods
     # ------------------------------------------------------------------
 
-    def _prompt_for_usernames(self, authors: List[str]) -> Optional[List[str]]:
+    def _prompt_for_usernames(self, author_map: Dict[str, str]) -> Optional[List[str]]:
+        """
+        author_map: {email: display_name}
+        Returns list of selected emails (canonical identities).
+        """
         print("\nPlease select your username(s) from the list of project contributors:")
-        if not authors:
+        if not author_map:
             print("No authors found in the commit history.")
             return None
-        for i, author in enumerate(authors):
-            print(f"  {i + 1}: {author}")
+
+        entries = sorted(author_map.items(), key=lambda x: x[1].lower())  # sort by display name
+        for i, (email, name) in enumerate(entries):
+            print(f"  {i + 1}: {name} <{email}>")
+
         print("\nYou can select multiple authors by entering numbers separated by commas (e.g., 1, 3).")
         try:
             choice_str = input("Enter your choice(s) (or 'q' to quit): ").strip()
             if choice_str.lower() == "q":
                 return None
-            selected_authors = []
+            selected_emails = []
             for choice in [c.strip() for c in choice_str.split(",")]:
                 index = int(choice) - 1
-                if not (0 <= index < len(authors)):
+                if not (0 <= index < len(entries)):
                     print(f"Invalid number '{choice}'. Please try again.")
-                    return self._prompt_for_usernames(authors)
-                selected_authors.append(authors[index])
-            return sorted(list(set(selected_authors)))
+                    return self._prompt_for_usernames(author_map)
+                selected_emails.append(entries[index][0])  # append email
+            return sorted(list(set(selected_emails)))
         except (ValueError, IndexError):
             print("Invalid input format. Please enter numbers separated by commas.")
-            return self._prompt_for_usernames(authors)
+            return self._prompt_for_usernames(author_map)
         except KeyboardInterrupt:
             print("\nOperation cancelled by user.")
             return None
@@ -336,15 +345,19 @@ class ProjectAnalyzer:
         projects = self._get_projects()
         if not projects:
             return
-        all_authors = set()
+
+        all_author_map: Dict[str, str] = {}
         for project in projects:
             if (Path(project.file_path) / ".git").exists():
                 with self.suppress_output():
-                    all_authors.update(self.contribution_analyzer.get_all_authors(str(project.file_path)))
-        if not all_authors:
+                    project_author_map = self.contribution_analyzer.get_all_authors(str(project.file_path), config_manager=self._config_manager)
+                all_author_map.update(project_author_map)
+
+        if not all_author_map:
             print("No Git authors found in any project.")
             return
-        new_usernames = self._prompt_for_usernames(sorted(list(all_authors)))
+
+        new_usernames = self._prompt_for_usernames(all_author_map)
         if new_usernames:
             self._config_manager.set("usernames", new_usernames)
             print(f"\nSuccessfully updated selected users to: {', '.join(new_usernames)}")
@@ -366,78 +379,81 @@ class ProjectAnalyzer:
         }
 
         return mapping.get(role_key, role_key.capitalize())
-
     def analyze_git_and_contributions(self, projects: Optional[List[Project]] = None, interactive: bool = True) -> None:
-        """
-        Analyze contributions for each project:
-        - Use get_all_authors() to set total author_count reliably
-        - Optionally prompt for selected usernames if not configured
-        - Compute detailed stats where possible
-        """
-        print("\n--- Git Repository & Contribution Analysis ---")
-        target_projects = projects or self._get_projects()
-        if not target_projects:
-            return
+      """
+      Analyze contributions for each project:
+      - Use get_all_authors() to set total author_count reliably
+      - Optionally prompt for selected usernames if not configured
+      - Compute detailed stats where possible
+      """
+      print("\n--- Git Repository & Contribution Analysis ---")
+      target_projects = projects or self._get_projects()
+      if not target_projects:
+          return
 
-        for project in target_projects:
-            repo_path = Path(project.file_path)
-            if not (repo_path / ".git").exists():
-                continue
+      for project in target_projects:
+          repo_path = Path(project.file_path)
+          if not (repo_path / ".git").exists():
+              continue
 
-            print(f"\n--- Analyzing contributions for: {project.name} ---")
+          print(f"\n--- Analyzing contributions for: {project.name} ---")
 
-            with self.suppress_output():
-                repo_authors = self.contribution_analyzer.get_all_authors(str(repo_path))
+          with self.suppress_output():
+              author_map = self.contribution_analyzer.get_all_authors(str(repo_path), config_manager=self._config_manager)
 
-            project.author_count = len(repo_authors)
-            project.collaboration_status = "collaborative" if project.author_count > 1 else "individual"
+          # Detect duplicates and optionally write .mailmap
+          author_map = self.contribution_analyzer.detect_and_write_mailmap(str(repo_path), author_map, config_manager=self._config_manager)
 
-            if interactive:
-                selected_usernames = self._get_or_select_usernames(sorted(repo_authors)) or []
-            else:
-                configured_usernames = self._config_manager.get("usernames")
-                if isinstance(configured_usernames, list) and configured_usernames:
-                    selected_usernames = configured_usernames
-                else:
-                    selected_usernames = sorted(repo_authors)
+          project.author_count = len(author_map)
+          project.collaboration_status = "Collaborative" if project.author_count > 1 else "Individual"
 
-            with self.suppress_output():
-                all_author_stats = self.contribution_analyzer.analyze(str(repo_path))
+          if interactive:
+              selected_emails = self._get_or_select_usernames(author_map) or []
+          else:
+              configured_usernames = self._config_manager.get("usernames")
+              if isinstance(configured_usernames, list) and configured_usernames:
+                  selected_emails = configured_usernames
+              else:
+                  selected_emails = list(author_map.keys())
 
-            available_authors = list(all_author_stats.keys()) if all_author_stats else sorted(repo_authors)
-            project.authors = self._resolve_selected_authors(selected_usernames, available_authors)
-            if all_author_stats:
-                roles_obj = self.role_inference_analyzer.analyze(all_author_stats)
-                project.contributor_roles = {
-                    user: {
-                        "primary_role": r.primary_role.value,
-                        "confidence": float(r.confidence),
-                        "secondary_roles": [sr.value for sr in (r.secondary_roles or [])],
-                        "evidence": r.evidence or {},
-                    }
-                    for user, r in roles_obj.items()
-                }
+          with self.suppress_output():
+              all_author_stats = self.contribution_analyzer.analyze(str(repo_path))
 
-            if all_author_stats:
-                selected_stats = self._aggregate_stats(all_author_stats, project.authors)
-                total_stats = self._aggregate_stats(all_author_stats)
-                project.author_contributions = [stats.to_dict() for stats in all_author_stats.values()]
-                project.individual_contributions = self.contribution_analyzer.calculate_share(selected_stats, total_stats)
-            else:
-                print("  - No detailed contribution stats available; using author list for collaboration status.")
+          project.authors = sorted([author_map[e] for e in selected_emails if e in author_map])
+          project.contributor_roles = {}
 
-            project.last_accessed = datetime.now()
-            self.project_manager.set(project)
-            print(f"  - Total Contributors: {project.author_count}")
-            print(f"  - Collaboration Status: {project.collaboration_status}")
-            if project.contributor_roles:
-                print(" - Inferred Roles:")
-                for user, info in project.contributor_roles.items():
-                    pretty = self._pretty_role(info.get("primary_role", "none"))
-                    confidence_pct = int(float(info.get("confidence", 0.0)) * 100)
-                    print(f"    - {user} → User Role: {pretty} ({confidence_pct}%)")
+          if all_author_stats:
+              roles_obj = self.role_inference_analyzer.analyze(all_author_stats)
+              project.contributor_roles = {
+                  user: {
+                      "primary_role": r.primary_role.value,
+                      "confidence": float(r.confidence),
+                      "secondary_roles": [sr.value for sr in (r.secondary_roles or [])],
+                      "evidence": r.evidence or {},
+                  }
+                  for user, r in roles_obj.items()
+              }
 
-            print(f"  - Saved data for '{project.name}'.")
+          if all_author_stats:
+              selected_stats = self._aggregate_stats(all_author_stats, selected_emails)
+              total_stats = self._aggregate_stats(all_author_stats)
+              project.author_contributions = [stats.to_dict() for stats in all_author_stats.values()]
+              project.individual_contributions = self.contribution_analyzer.calculate_share(selected_stats, total_stats)
+          else:
+              print("  - No detailed contribution stats available; using author list for collaboration status.")
+
+          project.last_accessed = datetime.now()
+          self.project_manager.set(project)
+          print(f"  - Total Contributors: {project.author_count}")
+          print(f"  - Collaboration Status: {project.collaboration_status}")
+          if project.contributor_roles:
+              print(" - Inferred Roles:")
+              for user, info in project.contributor_roles.items():
+                  pretty = self._pretty_role(info.get("primary_role", "none"))
+                  confidence_pct = int(float(info.get("confidence", 0.0)) * 100)
+                  print(f"    - {user} → User Role: {pretty} ({confidence_pct}%)")
+
+          print(f"  - Saved data for '{project.name}'.")
 
     def analyze_metadata(self, projects: Optional[List[Project]] = None) -> None:
         """Extracts and saves metadata for all projects or a specific list of them."""
@@ -651,6 +667,79 @@ class ProjectAnalyzer:
         self.project_manager.set(project)
         print(f"\nGenerated and saved insights for {project.name}:")
         gen.display_insights(project.bullets, project.summary, project.portfolio_entry)
+
+    def generate_insights_noninteractive(self, projects):
+        """
+        API-safe version of insights generation:
+        - generates bullets/summary/portfolio entry/details
+        - does NOT call any CLI editor
+        """
+        for project in projects:
+            self._generate_insights_for_project_noninteractive(project)
+
+
+    def _generate_insights_for_project_noninteractive(self, project: Project):
+        # Ensure prerequisite analyses exist (like CLI)
+        if not project.categories or not project.num_files or not project.languages:
+            self.analyze_metadata(projects=[project])
+            self.analyze_categories(projects=[project])
+            self.analyze_languages(projects=[project])
+            project = self.project_manager.get_by_name(project.name)
+
+        # Ensure contribution info if possible
+        if not project.author_count or project.author_count <= 1:
+            self.analyze_git_and_contributions(projects=[project], interactive=False)
+            project = self.project_manager.get_by_name(project.name)
+        """Generate resume + portfolio insights for a single project (non-interactive)."""
+        # Find the root folder for metadata extraction
+        with self.suppress_output():
+            with self.suppress_output():
+                root_folder = self._find_folder_by_name_recursive(project.name)
+
+                # always try the repo path itself
+                if not root_folder:
+                    root_folder = project.file_path
+
+                extracted = ProjectMetadataExtractor(root_folder).extract_metadata(
+                    repo_path=project.file_path
+                ) or {}
+                metadata = (extracted.get("project_metadata", {}) or {})
+
+            extracted = ProjectMetadataExtractor(root_folder).extract_metadata(
+                repo_path=project.file_path
+            ) or {}
+            metadata = (extracted.get("project_metadata", {}) or {})
+
+        # Update collaboration info if repo has .git
+        try:
+            repo_path = Path(project.file_path)
+            if (repo_path / ".git").exists():
+                with self.suppress_output():
+                    repo_authors = self.contribution_analyzer.get_all_authors(str(repo_path))
+                if repo_authors:
+                    project.author_count = len(repo_authors)
+                    project.collaboration_status = (
+                        "collaborative" if project.author_count > 1 else "individual"
+                    )
+        except Exception:
+            pass
+
+        # Generate resume insights
+        gen = ResumeInsightsGenerator(
+            metadata, project.categories, project.language_share, project, project.languages
+        )
+        project.bullets = gen.generate_resume_bullet_points()
+        project.summary = gen.generate_project_summary()
+        project.portfolio_entry = gen.generate_portfolio_entry()
+
+        # Generate portfolio details
+        portfolio_gen = PortfolioGenerator(
+            metadata, project.categories, project.language_share, project, project.languages
+        )
+        project.portfolio_details = portfolio_gen.generate_portfolio_details()
+
+        # Persist
+        self.project_manager.set(project)
 
     def generate_resume_insights(self) -> None:
         """Presents a menu to generate resume insights, ensuring scores are calculated first."""
@@ -1721,6 +1810,310 @@ class ProjectAnalyzer:
             self._config_manager.set("experience", experience_entries)
 
         print("Resume personal information saved.\n")
+    
+    def compare_projects(self):
+        '''Compares projects by sorting the list of all projects based on different variables stored in Project objects'''
+        projects = self._get_projects()
+        pro_amt = len(projects)
+        exiting = False
+
+        b = ' │ '
+        h = '#'
+
+        print('''
+┌─────────────────────────────────────────┐
+│Please select which attribute to sort by:│
+└─────────────────────────────────────────┘
+    Stats:
+        [1]  Size of project (kb)
+        [2]  # of files
+        [3]  # of Authors
+        [4]  # of languages
+        [5]  # of frameworks
+        [6]  # of skills
+        [7]  # of dependencies
+        [8]  # of lines of code
+    
+    Ratios:
+        [9]  Comments/lines of codex
+        [10] Test file/code file
+        [11] Average functions/code file
+
+    Scores:
+        [12] Testing Discipline Score
+        [13] Documentation Habits Score
+        [14] Modularity Score
+        [15] Language Depth Score
+        [16] Resume Score
+    
+    Chronology:
+        [17] Date Created
+        [18] Last Modified
+
+        [x] Exit
+    
+Projects:
+┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄''')
+
+        width = 0
+        for p in projects:
+            width = max(width, len(p.name))
+
+        for i,p in enumerate(projects):
+            print(h+str(i+1) +b+ '[Name]: ' + f'{p.name[:width]:<{width}}' + b)
+
+        print("┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄")
+        print("Your Selection (You may need to scroll up to see the list of sorting methods):")
+
+        while (not exiting):
+            choice = input()
+            if choice in ['1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18']:
+                #clear everything
+                for _ in range((3+pro_amt)):
+                    sys.stdout.write('\033[1A') # terminal cursor up one line
+                    sys.stdout.write('\033[2K') # terminal clear current line
+
+                #sort and print list of projects
+                projects = self.sort_projects(projects, choice, width)
+
+                print("┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄")
+                print("Successfully sorted using method "+choice+". Your Selection:")
+            
+            elif choice == 'flush': #return projects list for testing purposes
+                return projects
+            
+            elif choice == 'x': #exit this menu
+                return -1
+            
+            else:
+                # clear input and print error message before asking for new input
+                sys.stdout.write('\033[1A') # terminal cursor up one line
+                sys.stdout.write('\033[2K') # terminal clear current line
+                sys.stdout.write('\033[1A') # terminal cursor up one line
+                sys.stdout.write('\033[2K') # terminal clear current line
+                print('Command does not exist. Please try again:')
+
+    def sort_projects(self, projects: List[Project], sort_by:str, width:str):
+        '''Sorts projects based on input from user. Intended to be ran from compare_projects()'''
+
+        b = ' │ '
+        h = '#'
+
+        match sort_by:
+            case '1':
+                sorted_items = sorted(projects, key=lambda project: project.size_kb, reverse=True)
+
+                sorted_width = 0
+                for p in sorted_items:
+                    sorted_width = max(sorted_width, len(str(p.size_kb)))
+
+                for i,p in enumerate(sorted_items):
+                    print(h+str(i+1) +b+ '[Name]: ' + f'{p.name[:width]:<{width}}' +b+ '[Size (kb)]: ' + f'{str(p.size_kb)[:sorted_width]:<{sorted_width}}' +b)
+
+                return sorted_items
+
+            case '2':
+                sorted_items = sorted(projects, key=lambda project: project.num_files, reverse=True)
+
+                sorted_width = 0
+                for p in sorted_items:
+                    sorted_width = max(sorted_width, len(str(p.num_files)))
+
+                for i,p in enumerate(sorted_items):
+                    print(h+str(i+1) +b+ '[Name]: ' + f'{p.name[:width]:<{width}}' +b+ '[# of Files]: ' + f'{str(p.num_files)[:sorted_width]:<{sorted_width}}' +b)
+
+                return sorted_items
+
+            case '3':
+                sorted_items = sorted(projects, key=lambda project: project.author_count, reverse=True)
+
+                sorted_width = 0
+                for p in sorted_items:
+                    sorted_width = max(sorted_width, len(str(p.author_count)))
+
+                for i,p in enumerate(sorted_items):
+                    print(h+str(i+1) +b+ '[Name]: ' + f'{p.name[:width]:<{width}}' +b+ '[# of Authors]: ' + f'{str(p.author_count)[:sorted_width]:<{sorted_width}}' +b)
+
+                return sorted_items
+
+            case '4':
+                sorted_items = sorted(projects, key=lambda project: len(project.languages), reverse=True)
+
+                sorted_width = 0
+                for p in sorted_items:
+                    sorted_width = max(sorted_width, len(str(len(p.languages))))
+
+                for i,p in enumerate(sorted_items):
+                    print(h+str(i+1) +b+ '[Name]: ' + f'{p.name[:width]:<{width}}' +b+ '[# of Languages]: ' + f'{str(len(p.languages))[:sorted_width]:<{sorted_width}}' +b)
+
+                return sorted_items
+
+            case '5':
+                sorted_items = sorted(projects, key=lambda project: len(project.frameworks), reverse=True)
+
+                sorted_width = 0
+                for p in sorted_items:
+                    sorted_width = max(sorted_width, len(str(len(p.frameworks))))
+
+                for i,p in enumerate(sorted_items):
+                    print(h+str(i+1) +b+ '[Name]: ' + f'{p.name[:width]:<{width}}' +b+ '[# of Frameworks]: ' + f'{str(len(p.frameworks))[:sorted_width]:<{sorted_width}}' +b)
+
+                return sorted_items
+
+            case '6':
+                sorted_items = sorted(projects, key=lambda project: len(project.skills_used), reverse=True)
+
+                sorted_width = 0
+                for p in sorted_items:
+                    sorted_width = max(sorted_width, len(str(len(p.skills_used))))
+
+                for i,p in enumerate(sorted_items):
+                    print(h+str(i+1) +b+ '[Name]: ' + f'{p.name[:width]:<{width}}' +b+ '[# of Skills Used]: ' + f'{str(len(p.skills_used))[:sorted_width]:<{sorted_width}}' +b)
+
+                return sorted_items
+
+            case '7':
+                sorted_items = sorted(projects, key=lambda project: len(project.dependencies_list), reverse=True)
+
+                sorted_width = 0
+                for p in sorted_items:
+                    sorted_width = max(sorted_width, len(str(len(p.dependencies_list))))
+
+                for i,p in enumerate(sorted_items):
+                    print(h+str(i+1) +b+ '[Name]: ' + f'{p.name[:width]:<{width}}' +b+ '[# of Dependencies]: ' + f'{str(len(p.dependencies_list))[:sorted_width]:<{sorted_width}}' +b)
+
+                return sorted_items
+
+            case '8':
+                sorted_items = sorted(projects, key=lambda project: project.total_loc, reverse=True)
+
+                sorted_width = 0
+                for p in sorted_items:
+                    sorted_width = max(sorted_width, len(str(p.total_loc)))
+
+                for i,p in enumerate(sorted_items):
+                    print(h+str(i+1) +b+ '[Name]: ' + f'{p.name[:width]:<{width}}' +b+ '[# of Lines of Code]: ' + f'{str(p.total_loc)[:sorted_width]:<{sorted_width}}' +b)
+
+                return sorted_items
+
+            case '9':
+                sorted_items = sorted(projects, key=lambda project: project.comment_ratio, reverse=True)
+
+                sorted_width = 0
+                for p in sorted_items:
+                    sorted_width = max(sorted_width, len(str(p.comment_ratio)))
+
+                for i,p in enumerate(sorted_items):
+                    print(h+str(i+1) +b+ '[Name]: ' + f'{p.name[:width]:<{width}}' +b+ '[Comments per Lines of Code]: ' + f'{str(p.comment_ratio)[:sorted_width]:<{sorted_width}}' +b)
+
+                return sorted_items
+
+            case '10':
+                sorted_items = sorted(projects, key=lambda project: project.test_file_ratio, reverse=True)
+
+                sorted_width = 0
+                for p in sorted_items:
+                    sorted_width = max(sorted_width, len(str(p.test_file_ratio)))
+
+                for i,p in enumerate(sorted_items):
+                    print(h+str(i+1) +b+ '[Name]: ' + f'{p.name[:width]:<{width}}' +b+ '[Test files per Code Files]: ' + f'{str(p.test_file_ratio)[:sorted_width]:<{sorted_width}}' +b)
+
+                return sorted_items
+
+            case '11':
+                sorted_items = sorted(projects, key=lambda project: project.avg_functions_per_file, reverse=True)
+
+                sorted_width = 0
+                for p in sorted_items:
+                    sorted_width = max(sorted_width, len(str(p.avg_functions_per_file)))
+
+                for i,p in enumerate(sorted_items):
+                    print(h+str(i+1) +b+ '[Name]: ' + f'{p.name[:width]:<{width}}' +b+ '[Average Functions per Code File]: ' + f'{str(p.avg_functions_per_file)[:sorted_width]:<{sorted_width}}' +b)
+
+                return sorted_items
+
+            case '12':
+                sorted_items = sorted(projects, key=lambda project: project.testing_discipline_score, reverse=True)
+
+                sorted_width = 0
+                for p in sorted_items:
+                    sorted_width = max(sorted_width, len(str(p.testing_discipline_score)))
+
+                for i,p in enumerate(sorted_items):
+                    print(h+str(i+1) +b+ '[Name]: ' + f'{p.name[:width]:<{width}}' +b+ '[Testing Discipline Score]: ' + f'{str(p.testing_discipline_score)[:sorted_width]:<{sorted_width}}' +b)
+
+                return sorted_items          
+
+            case '13':
+                sorted_items = sorted(projects, key=lambda project: project.documentation_habits_score, reverse=True)
+
+                sorted_width = 0
+                for p in sorted_items:
+                    sorted_width = max(sorted_width, len(str(p.documentation_habits_score)))
+
+                for i,p in enumerate(sorted_items):
+                    print(h+str(i+1) +b+ '[Name]: ' + f'{p.name[:width]:<{width}}' +b+ '[Documentation Habits Score]: ' + f'{str(p.documentation_habits_score)[:sorted_width]:<{sorted_width}}' +b)
+
+                return sorted_items
+
+            case '14':
+                sorted_items = sorted(projects, key=lambda project: project.modularity_score, reverse=True)
+
+                sorted_width = 0
+                for p in sorted_items:
+                    sorted_width = max(sorted_width, len(str(p.modularity_score)))
+
+                for i,p in enumerate(sorted_items):
+                    print(h+str(i+1) +b+ '[Name]: ' + f'{p.name[:width]:<{width}}' +b+ '[Modularity Score]: ' + f'{str(p.modularity_score)[:sorted_width]:<{sorted_width}}' +b)
+
+                return sorted_items
+
+            case '15':
+                sorted_items = sorted(projects, key=lambda project: project.language_depth_score, reverse=True)
+
+                sorted_width = 0
+                for p in sorted_items:
+                    sorted_width = max(sorted_width, len(str(p.language_depth_score)))
+
+                for i,p in enumerate(sorted_items):
+                    print(h+str(i+1) +b+ '[Name]: ' + f'{p.name[:width]:<{width}}' +b+ '[Language Depth Score]: ' + f'{str(p.language_depth_score)[:sorted_width]:<{sorted_width}}' +b)
+
+                return sorted_items  
+
+            case '16':
+                sorted_items = sorted(projects, key=lambda project: project.resume_score, reverse=True)
+
+                sorted_width = 0
+                for p in sorted_items:
+                    sorted_width = max(sorted_width, len(f'{p.resume_score:.2f}'))
+                for i, p in enumerate(sorted_items):
+                    print(h+str(i+1) +b+ '[Name]: ' + f'{p.name[:width]:<{width}}' +b+ '[Resume Score]: ' + f'{p.resume_score:.2f}' +b)
+                    
+                return sorted_items
+
+            case '17':
+                sorted_items = sorted(projects, key=lambda project: project.date_created, reverse=True)
+
+                sorted_width = 0
+                for p in sorted_items:
+                    sorted_width = max(sorted_width, len(str(p.date_created)))
+
+                for i,p in enumerate(sorted_items):
+                    print(h+str(i+1) +b+ '[Name]: ' + f'{p.name[:width]:<{width}}' +b+ '[Date Created]: ' + f'{str(p.date_created)[:sorted_width]:<{sorted_width}}' +b)
+
+                return sorted_items
+
+            case '18':
+                sorted_items = sorted(projects, key=lambda project: project.last_modified, reverse=True)
+
+                sorted_width = 0
+                for p in sorted_items:
+                    sorted_width = max(sorted_width, len(str(p.last_modified)))
+
+                for i,p in enumerate(sorted_items):
+                    print(h+str(i+1) +b+ '[Name]: ' + f'{p.name[:width]:<{width}}' +b+ '[Last Modified]: ' + f'{str(p.last_modified)[:sorted_width]:<{sorted_width}}' +b)
+
+                return sorted_items
 
     def edit_skills(self):
         '''Ability to toggle which elements in a project's list of skills are used'''
@@ -1863,6 +2256,7 @@ class ProjectAnalyzer:
                 22. Edit Report
                 23. Delete Report
                 24. Select Thumbnail for a Given Project
+                98. Compare projects
                 99. Edit project information (Scores & Dates)
                 100. Toggle skills to showcase
                   """)
@@ -1884,8 +2278,8 @@ class ProjectAnalyzer:
                 "15": self.analyze_badges, "16": self.retrieve_full_portfolio,
                 "18": self.configure_personal_info, "19": self.create_report,
                 "20": self.trigger_resume_generation, "21": self.trigger_portfolio_generation,
-                "22": self.trigger_report_editing,"23": self.delete_report, "24": self.select_thumbnail, "99": self.update_score_and_date,
-                "100": self.edit_skills,
+                "22": self.trigger_report_editing,"23": self.delete_report, "24": self.select_thumbnail,
+                "98": self.compare_projects,"99": self.update_score_and_date,"100": self.edit_skills,
             }
 
             if choice == "17":
