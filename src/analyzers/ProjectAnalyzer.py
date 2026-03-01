@@ -233,6 +233,8 @@ class ProjectAnalyzer:
 
             proj_existing = self.project_manager.get_by_name(proj_new.name)
             if proj_existing:
+                proj_existing.file_path = proj_new.file_path
+                proj_existing.root_folder = proj_new.root_folder
                 if self._has_project_changed(proj_new):
                     proj_existing.file_path, proj_existing.root_folder = proj_new.file_path, proj_new.root_folder
                     if proj_new.num_files:
