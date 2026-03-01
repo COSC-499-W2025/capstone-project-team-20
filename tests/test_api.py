@@ -71,9 +71,10 @@ def test_get_projects_list(client, monkeypatch):
 
     data = res.json()
     assert data["ok"] is True
+    # API concatenates current_projects followed by previous_projects
     assert data["projects"] == [
-        {"id": 1, "name": "A"},
         {"id": 2, "name": "B"},
+        {"id": 1, "name": "A"},
     ]
     assert data["previous_projects"] == [{"id": 1, "name": "A"}]
     assert data["current_projects"] == [{"id": 2, "name": "B"}]
