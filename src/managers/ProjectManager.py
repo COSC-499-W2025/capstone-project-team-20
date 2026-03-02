@@ -66,6 +66,7 @@ class ProjectManager(StorageManager):
         language_share TEXT,
         frameworks TEXT,
         skills_used TEXT,
+        skills_selected TEXT,
         dependencies_list TEXT,
         dependency_files_list TEXT,
         build_tools TEXT,
@@ -121,7 +122,7 @@ class ProjectManager(StorageManager):
         """
         return (
             "id, name, import_batch_id, file_path, root_folder, num_files, size_kb, author_count, "
-            "authors, author_contributions, contributor_roles, languages, language_share, frameworks, skills_used, "
+            "authors, author_contributions, contributor_roles, languages, language_share, frameworks, skills_used, skills_selected, "
             "dependencies_list, dependency_files_list, build_tools, "
             "individual_contributions, collaboration_status, categories, "
             "total_loc, comment_ratio, test_file_ratio, "

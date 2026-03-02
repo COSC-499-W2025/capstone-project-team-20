@@ -189,6 +189,69 @@ def test_register_project_files_dedupes_across_uploads(tmp_path, mock_config_man
     all_hashes = list(analyzer.file_hash_manager.get_all())
     assert len(all_hashes) == 1
 
+def test_edit_skills(analyzer, monkeypatch):
+    p1 = Project()
+    p1.name='p1'
+    p1.skills_used=['Skill1','Skill2','Skill3']
+    p1.skills_selected=[] #start empty so we can check that it auto-fills
+
+    items = [p1]
+
+    #Exit without selecting project
+    with patch.object(analyzer, '_get_projects', return_value=items):
+        inputs = ['x']
+        monkeypatch.setattr('builtins.input', lambda prompt: inputs.pop(0))
+        with patch('builtins.input', side_effect=['x']):
+            assert analyzer.edit_skills() == -1
+    
+    #check empty list auto fills
+    with patch.object(analyzer, '_get_projects', return_value=items):
+        inputs = ['1','s','x']
+        monkeypatch.setattr('builtins.input', lambda prompt: inputs.pop(0))
+        with patch('builtins.input', side_effect=['1','s','x']):
+            assert analyzer.edit_skills() == True
+            assert p1.skills_used == p1.skills_selected
+
+    #p1 now selecting Skill1,Skill2,Skill3
+
+    #remove Skill2
+    with patch.object(analyzer, '_get_projects', return_value=items):
+        inputs = ['1','2','s','x']
+        monkeypatch.setattr('builtins.input', lambda prompt: inputs.pop(0))
+        with patch('builtins.input', side_effect=['1','2','s','x']):
+            assert analyzer.edit_skills() == True
+            assert 'Skill2' not in p1.skills_selected
+    
+    #p1 now selecting Skill1,Skill3
+
+    #remove Skill3, re-enable skill 2
+    with patch.object(analyzer, '_get_projects', return_value=items):
+        inputs = ['1','3','2','s','x']
+        monkeypatch.setattr('builtins.input', lambda prompt: inputs.pop(0))
+        with patch('builtins.input', side_effect=['1','3','2','s','x']):
+            assert analyzer.edit_skills() == True
+            assert 'Skill3' not in p1.skills_selected
+            assert 'Skill2' in p1.skills_selected
+    
+    #p1 now selecting Skill1,Skill2
+
+    #remove Skill1, enable all skills
+    with patch.object(analyzer, '_get_projects', return_value=items):
+        inputs = ['1','1','a','s','x']
+        monkeypatch.setattr('builtins.input', lambda prompt: inputs.pop(0))
+        with patch('builtins.input', side_effect=['1','1','a','s','x']):
+            assert analyzer.edit_skills() == True
+            assert 'Skill1' in p1.skills_selected
+            assert 'Skill3' in p1.skills_selected
+            assert 'Skill2' in p1.skills_selected
+
+    #Incorrect project selection, incorrect skill selection, exit without saving
+    with patch.object(analyzer, '_get_projects', return_value=items):
+        inputs = ['9','1','9','x']
+        monkeypatch.setattr('builtins.input', lambda prompt: inputs.pop(0))
+        with patch('builtins.input', side_effect=['9','1','9','x']):
+            assert analyzer.edit_skills() == False #False if not saved
+
 def test_update_score_and_date(analyzer, monkeypatch):
 
     date1='2001-01-01'

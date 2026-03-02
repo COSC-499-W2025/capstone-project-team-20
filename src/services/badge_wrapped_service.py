@@ -114,7 +114,7 @@ def _project_badges(project) -> list[str]:
         duration_days=duration_days,
         category_summary={"counts": _category_counts(project)},
         languages=getattr(project, "language_share", {}) or {},
-        skills=set(getattr(project, "skills_used", []) or []),
+        skills=set(getattr(project, "skills_selected", []) or []),
         author_count=_author_count(project),
         collaboration_status=getattr(project, "collaboration_status", "individual") or "individual",
     )
