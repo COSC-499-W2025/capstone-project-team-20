@@ -1,6 +1,7 @@
 ## Team 20 Weekly Log
 
 ### Table of contents
+- [Term 2 Week 8(February 23rd - March 1st)](#term-2-week-8-february-23rd---march-1st)
 - [Term 2 Week 7(February 16th - February 22nd)](#term-2-week-7-february-16th---february-22nd)
 - [Term 2 Week 6(February 9th - February 15th)](#term-2-week-6-february-9th---february-15th)
 - [Term 2 Week 5(February 2nd - February 8th)](#term-2-week-5-february-2nd---february-8th)
@@ -604,7 +605,7 @@ Our frontend is now setup! We will work away at improving that before that befor
 ### Term 2 Week 8 (February 23rd - March 1st)
 
 **Work Performed:**
-- Branden Kennedy (42474551):
+- Branden Kennedy (42474551): This week, I implemented automatic Resume Insights generation immediately after ZIP upload, removing the need to manually generate insights before exporting resumes or portfolios (as previously required in the CLI), which now enables instant export functionality from the frontend. This was [PR #409](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/409). I did extensive manual testing in both the CLI and frontend during code review and assisted with debugging requested changes on [PR #419](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/419). I also reviewed [PR 417](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/417), [PR 415](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/415), [PR 411](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/411), [PR 410](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/410). Either than that, I prepared for our presentation that was on Wednesday and helped with our milestone 2 video demo!
 
 - Necmi Kaan Sapoglu (17014796):
 
