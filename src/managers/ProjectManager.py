@@ -121,7 +121,7 @@ class ProjectManager(StorageManager):
         Must match create_table_query.
         """
         return (
-            "id, name, file_path, root_folder, num_files, size_kb, author_count, "
+            "id, name, import_batch_id, file_path, root_folder, num_files, size_kb, author_count, "
             "authors, author_contributions, contributor_roles, languages, language_share, frameworks, skills_used, skills_selected, "
             "dependencies_list, dependency_files_list, build_tools, "
             "individual_contributions, collaboration_status, categories, "
