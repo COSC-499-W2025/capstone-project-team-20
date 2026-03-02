@@ -612,8 +612,8 @@ Our frontend is now setup! We will work away at improving that before that befor
 
 - Dylan Alexander (16394025): This week, I made a PR implementing a new profile-setup page for the frontend. The feature checks if the user has stored necessary fields for report generation (name, phone, email). If they have, the page is bypassed. If they have not, this page allows them to enter the required information. Additionally, there were requested changes for my consolidate git contributors PR, so I spent quite a bit of time fixing that up as well. Other than that, I did my assigned code review and my part for the Milestone 2 presentation, and will be filming my part for the Milestone 2 Video Demo this evening.
 
-- Sven Annist (42486720):
-
+- Sven Annist (42486720): This week, I integrated portfolio role data into the portfolio generation flow, ensuring roles from YAML are surfaced in portfolio outputs. I implemented and updated API endpoints for portfolio retrieval, PDF generation, and metadata updates, expanding schemas and tests to support the new responses. I also cleaned up API endpoints and updated system documentation/architecture, including system diagrams. Additionally, I contributed to and recorded the system architecture and introduction section for our Milestone 2 video demo. I opened a PR for the portfolio API and role-aware output updates ([#403](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/403)), and reviewed [#385](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/385), [#391](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/391), [#411](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/411), and [#422](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/422).
+  
 **Features included in the project plan for this milestone are:**
 
 
