@@ -1762,13 +1762,17 @@ class ProjectAnalyzer:
 
                         msg = "Your Selection:"
                         while staying:
+                            if len(proj.skills_used)==0:
+                                print('no skills in project')
+                                return False
                             print(hr+'\n[#] Toggle Skill\n[a] Enable All\n'+hr+'\n[s] Save\n[x] Exit')
                             print(hr+'\n['+proj.name+"]'s Skills:\n"+hr)
 
                             for i,s in enumerate(proj.skills_used):
                                 if s in proj.skills_selected:
                                     print (GREEN+'✓ ['+str(i+1)+'] - ' + s +ENDC)
-
+                                elif s not in proj.skills_selected:
+                                    print (RED+'✗ ['+str(i+1)+'] - ' + s +ENDC)
                                 else:
                                     print (RED+'✗ ['+str(i+1)+'] - ' + s +ENDC)
                             
@@ -1795,7 +1799,7 @@ class ProjectAnalyzer:
                                 saved = False
                             else:
                                 try:
-                                    if int(selection)>0 and int(selection)<=skill_amt:
+                                    if (int(selection)-1)>=0 and (int(selection)-1)<skill_amt:
                                         skill = proj.skills_used[(int(selection)-1)]
                                         #remove if present, add if not
                                         #.remove() throws ValueError when skill not found.
@@ -1806,9 +1810,9 @@ class ProjectAnalyzer:
                                         msg = "Skill Toggled. Don't Forget To Save! Your Selection:"
                                         saved=False
                                     else:
-                                        msg = RED+'Invalid Input. Please try again:'+ENDC
+                                        msg = RED+'Invalid Skill Index. Please try again:'+ENDC
                                 except ValueError:
-                                    msg = RED+'Invalid Input. Please try again:'+ENDC
+                                    msg = RED+'Invalid Skill Selection. Please try again:'+ENDC
                     else:
                         #clear input
                         sys.stdout.write('\033[1A') # terminal cursor up one line
@@ -1817,7 +1821,7 @@ class ProjectAnalyzer:
                         sys.stdout.write('\033[1A') # terminal cursor up one line
                         sys.stdout.write('\033[2K') # terminal clear current line
                         #write error message
-                        sys.stdout.write(RED+'Invalid input. Please try again:'+ENDC+'\n')
+                        sys.stdout.write(RED+'Invalid Project Index. Please try again:'+ENDC+'\n')
 
                 except ValueError:
                     #clear input
@@ -1827,7 +1831,7 @@ class ProjectAnalyzer:
                     sys.stdout.write('\033[1A') # terminal cursor up one line
                     sys.stdout.write('\033[2K') # terminal clear current line
                     #write error message
-                    sys.stdout.write(RED+'Invalid input. Please try again:'+ENDC+'\n')
+                    sys.stdout.write(RED+'Invalid Project Selection. Please try again:'+ENDC+'\n')
 
     def run(self) -> None:
         """The main interactive menu loop."""
