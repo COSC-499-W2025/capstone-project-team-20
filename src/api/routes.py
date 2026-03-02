@@ -162,10 +162,23 @@ def upload_consent(req: ConsentRequest):
 def get_list_projects():
     """List all analyzed/uploaded projects."""
     pm = ProjectManager()
-    projects = pm.get_all()
+    grouped_projects = pm.get_project_groups()
+
+    current_projects = [ProjectSummary(id=p.id, name=p.name) for p in grouped_projects["current"]]
+    previous_projects = [ProjectSummary(id=p.id, name=p.name) for p in grouped_projects["previous"]]
     return ProjectsListResponse(
-        projects=[ProjectSummary(id=p.id, name=p.name) for p in projects]
+        projects=current_projects + previous_projects,
+        current_projects=current_projects,
+        previous_projects=previous_projects,
     )
+
+
+@router.post("/projects/clear", response_model=dict)
+def clear_projects():
+    """Development helper: remove all projects from storage."""
+    pm = ProjectManager()
+    pm.clear()
+    return {"ok": True}
 
 @router.get("/projects/{id}", response_model=ProjectDetailResponse)
 def get_project(id: int):
@@ -521,3 +534,56 @@ def download_resume(export_id: str):
         raise HTTPException(status_code=404, detail="Export not found.")
     p = matches[0]
     return FileResponse(str(p), filename=p.name)
+
+
+@router.post("/portfolio/export", response_model=PortfolioExportResponse, dependencies=[Depends(require_consent)])
+def export_portfolio(req: PortfolioExportRequest):
+    rm = ReportManager()
+    report = rm.get_report(req.report_id)
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found.")
+
+    try:
+        export_id, out_path = export_report_pdf(report, template="portfolio", output_name=req.output_name)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except RuntimeError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    return PortfolioExportResponse(
+        export_id=export_id,
+        filename=out_path.name,
+        download_url=f"/portfolio/exports/{export_id}/download"
+    )
+
+
+@router.get("/portfolio/exports/{export_id}/download", dependencies=[Depends(require_consent)])
+def download_portfolio(export_id: str):
+    out_dir = Path("portfolios")
+    matches = list(out_dir.glob(f"{export_id}-*.pdf"))
+    if not matches:
+        raise HTTPException(status_code=404, detail="Export not found.")
+    p = matches[0]
+    return FileResponse(str(p), filename=p.name)
+
+class ConfigSaveRequest(BaseModel):
+    name:     str | None = None
+    email:    str | None = None
+    phone:    str | None = None
+    github:   str | None = None
+    linkedin: str | None = None
+
+@router.get("/config")
+def get_config():
+    """Return all stored config values as a flat dict."""
+    cm = ConfigManager()
+    return {"ok": True, "config": cm.get_all()}
+
+@router.post("/config")
+def save_config(req: ConfigSaveRequest):
+    """Persist profile fields. Only non-empty values are written."""
+    cm = ConfigManager()
+    for key, value in req.model_dump().items():
+        if value is not None and str(value).strip():
+            cm.set(key, str(value).strip())
+    return {"ok": True, "config": cm.get_all()}

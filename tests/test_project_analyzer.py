@@ -542,3 +542,37 @@ def test_compare_projects(analyzer, monkeypatch):
         with patch('builtins.input', side_effect=['x']):
             result = analyzer.compare_projects()
             assert result == -1
+
+def test_initialize_projects_refreshes_batch_for_unchanged_project(tmp_path, mock_config_manager):
+    project_dir = tmp_path / "project-d"
+    project_dir.mkdir()
+    (project_dir / "file.txt").write_text("same content")
+
+    zip_location = tmp_path / "same-content.zip"
+    with zipfile.ZipFile(zip_location, 'w') as zf:
+        zf.writestr("project-d/file.txt", "same content")
+
+    root_folders = parse_zip_to_project_folders(str(zip_location))
+    analyzer = ProjectAnalyzer(mock_config_manager, root_folders, zip_location)
+    analyzer.project_manager = ProjectManager(db_path=str(tmp_path / "projects.db"))
+    analyzer.file_hash_manager = FileHashManager(db_path=str(tmp_path / "files.db"))
+
+    existing = Project(
+        name="project-d",
+        file_path=str(project_dir),
+        root_folder="project-d",
+        import_batch_id="old-batch",
+    )
+    analyzer.project_manager.set(existing)
+
+    analyzer._register_project_files(Project(name="project-d", file_path=str(project_dir)))
+
+    with patch.object(analyzer, "ensure_cached_dir", return_value=tmp_path), \
+         patch("src.analyzers.ProjectAnalyzer.RepoProjectBuilder.scan", return_value=[
+             Project(name="project-d", file_path=str(project_dir), root_folder="project-d")
+         ]):
+        analyzer.initialize_projects()
+
+    updated = analyzer.project_manager.get_by_name("project-d")
+    assert updated.import_batch_id == analyzer.import_batch_id
+    assert updated.last_accessed is not None

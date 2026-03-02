@@ -1,4 +1,5 @@
 import signal, threading
+from uuid import uuid4
 import json, os, sys, re, shutil, contextlib, zipfile
 from pathlib import Path
 from typing import Iterable, List, Optional, Tuple, Dict, Any
@@ -58,10 +59,11 @@ class ProjectAnalyzer:
 
         self.cached_extract_dir: Optional[Path] = None
         self.cached_projects: List[Project] = []
+        self.import_batch_id: str = uuid4().hex
 
         self.report_manager = ReportManager()
         self.report_exporter = ReportExporter()
-
+        
         self.role_inference_analyzer = RoleInferenceAnalyzer()
 
         if threading.current_thread() is threading.main_thread():
@@ -232,9 +234,10 @@ class ProjectAnalyzer:
                     proj_new.last_modified = datetime.strptime(summary["end_date"], "%Y-%m-%d")
 
             proj_existing = self.project_manager.get_by_name(proj_new.name)
+            proj_new.import_batch_id = self.import_batch_id
+
             if proj_existing:
-                proj_existing.file_path = proj_new.file_path
-                proj_existing.root_folder = proj_new.root_folder
+                proj_existing.import_batch_id = self.import_batch_id
                 if self._has_project_changed(proj_new):
                     proj_existing.file_path, proj_existing.root_folder = proj_new.file_path, proj_new.root_folder
                     if proj_new.num_files:
@@ -250,10 +253,13 @@ class ProjectAnalyzer:
                     self._register_project_files(proj_existing)
                     print(f"  - Updated existing project: {proj_existing.name}")
                 else:
-                    print(f"  - No changes detected, skipping: {proj_existing.name}")
+                    proj_existing.last_accessed = datetime.now()
+                    self.project_manager.set(proj_existing)
+                    print(f"  - No changes detected, refreshed batch for: {proj_existing.name}")
                 created_projects.append(proj_existing)
             else:
                 proj_new.last_accessed = datetime.now()
+                proj_new.import_batch_id = self.import_batch_id
                 self.project_manager.set(proj_new)
                 self._register_project_files(proj_new)
                 print(f"  - Created new project record: {proj_new.name} with ID {proj_new.id}")

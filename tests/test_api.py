@@ -59,8 +59,11 @@ def test_privacy_consent_sets_value(client, monkeypatch):
 # /projects (list) test. testing GET /project
 def test_get_projects_list(client, monkeypatch):
     class FakeProjectManager:
-        def get_all(self):
-            return [FakeProject(1, "A"), FakeProject(2, "B")]
+        def get_project_groups(self):
+            return {
+                "current": [FakeProject(2, "B")],
+                "previous": [FakeProject(1, "A")],
+            }
 
     monkeypatch.setattr(routes, "ProjectManager", FakeProjectManager)
 
@@ -69,11 +72,13 @@ def test_get_projects_list(client, monkeypatch):
 
     data = res.json()
     assert data["ok"] is True
+    # API concatenates current_projects followed by previous_projects
     assert data["projects"] == [
-        {"id": 1, "name": "A"},
         {"id": 2, "name": "B"},
+        {"id": 1, "name": "A"},
     ]
-
+    assert data["previous_projects"] == [{"id": 1, "name": "A"}]
+    assert data["current_projects"] == [{"id": 2, "name": "B"}]
 
 #/projects/{id} test. GET /projects/5 test.
 def test_get_project_found(client, monkeypatch):
@@ -406,6 +411,82 @@ def test_yearly_wrapped_contains_milestones_with_project_names(client, monkeypat
     assert any(m["project"] == "BigTests" for m in milestones)
     assert any(m["badge_id"] == "test_pilot" for m in milestones)
 
+def test_get_config_returns_empty_when_nothing_stored(client, monkeypatch):
+    class FakeConfigManager:
+        def get_all(self):
+            return {}
+
+    monkeypatch.setattr(routes, "ConfigManager", FakeConfigManager)
+
+    res = client.get("/config")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["ok"] is True
+    assert data["config"] == {}
+
+
+def test_save_config_persists_all_fields(client, monkeypatch):
+    stored = {}
+
+    class FakeConfigManager:
+        def set(self, key, value):
+            stored[key] = value
+
+        def get_all(self):
+            return stored
+
+    monkeypatch.setattr(routes, "ConfigManager", FakeConfigManager)
+
+    payload = {"name": "Ada Lovelace", "email": "ada@test.com", "phone": "555-1234", "github": "ada-lv", "linkedin": "ada-lovelace"}
+    res = client.post("/config", json=payload)
+    assert res.status_code == 200
+    data = res.json()
+    assert data["ok"] is True
+    assert stored["name"] == "Ada Lovelace"
+    assert stored["email"] == "ada@test.com"
+    assert stored["phone"] == "555-1234"
+    assert stored["github"] == "ada-lv"
+    assert stored["linkedin"] == "ada-lovelace"
+
+
+def test_save_config_skips_empty_fields(client, monkeypatch):
+    stored = {}
+
+    class FakeConfigManager:
+        def set(self, key, value):
+            stored[key] = value
+
+        def get_all(self):
+            return stored
+
+    monkeypatch.setattr(routes, "ConfigManager", FakeConfigManager)
+
+    payload = {"name": "Ada Lovelace", "email": "", "phone": None, "github": "   ", "linkedin": None}
+    res = client.post("/config", json=payload)
+    assert res.status_code == 200
+    assert "name" in stored
+    assert "email" not in stored
+    assert "phone" not in stored
+    assert "github" not in stored
+    assert "linkedin" not in stored
+
+
+def test_save_config_required_fields_only(client, monkeypatch):
+    stored = {}
+
+    class FakeConfigManager:
+        def set(self, key, value):
+            stored[key] = value
+
+        def get_all(self):
+            return stored
+
+    monkeypatch.setattr(routes, "ConfigManager", FakeConfigManager)
+
+    payload = {"name": "Ada Lovelace", "email": "ada@test.com", "phone": "555-1234"}
+    res = client.post("/config", json=payload)
+    assert res.status_code == 200
+    assert stored == {"name": "Ada Lovelace", "email": "ada@test.com", "phone": "555-1234"}
 def test_delete_project_success(client, monkeypatch):
     class FakeProject:
         def __init__(self, id, name):
