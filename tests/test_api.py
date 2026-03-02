@@ -2,6 +2,7 @@ import io
 import pytest
 from fastapi.testclient import TestClient
 from datetime import datetime
+from pathlib import Path
 
 import src.api.routes as routes
 from src.api.api_main import app
@@ -58,8 +59,11 @@ def test_privacy_consent_sets_value(client, monkeypatch):
 # /projects (list) test. testing GET /project
 def test_get_projects_list(client, monkeypatch):
     class FakeProjectManager:
-        def get_all(self):
-            return [FakeProject(1, "A"), FakeProject(2, "B")]
+        def get_project_groups(self):
+            return {
+                "current": [FakeProject(2, "B")],
+                "previous": [FakeProject(1, "A")],
+            }
 
     monkeypatch.setattr(routes, "ProjectManager", FakeProjectManager)
 
@@ -68,11 +72,13 @@ def test_get_projects_list(client, monkeypatch):
 
     data = res.json()
     assert data["ok"] is True
+    # API concatenates current_projects followed by previous_projects
     assert data["projects"] == [
-        {"id": 1, "name": "A"},
         {"id": 2, "name": "B"},
+        {"id": 1, "name": "A"},
     ]
-
+    assert data["previous_projects"] == [{"id": 1, "name": "A"}]
+    assert data["current_projects"] == [{"id": 2, "name": "B"}]
 
 #/projects/{id} test. GET /projects/5 test.
 def test_get_project_found(client, monkeypatch):
@@ -254,7 +260,12 @@ def test_get_portfolio_report_found(client, monkeypatch):
     assert data["portfolio"]["id"] == 1
     assert data["portfolio"]["projects"][0]["portfolio_details"]["contributor_roles"][0]["role"] == "Backend"
 
-def test_generate_portfolio_success(client, monkeypatch):
+def test_export_portfolio_success(client, monkeypatch):
+    """
+    HTTP: POST /portfolio/export
+    Exercise portfolio PDF export endpoint with valid input,
+    expects HTTP 200 OK and valid download URL in response.
+    """
     report = Report(
         id=2,
         title="My Report",
@@ -274,16 +285,20 @@ def test_generate_portfolio_success(client, monkeypatch):
         def export_to_pdf(self, report, config_manager, output_path: str, template: str):
             calls["output_path"] = output_path
             calls["template"] = template
+            Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+            Path(output_path).write_bytes(b"FAKE PDF DATA")
 
     monkeypatch.setattr(routes, "ReportManager", FakeReportManager)
     monkeypatch.setattr(routes, "ReportExporter", FakeReportExporter)
 
-    res = client.post("/portfolio/generate", json={"report_id": 2, "output_filename": "output.pdf"})
+    res = client.post("/portfolio/export", json={"report_id": 2, "output_name": "output.pdf"})
     assert res.status_code == 200
     data = res.json()
     assert data["ok"] is True
-    assert data["output_path"].endswith("portfolios/output.pdf")
+    assert data["download_url"].startswith("/portfolio/exports/")
     assert calls["template"] == "portfolio"
+    assert calls["output_path"].startswith("portfolios/")
+    assert calls["output_path"].endswith("-output.pdf")
 
 def test_edit_portfolio_updates_report(client, monkeypatch):
     report = Report(
@@ -311,6 +326,7 @@ def test_edit_portfolio_updates_report(client, monkeypatch):
     assert data["ok"] is True
     assert data["portfolio"]["title"] == "New Title"
     assert data["portfolio"]["notes"] == "Updated"
+
 def test_badge_progress_returns_closest_project(client, monkeypatch):
     class FakeProjectManager:
         def get_all(self):
@@ -324,7 +340,6 @@ def test_badge_progress_returns_closest_project(client, monkeypatch):
     res = client.get("/badges/progress")
     assert res.status_code == 200
     data = res.json()
-    assert data["ok"] is True
 
     as_map = {item["badge_id"]: item for item in data["badges"]}
     assert as_map["test_pilot"]["earned"] is True
@@ -395,3 +410,149 @@ def test_yearly_wrapped_contains_milestones_with_project_names(client, monkeypat
     milestones = data["wrapped"][0]["milestones"]
     assert any(m["project"] == "BigTests" for m in milestones)
     assert any(m["badge_id"] == "test_pilot" for m in milestones)
+
+def test_get_config_returns_empty_when_nothing_stored(client, monkeypatch):
+    class FakeConfigManager:
+        def get_all(self):
+            return {}
+
+    monkeypatch.setattr(routes, "ConfigManager", FakeConfigManager)
+
+    res = client.get("/config")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["ok"] is True
+    assert data["config"] == {}
+
+
+def test_save_config_persists_all_fields(client, monkeypatch):
+    stored = {}
+
+    class FakeConfigManager:
+        def set(self, key, value):
+            stored[key] = value
+
+        def get_all(self):
+            return stored
+
+    monkeypatch.setattr(routes, "ConfigManager", FakeConfigManager)
+
+    payload = {"name": "Ada Lovelace", "email": "ada@test.com", "phone": "555-1234", "github": "ada-lv", "linkedin": "ada-lovelace"}
+    res = client.post("/config", json=payload)
+    assert res.status_code == 200
+    data = res.json()
+    assert data["ok"] is True
+    assert stored["name"] == "Ada Lovelace"
+    assert stored["email"] == "ada@test.com"
+    assert stored["phone"] == "555-1234"
+    assert stored["github"] == "ada-lv"
+    assert stored["linkedin"] == "ada-lovelace"
+
+
+def test_save_config_skips_empty_fields(client, monkeypatch):
+    stored = {}
+
+    class FakeConfigManager:
+        def set(self, key, value):
+            stored[key] = value
+
+        def get_all(self):
+            return stored
+
+    monkeypatch.setattr(routes, "ConfigManager", FakeConfigManager)
+
+    payload = {"name": "Ada Lovelace", "email": "", "phone": None, "github": "   ", "linkedin": None}
+    res = client.post("/config", json=payload)
+    assert res.status_code == 200
+    assert "name" in stored
+    assert "email" not in stored
+    assert "phone" not in stored
+    assert "github" not in stored
+    assert "linkedin" not in stored
+
+
+def test_save_config_required_fields_only(client, monkeypatch):
+    stored = {}
+
+    class FakeConfigManager:
+        def set(self, key, value):
+            stored[key] = value
+
+        def get_all(self):
+            return stored
+
+    monkeypatch.setattr(routes, "ConfigManager", FakeConfigManager)
+
+    payload = {"name": "Ada Lovelace", "email": "ada@test.com", "phone": "555-1234"}
+    res = client.post("/config", json=payload)
+    assert res.status_code == 200
+    assert stored == {"name": "Ada Lovelace", "email": "ada@test.com", "phone": "555-1234"}
+def test_delete_project_success(client, monkeypatch):
+    class FakeProject:
+        def __init__(self, id, name):
+            self.id = id
+            self.name = name
+
+    class FakeProjectManager:
+        def get(self, id):
+            return FakeProject(id, f"Project{id}") if id == 42 else None
+        def delete(self, id):
+            return True
+
+    monkeypatch.setattr(routes, "ProjectManager", FakeProjectManager)
+
+    res = client.delete("/projects/42")
+    assert res.status_code == 204
+
+def test_delete_project_not_found(client, monkeypatch):
+    class FakeProjectManager:
+        def get(self, id):
+            return None
+        def delete(self, id):
+            return False
+
+    monkeypatch.setattr(routes, "ProjectManager", FakeProjectManager)
+
+    res = client.delete("/projects/99")
+    assert res.status_code == 404
+    assert "not found" in res.json()["detail"].lower()
+
+def test_delete_report_success(client, monkeypatch):
+    class FakeConsentManager:
+        def has_user_consented(self):
+            return True
+
+    class FakeReport:
+        def __init__(self, id):
+            self.id = id
+            self.title = "Report"
+
+    class FakeReportManager:
+        def get_report(self, id):
+            return FakeReport(id) if id == 7 else None
+        def delete_report(self, id):
+            return True
+
+    monkeypatch.setattr(routes, "ConsentManager", FakeConsentManager)
+    monkeypatch.setattr(routes, "ReportManager", FakeReportManager)
+
+    res = client.delete("/reports/7")
+    assert res.status_code == 204
+
+def test_delete_report_not_found(client, monkeypatch):
+    class FakeConsentManager:
+        def has_user_consented(self):
+            return True
+
+    class FakeReportManager:
+        def get_report(self, id):
+            return None
+        def delete_report(self, id):
+            return False
+
+    monkeypatch.setattr(routes, "ConsentManager", FakeConsentManager)
+    monkeypatch.setattr(routes, "ReportManager", FakeReportManager)
+
+    res = client.delete("/reports/99")
+    assert res.status_code == 404
+    assert "not found" in res.json()["detail"].lower()

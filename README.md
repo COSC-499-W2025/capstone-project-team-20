@@ -168,23 +168,36 @@ npm run dev
 The development server typically runs at:
 http://localhost:5173
 
+> **Note:** the Projects page now includes a **Clear Database** button that removes all stored projects. This is a development convenience and calls the backend `/projects/clear` endpoint.
 ---
 
 ## API Route Map
 
 | Method | Path | Description | Status |
 |--------|------|-------------|--------|
-| POST | /projects/upload | Upload a .zip file, analyze it, and store project records | Implemented |
-| POST | /privacy-consent | Save the user's privacy consent choice | Implemented |
-| GET | /projects | List stored projects (id, name) | Implemented |
-| GET | /projects/{id} | Retrieve full details for a specific project | Implemented |
-| GET | /skills | Return detected skills with project counts | Implemented |
-| GET | /resume/{id} | Retrieve generated resume output | Placeholder |
-| POST | /resume/generate | Generate resume output | Placeholder |
-| POST | /resume/{id}/edit | Edit resume output | Placeholder |
-| GET | /portfolio/{id} | Retrieve generated portfolio output | Placeholder |
-| POST | /portfolio/generate | Generate portfolio output | Placeholder |
-| POST | /portfolio/{id}/edit | Edit portfolio output | Placeholder |
+| POST   | /projects/upload          | Upload a .zip file, analyze it, and store project records   | Implemented |
+| POST   | /projects/upload-path     | Load a .zip by **server-side file path** (Dev-only! Do not expose in production; security risk) | Implemented (Dev only) |
+| DELETE | /projects/{id}            | Delete a project record by id                              | Implemented |
+| POST   | /privacy-consent          | Save the user's privacy consent choice                      | Implemented |
+| GET    | /projects                 | List stored projects (id, name)                             | Implemented |
+| GET    | /projects/{id}            | Retrieve full details for a specific project                | Implemented |
+| GET    | /skills                   | Return detected skills with project counts                  | Implemented |
+| GET    | /badges/progress          | Return badge progress analytics                             | Implemented |
+| GET    | /wrapped/yearly           | Return "yearly wrapped" (annual summary) analytics          | Implemented |
+| POST   | /reports                  | Create a report (template) from selected projects           | Implemented |
+| DELETE | /reports/{id}             | Delete a report and all its report projects                 | Implemented |
+| GET    | /reports                  | List all reports (templates)                                | Implemented |
+| GET    | /reports/{id}             | Retrieve details for a specific report                      | Implemented |
+| POST   | /reports/{id}/portfolio-details/generate | Generate/refresh metadata for report projects              | Implemented |
+| GET    | /portfolio/{id}           | Retrieve a generated portfolio report by id                 | Implemented |
+| POST   | /portfolio/export         | Export a portfolio to PDF and get download info             | Implemented |
+| GET    | /portfolio/exports/{export_id}/download | Download a previously exported portfolio file               | Implemented |
+| POST   | /portfolio/{id}/edit      | Edit a portfolio (title, notes)                             | Implemented |
+| POST   | /resume/export            | Export a resume to PDF and get download info                | Implemented |
+| GET    | /resume/exports/{export_id}/download  | Download a previously exported resume file                 | Implemented |
+
+**NOTE:**
+- `/projects/upload-path` is for developer use only; if this system is ever ran as a server this endpoint should never be exposed as it allows arbitrary file access by path.
 
 ---
 
@@ -222,6 +235,43 @@ Get Skills Summary:
 ```bash
 curl "http://127.0.0.1:8000/skills"
 ```
+
+---
+
+## Testing
+
+We maintain a comprehensive automated test suite to ensure the stability and correctness of the Project Analyzer system across all major areas:
+
+- **API endpoints are tested as if from the perspective of a real client (over HTTP)** using [FastAPI's TestClient](https://fastapi.tiangolo.com/advanced/testing/). This guarantees that response codes, payloads, and error handling reflect real-world use.
+- **Backend/core logic and managers** are covered with unit and integration tests, validating essential data flows, edge cases, and correct database persistence.
+- **CLI workflows** are verified where possible by mocking input/output and running through typical user scenarios.
+- **Front-end components** are tested with Jest and React Testing Library for both component behavior and simulated user flows.
+- **Database migrations and persistent storage logic** have end-to-end checks to ensure schema stability and upgrade safety.
+
+**Testing Technologies:**
+- [pytest](https://docs.pytest.org/en/stable/): main test runner and assertion library for our Python code.
+- [FastAPI TestClient](https://fastapi.tiangolo.com/advanced/testing/): Used for making real HTTP requests to the in-memory FastAPI application. All API tests are executed via HTTP methods (`GET`, `POST`, `DELETE`, etc.) mirroring real usage.
+- [Jest](https://jestjs.io/) & [React Testing Library](https://testing-library.com/docs/react-testing-library/intro/) for frontend.
+
+### Running the Tests
+
+**Backend & API:**
+```sh
+pytest
+```
+Runs all backend, database, and API endpoint tests.
+
+**Frontend:**
+```sh
+cd src/ui/react-app
+npm test
+```
+
+### Coverage
+
+- All public API routes are covered by tests that use HTTP requests and check for correct status codes, payloads, and error handling.
+- Backend logic and managers are tested for business rule correctness, persistence, and failure scenarios.
+- Frontend tests verify rendering, user interactivity, and end-to-end flows where feasible.
 
 ---
 
