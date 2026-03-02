@@ -634,3 +634,4 @@ We have no continuuing tasks! Now, we should be able to polish/refactor the back
 
 
 **Test Report:**
+![Term 2 Week 8 Test Report](teamWeeklyLogsImages/T2_W8_Tests.png)
