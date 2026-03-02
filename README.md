@@ -229,60 +229,83 @@ curl "http://127.0.0.1:8000/skills"
 
 ![System Architecture Diagram](media/system_architecture.png)
 
-This diagram shows how our system's components will be organized into layers, and the responsibility each layer has.
+The system is organized into five layers to enforce separation of concerns and support maintainability, testability, and extensibility.
 
-### Presentation Layer
-This layer is responsible for all user-facing interactions and outputs.
-- CLI Menu: Entry point for users to select analysis actions.
-- Reports & Views: Displays generated results such as resume insights, skill badges, rankings, and timelines.
-
-Purpose:
-- Provide a simple interface for users to trigger analyses and view results without exposing internal complexity.
-
-### Orchestration Layer
-
-This layer acts as the “conductor” of the system, managing how data flows between layers.
-- ProjectAnalyzer / RepoProjectBuilder: Orchestrates analysis workflows and assembles project objects.
-- ConfigManager: Loads and manages YAML/JSON configuration files (languages, categories, ignore rules).
+### 1) External Input
+- **User**
+- **Uploaded ZIP / Repository source**
 
 Purpose:
-- Coordinate components without performing heavy analysis itself, keeping logic centralized and readable.
+- Represents all external actors and project inputs entering the system.
 
-### Analysis Engines Layer
-
-This layer performs all intensive analysis and data transformations.
-- Repo & Code Analysis: ZIP parsing, Git repository detection, metadata extraction, and file-level analysis.
-- Project (dataclass): Central data model that aggregates all analysis results.
-- Skill / Profile Analysis: Detects skills, generates timelines, badges, and rankings.
-- ResumeInsightsGenerator: Produces resume-ready bullet points and summaries.
+### 2) Presentation Layer
+- **Front End (React)**
+- **API Client**
+- **CLI Interface (Optional)**
 
 Purpose:
-- Encapsulate analysis logic while keeping results structured and reusable through the Project model.
+- Provides user interaction surfaces for triggering analysis and viewing outputs.
 
-### Data & Integration Layer
-
-This layer handles input sources and persistent storage.
-- YAML / JSON Configs: Define languages, file categories, ignored directories, and detection rules.
-- Git Repos & ZIP Files: Raw input data that has been stored.
-- SQLite Database (ProjectManager): Stores and retrieves analyzed project records.
+### 3) API Layer
+- **FastAPI Application**
+- **API Routes/Endpoints**
+- **Request/Response Schema**
 
 Purpose:
-- Isolate external dependencies and storage concerns from analysis and orchestration logic.
+- Defines the backend contract, validates request/response data, and dispatches calls to orchestration logic.
+
+### 4) Orchestration & Analysis Layer
+- **Primary orchestrators:** `ProjectAnalyzer`, `RepoProjectBuilder`
+- **Input processing:** `ZipParser`, `RepoFinder`, `FileCategorizer`, `DocumentScraper`
+- **Analysis engines:** code metrics, contribution analysis, language detection, role inference, skill analysis, badge engine
+- **Insight/report services:** `ResumeInsightsGenerator`, `InsightEditor`, `ReportEditor`
+- **User configuration access**
+
+Purpose:
+- Coordinates end-to-end analysis workflow while keeping modules focused on specific responsibilities.
+
+### 5) Data & Output Layer
+- **Data management classes:** `ProjectManager`, `ReportManager`, `ReportProjectManager`, `ConsentManager`, `StorageManager`, `FileHashManager`
+- **SQLite Database**
+- **Exporters**
+- **Outputs:** badges, timelines, resume insights, portfolio/resume artifacts
+
+Purpose:
+- Isolates persistence and export concerns from orchestration and analysis logic.
+
+### Architectural Rationale
+
+This architecture was selected to:
+- Keep interfaces stable between frontend and backend (API-first boundary)
+- Encapsulate analysis logic in modular engines
+- Isolate persistence concerns in manager classes
+- Improve testing granularity through clear responsibility boundaries
+- Support both CLI and web-driven workflows without duplicating core analysis logic
 
 ---
 
-## Data Flow Diagram (Level 1)
+## Data Flow Diagram (Level 1, As-Built)
 
 ![Level 1 DFD](media/DFD_Level_1.png)
 
-### Data Flow Overview
+The DFD describes the runtime data movement through the system:
 
-- **User Interaction**: The user initiates the workflow by providing consent and uploading a project zip file.
-- **Data Ingestion**: The system captures user consent and receives the zip file, extracting its contents to identify the root folder for analysis.
-- **Project Analysis**: The extracted project data is examined to parse file structures, dependencies, and project characteristics.
-- **Skill Assessment**: The project data is evaluated to identify technical skills demonstrated, generate insights about code quality and complexity, and calculate an overall project score.
-- **Data Display**: The complete analysis and skill summary are presented to the user. Users can also request previously stored analyses.
-- **Persistence**: A central database stores user configurations, project data, and analysis results for future retrieval.
+1. **Capture consent and intake request** from the user.
+2. **Ingest repository/ZIP input** and extract project files/paths.
+3. **Validate API request and map schema** before orchestration.
+4. **Orchestrate project analysis** using configured rules.
+5. **Compute skills, badges, timeline, and insights** from normalized project data.
+6. **Persist and retrieve analysis results** from managed data stores.
+7. **Present results to the user** as analysis summaries and generated outputs.
+
+### DFD Data Stores
+
+- **Consent Records**
+- **Project Metadata**
+- **Analysis Results**
+- **Configuration Data**
+
+These stores support reproducibility, retrieval of previous analyses, and stable processing behavior across runs.
 
 ---
 
