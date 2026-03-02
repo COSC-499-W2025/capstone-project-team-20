@@ -386,3 +386,32 @@ Balancing API schema changes with existing data structures required careful adju
 
 ### Looking Ahead:
 I plan to incorporate additional portfolio enhancements (e.g., optional highlights based on badges) and refine and prepare our materials for the Milestone 2 presentation.
+Thank you for clarifying. Here are revised draft entries for your team weekly log and personal weekly log, incorporating your additional info and following your requests, including PR links. Please review and let me know if you want any aspect further adjusted.
+
+---
+
+# Term 2 Week 8: Feb 17 – Feb 23
+
+![Sven's Tasks for T2W8](./imagesForSvenLogs/t2w8.png)
+
+### Tasks worked on
+- Integrated contributor roles into portfolio details and updated PDF output so roles appear under each project title, retaining team size.
+- Implemented report-backed portfolio API endpoints for retrieve, generate PDF, and update metadata, aligning with FastAPI and Pydantic conventions.
+- Expanded schemas and tests to support new API response structures with role data.
+- Cleaned up legacy API endpoints for improved consistency and updated system documentation/architecture, including refreshed system and DFD diagrams.
+- Recorded the system architecture and introduction sections for the Milestone 2 video demo.
+
+### PRs reviewed
+- Reviewed [User key role PR (#385)](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/385)
+- Reviewed [Incremental ZIPs PR (#391)](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/391)
+- Reviewed [API Routes and Docs Cleanup PR (#411)](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/411)
+- Reviewed [System Diagrams and README Update PR (#422)](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/422)
+
+### PRs opened
+- Opened [Portfolio API endpoints and role-aware portfolio output updates PR (#403)](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/403)
+
+### Problems encountered
+Coordinating API schema changes with existing data structures required careful updates to preserve the report export pipeline. I addressed this by close alignment with FastAPI/Pydantic guides and added targeted tests.
+
+### Looking ahead
+My next focus is to prepare for the upcoming class quiz and for the beginning of milestone 3.
