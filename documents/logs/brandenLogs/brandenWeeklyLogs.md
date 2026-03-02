@@ -1,6 +1,7 @@
 ## **Branden Weekly Logs**
 ### **Table of contents:**
 
+- [Term 2 Week 8](#term-2-week-8-february-23rd---march-1st)
 - [Term 2 Week 7](#term-2-week-7-february-16th---february-22nd)
 - [Term 2 Week 6](#term-2-week-6-february-9th---february-15th)
 - [Term 2 Week 5](#term-2-week-5-february-2nd---february-8th)
@@ -361,3 +362,25 @@ Work on our presentation that will be on wednesday, as well as finishing off the
 **Any issues or Blockers That I Encountered This Week and How I Addressed/Plan to Address Them:**
 None this week, it was a great week to work on the project with reading week!
 
+### **Term 2 Week 8: February 23rd - March 1st**
+**Screenshot of Tasks Worked On:**
+
+![Term 2 Week 8](imagesForBrandenLogs/T2_W8_SS.png)
+
+**Coding Tasks:**
+This week, I worked on implementing our analyzers in the frontend once the ZIP file is uploaded. In our CLI, Resume Insights needed to be generated manually BEFORE trying to export a resume or portfolio. Now, all insights are automatically generated immediately after the ZIP file upload. This allows the frontend to be able to export resume and portfolios right after the initial upload. I was also focused on getting our presentation ready and proper for wednesday morning, as well as helping where I was needed in order to be ready for our video demo of our milestone 2! This included lots of PR review, team meetings to coordinate the hectic week, and brainstorming with my teammates to decide on best course of action for coding implementation.
+
+**Testing or Debugging Tasks:**
+I did lots of manual testing through our CLI and frontend during code review. I also helped with debugging for my requested changes on [Lex's PR](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/419).
+
+**Reviewing or Collaboration Tasks:**
+This week, I reviewed [Lex's PR](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/419), [Kaan's PR](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/417), [Dylan's PR](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/415), [Sven's PR](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/411), [and another Lex PR](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/410).
+
+**Brief Description of Last Week Connecting This Week:**
+Our presentation went well, as well as finishing off any remaining features for milestone 2 and even adding additional features on top of what is required! The team worked well together this week, so it felt easy to get things done in time!
+
+**Plan/Goals for Upcoming Week:**
+Next week, I plan on starting strong with Milestone 3. I want to implement a couple features on the frontend. My main priority will be to have the FULL same functionality that our CLI has, just in the frontend. I want to start chipping away at this ASAP, i dont know the exact size of this task as of right now, so im hesitant to say that I can do all of it, but I will definitely be starting to get our full CLI functionality into the frontend.
+
+**Any issues or Blockers That I Encountered This Week and How I Addressed/Plan to Address Them:**
+None this week, it was a great week and everyone got a lot done with our project!
