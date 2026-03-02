@@ -55,6 +55,11 @@ export function uploadProjectZip(file) {
   });
 }
 
+export function clearProjects() {
+  // POST /projects/clear -> { ok: true }
+  return request("/projects/clear", { method: "POST" });
+}
+
 // Skills
 
 export function listSkills() {
@@ -131,4 +136,16 @@ export function exportPortfolio({ report_id, output_name = "portfolio.pdf" }) {
 
 export function downloadPortfolioUrl(export_id) {
   return `${BASE_URL}/portfolio/exports/${export_id}/download`;
+}
+
+export function getConfig() {
+  return request("/config").then((data) => data.config);
+}
+
+export function saveConfig({ name, email, phone, github, linkedin }) {
+  return request("/config", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name, email, phone, github, linkedin }),
+  });
 }

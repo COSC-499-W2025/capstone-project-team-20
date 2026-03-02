@@ -171,6 +171,7 @@ npm run dev
 The development server typically runs at:
 http://localhost:5173
 
+> **Note:** the Projects page now includes a **Clear Database** button that removes all stored projects. This is a development convenience and calls the backend `/projects/clear` endpoint.
 ---
 
 ## API Route Map
@@ -233,6 +234,8 @@ http://localhost:5173
 | GET | /config | Retrieve stored profile configuration | Implemented |
 | POST | /config | Save or update profile configuration | Implemented |
 
+Note: `/projects/upload-path` is for developer use only and must not be exposed in production.
+
 ---
 
 ## Example Requests
@@ -269,6 +272,43 @@ Get Skills Summary:
 ```bash
 curl "http://127.0.0.1:8000/skills"
 ```
+
+---
+
+## Testing
+
+We maintain a comprehensive automated test suite to ensure the stability and correctness of the Project Analyzer system across all major areas:
+
+- **API endpoints are tested as if from the perspective of a real client (over HTTP)** using [FastAPI's TestClient](https://fastapi.tiangolo.com/advanced/testing/). This guarantees that response codes, payloads, and error handling reflect real-world use.
+- **Backend/core logic and managers** are covered with unit and integration tests, validating essential data flows, edge cases, and correct database persistence.
+- **CLI workflows** are verified where possible by mocking input/output and running through typical user scenarios.
+- **Front-end components** are tested with Jest and React Testing Library for both component behavior and simulated user flows.
+- **Database migrations and persistent storage logic** have end-to-end checks to ensure schema stability and upgrade safety.
+
+**Testing Technologies:**
+- [pytest](https://docs.pytest.org/en/stable/): main test runner and assertion library for our Python code.
+- [FastAPI TestClient](https://fastapi.tiangolo.com/advanced/testing/): Used for making real HTTP requests to the in-memory FastAPI application. All API tests are executed via HTTP methods (`GET`, `POST`, `DELETE`, etc.) mirroring real usage.
+- [Jest](https://jestjs.io/) & [React Testing Library](https://testing-library.com/docs/react-testing-library/intro/) for frontend.
+
+### Running the Tests
+
+**Backend & API:**
+```sh
+pytest
+```
+Runs all backend, database, and API endpoint tests.
+
+**Frontend:**
+```sh
+cd src/ui/react-app
+npm test
+```
+
+### Coverage
+
+- All public API routes are covered by tests that use HTTP requests and check for correct status codes, payloads, and error handling.
+- Backend logic and managers are tested for business rule correctness, persistence, and failure scenarios.
+- Frontend tests verify rendering, user interactivity, and end-to-end flows where feasible.
 
 ---
 

@@ -189,6 +189,69 @@ def test_register_project_files_dedupes_across_uploads(tmp_path, mock_config_man
     all_hashes = list(analyzer.file_hash_manager.get_all())
     assert len(all_hashes) == 1
 
+def test_edit_skills(analyzer, monkeypatch):
+    p1 = Project()
+    p1.name='p1'
+    p1.skills_used=['Skill1','Skill2','Skill3']
+    p1.skills_selected=[] #start empty so we can check that it auto-fills
+
+    items = [p1]
+
+    #Exit without selecting project
+    with patch.object(analyzer, '_get_projects', return_value=items):
+        inputs = ['x']
+        monkeypatch.setattr('builtins.input', lambda prompt: inputs.pop(0))
+        with patch('builtins.input', side_effect=['x']):
+            assert analyzer.edit_skills() == -1
+    
+    #check empty list auto fills
+    with patch.object(analyzer, '_get_projects', return_value=items):
+        inputs = ['1','s','x']
+        monkeypatch.setattr('builtins.input', lambda prompt: inputs.pop(0))
+        with patch('builtins.input', side_effect=['1','s','x']):
+            assert analyzer.edit_skills() == True
+            assert p1.skills_used == p1.skills_selected
+
+    #p1 now selecting Skill1,Skill2,Skill3
+
+    #remove Skill2
+    with patch.object(analyzer, '_get_projects', return_value=items):
+        inputs = ['1','2','s','x']
+        monkeypatch.setattr('builtins.input', lambda prompt: inputs.pop(0))
+        with patch('builtins.input', side_effect=['1','2','s','x']):
+            assert analyzer.edit_skills() == True
+            assert 'Skill2' not in p1.skills_selected
+    
+    #p1 now selecting Skill1,Skill3
+
+    #remove Skill3, re-enable skill 2
+    with patch.object(analyzer, '_get_projects', return_value=items):
+        inputs = ['1','3','2','s','x']
+        monkeypatch.setattr('builtins.input', lambda prompt: inputs.pop(0))
+        with patch('builtins.input', side_effect=['1','3','2','s','x']):
+            assert analyzer.edit_skills() == True
+            assert 'Skill3' not in p1.skills_selected
+            assert 'Skill2' in p1.skills_selected
+    
+    #p1 now selecting Skill1,Skill2
+
+    #remove Skill1, enable all skills
+    with patch.object(analyzer, '_get_projects', return_value=items):
+        inputs = ['1','1','a','s','x']
+        monkeypatch.setattr('builtins.input', lambda prompt: inputs.pop(0))
+        with patch('builtins.input', side_effect=['1','1','a','s','x']):
+            assert analyzer.edit_skills() == True
+            assert 'Skill1' in p1.skills_selected
+            assert 'Skill3' in p1.skills_selected
+            assert 'Skill2' in p1.skills_selected
+
+    #Incorrect project selection, incorrect skill selection, exit without saving
+    with patch.object(analyzer, '_get_projects', return_value=items):
+        inputs = ['9','1','9','x']
+        monkeypatch.setattr('builtins.input', lambda prompt: inputs.pop(0))
+        with patch('builtins.input', side_effect=['9','1','9','x']):
+            assert analyzer.edit_skills() == False #False if not saved
+
 def test_update_score_and_date(analyzer, monkeypatch):
 
     date1='2001-01-01'
@@ -479,3 +542,37 @@ def test_compare_projects(analyzer, monkeypatch):
         with patch('builtins.input', side_effect=['x']):
             result = analyzer.compare_projects()
             assert result == -1
+
+def test_initialize_projects_refreshes_batch_for_unchanged_project(tmp_path, mock_config_manager):
+    project_dir = tmp_path / "project-d"
+    project_dir.mkdir()
+    (project_dir / "file.txt").write_text("same content")
+
+    zip_location = tmp_path / "same-content.zip"
+    with zipfile.ZipFile(zip_location, 'w') as zf:
+        zf.writestr("project-d/file.txt", "same content")
+
+    root_folders = parse_zip_to_project_folders(str(zip_location))
+    analyzer = ProjectAnalyzer(mock_config_manager, root_folders, zip_location)
+    analyzer.project_manager = ProjectManager(db_path=str(tmp_path / "projects.db"))
+    analyzer.file_hash_manager = FileHashManager(db_path=str(tmp_path / "files.db"))
+
+    existing = Project(
+        name="project-d",
+        file_path=str(project_dir),
+        root_folder="project-d",
+        import_batch_id="old-batch",
+    )
+    analyzer.project_manager.set(existing)
+
+    analyzer._register_project_files(Project(name="project-d", file_path=str(project_dir)))
+
+    with patch.object(analyzer, "ensure_cached_dir", return_value=tmp_path), \
+         patch("src.analyzers.ProjectAnalyzer.RepoProjectBuilder.scan", return_value=[
+             Project(name="project-d", file_path=str(project_dir), root_folder="project-d")
+         ]):
+        analyzer.initialize_projects()
+
+    updated = analyzer.project_manager.get_by_name("project-d")
+    assert updated.import_batch_id == analyzer.import_batch_id
+    assert updated.last_accessed is not None

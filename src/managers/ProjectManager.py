@@ -1,6 +1,6 @@
 import sqlite3
 import json
-from typing import Any, Dict, Generator, Optional
+from typing import Any, Dict, Generator, Optional, List
 from src.managers.StorageManager import StorageManager
 from src.models.Project import Project
 
@@ -16,7 +16,17 @@ class ProjectManager(StorageManager):
     """
     def __init__(self, db_path="projects.db") -> None:
         super().__init__(db_path)
+        self._ensure_import_batch_id_column()
         self._ensure_portfolio_details_column()
+
+
+    def _ensure_import_batch_id_column(self) -> None:
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("PRAGMA table_info(projects)")
+            existing = {row[1] for row in cursor.fetchall()}
+            if "import_batch_id" not in existing:
+                cursor.execute("ALTER TABLE projects ADD COLUMN import_batch_id TEXT")
 
     def _ensure_portfolio_details_column(self) -> None:
         with self._get_connection() as conn:
@@ -43,6 +53,7 @@ class ProjectManager(StorageManager):
         return """CREATE TABLE IF NOT EXISTS projects (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL UNIQUE,
+        import_batch_id TEXT,
         file_path TEXT NOT NULL,
         root_folder TEXT,
         num_files INTEGER,
@@ -55,6 +66,7 @@ class ProjectManager(StorageManager):
         language_share TEXT,
         frameworks TEXT,
         skills_used TEXT,
+        skills_selected TEXT,
         dependencies_list TEXT,
         dependency_files_list TEXT,
         build_tools TEXT,
@@ -109,8 +121,8 @@ class ProjectManager(StorageManager):
         Must match create_table_query.
         """
         return (
-            "id, name, file_path, root_folder, num_files, size_kb, author_count, "
-            "authors, author_contributions, contributor_roles, languages, language_share, frameworks, skills_used, "
+            "id, name, import_batch_id, file_path, root_folder, num_files, size_kb, author_count, "
+            "authors, author_contributions, contributor_roles, languages, language_share, frameworks, skills_used, skills_selected, "
             "dependencies_list, dependency_files_list, build_tools, "
             "individual_contributions, collaboration_status, categories, "
             "total_loc, comment_ratio, test_file_ratio, "
@@ -181,6 +193,37 @@ class ProjectManager(StorageManager):
             if result:
                 return Project.from_dict(dict(result))
         return None
+
+    def get_projects_by_batch_id(self, import_batch_id: str) -> Generator[Project, None, None]:
+        """Return projects associated with a specific import batch."""
+        with self._get_connection() as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            query = f"SELECT * FROM {self.table_name} WHERE import_batch_id = ? ORDER BY id DESC"
+            cursor.execute(query, (import_batch_id,))
+            for row in cursor.fetchall():
+                yield Project.from_dict(dict(row))
+
+    def get_latest_import_batch_id(self) -> Optional[str]:
+        """Return the latest non-null batch id based on row insertion order."""
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            query = f"SELECT import_batch_id FROM {self.table_name} WHERE import_batch_id IS NOT NULL ORDER BY id DESC LIMIT 1"
+            cursor.execute(query)
+            row = cursor.fetchone()
+            return row[0] if row else None
+
+    def get_project_groups(self) -> Dict[str, List[Project]]:
+        """Return current batch projects and previous projects for dashboard grouping."""
+        latest_batch_id = self.get_latest_import_batch_id()
+        all_projects = list(self.get_all())
+
+        if not latest_batch_id:
+            return {"current": all_projects, "previous": []}
+
+        current = [p for p in all_projects if p.import_batch_id == latest_batch_id]
+        previous = [p for p in all_projects if p.import_batch_id != latest_batch_id]
+        return {"current": current, "previous": previous}
 
     def get_all(self) -> Generator[Project, None, None]:
         """Return a Generator that yields all stored projects."""

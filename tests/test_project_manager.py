@@ -151,3 +151,17 @@ def test_set_and_get_with_resume_score(cleanup_db, sample_project):
 
     assert retrieved is not None
     assert retrieved.resume_score == 99.9
+
+def test_get_project_groups_partitions_current_and_previous(cleanup_db, sample_project, another_project):
+    manager = ProjectManager(DB_PATH)
+
+    sample_project.import_batch_id = "batch-new"
+    another_project.import_batch_id = "batch-old"
+
+    manager.set(sample_project)
+    manager.set(another_project)
+
+    grouped = manager.get_project_groups()
+
+    assert [p.name for p in grouped["current"]] == ["AnotherProj"]
+    assert [p.name for p in grouped["previous"]] == ["SampleProj"]
