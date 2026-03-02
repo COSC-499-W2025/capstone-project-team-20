@@ -110,6 +110,9 @@ Choose an option:
 22. Edit Report
 23. Delete Report
 24. Select Thumbnail for a Given Project
+98. Compare projects
+99. Edit project information (Scores & Dates)
+100. Toggle skills to showcase
 ```
 
 ---
@@ -172,19 +175,63 @@ http://localhost:5173
 
 ## API Route Map
 
+### Projects
+
 | Method | Path | Description | Status |
 |--------|------|-------------|--------|
 | POST | /projects/upload | Upload a .zip file, analyze it, and store project records | Implemented |
-| POST | /privacy-consent | Save the user's privacy consent choice | Implemented |
-| GET | /projects | List stored projects (id, name) | Implemented |
+| POST | /projects/upload-path | Dev-only: load ZIP from backend file path | Implemented |
+| GET | /projects | List stored projects (grouped: current + previous) | Implemented |
 | GET | /projects/{id} | Retrieve full details for a specific project | Implemented |
+| DELETE | /projects/{id} | Delete a specific project | Implemented |
+| POST | /projects/clear | Clear all stored projects (dev helper) | Implemented |
+
+### Privacy
+
+| Method | Path | Description | Status |
+|--------|------|-------------|--------|
+| POST | /privacy-consent | Save the user's privacy consent choice | Implemented |
+
+### Skills & Analytics
+
+| Method | Path | Description | Status |
+|--------|------|-------------|--------|
 | GET | /skills | Return detected skills with project counts | Implemented |
-| GET | /resume/{id} | Retrieve generated resume output | Placeholder |
-| POST | /resume/generate | Generate resume output | Placeholder |
-| POST | /resume/{id}/edit | Edit resume output | Placeholder |
-| GET | /portfolio/{id} | Retrieve generated portfolio output | Placeholder |
-| POST | /portfolio/generate | Generate portfolio output | Placeholder |
-| POST | /portfolio/{id}/edit | Edit portfolio output | Placeholder |
+| GET | /badges/progress | Return badge progress analytics | Implemented |
+| GET | /wrapped/yearly | Return yearly wrapped analytics | Implemented |
+
+### Reports
+
+| Method | Path | Description | Status |
+|--------|------|-------------|--------|
+| POST | /reports | Create a saved report from selected project IDs | Implemented |
+| GET | /reports | List all saved reports | Implemented |
+| GET | /reports/{id} | Retrieve report summary | Implemented |
+| DELETE | /reports/{id} | Delete a report | Implemented |
+| POST | /reports/{id}/portfolio-details/generate | Generate portfolio details for report projects | Implemented |
+
+### Resume
+
+| Method | Path | Description | Status |
+|--------|------|-------------|--------|
+| POST | /resume/export | Export resume PDF from a report | Implemented |
+| GET | /resume/exports/{export_id}/download | Download exported resume | Implemented |
+
+### Portfolio
+
+| Method | Path | Description | Status |
+|--------|------|-------------|--------|
+| GET | /portfolio/{id} | Retrieve portfolio view of a report | Implemented |
+| POST | /portfolio/{id}/edit | Edit portfolio title and notes | Implemented |
+| POST | /portfolio/export | Export portfolio PDF from a report | Implemented |
+| GET | /portfolio/exports/{export_id}/download | Download exported portfolio | Implemented |
+
+### Config
+
+| Method | Path | Description | Status |
+|--------|------|-------------|--------|
+| GET | /config | Retrieve stored profile configuration | Implemented |
+| POST | /config | Save or update profile configuration | Implemented |
 
 ---
 
