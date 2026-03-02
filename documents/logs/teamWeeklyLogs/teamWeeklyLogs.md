@@ -1,6 +1,7 @@
 ## Team 20 Weekly Log
 
 ### Table of contents
+- [Term 2 Week 8(February 23rd - March 1st)](#term-2-week-8-february-23rd---march-1st)
 - [Term 2 Week 7(February 16th - February 22nd)](#term-2-week-7-february-16th---february-22nd)
 - [Term 2 Week 6(February 9th - February 15th)](#term-2-week-6-february-9th---february-15th)
 - [Term 2 Week 5(February 2nd - February 8th)](#term-2-week-5-february-2nd---february-8th)
@@ -535,7 +536,7 @@ Plan for the next week is to decide on a front end framework/GUI and get the bas
 
 - Necmi Kaan Sapoglu (17014796): This week I worked on getting some changes done to the incremental file updates as a teammate had pointed out that it was doing some unnecessary changes, and I added an evidence system so that the skills in the project could be backed by the evidence we collect from the project titles. I also reviewed some PRs that were assigned to me through the bot that we had setup. All of the reviews I did passed succesfully.
 
-- Lex Nash (84668540): 
+- Lex Nash (84668540): Recreated the entirety of the tkinter front end in react due to feedback from teammates, required learning react for the first time; [PR](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/377) Reviewed some PRs.
 
 - Dylan Alexander (16394025): This week, I made two PRs. One implemented an integrated test suite to fully test the resume generation feature (including full LaTeX resume generation). The other implemented the deletion of report items. I also reviewed 2 PRs.
 
@@ -571,7 +572,7 @@ Our frontend is now setup! We will work away at improving that before that befor
 
 - Necmi Kaan Sapoglu (17014796): This week I worked on implementing the yearly wrapped feature that I had been working on, as well as connecting the badges system with the existing API, as well as the react frontend to have a functioning frontend for that feature. I also updated the README with documentation regarding the APIs and update some information on the README that was outdated. My PRs links are as follows: [README Update] (https://github.com/COSC-499-W2025/capstone-project-team-20/pull/395), [Badges Implementation and Wrapped Feature] (https://github.com/COSC-499-W2025/capstone-project-team-20/pull/398).
 
-- Lex Nash (84668540): 
+- Lex Nash (84668540): Addressed some bugs in code, created icons for the UI (not yet merged, but made to show off in the powerpoint presentation) reviewed PRs.
 
 - Dylan Alexander (16394025): This week, I made four PRs. Each addressed pre-existing bugs in our system. This includes a fix for the progress bar, consolidating git contributors by email (removing duplicates), a check that reports cannot be created without previously generated resume insights for each project, and a fix that ensures and tests that projects are incrementally analyzed and not overwritten.
 
@@ -599,3 +600,38 @@ Our frontend is now setup! We will work away at improving that before that befor
 
 [Term 2 Week 7 Test Report](teamWeeklyLogsImages/T2W7-Tests.png)
 
+
+
+### Term 2 Week 8 (February 23rd - March 1st)
+
+**Work Performed:**
+- Branden Kennedy (42474551): This week, I implemented automatic Resume Insights generation immediately after ZIP upload, removing the need to manually generate insights before exporting resumes or portfolios (as previously required in the CLI), which now enables instant export functionality from the frontend. This was [PR #409](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/409). I did extensive manual testing in both the CLI and frontend during code review and assisted with debugging requested changes on [PR #419](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/419). I also reviewed [PR 417](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/417), [PR 415](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/415), [PR 411](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/411), [PR 410](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/410). Either than that, I prepared for our presentation that was on Wednesday and helped with our milestone 2 video demo!
+
+- Necmi Kaan Sapoglu (17014796): This week, I helped deliver our Milestone 2 presentation and prepared for the demo video. I implemented the yearly wrapped feature and added frontend support for the badges/achievements system [PR #398] (https://github.com/COSC-499-W2025/capstone-project-team-20/pull/398). I also introduced project batch grouping to distinguish current vs. previous imports and added a database reset button to simplify testing [PR #417] (https://github.com/COSC-499-W2025/capstone-project-team-20/pull/417). I performed manual testing on these features and reviewed PRs [#411] (https://github.com/COSC-499-W2025/capstone-project-team-20/pull/411), [#403] (https://github.com/COSC-499-W2025/capstone-project-team-20/pull/403), and [#409] (https://github.com/COSC-499-W2025/capstone-project-team-20/pull/409) focusing on code quality and consistency.
+
+- Lex Nash (84668540): Created 2 PRs this week addressing multiple features described in requirement 23. These are as follows: The ability to sort a list of all projects based on any project attribute for the purpose of comparison [PR](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/410), and the ability to (for each individual project) choose which skills are used in order to generate resumes and portfolios [PR](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/419). Reviewed Assigned PRs, made bug fixes, made video clips for the milestone 2 video.
+
+- Dylan Alexander (16394025): This week, I made a PR implementing a new profile-setup page for the frontend. The feature checks if the user has stored necessary fields for report generation (name, phone, email). If they have, the page is bypassed. If they have not, this page allows them to enter the required information. Additionally, there were requested changes for my consolidate git contributors PR, so I spent quite a bit of time fixing that up as well. Other than that, I did my assigned code review and my part for the Milestone 2 presentation, and will be filming my part for the Milestone 2 Video Demo this evening.
+
+- Sven Annist (42486720): This week, I integrated portfolio role data into the portfolio generation flow, ensuring roles from YAML are surfaced in portfolio outputs. I implemented and updated API endpoints for portfolio retrieval, PDF generation, and metadata updates, expanding schemas and tests to support the new responses. I also cleaned up API endpoints and updated system documentation/architecture, including system diagrams. Additionally, I contributed to and recorded the system architecture and introduction section for our Milestone 2 video demo. I opened a PR for the portfolio API and role-aware output updates ([#403](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/403)), and reviewed [#385](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/385), [#391](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/391), [#411](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/411), and [#422](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/422).
+  
+**Features included in the project plan for this milestone are:**
+Everything up to and including [Issue 421](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/421)
+
+**Continuing tasks from last week and plan for the next week:**
+We have no continuuing tasks! Now, we should be able to polish/refactor the backend, and really start diving into the frontend!
+
+**Burnup chart:**
+![Term 2 Week 8 Burnup chart](teamWeeklyLogsImages/T2_W8_Burnup.png)
+
+
+**Table View of Completed Tasks on Project Board:**
+![Term 2 Week 8 completed](teamWeeklyLogsImages/T2_W8_Completed.png)
+
+
+**Table View of In-Progress Tasks on Project Board:**
+![Term 2 Week 8 In-progress Tasks](teamWeeklyLogsImages/T2_W8_InProgress.png)
+
+
+**Test Report:**
+![Term 2 Week 8 Test Report](teamWeeklyLogsImages/T2_W8_Tests.png)
