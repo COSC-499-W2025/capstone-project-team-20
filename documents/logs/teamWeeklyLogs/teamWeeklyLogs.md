@@ -616,21 +616,21 @@ Our frontend is now setup! We will work away at improving that before that befor
 - Sven Annist (42486720): This week, I integrated portfolio role data into the portfolio generation flow, ensuring roles from YAML are surfaced in portfolio outputs. I implemented and updated API endpoints for portfolio retrieval, PDF generation, and metadata updates, expanding schemas and tests to support the new responses. I also cleaned up API endpoints and updated system documentation/architecture, including system diagrams. Additionally, I contributed to and recorded the system architecture and introduction section for our Milestone 2 video demo. I opened a PR for the portfolio API and role-aware output updates ([#403](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/403)), and reviewed [#385](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/385), [#391](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/391), [#411](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/411), and [#422](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/422).
   
 **Features included in the project plan for this milestone are:**
-
+Everything up to and including [Issue 421](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/421)
 
 **Continuing tasks from last week and plan for the next week:**
-
+We have no continuuing tasks! Now, we should be able to polish/refactor the backend, and really start diving into the frontend!
 
 **Burnup chart:**
-
+![Term 2 Week 8 Burnup chart](teamWeeklyLogsImages/T2_W8_Burnup.png)
 
 
 **Table View of Completed Tasks on Project Board:**
-
+![Term 2 Week 8 completed](teamWeeklyLogsImages/T2_W8_Completed.png)
 
 
 **Table View of In-Progress Tasks on Project Board:**
-
+![Term 2 Week 8 In-progress Tasks](teamWeeklyLogsImages/T2_W8_InProgress.png)
 
 
 **Test Report:**
