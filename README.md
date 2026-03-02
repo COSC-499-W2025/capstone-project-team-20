@@ -110,6 +110,9 @@ Choose an option:
 22. Edit Report
 23. Delete Report
 24. Select Thumbnail for a Given Project
+98. Compare projects
+99. Edit project information (Scores & Dates)
+100. Toggle skills to showcase
 ```
 
 ---
@@ -173,31 +176,65 @@ http://localhost:5173
 
 ## API Route Map
 
+### Projects
+
 | Method | Path | Description | Status |
 |--------|------|-------------|--------|
-| POST   | /projects/upload          | Upload a .zip file, analyze it, and store project records   | Implemented |
-| POST   | /projects/upload-path     | Load a .zip by **server-side file path** (Dev-only! Do not expose in production; security risk) | Implemented (Dev only) |
-| DELETE | /projects/{id}            | Delete a project record by id                              | Implemented |
-| POST   | /privacy-consent          | Save the user's privacy consent choice                      | Implemented |
-| GET    | /projects                 | List stored projects (id, name)                             | Implemented |
-| GET    | /projects/{id}            | Retrieve full details for a specific project                | Implemented |
-| GET    | /skills                   | Return detected skills with project counts                  | Implemented |
-| GET    | /badges/progress          | Return badge progress analytics                             | Implemented |
-| GET    | /wrapped/yearly           | Return "yearly wrapped" (annual summary) analytics          | Implemented |
-| POST   | /reports                  | Create a report (template) from selected projects           | Implemented |
-| DELETE | /reports/{id}             | Delete a report and all its report projects                 | Implemented |
-| GET    | /reports                  | List all reports (templates)                                | Implemented |
-| GET    | /reports/{id}             | Retrieve details for a specific report                      | Implemented |
-| POST   | /reports/{id}/portfolio-details/generate | Generate/refresh metadata for report projects              | Implemented |
-| GET    | /portfolio/{id}           | Retrieve a generated portfolio report by id                 | Implemented |
-| POST   | /portfolio/export         | Export a portfolio to PDF and get download info             | Implemented |
-| GET    | /portfolio/exports/{export_id}/download | Download a previously exported portfolio file               | Implemented |
-| POST   | /portfolio/{id}/edit      | Edit a portfolio (title, notes)                             | Implemented |
-| POST   | /resume/export            | Export a resume to PDF and get download info                | Implemented |
-| GET    | /resume/exports/{export_id}/download  | Download a previously exported resume file                 | Implemented |
+| POST | /projects/upload | Upload a .zip file, analyze it, and store project records | Implemented |
+| POST | /projects/upload-path | Dev-only: load ZIP from backend file path | Implemented |
+| GET | /projects | List stored projects (grouped: current + previous) | Implemented |
+| GET | /projects/{id} | Retrieve full details for a specific project | Implemented |
+| DELETE | /projects/{id} | Delete a specific project | Implemented |
+| POST | /projects/clear | Clear all stored projects (dev helper) | Implemented |
 
-**NOTE:**
-- `/projects/upload-path` is for developer use only; if this system is ever ran as a server this endpoint should never be exposed as it allows arbitrary file access by path.
+### Privacy
+
+| Method | Path | Description | Status |
+|--------|------|-------------|--------|
+| POST | /privacy-consent | Save the user's privacy consent choice | Implemented |
+
+### Skills & Analytics
+
+| Method | Path | Description | Status |
+|--------|------|-------------|--------|
+| GET | /skills | Return detected skills with project counts | Implemented |
+| GET | /badges/progress | Return badge progress analytics | Implemented |
+| GET | /wrapped/yearly | Return yearly wrapped analytics | Implemented |
+
+### Reports
+
+| Method | Path | Description | Status |
+|--------|------|-------------|--------|
+| POST | /reports | Create a saved report from selected project IDs | Implemented |
+| GET | /reports | List all saved reports | Implemented |
+| GET | /reports/{id} | Retrieve report summary | Implemented |
+| DELETE | /reports/{id} | Delete a report | Implemented |
+| POST | /reports/{id}/portfolio-details/generate | Generate portfolio details for report projects | Implemented |
+
+### Resume
+
+| Method | Path | Description | Status |
+|--------|------|-------------|--------|
+| POST | /resume/export | Export resume PDF from a report | Implemented |
+| GET | /resume/exports/{export_id}/download | Download exported resume | Implemented |
+
+### Portfolio
+
+| Method | Path | Description | Status |
+|--------|------|-------------|--------|
+| GET | /portfolio/{id} | Retrieve portfolio view of a report | Implemented |
+| POST | /portfolio/{id}/edit | Edit portfolio title and notes | Implemented |
+| POST | /portfolio/export | Export portfolio PDF from a report | Implemented |
+| GET | /portfolio/exports/{export_id}/download | Download exported portfolio | Implemented |
+
+### Config
+
+| Method | Path | Description | Status |
+|--------|------|-------------|--------|
+| GET | /config | Retrieve stored profile configuration | Implemented |
+| POST | /config | Save or update profile configuration | Implemented |
+
+Note: `/projects/upload-path` is for developer use only and must not be exposed in production.
 
 ---
 
@@ -279,60 +316,83 @@ npm test
 
 ![System Architecture Diagram](media/system_architecture.png)
 
-This diagram shows how our system's components will be organized into layers, and the responsibility each layer has.
+The system is organized into five layers to enforce separation of concerns and support maintainability, testability, and extensibility.
 
-### Presentation Layer
-This layer is responsible for all user-facing interactions and outputs.
-- CLI Menu: Entry point for users to select analysis actions.
-- Reports & Views: Displays generated results such as resume insights, skill badges, rankings, and timelines.
-
-Purpose:
-- Provide a simple interface for users to trigger analyses and view results without exposing internal complexity.
-
-### Orchestration Layer
-
-This layer acts as the “conductor” of the system, managing how data flows between layers.
-- ProjectAnalyzer / RepoProjectBuilder: Orchestrates analysis workflows and assembles project objects.
-- ConfigManager: Loads and manages YAML/JSON configuration files (languages, categories, ignore rules).
+### 1) External Input
+- **User**
+- **Uploaded ZIP / Repository source**
 
 Purpose:
-- Coordinate components without performing heavy analysis itself, keeping logic centralized and readable.
+- Represents all external actors and project inputs entering the system.
 
-### Analysis Engines Layer
-
-This layer performs all intensive analysis and data transformations.
-- Repo & Code Analysis: ZIP parsing, Git repository detection, metadata extraction, and file-level analysis.
-- Project (dataclass): Central data model that aggregates all analysis results.
-- Skill / Profile Analysis: Detects skills, generates timelines, badges, and rankings.
-- ResumeInsightsGenerator: Produces resume-ready bullet points and summaries.
+### 2) Presentation Layer
+- **Front End (React)**
+- **API Client**
+- **CLI Interface (Optional)**
 
 Purpose:
-- Encapsulate analysis logic while keeping results structured and reusable through the Project model.
+- Provides user interaction surfaces for triggering analysis and viewing outputs.
 
-### Data & Integration Layer
-
-This layer handles input sources and persistent storage.
-- YAML / JSON Configs: Define languages, file categories, ignored directories, and detection rules.
-- Git Repos & ZIP Files: Raw input data that has been stored.
-- SQLite Database (ProjectManager): Stores and retrieves analyzed project records.
+### 3) API Layer
+- **FastAPI Application**
+- **API Routes/Endpoints**
+- **Request/Response Schema**
 
 Purpose:
-- Isolate external dependencies and storage concerns from analysis and orchestration logic.
+- Defines the backend contract, validates request/response data, and dispatches calls to orchestration logic.
+
+### 4) Orchestration & Analysis Layer
+- **Primary orchestrators:** `ProjectAnalyzer`, `RepoProjectBuilder`
+- **Input processing:** `ZipParser`, `RepoFinder`, `FileCategorizer`, `DocumentScraper`
+- **Analysis engines:** code metrics, contribution analysis, language detection, role inference, skill analysis, badge engine
+- **Insight/report services:** `ResumeInsightsGenerator`, `InsightEditor`, `ReportEditor`
+- **User configuration access**
+
+Purpose:
+- Coordinates end-to-end analysis workflow while keeping modules focused on specific responsibilities.
+
+### 5) Data & Output Layer
+- **Data management classes:** `ProjectManager`, `ReportManager`, `ReportProjectManager`, `ConsentManager`, `StorageManager`, `FileHashManager`
+- **SQLite Database**
+- **Exporters**
+- **Outputs:** badges, timelines, resume insights, portfolio/resume artifacts
+
+Purpose:
+- Isolates persistence and export concerns from orchestration and analysis logic.
+
+### Architectural Rationale
+
+This architecture was selected to:
+- Keep interfaces stable between frontend and backend (API-first boundary)
+- Encapsulate analysis logic in modular engines
+- Isolate persistence concerns in manager classes
+- Improve testing granularity through clear responsibility boundaries
+- Support both CLI and web-driven workflows without duplicating core analysis logic
 
 ---
 
-## Data Flow Diagram (Level 1)
+## Data Flow Diagram (Level 1, As-Built)
 
 ![Level 1 DFD](media/DFD_Level_1.png)
 
-### Data Flow Overview
+The DFD describes the runtime data movement through the system:
 
-- **User Interaction**: The user initiates the workflow by providing consent and uploading a project zip file.
-- **Data Ingestion**: The system captures user consent and receives the zip file, extracting its contents to identify the root folder for analysis.
-- **Project Analysis**: The extracted project data is examined to parse file structures, dependencies, and project characteristics.
-- **Skill Assessment**: The project data is evaluated to identify technical skills demonstrated, generate insights about code quality and complexity, and calculate an overall project score.
-- **Data Display**: The complete analysis and skill summary are presented to the user. Users can also request previously stored analyses.
-- **Persistence**: A central database stores user configurations, project data, and analysis results for future retrieval.
+1. **Capture consent and intake request** from the user.
+2. **Ingest repository/ZIP input** and extract project files/paths.
+3. **Validate API request and map schema** before orchestration.
+4. **Orchestrate project analysis** using configured rules.
+5. **Compute skills, badges, timeline, and insights** from normalized project data.
+6. **Persist and retrieve analysis results** from managed data stores.
+7. **Present results to the user** as analysis summaries and generated outputs.
+
+### DFD Data Stores
+
+- **Consent Records**
+- **Project Metadata**
+- **Analysis Results**
+- **Configuration Data**
+
+These stores support reproducibility, retrieval of previous analyses, and stable processing behavior across runs.
 
 ---
 
