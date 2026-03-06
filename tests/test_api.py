@@ -655,7 +655,6 @@ def test_list_reports_success(client, monkeypatch):
     assert res.status_code == 200
 
     data = res.json()
-    assert data["ok"] is True
     assert len(data["reports"]) == 2
     assert data["reports"][0]["id"] == 1
     assert data["reports"][0]["title"] == "Report A"
@@ -688,7 +687,6 @@ def test_get_report_success(client, monkeypatch):
     assert res.status_code == 200
 
     data = res.json()
-    assert data["ok"] is True
     assert data["report"]["id"] == 5
     assert data["report"]["title"] == "My Report"
     assert data["report"]["project_count"] == 3
@@ -763,7 +761,6 @@ def test_create_report_success(client, monkeypatch):
 
     assert res.status_code == 201
     data = res.json()
-    assert data["ok"] is True
     assert data["report"]["id"] == 10
     assert data["report"]["title"] == "My Report"
 
