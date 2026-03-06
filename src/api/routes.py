@@ -526,21 +526,22 @@ def export_resume(req: ResumeExportRequest):
     )
 
 
-@router.get("/portfolio/exports/{export_id}/download", dependencies=[Depends(require_consent)])
-def download_portfolio(export_id: str):
-    out_dir = Path("portfolios")
-    matches = list(out_dir.glob(f"{export_id}-*.pdf"))
-    if not matches:
-        raise HTTPException(status_code=404, detail="Export not found.")
-    p = matches[0]
-    return FileResponse(str(p), filename=p.name)
-
 class ConfigSaveRequest(BaseModel):
     name:     str | None = None
     email:    str | None = None
     phone:    str | None = None
     github:   str | None = None
     linkedin: str | None = None
+
+@router.get("/resume/exports/{export_id}/download", dependencies=[Depends(require_consent)])
+def download_resume(export_id: str):
+    """Download a previously exported resume file."""
+    out_dir = Path("resumes")
+    matches = list(out_dir.glob(f"{export_id}-*.pdf"))
+    if not matches:
+        raise HTTPException(status_code=404, detail="Export not found.")
+    p = matches[0]
+    return FileResponse(str(p), filename=p.name)
 
 @router.get("/config")
 def get_config():
