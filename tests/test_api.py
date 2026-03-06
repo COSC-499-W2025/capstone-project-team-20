@@ -247,6 +247,9 @@ def test_upload_project_invalid_zip_returns_400(client, monkeypatch):
     assert "Zip parsed no projects" in res.json()["detail"]
 
 def test_get_portfolio_report_found(client, monkeypatch):
+    class FakeConsentManager:
+        def has_user_consented(self):
+            return True
     details = PortfolioDetails(
         project_name="Proj",
         role="Backend Developer",
@@ -295,6 +298,9 @@ def test_export_portfolio_success(client, monkeypatch):
     Exercise portfolio PDF export endpoint with valid input,
     expects HTTP 200 OK and valid download URL in response.
     """
+    class FakeConsentManager:
+        def has_user_consented(self):
+            return True
     report = Report(
         id=2,
         title="My Report",
@@ -330,6 +336,9 @@ def test_export_portfolio_success(client, monkeypatch):
     assert calls["output_path"].endswith("-output.pdf")
 
 def test_edit_portfolio_updates_report(client, monkeypatch):
+    class FakeConsentManager:
+        def has_user_consented(self):
+            return True
     report = Report(
         id=3,
         title="Old Title",
