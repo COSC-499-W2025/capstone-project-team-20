@@ -284,6 +284,7 @@ def test_get_portfolio_report_found(client, monkeypatch):
             return report if id == 1 else None
 
     monkeypatch.setattr(routes, "ReportManager", FakeReportManager)
+    monkeypatch.setattr(routes, "ConsentManager", FakeConsentManager)
 
     res = client.get("/portfolio/1")
     assert res.status_code == 200
@@ -325,6 +326,7 @@ def test_export_portfolio_success(client, monkeypatch):
 
     monkeypatch.setattr(routes, "ReportManager", FakeReportManager)
     monkeypatch.setattr(routes, "ReportExporter", FakeReportExporter)
+    monkeypatch.setattr(routes, "ConsentManager", FakeConsentManager)
 
     res = client.post("/portfolio/export", json={"report_id": 2, "output_name": "output.pdf"})
     assert res.status_code == 200
@@ -357,6 +359,7 @@ def test_edit_portfolio_updates_report(client, monkeypatch):
             return True
 
     monkeypatch.setattr(routes, "ReportManager", FakeReportManager)
+    monkeypatch.setattr(routes, "ConsentManager", FakeConsentManager)
 
     res = client.post("/portfolio/3/edit", json={"title": "New Title", "notes": "Updated"})
     assert res.status_code == 200
