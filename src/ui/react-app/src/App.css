@@ -68,7 +68,6 @@ html, body, #root {
   background-color: var(--secondary);
   margin: 6px;
   margin-left: 0;
-  padding: 20px;  
   flex: 1;
   overflow-y: auto;
   min-height: 0;

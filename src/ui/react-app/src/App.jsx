@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import ProfileSetup from "./ProfileSetup";
+import Settings from "./Settings";
 import {
   listProjects,
   getProject,
@@ -88,15 +89,6 @@ function App() {
       </div>
     </div>
   );
-}
-
-
-function Settings(){
-    return(
-        <>
-        <h3>This is the Settings page.</h3>
-        </>
-    );
 }
 
 function Projects() {
