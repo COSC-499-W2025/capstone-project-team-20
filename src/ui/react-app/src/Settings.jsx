@@ -4,19 +4,16 @@ import { getConfig, saveConfig, setPrivacyConsent, getPrivacyConsent, clearProje
 export default function Settings() {
   const [tab, setTab] = useState("profile");
 
-  // Profile
   const [form, setForm] = useState({ name: "", email: "", phone: "", github: "", linkedin: "" });
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState("");
   const [touched, setTouched] = useState({});
   const [errors, setErrors] = useState({});
 
-  // Consent
   const [consent, setConsent] = useState(false);
   const [consentSaving, setConsentSaving] = useState(false);
 
-  // Clear
-  const [clearState, setClearState] = useState("idle"); // idle | confirm | clearing | done
+  const [clearState, setClearState] = useState("idle");
 
   useEffect(() => {
     getConfig().then((cfg) => {
@@ -98,120 +95,240 @@ export default function Settings() {
     }
   }
 
+  const inputStyle = {
+    width: "100%",
+    fontSize: "15px",
+    padding: "6px 8px",
+    boxSizing: "border-box",
+    marginTop: 4,
+    display: "block",
+  };
+
+  const labelStyle = {
+    fontSize: "13px",
+    fontWeight: "600",
+    display: "block",
+    marginTop: 12,
+  };
+
+  const errorStyle = {
+    color: "red",
+    fontSize: "12px",
+    marginTop: 2,
+    display: "block",
+  };
+
   return (
-    <div style={{ display: "flex", height: "100%" }}>
+    <>
+      <style>{`
+        .s-nav-btn {
+          display: block;
+          width: 100%;
+          padding: 22px 32px;
+          font-size: 14px;
+          font-weight: bold;
+          font-family: inherit;
+          aspect-ratio: unset;
+          border: none;
+          border-radius: 0;
+          cursor: pointer;
+          text-align: left;
+        }
+        .s-nav-btn--off {
+          background: var(--primary);
+          color: var(--secondary);
+        }
+        .s-nav-btn--off:hover {
+          background: var(--primary_high);
+          color: var(--secondary);
+        }
+        .s-nav-btn--on {
+          background: var(--secondary);
+          color: var(--primary);
+          cursor: default;
+        }
 
-      {/* Sidebar */}
-      <div className="stacked-buttons" style={{ width: "fit-content" }}>
-        {[["profile","Profile"],["privacy","Privacy"],["data","Data"]].map(([id, label]) => (
-          <button
-            key={id}
-            className={tab === id ? "button-on" : "button-off"}
-            onClick={() => setTab(id)}
-            style={{ minWidth: 100 }}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+        .s-btn {
+          padding: 6px 16px;
+          font-size: 14px;
+          font-weight: bold;
+          font-family: inherit;
+          aspect-ratio: unset;
+          border-radius: 0;
+          cursor: pointer;
+          background: var(--primary);
+          color: var(--secondary);
+          border: 2px solid var(--primary);
+          box-sizing: border-box;
+        }
+        .s-btn:hover:not(:disabled) {
+          background: var(--primary_desat);
+          border-color: var(--primary_desat);
+        }
+        .s-btn:disabled {
+          opacity: 0.45;
+          cursor: not-allowed;
+        }
 
-      {/* Content */}
-      <div style={{ padding: "20px 24px", flex: 1, overflowY: "auto" }}>
+        .s-btn--danger {
+          background: transparent;
+          color: #f85149;
+          border: 1px solid rgba(248,81,73,0.35);
+          border-radius: 0;
+          padding: 6px 16px;
+          font-size: 14px;
+          font-weight: bold;
+          font-family: inherit;
+          cursor: pointer;
+        }
+        .s-btn--danger:hover:not(:disabled) {
+          background: rgba(248,81,73,0.08);
+          border-color: #f85149;
+        }
+        .s-btn--danger:disabled {
+          opacity: 0.45;
+          cursor: not-allowed;
+        }
+      `}</style>
 
-        {/* ── Profile ── */}
-        {tab === "profile" && (
-          <div>
-            <h3>Profile</h3>
-            <p>These details appear on your resume and portfolio exports.</p>
-            <hr />
+      <div style={{ display: "flex", height: "100%", overflow: "hidden" }}>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: 10, maxWidth: 480 }}>
-              <label>
-                Full name *<br />
-                <input value={form.name} onChange={change("name")} placeholder="Ada Lovelace" />
-                {touched.name && errors.name && <span style={{ color: "red" }}> {errors.name}</span>}
-              </label>
-              <label>
-                Email *<br />
-                <input type="email" value={form.email} onChange={change("email")} placeholder="ada@lovelace.dev" />
-                {touched.email && errors.email && <span style={{ color: "red" }}> {errors.email}</span>}
-              </label>
-              <label>
-                Phone *<br />
-                <input type="tel" value={form.phone} onChange={change("phone")} placeholder="+1 (555) 867-5309" />
-                {touched.phone && errors.phone && <span style={{ color: "red" }}> {errors.phone}</span>}
-              </label>
-              <label>
-                GitHub (optional)<br />
-                <input value={form.github} onChange={change("github")} placeholder="ada-lovelace" />
-              </label>
-              <label>
-                LinkedIn (optional)<br />
-                <input value={form.linkedin} onChange={change("linkedin")} placeholder="ada-lovelace" />
-              </label>
-            </div>
-
-            <br />
-            <button className="button-off" onClick={handleSaveProfile} disabled={saving}
-              style={{ minWidth: 120, aspectRatio: "unset", padding: "6px 16px" }}>
-              {saving ? "Saving…" : "Save changes"}
+        {/* Sidebar */}
+        <div style={{ display: "flex", flexDirection: "column", width: 120, flexShrink: 0, background: "var(--secondary_low)" }}>
+          {[["profile","Profile"],["privacy","Privacy"],["data","Data"]].map(([id, label]) => (
+            <button
+              key={id}
+              onClick={() => setTab(id)}
+              className={`s-nav-btn ${tab === id ? "s-nav-btn--on" : "s-nav-btn--off"}`}
+            >
+              {label}
             </button>
-            {saveMsg && <span style={{ marginLeft: 12 }}>{saveMsg}</span>}
-          </div>
-        )}
+          ))}
+        </div>
 
-        {/* ── Privacy ── */}
-        {tab === "privacy" && (
-          <div>
-            <h3>Privacy</h3>
-            <p>Consent is required to generate reports and export resumes/portfolios. Data is stored locally only.</p>
-            <hr />
+        {/* Content */}
+        <div style={{ padding: "24px 32px", flex: 1, overflowY: "auto", fontSize: "15px" }}>
 
-            <p>Status: <strong>{consent ? "Consent granted" : "Consent not granted"}</strong></p>
-            <p>Enables: generating PDFs, exporting resumes, exporting portfolios, saving reports.</p>
+          {/* ── Profile ── */}
+          {tab === "profile" && (
+            <div style={{ maxWidth: 500 }}>
+              <h3 style={{ marginTop: 0, marginBottom: 4 }}>Profile</h3>
+              <p style={{ marginTop: 0, opacity: 0.7, fontSize: "13px" }}>
+                These details will appear on your resume and portfolio exports.
+              </p>
+              <hr style={{ marginBottom: 16 }} />
 
-            <button className="button-off" onClick={handleToggleConsent} disabled={consentSaving}
-              style={{ minWidth: 140, aspectRatio: "unset", padding: "6px 16px" }}>
-              {consentSaving ? "Updating…" : consent ? "Revoke consent" : "Grant consent"}
-            </button>
-
-            <p><small>Revoking consent does not delete already-exported files.</small></p>
-          </div>
-        )}
-
-        {/* ── Data ── */}
-        {tab === "data" && (
-          <div>
-            <h3>Data</h3>
-            <p>Irreversible actions affecting stored project data.</p>
-            <hr />
-
-            <p><strong>Clear all projects</strong></p>
-            <p>Permanently removes all uploaded projects and analysis data. Existing reports will have no linked data.</p>
-
-            {clearState === "done" && <p>✓ All projects cleared.</p>}
-
-            {clearState !== "done" && (
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                {clearState === "confirm" && <span style={{ color: "red" }}>⚠ This cannot be undone. Are you sure?</span>}
-                <button className="button-off" onClick={handleClearProjects} disabled={clearState === "clearing"}
-                  style={{ minWidth: 160, aspectRatio: "unset", padding: "6px 16px" }}>
-                  {clearState === "clearing" ? "Clearing…"
-                    : clearState === "confirm"  ? "Yes, delete everything"
-                    : "Clear all projects"}
-                </button>
-                {clearState === "confirm" && (
-                  <button className="button-off" onClick={() => setClearState("idle")}
-                    style={{ minWidth: 80, aspectRatio: "unset", padding: "6px 16px" }}>
-                    Cancel
-                  </button>
-                )}
+              <div style={{ display: "flex", gap: 16 }}>
+                <div style={{ flex: 1 }}>
+                  <label style={labelStyle}>Full name *</label>
+                  <input style={inputStyle} value={form.name} onChange={change("name")} placeholder="Ada Lovelace" />
+                  {touched.name && errors.name && <span style={errorStyle}>{errors.name}</span>}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={labelStyle}>Email *</label>
+                  <input style={inputStyle} type="email" value={form.email} onChange={change("email")} placeholder="ada@lovelace.dev" />
+                  {touched.email && errors.email && <span style={errorStyle}>{errors.email}</span>}
+                </div>
               </div>
-            )}
-          </div>
-        )}
 
+              <div style={{ display: "flex", gap: 16 }}>
+                <div style={{ flex: 1 }}>
+                  <label style={labelStyle}>Phone *</label>
+                  <input style={inputStyle} type="tel" value={form.phone} onChange={change("phone")} placeholder="+1 (555) 867-5309" />
+                  {touched.phone && errors.phone && <span style={errorStyle}>{errors.phone}</span>}
+                </div>
+                <div style={{ flex: 1 }} />
+              </div>
+
+              <p style={{ fontSize: "12px", opacity: 0.5, margin: "16px 0 0" }}>Online presence (optional)</p>
+              <hr style={{ marginBottom: 0 }} />
+
+              <div style={{ display: "flex", gap: 16 }}>
+                <div style={{ flex: 1 }}>
+                  <label style={labelStyle}>GitHub</label>
+                  <input style={inputStyle} value={form.github} onChange={change("github")} placeholder="ada-lovelace" />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={labelStyle}>LinkedIn</label>
+                  <input style={inputStyle} value={form.linkedin} onChange={change("linkedin")} placeholder="ada-lovelace" />
+                </div>
+              </div>
+
+              <div style={{ marginTop: 20, display: "flex", alignItems: "center", gap: 12 }}>
+                <button className="s-btn" onClick={handleSaveProfile} disabled={saving} style={{ minWidth: 120 }}>
+                  {saving ? "Saving…" : "Save changes"}
+                </button>
+                {saveMsg && <span style={{ fontSize: "13px", opacity: 0.8 }}>{saveMsg}</span>}
+              </div>
+            </div>
+          )}
+
+          {/* ── Privacy ── */}
+          {tab === "privacy" && (
+            <div style={{ maxWidth: 500 }}>
+              <h3 style={{ marginTop: 0, marginBottom: 4 }}>Privacy</h3>
+              <p style={{ marginTop: 0, opacity: 0.7, fontSize: "13px" }}>
+                Consent is required to generate reports and export resumes and portfolios. 
+                Data is only ever stored locally.
+              </p>
+              <hr />
+
+              <p>Status: <strong>{consent ? "Consent granted" : "Consent not granted"}</strong></p>
+              <p style={{ fontSize: "13px", opacity: 0.7 }}>
+                Enables: generating PDFs, exporting resumes, exporting portfolios, saving reports.
+              </p>
+
+              <button className="s-btn" onClick={handleToggleConsent} disabled={consentSaving} style={{ minWidth: 140 }}>
+                {consentSaving ? "Updating…" : consent ? "Revoke consent" : "Grant consent"}
+              </button>
+            </div>
+          )}
+
+          {/* ── Data ── */}
+          {tab === "data" && (
+            <div style={{ maxWidth: 500 }}>
+              <h3 style={{ marginTop: 0, marginBottom: 4 }}>Data</h3>
+              <p style={{ marginTop: 0, opacity: 0.7, fontSize: "13px" }}>
+                Irreversible actions affecting stored project data.
+              </p>
+              <hr />
+
+              <p><strong>Clear all projects</strong></p>
+              <p style={{ fontSize: "13px", opacity: 0.7 }}>
+                Permanently removes all uploaded projects and analysis data. 
+              </p>
+
+              {clearState === "done" && <p>✓ All projects cleared.</p>}
+
+              {clearState !== "done" && (
+                <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                  {clearState === "confirm" && (
+                    <span style={{ color: "#f85149", fontSize: "13px", width: "100%" }}>
+                      ⚠ This cannot be undone. Are you sure?
+                    </span>
+                  )}
+                  <button
+                    className="s-btn--danger"
+                    onClick={handleClearProjects}
+                    disabled={clearState === "clearing"}
+                    style={{ minWidth: 160 }}
+                  >
+                    {clearState === "clearing" ? "Clearing…"
+                      : clearState === "confirm"  ? "Yes, delete everything"
+                      : "Clear all projects"}
+                  </button>
+                  {clearState === "confirm" && (
+                    <button className="s-btn" onClick={() => setClearState("idle")} style={{ minWidth: 80 }}>
+                      Cancel
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+        </div>
       </div>
-    </div>
+    </>
   );
 }
