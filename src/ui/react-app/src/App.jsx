@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import ProfileSetup from "./ProfileSetup";
+import ProfileSetup from "./pages/ProfileSetup";
+import Reports from "./Reports";
 import {
   listProjects,
   getProject,
@@ -35,9 +36,8 @@ function App() {
     {id:0, label:"Settings"},
     {id:1, label:"Projects"},
     {id:2, label:"Badges"},
-    {id:3, label:"Resume"},
-    {id:4, label:"Portfolio"},
-    {id:5, label:"Help"}
+    {id:3, label:"Reports"},
+    {id:4, label:"Help"}
   ];
 
   const whenClick = (id) => {
@@ -54,9 +54,9 @@ function App() {
       case 0: return <Settings />;
       case 1: return <Projects />;
       case 2: return <Badges />;
-      case 3: return <Resume />;
-      case 4: return <Portfolio />;
-      case 5: return <Help />;
+      case 3: return <Reports />
+      case 4: return <Help />;
+      default: return <Projects />;
     }
   }
   // ensure name, phone, email are set
