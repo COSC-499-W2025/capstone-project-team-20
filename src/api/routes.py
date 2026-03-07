@@ -369,7 +369,7 @@ def delete_report(id: int):
 
     return None
 
-@router.get("/portfolio/{id}", response_model=PortfolioResponse)
+@router.get("/portfolio/{id}", response_model=PortfolioResponse, dependencies=[Depends(require_consent)])
 def get_portfolio(id: int):
     """Retrieve a generated portfolio report by id."""
     report_manager = ReportManager()
@@ -379,7 +379,7 @@ def get_portfolio(id: int):
     portfolio = _build_portfolio_report(report)
     return PortfolioResponse(ok=True, portfolio=portfolio, message="Portfolio retrieved.")
 
-@router.post("/portfolio/export", response_model=PortfolioExportResponse)
+@router.post("/portfolio/export", response_model=PortfolioExportResponse, dependencies=[Depends(require_consent)])
 def export_portfolio(req: PortfolioExportRequest):
     """
     Export a portfolio PDF file from a report and return download info.
@@ -412,7 +412,7 @@ def download_portfolio(export_id: str):
     p = matches[0]
     return FileResponse(str(p), filename=p.name)
 
-@router.post("/portfolio/{id}/edit", response_model=PortfolioResponse)
+@router.post("/portfolio/{id}/edit", response_model=PortfolioResponse, dependencies=[Depends(require_consent)])
 def edit_portfolio(id: int, payload: PortfolioUpdateRequest):
     """
     Edit an existing portfolio report's title and notes.
@@ -525,6 +525,14 @@ def export_resume(req: ResumeExportRequest):
         download_url=f"/resume/exports/{export_id}/download"
     )
 
+
+class ConfigSaveRequest(BaseModel):
+    name:     str | None = None
+    email:    str | None = None
+    phone:    str | None = None
+    github:   str | None = None
+    linkedin: str | None = None
+
 @router.get("/resume/exports/{export_id}/download", dependencies=[Depends(require_consent)])
 def download_resume(export_id: str):
     """Download a previously exported resume file."""
@@ -534,44 +542,6 @@ def download_resume(export_id: str):
         raise HTTPException(status_code=404, detail="Export not found.")
     p = matches[0]
     return FileResponse(str(p), filename=p.name)
-
-
-@router.post("/portfolio/export", response_model=PortfolioExportResponse, dependencies=[Depends(require_consent)])
-def export_portfolio(req: PortfolioExportRequest):
-    rm = ReportManager()
-    report = rm.get_report(req.report_id)
-    if not report:
-        raise HTTPException(status_code=404, detail="Report not found.")
-
-    try:
-        export_id, out_path = export_report_pdf(report, template="portfolio", output_name=req.output_name)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except RuntimeError as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-    return PortfolioExportResponse(
-        export_id=export_id,
-        filename=out_path.name,
-        download_url=f"/portfolio/exports/{export_id}/download"
-    )
-
-
-@router.get("/portfolio/exports/{export_id}/download", dependencies=[Depends(require_consent)])
-def download_portfolio(export_id: str):
-    out_dir = Path("portfolios")
-    matches = list(out_dir.glob(f"{export_id}-*.pdf"))
-    if not matches:
-        raise HTTPException(status_code=404, detail="Export not found.")
-    p = matches[0]
-    return FileResponse(str(p), filename=p.name)
-
-class ConfigSaveRequest(BaseModel):
-    name:     str | None = None
-    email:    str | None = None
-    phone:    str | None = None
-    github:   str | None = None
-    linkedin: str | None = None
 
 @router.get("/config")
 def get_config():
@@ -587,3 +557,4 @@ def save_config(req: ConfigSaveRequest):
         if value is not None and str(value).strip():
             cm.set(key, str(value).strip())
     return {"ok": True, "config": cm.get_all()}
+
