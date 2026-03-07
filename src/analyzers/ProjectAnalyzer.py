@@ -685,6 +685,7 @@ class ProjectAnalyzer:
 
 
     def _generate_insights_for_project_noninteractive(self, project: Project):
+        """Generate resume + portfolio insights for a single project (non-interactive)."""
         # Ensure prerequisite analyses exist (like CLI)
         if not project.categories or not project.num_files or not project.languages:
             self.analyze_metadata(projects=[project])
@@ -696,25 +697,21 @@ class ProjectAnalyzer:
         if not project.author_count or project.author_count <= 1:
             self.analyze_git_and_contributions(projects=[project], interactive=False)
             project = self.project_manager.get_by_name(project.name)
-        """Generate resume + portfolio insights for a single project (non-interactive)."""
+
         # Find the root folder for metadata extraction
         with self.suppress_output():
-            with self.suppress_output():
-                root_folder = self._find_folder_by_name_recursive(project.name)
+            root_folder = self._find_folder_by_name_recursive(project.name)
 
-                # always try the repo path itself
-                if not root_folder:
-                    root_folder = project.file_path
-
+            if root_folder:
                 extracted = ProjectMetadataExtractor(root_folder).extract_metadata(
                     repo_path=project.file_path
                 ) or {}
                 metadata = (extracted.get("project_metadata", {}) or {})
-
-            extracted = ProjectMetadataExtractor(root_folder).extract_metadata(
-                repo_path=project.file_path
-            ) or {}
-            metadata = (extracted.get("project_metadata", {}) or {})
+            else:
+                metadata = {
+                    "start_date": (project.date_created.isoformat()[:10] if project.date_created else None),
+                    "end_date": (project.last_modified.isoformat()[:10] if project.last_modified else None),
+                }
 
         # Update collaboration info if repo has .git
         try:

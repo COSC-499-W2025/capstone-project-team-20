@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import ProfileSetup from "./ProfileSetup";
+import ProfileSetup from "./pages/ProfileSetup";
+import Reports from "./pages/Reports";
 import {
   listProjects,
   getProject,
@@ -8,9 +9,6 @@ import {
   getYearlyWrapped,
   getConfig,
   setPrivacyConsent,
-  createReport,
-  exportResume,
-  exportPortfolio,
   uploadProjectZip,
   uploadProjectFromPath,
   clearProjects
@@ -35,9 +33,8 @@ function App() {
     {id:0, label:"Settings"},
     {id:1, label:"Projects"},
     {id:2, label:"Badges"},
-    {id:3, label:"Resume"},
-    {id:4, label:"Portfolio"},
-    {id:5, label:"Help"}
+    {id:3, label:"Reports"},
+    {id:4, label:"Help"}
   ];
 
   const whenClick = (id) => {
@@ -54,9 +51,9 @@ function App() {
       case 0: return <Settings />;
       case 1: return <Projects />;
       case 2: return <Badges />;
-      case 3: return <Resume />;
-      case 4: return <Portfolio />;
-      case 5: return <Help />;
+      case 3: return <Reports />
+      case 4: return <Help />;
+      default: return <Projects />;
     }
   }
   // ensure name, phone, email are set
@@ -522,114 +519,6 @@ function Badges() {
           ))}
         </ul>
       )}
-    </>
-  );
-}
-
-function Resume() {
-  const [loading, setLoading] = useState(false);
-  const [msg, setMsg] = useState("");
-
-  async function handleExport() {
-    setLoading(true);
-    setMsg("");
-    try {
-      await setPrivacyConsent(true);
-
-      // TEMP: create a report from all projects in DB
-      const { projects } = await listProjects();
-      const ids = (projects ?? []).map((p) => p.id);
-
-      if (ids.length === 0) {
-        setMsg("No projects found. Upload a project first.");
-        return;
-      }
-
-      const created = await createReport({
-        title: "Resume Report",
-        sort_by: "resume_score",
-        notes: "Generated from UI",
-        project_ids: ids,
-      });
-
-      const reportId = created.report.id;
-
-      const exp = await exportResume({
-        report_id: reportId,
-        template: "jake",
-        output_name: "resume.pdf",
-      });
-
-      window.open(`http://localhost:8000${exp.download_url}`, "_blank");
-      setMsg("Resume export started — opened download in a new tab.");
-    } catch (e) {
-      setMsg(e.message ?? "Failed to export resume");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  return (
-    <>
-      <h3>Resume</h3>
-      <button onClick={handleExport} disabled={loading}>
-        {loading ? "Exporting..." : "Export Resume PDF"}
-      </button>
-      {msg && <p>{msg}</p>}
-    </>
-  );
-}
-
-function Portfolio() {
-  const [loading, setLoading] = useState(false);
-  const [msg, setMsg] = useState("");
-
-  async function handleExport() {
-    setLoading(true);
-    setMsg("");
-    try {
-      await setPrivacyConsent(true);
-
-      const { projects } = await listProjects();
-      const ids = (projects ?? []).map((p) => p.id);
-
-      if (ids.length === 0) {
-        setMsg("No projects found. Upload a project first.");
-        return;
-      }
-
-      const created = await createReport({
-        title: "Portfolio Report",
-        sort_by: "resume_score",
-        notes: "Generated from UI",
-        project_ids: ids,
-      });
-
-      const reportId = created.report.id;
-
-      // NOTE: portfolio export will fail unless portfolio_details exist for each report project
-      // If you haven’t generated them yet, add that step later.
-      const exp = await exportPortfolio({
-        report_id: reportId,
-        output_name: "portfolio.pdf",
-      });
-
-      window.open(`http://localhost:8000${exp.download_url}`, "_blank");
-      setMsg("Portfolio export started — opened download in a new tab.");
-    } catch (e) {
-      setMsg(e.message ?? "Failed to export portfolio");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  return (
-    <>
-      <h3>Portfolio</h3>
-      <button onClick={handleExport} disabled={loading}>
-        {loading ? "Exporting..." : "Export Portfolio PDF"}
-      </button>
-      {msg && <p>{msg}</p>}
     </>
   );
 }
