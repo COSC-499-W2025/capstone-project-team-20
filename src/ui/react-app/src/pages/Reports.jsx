@@ -128,35 +128,6 @@ function Reports() {
     }
   }
 
-  async function handleGeneratePortfolioDetails() {
-    if (!selectedReport?.id) {
-      setMessage("Select or create a report first.");
-      return;
-    }
-
-    setLoading(true);
-    setMessage("");
-
-    try {
-      const reportProjects = selectedReport.projects ?? [];
-      const projectNames = reportProjects.map((p) => p.project_name).filter(Boolean);
-
-      await generatePortfolioDetailsForReport({
-        report_id: selectedReport.id,
-        project_names: projectNames,
-      });
-
-      const refreshed = await getReport(selectedReport.id);
-      setSelectedReport(refreshed.report ?? null);
-
-      setMessage("Portfolio details generated.");
-    } catch (e) {
-      setMessage(e.message ?? "Failed to generate portfolio details");
-    } finally {
-      setLoading(false);
-    }
-  }
-
   async function handleExportPortfolio() {
     if (!selectedReport?.id) {
       setMessage("Select or create a report first.");
@@ -271,14 +242,6 @@ function Reports() {
               <div style={{ marginTop: 12 }}>
                 <button onClick={handleExportResume} disabled={loading}>
                   Export Resume PDF
-                </button>
-
-                <button
-                  onClick={handleGeneratePortfolioDetails}
-                  disabled={loading}
-                  style={{ marginLeft: 8 }}
-                >
-                  Generate Portfolio Details
                 </button>
 
                 <button
