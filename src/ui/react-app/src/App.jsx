@@ -9,6 +9,7 @@ import {
   getYearlyWrapped,
   getConfig,
   setPrivacyConsent,
+  getPrivacyConsent,
   createReport,
   exportResume,
   exportPortfolio,
@@ -139,12 +140,13 @@ function Projects() {
     setError("Enter a path first (example: TestResources/sample.zip)");
     return;
   }
+  const consent = await getPrivacyConsent();
+  if (!consent) { setError("You must grant consent in Settings in order to upload projects."); return; }
 
   setUploading(true);
   setError(null);
 
   try {
-    await setPrivacyConsent(true);
 
     const res = await uploadProjectFromPath(pathInput.trim());
 
@@ -167,13 +169,13 @@ function Projects() {
     setError("Pick a .zip file first.");
     return;
   }
+  const consent = await getPrivacyConsent();
+  if (!consent) { setError("You must grant consent in Settings in order to upload projects."); return; }
 
   setUploading(true);
   setError(null);
 
   try {
-    // consent first
-    await setPrivacyConsent(true);
 
     // upload zip, backend creates projects
     const res = await uploadProjectZip(zipFile);
