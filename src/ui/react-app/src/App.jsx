@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import ProfileSetup from "./pages/ProfileSetup";
-import Reports from "./Reports";
+import Reports from "./pages/Reports";
 import {
   listProjects,
   getProject,
