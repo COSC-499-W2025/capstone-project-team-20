@@ -76,6 +76,11 @@ export function getYearlyWrapped() {
 }
 
 // Privacy Consent
+
+export function getPrivacyConsent() {
+  return request("/privacy-consent").then((data) => !!(data.consent ?? false));
+}
+
 export function setPrivacyConsent(consent) {
   return request("/privacy-consent", {
     method: "POST",

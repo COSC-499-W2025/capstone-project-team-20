@@ -151,6 +151,12 @@ def upload_project(zip_file: UploadFile = File(...)):
         projects=[ProjectSummary(id=p.id, name=p.name) for p in created_projects]
     )
 
+@router.get("/privacy-consent", response_model=ConsentResponse)
+def get_consent():
+    """Return the user's current privacy consent status."""
+    cm = ConsentManager()
+    return ConsentResponse(consent=cm.has_user_consented())
+
 @router.post("/privacy-consent", response_model=ConsentResponse)
 def upload_consent(req: ConsentRequest):
     """Set the user's privacy consent flag (required for reporting/export features)."""
