@@ -11,7 +11,7 @@ Workflow:
 from pathlib import Path
 
 from src.analyzers.ProjectAnalyzer import ProjectAnalyzer
-from src.analyzers.ProjectMetadataExtractor import ProjectMetadataExtractor
+from src.managers.ConfigManager import ConfigManager
 from src.ZipParser import parse_zip_to_project_folders
 
 
@@ -29,31 +29,41 @@ def batch_analyze(zipped_repos_dir: str = "zipped_repos") -> None:
 
     print(f"\nBatch analyzing {len(zip_files)} repositories...\n")
 
-    pa = ProjectAnalyzer()
     analyzed, failed = 0, 0
 
     for zip_path in zip_files:
-        pa._cleanup_temp()
         repo_name = zip_path.stem
 
         try:
-            pa.zip_path = Path(zip_path)
-            folders = parse_zip_to_project_folders(str(pa.zip_path))
-            pa.root_folder = folders[0]
-            pa.metadata_extractor = ProjectMetadataExtractor(pa.root_folder)
+            folders = parse_zip_to_project_folders(str(zip_path))
+            if not folders:
+                raise ValueError("No project folders found in zip")
+
+            cm = ConfigManager()
+            pa = ProjectAnalyzer(cm, folders, zip_path)
 
             print(f"\n{'=' * 50}")
             print(f"Analyzing: {repo_name}")
             print(f"{'=' * 50}")
 
-            pa.run_all()
+            # Initialize only this repo's project(s), scoped to current zip
+            projects = pa.initialize_projects()
+            if not projects:
+                raise ValueError("Initialization produced no projects")
+
+            # Run each analysis step scoped to only this batch
+            pa.analyze_git_and_contributions(projects=projects, interactive=False)
+            pa.analyze_metadata(projects=projects)
+            pa.analyze_categories(projects=projects)
+            pa.analyze_languages(projects=projects)
+            pa.analyze_skills(projects=projects)
+
+            pa._cleanup_temp()
             analyzed += 1
 
         except Exception as e:
-            print(f"❌ {repo_name}: {str(e)[:50]}")
+            print(f"❌ {repo_name}: {str(e)[:80]}")
             failed += 1
-
-    pa._cleanup_temp()
 
     print(f"\n{'=' * 40}")
     print(f"Analyzed: {analyzed} | Failed: {failed}")
