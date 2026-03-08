@@ -257,6 +257,8 @@ class ProjectAnalyzer:
                     print(f"  - Updated existing project: {proj_existing.name}")
                 else:
                     proj_existing.last_accessed = datetime.now()
+                    proj_existing.file_path = proj_new.file_path
+                    proj_existing.root_folder = proj_new.root_folder
                     self.project_manager.set(proj_existing)
                     print(f"  - No changes detected, refreshed batch for: {proj_existing.name}")
                 created_projects.append(proj_existing)
