@@ -1,6 +1,7 @@
 ## Team 20 Weekly Log
 
 ### Table of contents
+- [Term 2 Week 9(March 2nd - March 8th)](#term-2-week-9-march-2nd---march-8th)
 - [Term 2 Week 8(February 23rd - March 1st)](#term-2-week-8-february-23rd---march-1st)
 - [Term 2 Week 7(February 16th - February 22nd)](#term-2-week-7-february-16th---february-22nd)
 - [Term 2 Week 6(February 9th - February 15th)](#term-2-week-6-february-9th---february-15th)
@@ -635,3 +636,39 @@ We have no continuuing tasks! Now, we should be able to polish/refactor the back
 
 **Test Report:**
 ![Term 2 Week 8 Test Report](teamWeeklyLogsImages/T2_W8_Tests.png)
+
+
+### Term 2 Week 9 (March 2nd - March 8th)
+
+**Work Performed:**
+- Branden Kennedy (42474551): 
+
+- Necmi Kaan Sapoglu (17014796): 
+
+- Lex Nash (84668540): 
+
+- Dylan Alexander (16394025): This week, I made a PR implementing a new settings page for the frontend. This page has three submenus. 1. Profile, for users to change their name/email/phone/github/linkedin (all information displayed on resume/portfolios). 2. Privacy (gives users the option to grant/revoke consent) 3. Data (gives users the option to delete all stored project data). Additionally, I made a PR installing Vitest and React Testing Library, and another adding tests for my profile-setup page from last week, now that we have a frontend component testing framework.
+
+- Sven Annist (42486720): 
+  
+**Features included in the project plan for this milestone are:**
+
+
+**Continuing tasks from last week and plan for the next week:**
+
+
+**Burnup chart:**
+![Term 2 Week 9 Burnup chart]()
+
+
+**Table View of Completed Tasks on Project Board:**
+![Term 2 Week 9 completed]()
+
+
+**Table View of In-Progress Tasks on Project Board:**
+![Term 2 Week 9 In-progress Tasks]()
+
+
+**Test Report:**
+![Term 2 Week 9 Test Report]()
+
