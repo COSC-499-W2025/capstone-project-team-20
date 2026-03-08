@@ -98,3 +98,211 @@ My goals for next week are to finish the tests I began writing for ZipParser, cr
 Issues closed:
 - Issue [#58](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/58)
 - Issue [#59](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/59)
+
+## Week 8
+
+**Types of Tasks Worked On**
+![Week 8 Tasks](imagesForLexLogs/week_8_lexlog.png)
+
+**Recap of Goals**
+Was working on completing this issue:
+- Issue [#31](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/31)
+
+For this week, these issues remained:
+- [COSC-499-W2025/capstone-project-team-20#119](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/119)
+- [COSC-499-W2025/capstone-project-team-20#111](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/111)
+-[COSC-499-W2025/capstone-project-team-20#127](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/127)
+-#97 (may have accidentally deleted this because its not linking? it appears under issue #31 tho)
+
+These were:
+- A bug fix in ZipParser so it now correctly handles zip files that contain multiple folders of the same name at different points in the file structure.
+- A toString() method for ZipParser to take a root projectFolder object and return a String representation of the tree structure for easy printing, the associated tests for this, and a template for tree traversal for potential future methods
+- Tests for the ProjectFolder class, as it lacked them initially due to being a node class, but upon review it had some 'features' within the constructor that warranted testing
+- Tests for ZipParser, as it was lacking some due to the last minute implementation last week.
+
+I only managed to review one PR this week as only one (that was not made by me) remained by the time i had put aside to look at them.
+
+I did not manage to find an issue to break up into smaller issues for next week as I had planned to do. However as a team we figured out what times we are all free for team meetings so we can meet and plan out implementation of future features together.
+
+Issues closed:
+#31, #119, #111, #127, #97
+
+## Week 9
+**Types of Tasks Worked On**
+![Week 9 Tasks](imagesForLexLogs/week_9_lexlog.png)
+
+**Recap of Goals**
+My goal was to begin work on planning and implementing a progress bar for showing better feedback to the user.
+This resulted in the creation of the issue:
+- [COSC-499-W2025/capstone-project-team-20#146](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/146)
+And the first major sub-issue:
+- [COSC-499-W2025/capstone-project-team-20#158](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/158)
+
+I began work on issue #158 to create an object that could be used to display a project bar that would be reuseable by various segments of our program.
+
+Considerable time was spent researching how best to display a loading bar, as most examples of text loading bars did not really look like a smooth continuous bar. I eventually managed to find the unicode block characters, which would prove to be exactly what i was looking for, being able to display a continuous bar as well as divide each bar into 8 different segments by cycling through characters.
+
+One important part of the planning process was figuring out how i could program the class in such a way that it could be tested easily and simply, while i think i failed at simplicity, my tests are very comprehensive and handle many niche edge cases.
+
+I think my implementation could have been a lot simpler; I feel like most things in our program occur too rapidly for a progress bar programmed to look very pretty to be shown off very well.
+
+The next steps for the progress bar are to do individual implementations for the various analyzers and parsers in the project, so that each is able to have a loading bar. Theres also a potential for parallelization that i have been considering in order to have the bar look prettier in motion, but next week im definitely going to focus on perfecting the functionality of the bar through implementation rather than getting caught up in visuals.
+
+Issues closed:
+issue [COSC-499-W2025/capstone-project-team-20#158](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/158)
+
+## Week 10
+**Types of Tasks Worked On**
+![Week 10 Tasks](imagesForLexLogs/week_10_lexlog.png)
+
+**Recap of Goals**
+My goal was to continue implementation of:
+- [COSC-499-W2025/capstone-project-team-20#146](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/146)
+
+The focus for this week was on progress bar implementation into zip parser, in issue #160
+
+As with a few others of our team members I had a busy week 10 with many midterms, by the time I had free time to implement there were already some changes I needed to make.
+
+Had to fix some existing bugs in ProgressBar that arose from my shoddy job replacing variable names that resulted in some tests failing. I implemented progress bar into zip parser, and then realized some of the code I had already studied and familiarize myself with was completely different from refactoring changes, so i decided to hang back this week and focus more on reviewing the code of teammates in-order to better undertstand what my approach should be going forward. I also found a slight error in existing code that caused a test to fail for some uses but not for others, fixed this in Issue #182.
+
+Things are only getting busier so i really need to focus up for this final stretch of the term.
+
+One issue I am having at the moment is figuring out what to implement. Most of the core features are already implemented or in the process of being implemented, so I'm struggling to determine what to do next. Will bring this up at the next team meeting.
+
+Issues closed:
+- Issue #160
+- Issue #182 
+
+## Week 12
+**Types of Tasks Worked On**
+![Week 12 Tasks](imagesForLexLogs/week_12_lexlog.png)
+
+**Recap of Goals**
+My original goal was to finish with the progress bar, but after talking with the TA about our progress towards having a demo and completing milestone 1 I decided I needed to switch gears to making sure we are creating good metrics and insights about projects for our users, and better enable them to create a resume using our program.
+
+I started by discussing with the team what kinds of things we still need to do in terms of gathering data, and in what ways we can process that data in order to give the user valuable insights. I am someone who finds it easier to describe things using visuals, and so I created the following mockup of how I have been envisioning the final milestone 1 to look during a run-through and shared with the team:
+
+![Output Mockup](imagesForLexLogs/lexoutputmockup.png)
+
+The team liked what I made and so I got started on creating GraphPrint.py, in order to show a graph visualization of a given set of data so that the user can easily parse metrics and help decide which projects are valuable for a resume. Outside of my mockup I also described to the group how we could show the user a ranking of which projects are best to show on a resume based on the variety of skills shown along with the percentage of the project that you contributed.
+
+The graph code itself took a lot of fiddling to make it look nice, I decided since I was intending for multiple graphs to appear in the output that I should implement some delay to make sure graphs dont appear all at once and overwhelm the user (or have them miss information). For the delay I made it dynamically animate in the terminal so you can see the graph move and the values change, makes the user feel like the program is actively doing something, and is more engaging then watching a bunch of text pop in all at once and overwhelm the user. 
+
+If you can't tell I think HCI is very fun, and I am looking forward to being able to do front-end stuff next term. as an artist I am hoping to take sort of a leadership role with it, at least in terms of making it look nice and feel good to use.
+
+Did some reviews and such as well.
+
+Issues closed:
+- Issue [COSC-499-W2025/capstone-project-team-20#219](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/219)
+
+## Week 13
+**Types of Tasks Worked On**
+![Week 13 Tasks](imagesForLexLogs/week_13_lexlog.png)
+
+**Recap of Goals**
+Once again ended up working on something i completely was not expecting to work on, but it became clear that many last minute changes and features to the analysis portion of our project were going to continue to happen for the rest of the week and my efforts would be best spent on something that wouldnt risk further merge conflicts. Due to this, and a suggestion that was made during this week's team meeting, i decided to work on something else.
+
+During the team meeting a suggestion was brought up to develop a github workflow to automatically assign reviewers to pull requests upon their creation in alignment with some of the rules we established in our team contract. I had never worked with workflows before and had no idea how they worked or how they were programmed but since I was the only one without a clear plan for my week and I enjoy challenging myself to learn new things I decided I would take on the Issue.
+
+It was quite challenging, as it incorperates several different kinds of syntax from multiple different programming languages I had not yet interacted with, so it was hard to find comprehensive documentation. But I believe I have managed to program it correctly. I am just hoping I dont run into any issues with permissions and the like. It was sort of impossible to test it before merging, all I could do was see if it compiled when i submitted the PR, which took a few bug fixes before it no longer threw an error. Now that its merged we just have to wait and see if it works once a new pull request comes in.
+
+Reviewed a few PRs this week as usual, but hopefully from now on everyone will have an equal-ish amount of PRs to review.
+
+I'm looking forward to cleaning up the project output before the video demo!
+
+Issues closed:
+- Issue [COSC-499-W2025/capstone-project-team-20#244](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/244)
+
+## T2 Week 2
+**Types of tasks worked on**
+![Week 2 Tasks](imagesForLexLogs/w2t2.png)
+
+Did some refactoring as well as bugfixes on progress bar code as it developed some problems due to some sweeping changes at the end of last term. That is now merged.
+
+As a team we've been trying to figure out when is best to meet as we all need to discuss our plan going forward before we can start picking up the pace with development of milestone 2. I'm really hoping we can meet multiple times a week because we work especially productively when we are all in the same room i have found from last term.
+
+This week's main focus was planning front end stuff since im going to be in charge of most of the visual design for that, I've been researching different modules and settling on tkinter. I have started to make mockups of the different screens for our application, which will be finalized with the team's input as it can heavily influence code complexity if we split things up into too many screens and I want to get input on what the rest of the team is envisioning.
+
+I reviewed Branden's API pull request, which involved having to research a lot about the different modules used as well as learning more about the function of APIs themselves since I haven't had to learn about them prior to this point. It is really enjoyable to learn new things and I have no doubt this effort will be rewarded throughout the rest of the project.
+
+## T2 Week 3
+**Types of tasks worked on**
+![Week 2 Tasks](imagesForLexLogs/w3t2.png)
+
+Finally had our first proper team meeting outside of class time this week, and I lead a group discussion where we went through every single milestone 2 task, assigned each to people, came up with an understanding as a team of what each task meant, and how we would implement it. This included noting down any tasks that we need further clarification on from the TA/prof. 
+
+The tasks I was assigned during the meeting required me to wait for some holdover tasks from term 1 to be completed, so I was unable to do any coding on my assigned tasks this week.
+
+instead, I started a front end mockup which was added to the documentation. I created it in the 3D software Blender in order to easily simulate things such as drop shadows and to be able to instantly make sweeping colour or font changes, for super fast prototyping. I tried to choose a navigation style that's simple yet likely won't be attempted by other teams in order to challenge myself and help my team stand out.
+
+Example images showing the 3D nature of the mockups, as well as the ability to change colours:
+![3D](imagesForLexLogs/3Dmockup.png)
+![Colour](imagesForLexLogs/3Dmockup_color.png)
+
+## T2 Week 4-5
+**Types of tasks worked on**
+![Week 2 Tasks](imagesForLexLogs/w4-5t2.png)
+
+Tasks these two weeks:
+1) I implemented the ability to edit resume rankings and chronology as specified in the Milestone 2 requirement 23(Allow users to choose which information is represented), the aspects of this requirement I did not implement are already implemented in different parts of the system.
+
+2) Setup Tkinter for creating a frontend UI, which incuded the following:
+      i) study tkinter documentation
+     ii) create an app.py file containing an App class which is a tk.TK() window
+    iii) create a constructor for building the main screen
+     iv) implement a framework for switching menus with visual feedback
+      v) thoroughly comment so that teammates unfamiliar with tkinter can understand how the code works and replicate if needed
+
+Team agreed we should get started on the UI due to how well recieved our temporary front end was for the demos last week, as well as due to the fact that our current command line UI is difficult to navigate quickly due to the staggering amount of menu options. 
+
+We discussed as a team what menus/screens would be necessary for the front end, and i ordered them in the application in an order I found intuitive:
+    1. Settings
+    2. Projects [default menu that is open on application start]
+    3. Badges
+    4. Resume
+    5. Portfolio
+    6. Help
+ Despite being the top option, the Options menu is not the menu opened by default upon launching the program, I may attempt to find a better solution for this in the future if it bothers people, but personally I find it most intuitive.
+
+ It was my descision to have a Help menu, I have no concrete plans for what should go in there at the moment.
+
+ The way i've set up the framework each menu and it's UI will be stored in a file containing its corresponding class, with methods .build(self) and .teardown(self) to make their UI elements appear and disappear. Many menus will have to have far more methods in order to handle things such as dynamic tables/pagination or in-place information editing, which im excited to figure out how to implement.
+
+ My first and foremost plan for next week is to hook up the consent manager to the front end, it makes sense as a starting point and would be good practice for understanding how existing features will be implemented on the front end.
+
+ After that I'll take on some of the following in vaguely this order:
+    - finish my remaining Milestone 2 tasks
+    - Implement basic layout for each of the menu classes
+    - Fully implement user profile editing in the settings menu
+    - in the projects menu, 
+        - implement file uploads
+        - implement project viewer
+        - implement project editor
+    - implement badge viewing in the badges menu
+    - (and more later on...)
+
+## T2 Week 6-8
+**Types of tasks worked on**
+![Week 2 Tasks](imagesForLexLogs/w678t2.png)
+
+Tasks these three weeks:
+
+RECREATE UI IN REACT:
+So, turns out when I asked if tkinter was fine and everyone gave me the go ahead I probably should have made doubly sure there wasnt anything the rest of my group would prefer to use. As a result of this, upon completing my tkinter PRs, most of the team requested I switch to react, and so over the course of a week I learned react for the first time and recreated my entire tkinter front end in react, as shown in the following pr:
+[PR #377](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/377)
+
+COMPARE PROJECTS FEATURE (req 23):
+In the process of cleaning up some requirements for Milestone 2 I implemented a feature to compare projects, the programming was rather tedious as I wished to allow the user to compare based on any piece of data we track about projects and I did just that. It displays a list of projects, and based on user selection, sorts them based on one of 18 project statistics. Helps users easily find which projects are the most valuable for which criteria. Comes with comprehensive testing.
+[PR #410](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/410)
+
+COMPARE PROJECTS FEATURE (req 23):
+In the process of cleaning up some requirements for Milestone 2 I implemented a feature to select skills to include in showcases. Basically involves a menu which allows you to select a project, then presents a list of the skills in that project, and allows you to toggle them on and off. Required adding a variable to the database and editing existing features that implement skills. Has comprehensive testing.
+[PR #410](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/410)
+
+Also participated in team meetings, 
+created clips for the milestone 2 video, 
+made slides/script for the powerpoint presentation, 
+reviewed assigned PRs.
+
+Goals moving forward:
+create more UI icons, unify UI design, more interactive elements (like drag and drops)

@@ -52,7 +52,7 @@ coverage.xml
 dist/
 build/
 
-# Resumes and Resume artifacts
+# reports
 resumes/
 portfolios/
 
@@ -60,4 +60,7 @@ portfolios/
 thumbnails/
 
 # frontend 
+src/ui/
 src/ui/react-app/
+
+
