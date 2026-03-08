@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import ProfileSetup from "./ProfileSetup";
-import Settings from "./Settings";
+import ProfileSetup from "./ProfileSetup.jsx";
+import Settings from "./Settings.jsx";
 import {
   listProjects,
   getProject,
@@ -18,6 +18,22 @@ import {
   clearProjects
 } from "./api/client";
 import './App.css'
+
+const formatBadgeLabel = (badgeId = "") =>
+  badgeId
+    .split("_")
+    .map((chunk) => chunk.charAt(0).toUpperCase() + chunk.slice(1))
+    .join(" ");
+
+const formatBadgeRequirement = (metric, target) => {
+  const label = (metric || "metric").toLowerCase();
+
+  if (label.includes("ratio") || label.includes("share")) {
+    return `Reach at least ${(target * 100).toFixed(0)}% ${label}.`;
+  }
+
+  return `Reach at least ${target} ${label}.`;
+};
 
 function App() {
   //starts the actual app itself, all pages are gathered here
@@ -355,6 +371,7 @@ function Badges() {
   const [skills, setSkills] = useState([]);
   const [progress, setProgress] = useState([]);
   const [wrapped, setWrapped] = useState([]);
+  const [activeWrappedYear, setActiveWrappedYear] = useState(null);
 
   async function loadBadgeData() {
     setLoading(true);
@@ -419,6 +436,36 @@ function Badges() {
     (a.label ?? a.badge_id).localeCompare(b.label ?? b.badge_id)
   );
 
+  const badgeCatalog = progress
+    .map((badge) => ({
+      badgeId: badge.badge_id,
+      label: badge.label ?? formatBadgeLabel(badge.badge_id),
+      howToEarn: formatBadgeRequirement(badge.metric, badge.target),
+    }))
+    .sort((a, b) => a.label.localeCompare(b.label));
+
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const isCurrentYearComplete = now.getMonth() === 11 && now.getDate() === 31;
+
+  const wrappedByYear = wrapped.reduce((acc, yearBlock) => {
+    acc[yearBlock.year] = yearBlock;
+    return acc;
+  }, {});
+
+  const wrappedButtons = wrapped.map((yearBlock) => ({
+    year: yearBlock.year,
+    label:
+      yearBlock.year === currentYear
+        ? isCurrentYearComplete
+          ? "Get Yearly Stats"
+          : "Get Yearly Stats (so far)"
+        : `Get ${yearBlock.year} Stats`,
+  }));
+
+  const openWrappedYear = (year) => setActiveWrappedYear(year);
+  const selectedWrapped = activeWrappedYear ? wrappedByYear[activeWrappedYear] : null;
+
   return (
     <>
       <h3>Badges</h3>
@@ -429,16 +476,29 @@ function Badges() {
 
       {error && <pre style={{ color: "crimson" }}>{error}</pre>}
 
+      <section className="badges-hero">
+        <h4>🏆 Badge Guide</h4>
+        <p>Here&apos;s every badge, plus exactly how to earn it.</p>
+        <div className="badge-guide-grid">
+          {badgeCatalog.map((badge) => (
+            <article className="badge-guide-card" key={badge.badgeId}>
+              <h5>{badge.label}</h5>
+              <p>{badge.howToEarn}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
       <h4>🎯 Badge Progress Tracker (Uncompleted)</h4>
       {inProgress.length === 0 ? (
         <p>All tracked progress badges are complete 🎉</p>
       ) : (
-        <ul style={{ listStyle: "none", paddingLeft: 0 }}>
+        <ul className="in-progress-list">
           {inProgress.map((b) => (
-            <li key={b.badge_id} style={{ marginBottom: 12, border: "1px solid #2f4d6f", borderRadius: 8, padding: 10 }}>
+            <li key={b.badge_id} className="progress-card">
               <strong>{b.label}</strong> — {Math.round((b.progress ?? 0) * 100)}%
-              <div style={{ height: 10, borderRadius: 999, background: "#21344a", marginTop: 8, overflow: "hidden" }}>
-                <div style={{ width: `${Math.round((b.progress ?? 0) * 100)}%`, height: "100%", background: "#55BDCA" }} />
+              <div className="progress-track">
+                <div className="progress-fill" style={{ width: `${Math.round((b.progress ?? 0) * 100)}%` }} />
               </div>
               <small>
                 {b.metric}: {(b.current ?? 0).toFixed(2)} / {b.target} • Closest project: {b.project?.name ?? "N/A"} • ⏳ In progress
@@ -468,31 +528,40 @@ function Badges() {
           ))}
         </ul>
       )}
-
-
       <h4>🎉 Yearly Wrapped</h4>
       {wrapped.length === 0 ? (
         <p>No yearly wrapped history available yet.</p>
       ) : (
-        wrapped.map((yearBlock) => (
-          <div key={yearBlock.year} style={{ marginBottom: 14, border: "1px solid #3f638c", borderRadius: 12, padding: 12, background: "linear-gradient(135deg, rgba(85,189,202,0.12), rgba(242,125,66,0.10))" }}>
-            <h5>{yearBlock.vibe_title}</h5>
+        <div className="wrapped-buttons">
+          {wrappedButtons.map((button) => (
+            <button key={button.year} onClick={() => openWrappedYear(button.year)}>
+              {button.label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {selectedWrapped ? (
+        <div className="wrapped-modal-backdrop" onClick={() => setActiveWrappedYear(null)}>
+          <div className="wrapped-modal" onClick={(event) => event.stopPropagation()}>
+            <button className="wrapped-close" onClick={() => setActiveWrappedYear(null)}>✕</button>
+            <h5>{selectedWrapped.year} — {selectedWrapped.vibe_title}</h5>
             <p>
-              Projects: {yearBlock.projects_count} • LOC: {yearBlock.total_loc} • Files: {yearBlock.total_files} • Avg test ratio: {(yearBlock.avg_test_file_ratio * 100).toFixed(1)}%
+              Projects: {selectedWrapped.projects_count} • LOC: {selectedWrapped.total_loc} • Files: {selectedWrapped.total_files} • Avg test ratio: {(selectedWrapped.avg_test_file_ratio * 100).toFixed(1)}%
             </p>
-            {yearBlock.highlights?.length ? (
+            {selectedWrapped.highlights?.length ? (
               <ul>
-                {yearBlock.highlights.map((line, idx) => (
-                  <li key={`${yearBlock.year}-highlight-${idx}`}>{line}</li>
+                {selectedWrapped.highlights.map((line, idx) => (
+                  <li key={`${selectedWrapped.year}-highlight-${idx}`}>{line}</li>
                 ))}
               </ul>
             ) : null}
             <p><strong>Milestones:</strong></p>
-            {yearBlock.milestones?.length ? (
+            {selectedWrapped.milestones?.length ? (
               <ul>
-                {yearBlock.milestones.map((m, idx) => (
-                  <li key={`${yearBlock.year}-${m.badge_id}-${idx}`}>
-                    🏅 {m.badge_id} earned in <strong>{m.project}</strong>{m.achieved_on ? ` on ${m.achieved_on}` : ""}
+                {selectedWrapped.milestones.map((m, idx) => (
+                  <li key={`${selectedWrapped.year}-${m.badge_id}-${idx}`}>
+                    🏅 {(progress.find((badge) => badge.badge_id === m.badge_id)?.label ?? formatBadgeLabel(m.badge_id))} earned in <strong>{m.project}</strong>{m.achieved_on ? ` on ${m.achieved_on}` : ""}
                   </li>
                 ))}
               </ul>
@@ -500,8 +569,8 @@ function Badges() {
               <p>No badge milestones recorded for this year.</p>
             )}
           </div>
-        ))
-      )}
+        </div>
+      ) : null}
 
       <h4>🔥 Skill Heatmap</h4>
 
