@@ -57,8 +57,6 @@ def batch_analyze(zipped_repos_dir: str = "zipped_repos") -> None:
             pa.analyze_categories(projects=projects)
             pa.analyze_languages(projects=projects)
             pa.analyze_skills(projects=projects)
-
-            pa._cleanup_temp()
             analyzed += 1
 
         except Exception as e:

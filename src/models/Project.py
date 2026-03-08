@@ -32,7 +32,6 @@ class Project:
         "dependency_files_list",
         "build_tools",
         "readme_keywords",
-        "individual_contributions",
         "author_contributions",
         "bullets",
     ]
@@ -42,6 +41,7 @@ class Project:
         "language_share",
         "portfolio_details",
         "contributor_roles",
+        "individual_contributions",
     ]
 
     id: Optional[int] = None
@@ -66,7 +66,7 @@ class Project:
     dependency_files_list: List[str] = list_field()
     build_tools: List[str] = list_field()
 
-    individual_contributions: List[str] = list_field()
+    individual_contributions: Dict[str, Any] = field(default_factory=dict)
     author_contributions: List[Dict[str, Any]] = list_field()
     contributor_roles: Dict[str, Any] = field(default_factory=dict)
     collaboration_status: Literal["individual", "collaborative"] = "individual"
