@@ -559,8 +559,8 @@ class ProjectAnalyzer:
 
                 if tech := result.get("tech_profile", {}):
                     project.frameworks = tech.get("frameworks", [])
-                    project.dependencies_list = tech.get("dependencies", [])
-                    project.dependency_files_list = tech.get("dependency_files", [])
+                    project.dependencies_list = tech.get("dependencies_list", [])
+                    project.dependency_files_list = tech.get("dependency_files_list", [])
                     project.build_tools = tech.get("build_tools", [])
                     project.has_dockerfile = tech.get("has_dockerfile", False)
                     project.has_database = tech.get("has_database", False)
