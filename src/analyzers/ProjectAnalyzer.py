@@ -557,16 +557,35 @@ class ProjectAnalyzer:
                 project.skills_used = sorted(list(set(filtered_skills)))
                 project.skills_selected = project.skills_used #Select all skills by default.
 
+                if tech := result.get("tech_profile", {}):
+                    project.frameworks = tech.get("frameworks", [])
+                    project.dependencies_list = tech.get("dependencies", [])
+                    project.dependency_files_list = tech.get("dependency_files", [])
+                    project.build_tools = tech.get("build_tools", [])
+                    project.has_dockerfile = tech.get("has_dockerfile", False)
+                    project.has_database = tech.get("has_database", False)
+                    project.has_frontend = tech.get("has_frontend", False)
+                    project.has_backend = tech.get("has_backend", False)
+                    project.has_test_files = tech.get("has_test_files", False)
+                    project.has_readme = tech.get("has_readme", False)
+                    project.readme_keywords = tech.get("readme_keywords", [])
+
                 if dimensions := result.get("dimensions", {}):
                     if td := dimensions.get("testing_discipline"):
                         project.testing_discipline_score, project.testing_discipline_level = td.get("score", 0.0), td.get("level", "")
                     if doc := dimensions.get("documentation_habits"):
                         project.documentation_habits_score, project.documentation_habits_level = doc.get("score", 0.0), doc.get("level", "")
+                    if mod := dimensions.get("modularity"):
+                        project.modularity_score, project.modularity_level = mod.get("score", 0.0), mod.get("level", "")
+                    if ld := dimensions.get("language_depth"):
+                        project.language_depth_score, project.language_depth_level = ld.get("score", 0.0), ld.get("level", "")
 
                 if overall := result.get("stats", {}).get("overall"):
                     project.total_loc = overall.get("total_lines_of_code", 0)
                     project.comment_ratio = overall.get("comment_ratio", 0.0)
                     project.test_file_ratio = overall.get("test_file_ratio", 0.0)
+                    project.avg_functions_per_file = overall.get("avg_functions_per_file", 0.0)
+                    project.max_function_length = overall.get("max_function_length", 0)
 
                 ranker = ProjectRanker(project)
                 ranker.calculate_resume_score()
