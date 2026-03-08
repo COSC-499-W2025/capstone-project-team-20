@@ -1,24 +1,52 @@
 import { useState, useEffect } from "react";
+import ProfileSetup from "./ProfileSetup";
+import Settings from "./Settings";
 import {
   listProjects,
   getProject,
   listSkills,
   getBadgeProgress, 
   getYearlyWrapped,
+  getConfig,
   setPrivacyConsent,
+  getPrivacyConsent,
   createReport,
   exportResume,
   exportPortfolio,
   uploadProjectZip,
-  uploadProjectFromPath
+  uploadProjectFromPath,
+  clearProjects
 } from "./api/client";
 import './App.css'
+
+const formatBadgeLabel = (badgeId = "") =>
+  badgeId
+    .split("_")
+    .map((chunk) => chunk.charAt(0).toUpperCase() + chunk.slice(1))
+    .join(" ");
+
+const formatBadgeRequirement = (metric, target) => {
+  const label = (metric || "metric").toLowerCase();
+
+  if (label.includes("ratio") || label.includes("share")) {
+    return `Reach at least ${(target * 100).toFixed(0)}% ${label}.`;
+  }
+
+  return `Reach at least ${target} ${label}.`;
+};
 
 function App() {
   //starts the actual app itself, all pages are gathered here
 
   //creates a variable 'current' with a method 'setcurrent' that updates it, we set to 1 by default here.
+  const [profileReady, setProfileReady] = useState(null);
   const [current, setCurrent] = useState(1);
+
+  useEffect(() => {
+    getConfig()
+      .then((cfg) => setProfileReady(!!(cfg?.name && cfg?.email && cfg?.phone)))
+      .catch(() => setProfileReady(false));
+  }, []);
 
   const buttons = [
     //id for use with 'current', label is a placeholder as of now
@@ -39,21 +67,19 @@ function App() {
   const menuRender = () => {
     //ran on render, renders correct page based on selection
     //menu pages currently stored as individual functions within this file. Scroll down to locate.
+    
     switch(current) {
-      case 0:
-        return <Settings />;
-      case 1:
-        return <Projects />;
-      case 2:
-        return <Badges />;
-      case 3:
-        return <Resume />;
-      case 4:
-        return <Portfolio />;
-      case 5:
-        return <Help />;
+      case 0: return <Settings />;
+      case 1: return <Projects />;
+      case 2: return <Badges />;
+      case 3: return <Resume />;
+      case 4: return <Portfolio />;
+      case 5: return <Help />;
     }
   }
+  // ensure name, phone, email are set
+  if (profileReady === null) return <div className="ps-loading">Loading…</div>;
+  if (!profileReady) return <ProfileSetup onComplete={() => setProfileReady(true)} />;
 
   //on app construction/refresh, builds our UI
   return(
@@ -74,7 +100,6 @@ function App() {
           </button>
         ))}
       </div>
-
       {/* Right Side Content */}
       <div className="menu">
         {menuRender()}
@@ -83,20 +108,14 @@ function App() {
   );
 }
 
-function Settings(){
-    return(
-        <>
-        <h3>This is the Settings page.</h3>
-        </>
-    );
-}
-
 function Projects() {
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState(null);
 
   const [projects, setProjects] = useState([]);
+  const [currentProjects, setCurrentProjects] = useState([]);
+  const [previousProjects, setPreviousProjects] = useState([]);
   const [selected, setSelected] = useState(null);
   const [zipFile, setZipFile] = useState(null);
   const [pathInput, setPathInput] = useState("");
@@ -106,7 +125,12 @@ function Projects() {
     setError(null);
     try {
       const data = await listProjects();
-      setProjects(data.projects ?? []);
+      const allProjects = data.projects ?? [];
+      const current = data.current_projects ?? allProjects;
+      const previous = data.previous_projects ?? [];
+      setProjects(allProjects);
+      setCurrentProjects(current);
+      setPreviousProjects(previous);
     } catch (e) {
       setError(e.message ?? "Failed to load projects");
     } finally {
@@ -132,12 +156,13 @@ function Projects() {
     setError("Enter a path first (example: TestResources/sample.zip)");
     return;
   }
+  const consent = await getPrivacyConsent();
+  if (!consent) { setError("You must grant consent in Settings in order to upload projects."); return; }
 
   setUploading(true);
   setError(null);
 
   try {
-    await setPrivacyConsent(true);
 
     const res = await uploadProjectFromPath(pathInput.trim());
 
@@ -160,13 +185,13 @@ function Projects() {
     setError("Pick a .zip file first.");
     return;
   }
+  const consent = await getPrivacyConsent();
+  if (!consent) { setError("You must grant consent in Settings in order to upload projects."); return; }
 
   setUploading(true);
   setError(null);
 
   try {
-    // consent first
-    await setPrivacyConsent(true);
 
     // upload zip, backend creates projects
     const res = await uploadProjectZip(zipFile);
@@ -197,6 +222,25 @@ function Projects() {
 
       <button onClick={loadProjects} disabled={loading}>
         {loading ? "Loading..." : "Refresh Projects"}
+      </button>
+      <button
+        onClick={async () => {
+          setLoading(true);
+          setError(null);
+          try {
+            await clearProjects();
+            setSelected(null);
+            await loadProjects();
+          } catch (e) {
+            setError(e.message ?? "Failed to clear database");
+          } finally {
+            setLoading(false);
+          }
+        }}
+        disabled={loading}
+        style={{ marginLeft: 8 }}
+      >
+        {loading ? "Clearing..." : "Clear Database"}
       </button>
       <div style={{ marginTop: 12, padding: 12, border: "1px solid #ddd", borderRadius: 8 }}>
       <h4>Add Project (Upload ZIP)</h4>
@@ -266,20 +310,46 @@ function Projects() {
       {error && <pre style={{ color: "crimson" }}>{error}</pre>}
 
       <div style={{ display: "flex", gap: 16, marginTop: 12 }}>
-        <div style={{ minWidth: 260 }}>
-          <ul>
-            {projects.map((p) => (
-              <li key={p.id}>
-                <button
-                  onClick={() => handleSelect(p.id)}
-                  disabled={loading}
-                  style={{ background: "transparent", border: "none", cursor: "pointer", padding: 0 }}
-                >
-                  {p.name} (#{p.id})
-                </button>
-              </li>
-            ))}
-          </ul>
+        <div style={{ minWidth: 320 }}>
+          <h4>Current Projects</h4>
+          {currentProjects.length === 0 ? (
+            <p>No projects in the current import batch yet.</p>
+          ) : (
+            <ul>
+              {currentProjects.map((p) => (
+                <li key={`current-${p.id}`}>
+                  <button
+                    onClick={() => handleSelect(p.id)}
+                    disabled={loading}
+                    style={{ background: "transparent", border: "none", cursor: "pointer", padding: 0 }}
+                  >
+                    {p.name} (#{p.id})
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          <h4>Previous Projects</h4>
+          {previousProjects.length === 0 ? (
+            <p>No previous projects yet.</p>
+          ) : (
+            <ul>
+              {previousProjects.map((p) => (
+                <li key={`previous-${p.id}`}>
+                  <button
+                    onClick={() => handleSelect(p.id)}
+                    disabled={loading}
+                    style={{ background: "transparent", border: "none", cursor: "pointer", padding: 0 }}
+                  >
+                    {p.name} (#{p.id})
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          <p style={{ opacity: 0.7 }}>Total projects stored: {projects.length}</p>
         </div>
 
         <div style={{ flex: 1 }}>
@@ -301,6 +371,7 @@ function Badges() {
   const [skills, setSkills] = useState([]);
   const [progress, setProgress] = useState([]);
   const [wrapped, setWrapped] = useState([]);
+  const [activeWrappedYear, setActiveWrappedYear] = useState(null);
 
   async function loadBadgeData() {
     setLoading(true);
@@ -365,6 +436,36 @@ function Badges() {
     (a.label ?? a.badge_id).localeCompare(b.label ?? b.badge_id)
   );
 
+  const badgeCatalog = progress
+    .map((badge) => ({
+      badgeId: badge.badge_id,
+      label: badge.label ?? formatBadgeLabel(badge.badge_id),
+      howToEarn: formatBadgeRequirement(badge.metric, badge.target),
+    }))
+    .sort((a, b) => a.label.localeCompare(b.label));
+
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const isCurrentYearComplete = now.getMonth() === 11 && now.getDate() === 31;
+
+  const wrappedByYear = wrapped.reduce((acc, yearBlock) => {
+    acc[yearBlock.year] = yearBlock;
+    return acc;
+  }, {});
+
+  const wrappedButtons = wrapped.map((yearBlock) => ({
+    year: yearBlock.year,
+    label:
+      yearBlock.year === currentYear
+        ? isCurrentYearComplete
+          ? "Get Yearly Stats"
+          : "Get Yearly Stats (so far)"
+        : `Get ${yearBlock.year} Stats`,
+  }));
+
+  const openWrappedYear = (year) => setActiveWrappedYear(year);
+  const selectedWrapped = activeWrappedYear ? wrappedByYear[activeWrappedYear] : null;
+
   return (
     <>
       <h3>Badges</h3>
@@ -375,16 +476,29 @@ function Badges() {
 
       {error && <pre style={{ color: "crimson" }}>{error}</pre>}
 
+      <section className="badges-hero">
+        <h4>🏆 Badge Guide</h4>
+        <p>Here&apos;s every badge, plus exactly how to earn it.</p>
+        <div className="badge-guide-grid">
+          {badgeCatalog.map((badge) => (
+            <article className="badge-guide-card" key={badge.badgeId}>
+              <h5>{badge.label}</h5>
+              <p>{badge.howToEarn}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
       <h4>🎯 Badge Progress Tracker (Uncompleted)</h4>
       {inProgress.length === 0 ? (
         <p>All tracked progress badges are complete 🎉</p>
       ) : (
-        <ul style={{ listStyle: "none", paddingLeft: 0 }}>
+        <ul className="in-progress-list">
           {inProgress.map((b) => (
-            <li key={b.badge_id} style={{ marginBottom: 12, border: "1px solid #2f4d6f", borderRadius: 8, padding: 10 }}>
+            <li key={b.badge_id} className="progress-card">
               <strong>{b.label}</strong> — {Math.round((b.progress ?? 0) * 100)}%
-              <div style={{ height: 10, borderRadius: 999, background: "#21344a", marginTop: 8, overflow: "hidden" }}>
-                <div style={{ width: `${Math.round((b.progress ?? 0) * 100)}%`, height: "100%", background: "#55BDCA" }} />
+              <div className="progress-track">
+                <div className="progress-fill" style={{ width: `${Math.round((b.progress ?? 0) * 100)}%` }} />
               </div>
               <small>
                 {b.metric}: {(b.current ?? 0).toFixed(2)} / {b.target} • Closest project: {b.project?.name ?? "N/A"} • ⏳ In progress
@@ -414,31 +528,40 @@ function Badges() {
           ))}
         </ul>
       )}
-
-
       <h4>🎉 Yearly Wrapped</h4>
       {wrapped.length === 0 ? (
         <p>No yearly wrapped history available yet.</p>
       ) : (
-        wrapped.map((yearBlock) => (
-          <div key={yearBlock.year} style={{ marginBottom: 14, border: "1px solid #3f638c", borderRadius: 12, padding: 12, background: "linear-gradient(135deg, rgba(85,189,202,0.12), rgba(242,125,66,0.10))" }}>
-            <h5>{yearBlock.vibe_title}</h5>
+        <div className="wrapped-buttons">
+          {wrappedButtons.map((button) => (
+            <button key={button.year} onClick={() => openWrappedYear(button.year)}>
+              {button.label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {selectedWrapped ? (
+        <div className="wrapped-modal-backdrop" onClick={() => setActiveWrappedYear(null)}>
+          <div className="wrapped-modal" onClick={(event) => event.stopPropagation()}>
+            <button className="wrapped-close" onClick={() => setActiveWrappedYear(null)}>✕</button>
+            <h5>{selectedWrapped.year} — {selectedWrapped.vibe_title}</h5>
             <p>
-              Projects: {yearBlock.projects_count} • LOC: {yearBlock.total_loc} • Files: {yearBlock.total_files} • Avg test ratio: {(yearBlock.avg_test_file_ratio * 100).toFixed(1)}%
+              Projects: {selectedWrapped.projects_count} • LOC: {selectedWrapped.total_loc} • Files: {selectedWrapped.total_files} • Avg test ratio: {(selectedWrapped.avg_test_file_ratio * 100).toFixed(1)}%
             </p>
-            {yearBlock.highlights?.length ? (
+            {selectedWrapped.highlights?.length ? (
               <ul>
-                {yearBlock.highlights.map((line, idx) => (
-                  <li key={`${yearBlock.year}-highlight-${idx}`}>{line}</li>
+                {selectedWrapped.highlights.map((line, idx) => (
+                  <li key={`${selectedWrapped.year}-highlight-${idx}`}>{line}</li>
                 ))}
               </ul>
             ) : null}
             <p><strong>Milestones:</strong></p>
-            {yearBlock.milestones?.length ? (
+            {selectedWrapped.milestones?.length ? (
               <ul>
-                {yearBlock.milestones.map((m, idx) => (
-                  <li key={`${yearBlock.year}-${m.badge_id}-${idx}`}>
-                    🏅 {m.badge_id} earned in <strong>{m.project}</strong>{m.achieved_on ? ` on ${m.achieved_on}` : ""}
+                {selectedWrapped.milestones.map((m, idx) => (
+                  <li key={`${selectedWrapped.year}-${m.badge_id}-${idx}`}>
+                    🏅 {(progress.find((badge) => badge.badge_id === m.badge_id)?.label ?? formatBadgeLabel(m.badge_id))} earned in <strong>{m.project}</strong>{m.achieved_on ? ` on ${m.achieved_on}` : ""}
                   </li>
                 ))}
               </ul>
@@ -446,8 +569,8 @@ function Badges() {
               <p>No badge milestones recorded for this year.</p>
             )}
           </div>
-        ))
-      )}
+        </div>
+      ) : null}
 
       <h4>🔥 Skill Heatmap</h4>
 
