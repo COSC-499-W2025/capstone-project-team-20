@@ -51,10 +51,16 @@ coverage.xml
 *.whl
 dist/
 build/
-# 
+
+# reports
 resumes/
 portfolios/
-src/ui/
 
 # project thumbnails
 thumbnails/
+
+# frontend 
+src/ui/
+src/ui/react-app/
+
+

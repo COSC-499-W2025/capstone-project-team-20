@@ -2,6 +2,7 @@
 
 ### **Table of Contents:**
 
+- [Term 2 Week 9: March 2nd - March 8th](#term-2-week-9-march-2nd---march-8th)
 - [Term 2 Week 8: February 23rd - March 1st](#term-2-week-8-february-23rd---march-1st)
 - [Term 2 Week 7: February 16th - February 22nd](#term-2-week-7-february-16th---february-22nd)
 - [Term 2 Week 6: February 9th - February 15th](#term-2-week-6-february-9th---february-15th)
@@ -504,6 +505,7 @@ As Milestone 2 approaches, I will look to remain flexible and help out however I
 
 N/A
 
+
 ### Term 2 Week 8: February 23rd - March 1st
 
 **Screenshot of Tasks Worked On:**
@@ -512,7 +514,7 @@ N/A
 
 **Coding Tasks:**
 
-This week, I made a PR, implementing a new profile-setup page for the frontend. The feature checks if the user has stored necessary fields for report generation (name, phone, email). If they have, the page is bypassed. If they have not, this page allows them to enter the required information. 
+This week, I made a PR implementing a new profile-setup page for the frontend. The feature checks if the user has stored necessary fields for report generation (name, phone, email). If they have, the page is bypassed. If they have not, this page allows them to enter the required information. 
 
 Additionally, there were requested changes for my consolidate git contributors PR, so I spent quite a bit of time fixing that up as well.
 
@@ -549,6 +551,68 @@ Now that Milestone 2 is upon us, I would like to see the requirements for Milest
 **Any issues or Blockers That I Encountered This Week and How I Addressed/Plan to Address Them:**
 
 N/A
+
+
+### Term 2 Week 9: March 2nd - March 8th
+
+**Screenshot of Tasks Worked On:**
+
+![Term 2 Week 5 Log](images/dylan-week-9-term-2-ss.png)
+
+**Coding Tasks:**
+
+This week, I made a PR implementing a new settings page for the frontend. This page has three submenus. 1. Profile, for users to change their name/email/phone/github/linkedin (all information displayed on resume/portfolios). 2. Privacy (gives users the option to grant/revoke consent) 3. Data (gives users the option to delete all stored project data). 
+
+[Feature/settings page](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/438)
+
+
+**Testing or Debugging Tasks:**
+
+I wrote extensive unit tests for my PR this week, linked above.
+
+Additionally, I made a PR installing Vitest and React Testing Library, and another adding tests for my profile-setup page from last week, now that we have a frontend component testing framework.
+
+[tests: install vitest and RTL](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/431)
+
+[tests: add tests for ProfileSetup.jsx](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/437)
+
+
+**Reviewing or Collaboration Tasks:**
+
+I manually tested and reviewed the following PRs this week. 
+
+[Add a Reports tab, merging resume and portfolio tabs](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/436)
+
+[Updated the consent requirement in our API and added more tests for full coverage](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/428)
+
+
+**Brief Description of Last Week Connecting This Week:**
+
+Last week, I added a profile-setup page to our frontend, allowing the user to set required fields for report generation.
+
+This week, I added a settings page to our frontend, allowing the user to edit required fields for report generation, as well as grant/revoke consent and clear all data. I also installed Vitest and React Testing Library so that we could start writing component tests for our frontend.
+
+**Plan/Goals for Upcoming Week:**
+
+The plan this week is to continue working on our frontend. As there are still no finalized Milestone 3 requirements, this would be my best guess as to what we should be focusing on. 
+
+**Any issues or Blockers That I Encountered This Week and How I Addressed/Plan to Address Them:**
+
+N/A
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
