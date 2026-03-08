@@ -18,6 +18,7 @@ class ProjectManager(StorageManager):
         super().__init__(db_path)
         self._ensure_import_batch_id_column()
         self._ensure_portfolio_details_column()
+        self._ensure_project_type_column()
 
 
     def _ensure_import_batch_id_column(self) -> None:
@@ -35,6 +36,14 @@ class ProjectManager(StorageManager):
             existing = {row[1] for row in cursor.fetchall()}
             if "portfolio_details" not in existing:
                 cursor.execute("ALTER TABLE projects ADD COLUMN portfolio_details TEXT")
+
+    def _ensure_project_type_column(self) -> None:
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("PRAGMA table_info(projects)")
+            existing = {row[1] for row in cursor.fetchall()}
+            if "project_type" not in existing:
+                cursor.execute("ALTER TABLE projects ADD COLUMN project_type TEXT DEFAULT ''")
 
     def _retrieve_id(self, cursor: sqlite3.Cursor, row: Dict[str, Any]) -> None:
         """
@@ -98,6 +107,7 @@ class ProjectManager(StorageManager):
         portfolio_entry TEXT,
         portfolio_details TEXT,
         thumbnail TEXT,
+        project_type TEXT DEFAULT '',
         resume_score REAL,
         date_created TEXT,
         last_modified TEXT,
@@ -133,7 +143,7 @@ class ProjectManager(StorageManager):
             "language_depth_level, language_depth_score, "
             "has_dockerfile, has_database, has_frontend, has_backend, "
             "has_test_files, has_readme, readme_keywords, "
-            "bullets, summary, portfolio_entry, portfolio_details, thumbnail, resume_score, "
+            "bullets, summary, portfolio_entry, portfolio_details, thumbnail, project_type, resume_score, "
             "date_created, last_modified, last_accessed"
         )
 
