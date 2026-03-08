@@ -1,6 +1,7 @@
 ## **Branden Weekly Logs**
 ### **Table of contents:**
 
+- [Term 2 Week 9](#term-2-week-9-march-2nd---march-8th)
 - [Term 2 Week 8](#term-2-week-8-february-23rd---march-1st)
 - [Term 2 Week 7](#term-2-week-7-february-16th---february-22nd)
 - [Term 2 Week 6](#term-2-week-6-february-9th---february-15th)
@@ -384,3 +385,26 @@ Next week, I plan on starting strong with Milestone 3. I want to implement a cou
 
 **Any issues or Blockers That I Encountered This Week and How I Addressed/Plan to Address Them:**
 None this week, it was a great week and everyone got a lot done with our project!
+
+### **Term 2 Week 9: March 2nd - March 8th**
+**Screenshot of Tasks Worked On:**
+
+![Term 2 Week 9](imagesForBrandenLogs/T2_W9_SS.png)
+
+**Coding Tasks:**
+This week, I worked on two PRs, [My testing/API/consent PR](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/428), and [my frontend Reports tab PR](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/436). The testing/API/consent PR updated our API to enforce our consent requirements in order to use the portfolio feature. This was a matter of updating endpoints to require consent. I also added new tests for portfolio consent enforcement, report listing and retrieval, and report creation and the error handling of it. This gives our tests better coverage and tests the new implementation for consent. My Reports tab in the frontend PR merged two previous buttons. We had a "portfolio" and a "resumes" button, which are now merged into one "Reports" tab. This unifies the two pages and will allow us to implement all CRUD features to this page, and then export directly from there, instead of switching between two tabs for two different types of exporting.
+
+**Testing or Debugging Tasks:**
+I did manual testing of all PRs that I reviewed. I also removed dead code and duplicate methods that I had found while doing the [Reports tab PR](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/436).
+
+**Reviewing or Collaboration Tasks:**
+I did code review on [Dylans PR](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/440), [another Dylan PR](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/437), [another Dylan PR](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/438), and [one last Dylan PR](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/431). at the time of writing this, i have reviewed all PRs for the week, and they are all Dylans.
+
+**Brief Description of Last Week Connecting This Week:**
+Yes, the connection was great! I did start on the work that I had mentioned, but I didnt want to take anything too far before we have full Milestone 3 requirements out. So I worked on refactoring and bettering our current code, while starting the work to implement CRUD for our reports.
+
+**Plan/Goals for Upcoming Week:**
+I am hoping to see the full Milestone 3 requirements and start picking away at them. If they do not come out this week, then I will be implementing CRUD into our frontend reports, as well as writing tests for frontend components and learning about testing in React.
+
+**Any issues or Blockers That I Encountered This Week and How I Addressed/Plan to Address Them:**
+None this week!
