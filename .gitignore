@@ -54,6 +54,10 @@ build/
 
 # Resumes and Resume artifacts
 resumes/
+portfolios/
 
 # project thumbnails
 thumbnails/
+
+# frontend 
+src/ui/react-app/
