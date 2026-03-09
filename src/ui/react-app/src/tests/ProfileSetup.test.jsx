@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import ProfileSetup from '../ProfileSetup'
+import ProfileSetup from '../pages/ProfileSetup'
 
 // Mock the API call so tests never hit the network
 vi.mock('../api/client', () => ({
