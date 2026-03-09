@@ -1,6 +1,7 @@
 ## Team 20 Weekly Log
 
 ### Table of contents
+- [Term 2 Week 9(March 2nd - March 8th)](#term-2-week-9-march-2nd---march-8th)
 - [Term 2 Week 8(February 23rd - March 1st)](#term-2-week-8-february-23rd---march-1st)
 - [Term 2 Week 7(February 16th - February 22nd)](#term-2-week-7-february-16th---february-22nd)
 - [Term 2 Week 6(February 9th - February 15th)](#term-2-week-6-february-9th---february-15th)
@@ -635,3 +636,39 @@ We have no continuuing tasks! Now, we should be able to polish/refactor the back
 
 **Test Report:**
 ![Term 2 Week 8 Test Report](teamWeeklyLogsImages/T2_W8_Tests.png)
+
+
+### Term 2 Week 9 (March 2nd - March 8th)
+
+**Work Performed:**
+- Branden Kennedy (42474551): This week I worked on two PRs: [Testing/API/consent PR](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/428) and my [frontend Reports tab PR](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/436). The testing/API/consent PR updated several API endpoints to enforce user consent before accessing the portfolio feature and added new tests for portfolio consent enforcement, report listing and retrieval, report creation, and related error handling to improve coverage and validate the new implementation. In the Reports tab PR, I refactored the frontend by merging the previous “Portfolio” and “Resumes” pages into a single Reports tab so that report management, editing, and exporting can be handled in one place rather than across multiple tabs. While implementing this change I also removed dead code and duplicate methods discovered during the refactor. In addition to development work, I performed manual testing on all PRs I reviewed and completed code reviews for [PR 442](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/442), [PR 440](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/440), [PR 437](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/437), [PR 438](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/438), and [PR 431](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/431). I also helped setup our tasks for our upcoming peer testing!
+
+- Necmi Kaan Sapoglu (17014796): This week I made a PR implementing some changes we had discussed in our group, as well as going off of the feedback that we had received from our presentation's results. PR: [PR 442](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/442). I made the frontend look more approachable, as well as add explanations for some of the achievements that are able to be achieved. I also changed the yearly wrapped so that only the current year's progress would be generated to make it more exclusive, and fun to share by end of year. I also reviewed two PRs, which were all of the PRs assigned to me this week, which were: [PR 438](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/438), and [PR 440](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/440).
+
+- Lex Nash (84668540): 
+
+- Dylan Alexander (16394025): This week, I made a PR implementing a new settings page for the frontend. This page has three submenus. 1. Profile, for users to change their name/email/phone/github/linkedin (all information displayed on resume/portfolios). 2. Privacy (gives users the option to grant/revoke consent) 3. Data (gives users the option to delete all stored project data). Additionally, I made a PR installing Vitest and React Testing Library, and another adding tests for my profile-setup page from last week, now that we have a frontend component testing framework.
+
+- Sven Annist (42486720): This week, I pivoted our portfolio implementation from a PDF workflow to a web portfolio workflow to match updated milestone expectations. I implemented the in-app generation/render path for portfolio data, updated API/schema wiring so report summary and bullet content can be surfaced in the portfolio view, and refined the generated portfolio content for cleaner presentation. I also improved portfolio usability by changing project rendering to an accordion layout so entries can be expanded/collapsed, and updated tests to keep coverage aligned with the new behavior. I opened [PR #447](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/447), and reviewed [PR #437](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/437), [PR #431](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/431), and [PR #428](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/428).
+  
+**Features included in the project plan for this milestone are:**
+Everything up to and including Issue [COSC-499-W2025/capstone-project-team-20#443](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/443)
+
+**Continuing tasks from last week and plan for the next week:**
+Continuuing to implement our current functionality into the frontend and expanding on it as well. 
+
+**Burnup chart:**
+![Term 2 Week 9 Burnup chart](teamWeeklyLogsImages/T2_W9_burnup.png)
+
+
+**Table View of Completed Tasks on Project Board:**
+![Term 2 Week 9 completed](teamWeeklyLogsImages/T2_W9_completed.png)
+
+
+**Table View of In-Progress Tasks on Project Board:**
+![Term 2 Week 9 In-progress Tasks](teamWeeklyLogsImages/T2_W9_in_progress.png)
+
+
+**Test Report:**
+![Term 2 Week 9 Test Report](teamWeeklyLogsImages/T2_W9_tests.png)
+
