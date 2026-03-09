@@ -655,7 +655,7 @@ We have no continuuing tasks! Now, we should be able to polish/refactor the back
 Everything up to and including Issue [COSC-499-W2025/capstone-project-team-20#443](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/443)
 
 **Continuing tasks from last week and plan for the next week:**
-
+Continuuing to implement our current functionality into the frontend and expanding on it as well. 
 
 **Burnup chart:**
 ![Term 2 Week 9 Burnup chart](teamWeeklyLogsImages/T2_W9_burnup.png)
