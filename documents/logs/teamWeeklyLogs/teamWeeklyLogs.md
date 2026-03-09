@@ -643,7 +643,7 @@ We have no continuuing tasks! Now, we should be able to polish/refactor the back
 **Work Performed:**
 - Branden Kennedy (42474551): This week I worked on two PRs: [Testing/API/consent PR](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/428) and my [frontend Reports tab PR](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/436). The testing/API/consent PR updated several API endpoints to enforce user consent before accessing the portfolio feature and added new tests for portfolio consent enforcement, report listing and retrieval, report creation, and related error handling to improve coverage and validate the new implementation. In the Reports tab PR, I refactored the frontend by merging the previous “Portfolio” and “Resumes” pages into a single Reports tab so that report management, editing, and exporting can be handled in one place rather than across multiple tabs. While implementing this change I also removed dead code and duplicate methods discovered during the refactor. In addition to development work, I performed manual testing on all PRs I reviewed and completed code reviews for [PR 442](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/442), [PR 440](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/440), [PR 437](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/437), [PR 438](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/438), and [PR 431](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/431). I also helped setup our tasks for our upcoming peer testing!
 
-- Necmi Kaan Sapoglu (17014796): 
+- Necmi Kaan Sapoglu (17014796): This week I made a PR implementing some changes we had discussed in our group, as well as going off of the feedback that we had received from our presentation's results. PR: [PR 442](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/442). I made the frontend look more approachable, as well as add explanations for some of the achievements that are able to be achieved. I also changed the yearly wrapped so that only the current year's progress would be generated to make it more exclusive, and fun to share by end of year. I also reviewed two PRs, which were all of the PRs assigned to me this week, which were: [PR 438](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/438), and [PR 440](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/440).
 
 - Lex Nash (84668540): 
 
@@ -658,17 +658,17 @@ Everything up to and including Issue [COSC-499-W2025/capstone-project-team-20#44
 
 
 **Burnup chart:**
-![Term 2 Week 9 Burnup chart](teamWeeklyLogsImages/)
+![Term 2 Week 9 Burnup chart](teamWeeklyLogsImages/T2_W9_burnup.png)
 
 
 **Table View of Completed Tasks on Project Board:**
-![Term 2 Week 9 completed](teamWeeklyLogsImages/)
+![Term 2 Week 9 completed](teamWeeklyLogsImages/T2_W9_completed.png)
 
 
 **Table View of In-Progress Tasks on Project Board:**
-![Term 2 Week 9 In-progress Tasks](teamWeeklyLogsImages/)
+![Term 2 Week 9 In-progress Tasks](teamWeeklyLogsImages/T2_W9_in_progress.png)
 
 
 **Test Report:**
-![Term 2 Week 9 Test Report](teamWeeklyLogsImages/)
+![Term 2 Week 9 Test Report](teamWeeklyLogsImages/T2_W9_tests.png)
 
