@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import ProfileSetup from "./ProfileSetup";
 import Settings from "./Settings";
+import Help from "./Help";
 import {
   listProjects,
   getProject,
@@ -626,14 +627,6 @@ function Portfolio() {
       {msg && <p>{msg}</p>}
     </>
   );
-}
-
-function Help(){
-    return(
-        <>
-        <h3>This is the Help page.</h3>
-        </>
-    );
 }
 
 export default App;
