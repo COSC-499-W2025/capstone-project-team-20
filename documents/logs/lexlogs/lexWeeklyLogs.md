@@ -306,3 +306,17 @@ reviewed assigned PRs.
 
 Goals moving forward:
 create more UI icons, unify UI design, more interactive elements (like drag and drops)
+
+## Week 9
+**Types of tasks worked on**
+![Week 9 Tasks](imagesForLexLogs/w9t2.png)
+
+This week has been all about getting the front end fully functional as we are still waiting on the milestone 3 requirements, I tackled the issue of Implementing the help menu if users are confused about using our system.
+![Issue 466](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/446)
+Associated PR:
+![PR 444](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/444)
+
+This week I reviewed the following PR (which is all the PRs i was assigned):
+![PR 436](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/436)
+
+Next week im planning to update the rest of the UI appearance-wise to match the account setup UI that was implemented recently and that the whole team really enjoys. I'm already mostly done with it.
