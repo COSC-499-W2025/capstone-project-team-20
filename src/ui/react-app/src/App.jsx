@@ -67,26 +67,30 @@ function App() {
 
   //on app construction/refresh, builds our UI
   return(
-    <div className="screen">
-      {/* Left Side Buttons */}
-      <div className="stacked-buttons">
-        {buttons.map(button => (
-          <button
-            key = {button.id}
-            className={
-              button.id === current
-                ? "button-on"
-                : "button-off"
-            }
-            onClick={()=>whenClick(button.id)}
-          >
-            {button.label}
-          </button>
-        ))}
-      </div>
-      {/* Right Side Content */}
-      <div className="menu">
-        {menuRender()}
+    <div className="app-shell">
+      <div className="grid-bg"></div>
+      
+      <div className="screen">
+        {/* Left Side Buttons */}
+        <div className="stacked-buttons">
+          {buttons.map(button => (
+            <button
+              key = {button.id}
+              className={
+                button.id === current
+                  ? "button-on"
+                  : "button-off"
+              }
+              onClick={()=>whenClick(button.id)}
+            >
+              {button.label}
+            </button>
+          ))}
+        </div>
+        {/* Right Side Content */}
+        <div className="menu">
+          {menuRender()}
+        </div>
       </div>
     </div>
   );

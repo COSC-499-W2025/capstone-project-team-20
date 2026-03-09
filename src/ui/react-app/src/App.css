@@ -4,71 +4,217 @@ html, body, #root {
 }
 
 #root {
-  --primary: #55BDCA;
-  --primary_high: #98FFFF;
-  --primary_desat: #C8EFF9;
-  --secondary: #022445;
-  --secondary_low: #03132e;
-  --tertiary: #F27D42;
-  background-color: var(--secondary);
+  /* reuse ProfileSetup color system */
+  --accent:  #58a6ff;
+  --accent2: #f78166;
+  --bg:      #0d1117;
+  --surface: #161b22;
+  --border:  #30363d;
+  --text:    #e6edf3;
+  --muted:   #8b949e;
+
+  font-family: 'DM Sans', 'Segoe UI', system-ui, sans-serif;
+  background: transparent;
+  color: var(--text);
   width: 100%;
-  overflow: hidden;
-  
 }
 
-.button-on,
-.button-on:hover{
-  color: var(--primary);
-  background: var(--secondary);
-  border: solid 6px var(--secondary_low);
-  border-right: solid 6px var(--secondary);
-  border-top: solid 3px var(--secondary_low);
-  border-bottom: solid 3px var(--secondary_low);
+/* main app layout */
+.screen{
+  display:flex;
+  height:100vh;
+  padding: 24px;
+  gap: 20px;
 }
 
+/* LEFT SIDEBAR */
+
+.stacked-buttons{
+  width:180px;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  background: transparent;
+}
+
+/* sidebar buttons */
+.stacked-buttons button{
+  height:44px;
+  border-radius:10px;
+  font-weight:600;
+  font-size:14px;
+  cursor:pointer;
+  border:1px solid var(--border);
+  transition:all .15s;
+}
+
+/* inactive */
 .button-off{
-  color: var(--secondary);
-  background: var(--primary);
-  border: solid 6px var(--secondary_low);
-  border-top: solid 3px var(--secondary_low);
-  border-bottom: solid 3px var(--secondary_low);
+  background: transparent;
+  color: var(--muted);
 }
+
 .button-off:hover{
-  border: solid 6px var(--primary_desat);
-  border-top: solid 3px var(--primary_desat);
-  border-bottom: solid 3px var(--primary_desat);
+  border-color: var(--muted);
+  color: var(--text);
+}
+
+/* active */
+.button-on{
+  background: var(--accent);
+  color:#0d1117;
+  border-color: var(--accent);
+  box-shadow:0 0 14px rgba(88,166,255,.35);
+}
+
+/* RIGHT CONTENT PANEL */
+
+.menu{
+  flex:1;
+  background: var(--surface);
+  border:1px solid var(--border);
+  border-radius:16px;
+  padding:24px 28px;
+  overflow-y:auto;
+
+  box-shadow:
+    0 24px 64px rgba(0,0,0,.6),
+    0 0 0 1px rgba(88,166,255,.06);
+}
+
+/* headings */
+
+.menu h3{
+  margin-top:0;
+  font-size:22px;
+  font-weight:700;
+  margin-bottom:16px;
+}
+
+.menu h4{
+  margin-top:24px;
+  margin-bottom:10px;
+  font-size:16px;
+  color:var(--accent);
+}
+
+/* default buttons inside pages */
+
+.menu button{
+  height:40px;
+  padding:0 16px;
+  border-radius:10px;
+  font-weight:600;
+  font-size:14px;
+  cursor:pointer;
+
+  background: var(--accent);
+  color:#0d1117;
+  border:1px solid var(--accent);
+
+  transition:all .15s;
+}
+
+.menu button:hover{
+  background:#79c0ff;
+  border-color:#79c0ff;
+  box-shadow:0 0 12px rgba(88,166,255,.35);
+  transform:translateY(-1px);
+}
+
+.menu button:disabled{
+  opacity:.5;
+  cursor:not-allowed;
+}
+
+/* cards used inside sections */
+
+.menu > div{
+  background: rgba(88,166,255,.05);
+  border:1px solid rgba(88,166,255,.1);
+  border-radius:10px;
+  padding:14px;
+}
+
+/* project list buttons */
+
+.menu ul button{
+  background:transparent;
+  border:none;
+  color:var(--accent);
+  cursor:pointer;
+  padding:0;
+}
+
+.menu ul button:hover{
+  text-decoration:underline;
+}
+
+/* scrollbars */
+
+.menu::-webkit-scrollbar{
+  width:8px;
+}
+
+.menu::-webkit-scrollbar-thumb{
+  background:var(--border);
+  border-radius:4px;
+}
+
+.app-shell{
+  position:relative;
+  min-height:100vh;
+  overflow:hidden;
+  background: var(--bg);
+}
+
+/* animated background grid */
+
+.grid-bg{
+  position:fixed;
+  inset:0;
+  z-index:-1;
+
+  background:
+    linear-gradient(var(--border) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border) 1px, transparent 1px);
+
+  background-size: 40px 40px;
+
+  mask-image: radial-gradient(circle at center, black 30%, transparent 80%);
+  opacity:.35;
+
+  animation:gridMove 30s linear infinite;
+}
+
+/* animation */
+
+@keyframes gridMove{
+  from{
+    transform:translateY(0);
+  }
+  to{
+    transform:translateY(40px);
+  }
+}
+
+.grid-bg{
+  position:fixed;
+  inset:0;
+  z-index:0;
+
+  background:
+    linear-gradient(var(--border) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border) 1px, transparent 1px);
+
+  background-size:40px 40px;
+
+  opacity:.35;
+
+  animation:gridMove 30s linear infinite;
 }
 
 .screen{
-  display:flex;
-  width: auto;
-  height:100vh;
-  background-color: var(--secondary_low);
-  overflow: hidden;
-}
-
-.stacked-buttons{
-  width:fit-content;
-  height: 100%;
-  display: flex;
-  flex-direction:column;
-  margin-right: 0;
-  margin-top:3px;
-  background-color: var(--secondary_low);
-}
-
-.stacked-buttons button{
-  min-width: 125px;
-  aspect-ratio: 1/1;
-  border-radius: 0;
-  font-weight: bold;
-}
-
-.menu{
-  background-color: var(--secondary);
-  margin: 6px;
-  margin-left: 0;
-  flex: 1;
-  overflow-y: auto;
-  min-height: 0;
+  position:relative;
+  z-index:1;
 }
