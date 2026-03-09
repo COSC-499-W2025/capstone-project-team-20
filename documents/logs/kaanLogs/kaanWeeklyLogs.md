@@ -327,3 +327,28 @@ Last week, we were getting ready for the presentation, this week we delivered ou
 Next week, I plan to start planning for milestone 3, and refurbish the badges/achievements in the frontend to make it more clear and easy on the eyes.
 
 **Any Issues or Blockers That I Encountered This Week and How I Addressed/Plan to Address Them:**  
+
+### Term 2 Week 9: March 2nd – March 8th
+
+![Term 2 Week 9 Log](imagesForKaanLogs/T2_W9_SS.png)
+
+### Weekly Goals
+
+This week we mainly focused on studying for the quiz on wednesday, and after that focused on making our frontent look better, and add more of the functionality to be displayed that we already had in the backend. I specifically wanted to add more visuals, and explanation for the achievements page, as from the feedback that we have gotten from our presentations that was a feature that a lot of people had liked.
+
+**Coding Tasks:**  
+I changed the badges page to include the descriptions of the badges, as well as having them display the status in which some badges were in to support the in progress section, with just informing the user of what badges are achievable. I also worked on fixing some of the logic behind badges that would produce faulty results at times, made the yearly wrapped feature a little more different so it is displayed better, and fixed a common issue we had with CORS by widening the available domains.
+
+**Testing Tasks:**  
+I performed manual testing on frontend, along with the new frontend test we had implemented to github. I also tested the PRs that I had reviewed, that were assigned to me this week.
+
+**Reviewing or Collaboration Tasks:**  
+I reviewed PR #438 and, #440 focusing on code quality, maintainability, and alignment with existing project conventions. The PRs that were assigned to me this week were very well made, so I didn't have any feedback in the overall features implemented that wasn't mentioned already by another reviewer, or the PR's author through github automated tests.
+
+**Brief Description of Last Week Connecting This Week:**  
+Last week, we gave our presentation to the class, and this week we started working on the feedback that we had received from our presentation to make sure we deliver the best product we can.
+
+**Plan/Goals for Upcoming Week:**  
+Next week, I plan to start developing more features specifically for milestone 3, and help refurbish the frontend to make it more clear and easy on the eyes.
+
+**Any Issues or Blockers That I Encountered This Week and How I Addressed/Plan to Address Them:**  
