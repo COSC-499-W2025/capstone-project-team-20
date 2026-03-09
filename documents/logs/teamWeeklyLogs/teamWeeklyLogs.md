@@ -641,7 +641,7 @@ We have no continuuing tasks! Now, we should be able to polish/refactor the back
 ### Term 2 Week 9 (March 2nd - March 8th)
 
 **Work Performed:**
-- Branden Kennedy (42474551): 
+- Branden Kennedy (42474551): This week I worked on two PRs: [Testing/API/consent PR](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/428) and my [frontend Reports tab PR](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/436). The testing/API/consent PR updated several API endpoints to enforce user consent before accessing the portfolio feature and added new tests for portfolio consent enforcement, report listing and retrieval, report creation, and related error handling to improve coverage and validate the new implementation. In the Reports tab PR, I refactored the frontend by merging the previous “Portfolio” and “Resumes” pages into a single Reports tab so that report management, editing, and exporting can be handled in one place rather than across multiple tabs. While implementing this change I also removed dead code and duplicate methods discovered during the refactor. In addition to development work, I performed manual testing on all PRs I reviewed and completed code reviews for [PR 442](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/442), [PR 440](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/440), [PR 437](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/437), [PR 438](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/438), and [PR 431](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/431). I also helped setup our tasks for our upcoming peer testing!
 
 - Necmi Kaan Sapoglu (17014796): 
 
@@ -652,23 +652,23 @@ We have no continuuing tasks! Now, we should be able to polish/refactor the back
 - Sven Annist (42486720): 
   
 **Features included in the project plan for this milestone are:**
-
+Everything up to and including Issue [COSC-499-W2025/capstone-project-team-20#443](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/443)
 
 **Continuing tasks from last week and plan for the next week:**
 
 
 **Burnup chart:**
-![Term 2 Week 9 Burnup chart]()
+![Term 2 Week 9 Burnup chart](teamWeeklyLogsImages/)
 
 
 **Table View of Completed Tasks on Project Board:**
-![Term 2 Week 9 completed]()
+![Term 2 Week 9 completed](teamWeeklyLogsImages/)
 
 
 **Table View of In-Progress Tasks on Project Board:**
-![Term 2 Week 9 In-progress Tasks]()
+![Term 2 Week 9 In-progress Tasks](teamWeeklyLogsImages/)
 
 
 **Test Report:**
-![Term 2 Week 9 Test Report]()
+![Term 2 Week 9 Test Report](teamWeeklyLogsImages/)
 
