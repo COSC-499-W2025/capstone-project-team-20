@@ -102,7 +102,7 @@ def test_initialize_projects_skips_older_zip_update(tmp_path, mock_config_manage
         analyzer.initialize_projects()
 
     updated = analyzer.project_manager.get_by_name("project-a")
-    assert updated.file_path == "/old/path"
+    assert updated.file_path == str(project_dir)
     assert updated.last_modified == datetime(2024, 1, 1)
 
 
