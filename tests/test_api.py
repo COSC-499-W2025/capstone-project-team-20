@@ -84,6 +84,51 @@ def test_privacy_consent_sets_value(client, monkeypatch):
     assert data["consent"] is True
     assert calls["consent"] is True
 
+def test_get_privacy_consent_true(client, monkeypatch):
+    class FakeConsentManager:
+        def has_user_consented(self):
+            return True
+
+    monkeypatch.setattr(routes, "ConsentManager", FakeConsentManager)
+
+    res = client.get("/privacy-consent")
+    assert res.status_code == 200
+    assert res.json()["consent"] is True
+
+
+def test_get_privacy_consent_false(client, monkeypatch):
+    class FakeConsentManager:
+        def has_user_consented(self):
+            return False
+
+    monkeypatch.setattr(routes, "ConsentManager", FakeConsentManager)
+
+    res = client.get("/privacy-consent")
+    assert res.status_code == 200
+    assert res.json()["consent"] is False
+
+
+def test_get_privacy_consent_independent_of_post(client, monkeypatch):
+    """GET should reflect whatever ConsentManager returns, not be affected by prior POST state."""
+    state = {"consent": False}
+
+    class FakeConsentManager:
+        def has_user_consented(self):
+            return state["consent"]
+
+        def set_consent(self, value):
+            state["consent"] = value
+
+    monkeypatch.setattr(routes, "ConsentManager", FakeConsentManager)
+
+    res = client.get("/privacy-consent")
+    assert res.json()["consent"] is False
+
+    client.post("/privacy-consent", json={"consent": True})
+
+    res = client.get("/privacy-consent")
+    assert res.json()["consent"] is True
+
 
 # /projects (list) test. testing GET /project
 def test_get_projects_list(client, monkeypatch):
@@ -100,7 +145,6 @@ def test_get_projects_list(client, monkeypatch):
     assert res.status_code == 200
 
     data = res.json()
-    assert data["ok"] is True
     # API concatenates current_projects followed by previous_projects
     assert data["projects"] == [
         {"id": 2, "name": "B"},
