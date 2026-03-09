@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import ProfileSetup from "./pages/ProfileSetup";
 import Reports from "./pages/Reports";
+import Settings from "./Settings"
 import {
   listProjects,
   getProject,
@@ -95,6 +96,8 @@ function Projects() {
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState(null);
+  const [uploadStatus, setUploadStatus] = useState(null);
+  const fileInputRef = useRef(null);
 
   const [projects, setProjects] = useState([]);
   const [currentProjects, setCurrentProjects] = useState([]);
@@ -144,6 +147,7 @@ function Projects() {
 
   setUploading(true);
   setError(null);
+  setUploadStatus("Uploading and analyzing… this may take a moment.");
 
   try {
 
@@ -155,9 +159,11 @@ function Projects() {
       await handleSelect(res.projects[0].id);
     }
 
+    setUploadStatus(`Done! Loaded ${res?.projects?.length ?? 0} project(s).`);
     setPathInput("");
   } catch (e) {
     setError(e.message ?? "Path upload failed");
+    setUploadStatus(null);
   } finally {
     setUploading(false);
   }
@@ -173,6 +179,7 @@ function Projects() {
 
   setUploading(true);
   setError(null);
+  setUploadStatus("Uploading and analyzing… this may take a moment.");
 
   try {
 
@@ -187,9 +194,11 @@ function Projects() {
       await handleSelect(res.projects[0].id);
     }
 
+    setUploadStatus(`Done! Loaded ${res?.projects?.length ?? 0} project(s).`);
     setZipFile(null);
   } catch (e) {
     setError(e.message ?? "Upload failed");
+    setUploadStatus(null);
   } finally {
     setUploading(false);
   }
@@ -229,19 +238,23 @@ function Projects() {
       <h4>Add Project (Upload ZIP)</h4>
 
       <input
+        ref={fileInputRef}
         type="file"
         accept=".zip"
         onChange={(e) => setZipFile(e.target.files?.[0] ?? null)}
         disabled={loading}
+        style={{ display: "none" }}
       />
 
       <button
-        onClick={handleUpload}
-        disabled={uploading || !zipFile}
+        onClick={() => zipFile ? handleUpload() : fileInputRef.current?.click()}
+        disabled={uploading}
         style={{ marginLeft: 8 }}
       >
-        {loading ? "Uploading..." : "Upload ZIP"}
+        {uploading ? "Uploading..." : zipFile ? "Upload ZIP" : "Choose ZIP"}
       </button>
+
+      {uploadStatus && <p style={{ marginTop: 8, opacity: 0.8 }}>{uploadStatus}</p>}
 
       {zipFile && (
         <p style={{ marginTop: 8, opacity: 0.8 }}>
