@@ -10,24 +10,26 @@ def main():
     consent = ConsentManager()
     config_manager = ConfigManager()
 
+    # Consent loop
     while True:
         if consent.require_consent():
             break
         print("Consent is required to run the program. Please try again.\n")
 
-    # 1. Load the ZIP file a single time.
+    # Load ZIP
     root_folders, zip_path = ProjectAnalyzer.load_zip()
+
     if not root_folders:
         print("Could not find any projects in the ZIP file. Exiting.")
         return
 
-    # 2. Create the analyzer instance with the loaded data.
     analyzer = ProjectAnalyzer(config_manager, root_folders, zip_path)
 
-    # 3. Initialize the projects from the ZIP before showing the menu.
+    # Initialize + run all analyses
     analyzer.initialize_projects()
+    analyzer.run_all()
 
-    # 4. Start the interactive menu loop.
+    # Enter interactive mode
     analyzer.run()
 
 if __name__ == "__main__":
