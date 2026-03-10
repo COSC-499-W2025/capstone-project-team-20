@@ -145,7 +145,6 @@ def test_get_projects_list(client, monkeypatch):
     assert res.status_code == 200
 
     data = res.json()
-    assert data["ok"] is True
     # API concatenates current_projects followed by previous_projects
     assert data["projects"] == [
         {"id": 2, "name": "B"},

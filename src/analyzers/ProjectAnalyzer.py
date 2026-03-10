@@ -80,6 +80,9 @@ class ProjectAnalyzer:
             old_stdout, old_stderr, sys.stdout, sys.stderr = sys.stdout, sys.stderr, devnull, devnull
             try:
                 yield
+            except Exception:
+                sys.stdout, sys.stderr = old_stdout, old_stderr
+                raise
             finally:
                 sys.stdout, sys.stderr = old_stdout, old_stderr
 
@@ -254,6 +257,8 @@ class ProjectAnalyzer:
                     print(f"  - Updated existing project: {proj_existing.name}")
                 else:
                     proj_existing.last_accessed = datetime.now()
+                    proj_existing.file_path = proj_new.file_path
+                    proj_existing.root_folder = proj_new.root_folder
                     self.project_manager.set(proj_existing)
                     print(f"  - No changes detected, refreshed batch for: {proj_existing.name}")
                 created_projects.append(proj_existing)
@@ -540,41 +545,77 @@ class ProjectAnalyzer:
             if not silent:
                 print(f"\nAnalyzing skills for: {project.name}...")
 
-            with self.suppress_output():
-                if not Path(project.file_path).exists():
-                    if not silent:
-                        print(f"  - Warning: Path not found. Skipping.")
-                    continue
+            if not Path(project.file_path).exists():
+                if not silent:
+                    print(f"  - Warning: Path not found. Skipping.")
+                continue
 
-                result = SkillAnalyzer(Path(project.file_path)).analyze()
+            # --- moved outside silent block ---
+            result = SkillAnalyzer(Path(project.file_path)).analyze()
 
-                skills_raw = result.get("skills", [])
-                filtered_skills = []
-                for item in skills_raw:
-                    name, conf = (item.get("skill"), item.get("confidence")) if isinstance(item, dict) else (getattr(item, 'skill', None), getattr(item, 'confidence', 0.0))
-                    if name and conf >= MIN_DISPLAY_CONFIDENCE:
-                        filtered_skills.append(name.strip())
-                project.skills_used = sorted(list(set(filtered_skills)))
-                project.skills_selected = project.skills_used #Select all skills by default.
+            # skills
+            skills_raw = result.get("skills", [])
+            filtered_skills = []
+            for item in skills_raw:
+                name, conf = (
+                    (item.get("skill"), item.get("confidence"))
+                    if isinstance(item, dict)
+                    else (getattr(item, 'skill', None), getattr(item, 'confidence', 0.0))
+                )
+                if name and conf >= MIN_DISPLAY_CONFIDENCE:
+                    filtered_skills.append(name.strip())
+            project.skills_used = sorted(list(set(filtered_skills)))
+            project.skills_selected = project.skills_used
 
-                if dimensions := result.get("dimensions", {}):
-                    if td := dimensions.get("testing_discipline"):
-                        project.testing_discipline_score, project.testing_discipline_level = td.get("score", 0.0), td.get("level", "")
-                    if doc := dimensions.get("documentation_habits"):
-                        project.documentation_habits_score, project.documentation_habits_level = doc.get("score", 0.0), doc.get("level", "")
+            # tech_profile
+            tech = result.get("tech_profile", {}) or {}
+            project.frameworks = tech.get("frameworks", [])
+            project.dependencies_list = tech.get("dependencies_list", [])
+            project.dependency_files_list = tech.get("dependency_files_list", [])
+            project.build_tools = tech.get("build_tools", [])
+            project.has_dockerfile = tech.get("has_dockerfile", False)
+            project.has_database = tech.get("has_database", False)
+            project.has_frontend = tech.get("has_frontend", False)
+            project.has_backend = tech.get("has_backend", False)
+            project.has_test_files = tech.get("has_test_files", False)
+            project.has_readme = tech.get("has_readme", False)
+            project.readme_keywords = tech.get("readme_keywords", [])
 
-                if overall := result.get("stats", {}).get("overall"):
-                    project.total_loc = overall.get("total_lines_of_code", 0)
-                    project.comment_ratio = overall.get("comment_ratio", 0.0)
-                    project.test_file_ratio = overall.get("test_file_ratio", 0.0)
+            # dimensions
+            dimensions = result.get("dimensions", {}) or {}
+            if td := dimensions.get("testing_discipline"):
+                project.testing_discipline_score = td.get("score", 0.0)
+                project.testing_discipline_level = td.get("level", "")
+            if doc := dimensions.get("documentation_habits"):
+                project.documentation_habits_score = doc.get("score", 0.0)
+                project.documentation_habits_level = doc.get("level", "")
+            if mod := dimensions.get("modularity"):
+                project.modularity_score = mod.get("score", 0.0)
+                project.modularity_level = mod.get("level", "")
+            if ld := dimensions.get("language_depth"):
+                project.language_depth_score = ld.get("score", 0.0)
+                project.language_depth_level = ld.get("level", "")
 
-                ranker = ProjectRanker(project)
-                ranker.calculate_resume_score()
+            # stats
+            overall = result.get("stats", {}).get("overall", {}) or {}
+            project.total_loc = overall.get("total_lines_of_code", 0)
+            project.comment_ratio = overall.get("comment_ratio", 0.0)
+            project.test_file_ratio = overall.get("test_file_ratio", 0.0)
+            project.avg_functions_per_file = overall.get("avg_functions_per_file", 0.0)
+            project.max_function_length = overall.get("max_function_length", 0)
 
-                self.project_manager.set(project)
+            # resume score
+            ranker = ProjectRanker(project)
+            ranker.calculate_resume_score()
+
+            # --- persistence always happens ---
+            self.project_manager.set(project)
 
             if not silent:
                 print(f"  - Successfully enriched '{project.name}'. Resume Score: {project.resume_score:.2f}")
+
+
+
 
     def analyze_badges(self) -> None:
         """
@@ -685,6 +726,7 @@ class ProjectAnalyzer:
 
 
     def _generate_insights_for_project_noninteractive(self, project: Project):
+        """Generate resume + portfolio insights for a single project (non-interactive)."""
         # Ensure prerequisite analyses exist (like CLI)
         if not project.categories or not project.num_files or not project.languages:
             self.analyze_metadata(projects=[project])
@@ -696,25 +738,21 @@ class ProjectAnalyzer:
         if not project.author_count or project.author_count <= 1:
             self.analyze_git_and_contributions(projects=[project], interactive=False)
             project = self.project_manager.get_by_name(project.name)
-        """Generate resume + portfolio insights for a single project (non-interactive)."""
+
         # Find the root folder for metadata extraction
         with self.suppress_output():
-            with self.suppress_output():
-                root_folder = self._find_folder_by_name_recursive(project.name)
+            root_folder = self._find_folder_by_name_recursive(project.name)
 
-                # always try the repo path itself
-                if not root_folder:
-                    root_folder = project.file_path
-
+            if root_folder:
                 extracted = ProjectMetadataExtractor(root_folder).extract_metadata(
                     repo_path=project.file_path
                 ) or {}
                 metadata = (extracted.get("project_metadata", {}) or {})
-
-            extracted = ProjectMetadataExtractor(root_folder).extract_metadata(
-                repo_path=project.file_path
-            ) or {}
-            metadata = (extracted.get("project_metadata", {}) or {})
+            else:
+                metadata = {
+                    "start_date": (project.date_created.isoformat()[:10] if project.date_created else None),
+                    "end_date": (project.last_modified.isoformat()[:10] if project.last_modified else None),
+                }
 
         # Update collaboration info if repo has .git
         try:
