@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef } from "react";
-import Settings from "./Settings.jsx";
+import Settings from "./Settings";
 import ProfileSetup from "./pages/ProfileSetup";
 import Reports from "./pages/Reports";
-import Settings from "./Settings"
 import {
   listProjects,
   getProject,
