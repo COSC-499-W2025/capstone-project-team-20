@@ -141,10 +141,12 @@ def parse_zip_to_project_folders(zip_path: str) -> list[ProjectFolder]:
             roots: dict[str, ProjectFolder] = {}
             dirs: dict[str, ProjectFolder] = {}
 
+            # First pass: identify root folders
             for file in infolist:
                 if ignore_file_criteria(file):
                     continue
                 path_parts = PurePosixPath(file.filename).parts
+                # We only need to add files that are not roots themselves
                 if len(path_parts) > 1:
                     root_name = path_parts[0] + "/"
                     if root_name not in roots:
@@ -152,6 +154,7 @@ def parse_zip_to_project_folders(zip_path: str) -> list[ProjectFolder]:
                         root_folder = ProjectFolder(synthetic_info, parent=None)
                         roots[root_name] = root_folder
                         dirs[root_name] = root_folder
+
             # If no subdirectories are found, treat the whole zip as one project.
             if not roots:
                 synthetic_info = ZipInfo(filename=Path(zip_path).stem + "/")
@@ -161,7 +164,7 @@ def parse_zip_to_project_folders(zip_path: str) -> list[ProjectFolder]:
 
                 for file in infolist:
                     if ignore_file_criteria(file):
-                        my_bar.update(file.file_size)  # ← count ignored bytes too
+                        my_bar.update(file.file_size)
                         continue
                     parent_path_str = str(PurePosixPath(file.filename).parent)
                     # Normalize parent path for root files
@@ -173,10 +176,10 @@ def parse_zip_to_project_folders(zip_path: str) -> list[ProjectFolder]:
                     my_bar.update(file.file_size)
                 return list(roots.values())
 
-            # Second pass — use file_path, not path (avoid shadowing)
+            # Second pass: build full tree
             for file in infolist:
                 if ignore_file_criteria(file):
-                    my_bar.update(file.file_size)  # ← count ignored bytes too
+                    my_bar.update(file.file_size)
                     continue
                 file_path = PurePosixPath(file.filename)
                 # We only need to add files that are not roots themselves
@@ -184,7 +187,6 @@ def parse_zip_to_project_folders(zip_path: str) -> list[ProjectFolder]:
                     parent_path = str(file_path.parent) + "/"
                     add_to_tree(file, parent_path, dirs, roots)
                 my_bar.update(file.file_size)
-
             return list(roots.values())
     except Exception as e:
         print(f"An error occurred during zip parsing: {e}")
@@ -205,7 +207,8 @@ def extract_zip(zip_path: str) -> Path:
     temp_dir_str = tempfile.mkdtemp()
     try:
         with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-            zip_ref.extractall(temp_dir_str)
+            members = [m for m in zip_ref.infolist() if not ignore_file_criteria(m)]
+            zip_ref.extractall(temp_dir_str, members=members)
     except (zipfile.BadZipFile, FileNotFoundError) as e:
         shutil.rmtree(temp_dir_str)
         raise ValueError(f"Error processing zip file: {e}")
