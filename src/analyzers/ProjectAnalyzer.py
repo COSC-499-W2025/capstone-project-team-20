@@ -60,6 +60,7 @@ class ProjectAnalyzer:
         self.cached_extract_dir: Optional[Path] = None
         self.cached_projects: List[Project] = []
         self.import_batch_id: str = uuid4().hex
+        self.changed_project_names: set = set()  # tracks new/changed projects for run_all
 
         self.report_manager = ReportManager()
         self.report_exporter = ReportExporter()
@@ -113,14 +114,16 @@ class ProjectAnalyzer:
         project_root = Path(project.file_path)
         if not project_root.exists():
             return False
+        file_count = 0
         for root, _, files in os.walk(project_root):
             for name in files:
                 file_path = Path(root) / name
                 file_hash = compute_file_hash(file_path)
+                file_count += 1
                 if not file_hash:
                     continue
                 if not self.file_hash_manager.has_hash(file_hash):
-                    return True  # found a new/changed file
+                    return True
         return False
 
     def _register_project_files(self, project: Project) -> Dict[str, int]:
@@ -128,21 +131,16 @@ class ProjectAnalyzer:
         if not project_root.exists():
             return {"new": 0, "duplicate": 0}
 
-        new_count = 0
-        duplicate_count = 0
+        entries = []
         for root, _, files in os.walk(project_root):
             for name in files:
                 file_path = Path(root) / name
                 file_hash = compute_file_hash(file_path)
-                if not file_hash:
-                    continue
-                if self.file_hash_manager.register_hash(
-                    file_hash, str(file_path), project.name
-                ):
-                    new_count += 1
-                else:
-                    duplicate_count += 1
-        return {"new": new_count, "duplicate": duplicate_count}
+                if file_hash:
+                    entries.append((file_hash, str(file_path), project.name))
+
+        result = self.file_hash_manager.register_hashes_batch(entries)
+        return result
 
 
     def _ensure_scores_are_calculated(self) -> List[Project]:
@@ -225,6 +223,7 @@ class ProjectAnalyzer:
             print("No projects found to build.")
             return []
         print(f"Found {len(projects_from_builder)} project(s). Saving initial records...")
+        changed_names: set = set()
         for proj_new in projects_from_builder:
             if summary := self._get_zip_project_summary(proj_new.name):
                 if summary.get("total_files") is not None:
@@ -241,7 +240,8 @@ class ProjectAnalyzer:
 
             if proj_existing:
                 proj_existing.import_batch_id = self.import_batch_id
-                if self._has_project_changed(proj_new):
+                changed = self._has_project_changed(proj_new)
+                if changed:
                     proj_existing.file_path, proj_existing.root_folder = proj_new.file_path, proj_new.root_folder
                     if proj_new.num_files:
                         proj_existing.num_files = proj_new.num_files
@@ -254,6 +254,7 @@ class ProjectAnalyzer:
                     proj_existing.last_accessed = datetime.now()
                     self.project_manager.set(proj_existing)
                     self._register_project_files(proj_existing)
+                    changed_names.add(proj_existing.name)
                     print(f"  - Updated existing project: {proj_existing.name}")
                 else:
                     proj_existing.last_accessed = datetime.now()
@@ -267,9 +268,11 @@ class ProjectAnalyzer:
                 proj_new.import_batch_id = self.import_batch_id
                 self.project_manager.set(proj_new)
                 self._register_project_files(proj_new)
+                changed_names.add(proj_new.name)
                 print(f"  - Created new project record: {proj_new.name} with ID {proj_new.id}")
                 created_projects.append(proj_new)
         self.cached_projects = created_projects
+        self.changed_project_names = changed_names
         return created_projects
     # ------------------------------------------------------------------
     # Analysis Methods
@@ -1669,6 +1672,7 @@ class ProjectAnalyzer:
         self.root_folders, self.zip_path = root_folders, zip_path
         print("\nNew project loaded successfully\n")
         self.initialize_projects()
+        self.run_all()
 
     def select_thumbnail(self) -> None:
         sorted_projects = self.get_projects_sorted_by_score()
@@ -1730,16 +1734,29 @@ class ProjectAnalyzer:
         if not self._get_projects():
             print("Initializing projects first...")
             self.initialize_projects()
-
         if not self.cached_projects:
             print("Initialization failed. No projects to analyze.")
             return
+        # Split projects into changed (need full analysis) vs unchanged (skip heavy steps)
+        changed = [p for p in self.cached_projects if p.name in self.changed_project_names]
+        unchanged = [p for p in self.cached_projects if p.name not in self.changed_project_names]
+        if unchanged:
+            print(f"  - Skipping analysis for {len(unchanged)} unchanged project(s): {[p.name for p in unchanged]}")
+        if not changed:
+            print("  - All projects unchanged, skipping analyses.")
+            self.display_project_timeline()
+            print("\nAll analyses complete.\n")
+            return
 
-        self.analyze_git_and_contributions()
-        self.analyze_metadata()
-        self.analyze_categories()
-        self.analyze_languages()
-        self.analyze_skills()
+        print(f"  - Running analyses for {len(changed)} changed/new project(s): {[p.name for p in changed]}")
+
+        # perform analysis on changed projects only
+        self.analyze_git_and_contributions(projects=changed)
+        self.analyze_metadata(projects=changed)
+        self.analyze_categories(projects=changed)
+        self.analyze_languages(projects=changed)
+        self.analyze_skills(projects=changed)
+        self.generate_insights_noninteractive(projects=changed)
         self.display_project_timeline()
         print("\nAll analyses complete.\n")
 
