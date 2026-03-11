@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
-import ProfileSetup from "./ProfileSetup";
-import Settings from "./Settings";
+import Settings from "./Settings.jsx";
+import ProfileSetup from "./pages/ProfileSetup";
+import Reports from "./pages/Reports";
 import {
   listProjects,
   getProject,
@@ -8,49 +9,172 @@ import {
   getBadgeProgress,
   getYearlyWrapped,
   getConfig,
-  setPrivacyConsent,
   getPrivacyConsent,
-  createReport,
-  exportResume,
   uploadProjectZip,
   uploadProjectFromPath,
-  clearProjects,
-  generatePortfolioDetailsForReport,
-  getPortfolio
+  clearProjects
 } from "./api/client";
 import "./App.css";
+
+const formatBadgeLabel = (badgeId = "") =>
+  badgeId
+    .split("_")
+    .map((chunk) => chunk.charAt(0).toUpperCase() + chunk.slice(1))
+    .join(" ");
+
+const formatBadgeRequirement = (metric, target) => {
+  const label = (metric || "metric").toLowerCase();
+  if (label.includes("ratio") || label.includes("share")) return `Reach at least ${(target * 100).toFixed(0)}% ${label}.`;
+  return `Reach at least ${target} ${label}.`;
+};
+
+
+const ALL_BADGE_DETAILS = {
+  gigantana: {
+    label: "Gigantana",
+    description: "A massive project with heavyweight assets and scope.",
+    howToEarn: "Reach at least 1024 MB project size.",
+  },
+  slow_burn: {
+    label: "Slow Burn",
+    description: "Steady long-term effort across a full year.",
+    howToEarn: "Keep project duration at 365+ days.",
+  },
+  flash_build: {
+    label: "Flash Build",
+    description: "A fast sprint with meaningful output.",
+    howToEarn: "Finish in 7 days or less with at least 20 files.",
+  },
+  fresh_breeze: {
+    label: "Fresh Breeze",
+    description: "A compact project delivered quickly.",
+    howToEarn: "Finish within 30 days and keep files under 50.",
+  },
+  marathoner: {
+    label: "Marathoner",
+    description: "A multi-year commitment to growth.",
+    howToEarn: "Keep project duration at 730+ days.",
+  },
+  tiny_but_mighty: {
+    label: "Tiny but Mighty",
+    description: "Small footprint, high impact.",
+    howToEarn: "Keep size at 5 MB or less while shipping at least 10 files.",
+  },
+  rapid_builder: {
+    label: "Rapid Builder",
+    description: "High-volume output in a tight window.",
+    howToEarn: "Ship 500+ files within 120 days.",
+  },
+  jack_of_all_trades: {
+    label: "Jack of All Trades",
+    description: "Excellent language diversity.",
+    howToEarn: "Use at least 5 languages in a project.",
+  },
+  polyglot: {
+    label: "Polyglot",
+    description: "Comfortable across multiple languages.",
+    howToEarn: "Use at least 3 languages.",
+  },
+  language_specialist: {
+    label: "Language Specialist",
+    description: "Deep specialization in one primary language.",
+    howToEarn: "Make one language at least 80% of code share.",
+  },
+  balanced_palette: {
+    label: "Balanced Palette",
+    description: "Great balance across a mixed stack.",
+    howToEarn: "Use 3+ languages with top language at or below 50%.",
+  },
+  solo_runner: {
+    label: "Solo Runner",
+    description: "Built independently end-to-end.",
+    howToEarn: "Have 1 or fewer contributors.",
+  },
+  team_effort: {
+    label: "Team Effort",
+    description: "Strong collaboration across contributors.",
+    howToEarn: "Have 3 or more contributors.",
+  },
+  test_pilot: {
+    label: "Test Pilot",
+    description: "Testing takes a meaningful share of the repo.",
+    howToEarn: "Keep test share at 15% or higher.",
+  },
+  test_scout: {
+    label: "Test Scout",
+    description: "Testing is present and consistent.",
+    howToEarn: "Keep test share between 5% and 15%.",
+  },
+  docs_guardian: {
+    label: "Docs Guardian",
+    description: "Documentation-first mindset.",
+    howToEarn: "Keep docs share at 20% or higher.",
+  },
+  doc_enthusiast: {
+    label: "Doc Enthusiast",
+    description: "Good documentation coverage.",
+    howToEarn: "Keep docs share between 10% and 20%.",
+  },
+  pixel_perfect: {
+    label: "Pixel Perfect",
+    description: "Strong visual/design emphasis.",
+    howToEarn: "Keep design or game assets at 25% or higher.",
+  },
+  visual_storyteller: {
+    label: "Visual Storyteller",
+    description: "Visual assets are a key supporting strength.",
+    howToEarn: "Keep design or game assets between 15% and 25%.",
+  },
+  data_seedling: {
+    label: "Data Seedling",
+    description: "Early signs of data-heavy work.",
+    howToEarn: "Keep data share between 10% and 25%.",
+  },
+  data_wrangler: {
+    label: "Data Wrangler",
+    description: "Strong data footprint and tooling.",
+    howToEarn: "Keep data share at 25%+ or use data stack skills.",
+  },
+  code_cruncher: {
+    label: "Code Cruncher",
+    description: "Code-focused project composition.",
+    howToEarn: "Keep code share at 60% or higher.",
+  },
+  container_captain: {
+    label: "Container Captain",
+    description: "Deployment-ready with containers.",
+    howToEarn: "Use Docker in the project skills.",
+  },
+  full_stack_explorer: {
+    label: "Full Stack Explorer",
+    description: "Bridges frontend and backend confidently.",
+    howToEarn: "Use backend + frontend languages and React/Next.js.",
+  },
+};
 
 function App() {
   const [profileReady, setProfileReady] = useState(null);
   const [current, setCurrent] = useState(1);
 
   useEffect(() => {
-    getConfig()
-      .then((cfg) => setProfileReady(!!(cfg?.name && cfg?.email && cfg?.phone)))
-      .catch(() => setProfileReady(false));
+    getConfig().then((cfg) => setProfileReady(!!(cfg?.name && cfg?.email && cfg?.phone))).catch(() => setProfileReady(false));
   }, []);
 
   const buttons = [
     { id: 0, label: "Settings" },
     { id: 1, label: "Projects" },
     { id: 2, label: "Badges" },
-    { id: 3, label: "Resume" },
-    { id: 4, label: "Portfolio" },
-    { id: 5, label: "Help" }
+    { id: 3, label: "Reports" },
+    { id: 4, label: "Help" }
   ];
-
-  const whenClick = (id) => {
-    setCurrent(id);
-  };
 
   const menuRender = () => {
     switch (current) {
       case 0: return <Settings />;
       case 1: return <Projects />;
       case 2: return <Badges />;
-      case 3: return <Resume />;
-      case 4: return <Portfolio />;
-      case 5: return <Help />;
+      case 3: return <Reports />;
+      case 4: return <Help />;
       default: return <Projects />;
     }
   };
@@ -61,19 +185,13 @@ function App() {
   return (
     <div className="screen">
       <div className="stacked-buttons">
-        {buttons.map(button => (
-          <button
-            key={button.id}
-            className={button.id === current ? "button-on" : "button-off"}
-            onClick={() => whenClick(button.id)}
-          >
+        {buttons.map((button) => (
+          <button key={button.id} className={button.id === current ? "button-on" : "button-off"} onClick={() => setCurrent(button.id)}>
             {button.label}
           </button>
         ))}
       </div>
-      <div className="menu">
-        {menuRender()}
-      </div>
+      <div className="menu">{menuRender()}</div>
     </div>
   );
 }
@@ -311,6 +429,7 @@ function Badges() {
   const [skills, setSkills] = useState([]);
   const [progress, setProgress] = useState([]);
   const [wrapped, setWrapped] = useState([]);
+  const [activeWrappedYear, setActiveWrappedYear] = useState(null);
 
   async function loadBadgeData() {
     setLoading(true);
@@ -335,10 +454,20 @@ function Badges() {
     loadBadgeData();
   }, []);
 
-  const inProgress = progress.filter((b) => !b.earned);
-  const achievedProgressBadges = progress.filter((b) => b.earned);
+  const progressLookup = progress.reduce((acc, badge) => {
+    acc[badge.badge_id] = badge;
+    return acc;
+  }, {});
 
+  const inProgress = progress.filter((b) => !b.earned).map((badge) => ({
+    ...badge,
+    description: ALL_BADGE_DETAILS[badge.badge_id]?.description ?? "Keep building to unlock this badge.",
+    howToEarn: ALL_BADGE_DETAILS[badge.badge_id]?.howToEarn ?? formatBadgeRequirement(badge.metric, badge.target),
+  }));
+
+  const achievedProgressBadges = progress.filter((b) => b.earned);
   const achievedBadgeMap = new Map();
+
   wrapped.forEach((yearBlock) => {
     (yearBlock.milestones ?? []).forEach((m) => {
       if (!achievedBadgeMap.has(m.badge_id)) {
@@ -348,7 +477,10 @@ function Badges() {
       const projectKey = `${m.project}::${m.achieved_on ?? ""}`;
       const alreadyListed = badge.projects.some((p) => `${p.project}::${p.achieved_on ?? ""}` === projectKey);
       if (!alreadyListed) {
-        badge.projects.push({ project: m.project, achieved_on: m.achieved_on });
+        badge.projects.push({
+          project: m.project,
+          achieved_on: m.achieved_on,
+        });
       }
     });
   });
@@ -364,9 +496,46 @@ function Badges() {
     if (!alreadyListed) badge.projects.push({ project: projectName, achieved_on: null });
   });
 
-  const achievedBadges = Array.from(achievedBadgeMap.values()).sort((a, b) =>
-    (a.label ?? a.badge_id).localeCompare(b.label ?? b.badge_id)
-  );
+  const achievedBadges = Array.from(achievedBadgeMap.values())
+    .map((badge) => ({
+      ...badge,
+      label: badge.label ?? ALL_BADGE_DETAILS[badge.badge_id]?.label ?? formatBadgeLabel(badge.badge_id),
+      description: ALL_BADGE_DETAILS[badge.badge_id]?.description ?? "Unlocked through project analytics.",
+      howToEarn: ALL_BADGE_DETAILS[badge.badge_id]?.howToEarn ?? "Complete its badge conditions in a project.",
+    }))
+    .sort((a, b) => (a.label ?? a.badge_id).localeCompare(b.label ?? b.badge_id));
+
+  const unlockedSet = new Set(achievedBadges.map((badge) => badge.badge_id));
+  const allBadgeCatalog = Object.entries(ALL_BADGE_DETAILS)
+    .map(([badgeId, details]) => ({
+      badgeId,
+      ...details,
+      unlocked: unlockedSet.has(badgeId),
+      trackedProgress: progressLookup[badgeId] ?? null,
+    }))
+    .sort((a, b) => a.label.localeCompare(b.label));
+
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const isCurrentYearComplete = now.getMonth() === 11 && now.getDate() === 31;
+
+  const wrappedByYear = wrapped.reduce((acc, yearBlock) => {
+    acc[yearBlock.year] = yearBlock;
+    return acc;
+  }, {});
+
+  const wrappedButtons = wrapped.map((yearBlock) => ({
+    year: yearBlock.year,
+    label:
+      yearBlock.year === currentYear
+        ? isCurrentYearComplete
+          ? "Get Yearly Stats"
+          : "Get Yearly Stats (so far)"
+        : `Get ${yearBlock.year} Stats`,
+  }));
+
+  const openWrappedYear = (year) => setActiveWrappedYear(year);
+  const selectedWrapped = activeWrappedYear ? wrappedByYear[activeWrappedYear] : null;
 
   return (
     <>
@@ -377,26 +546,43 @@ function Badges() {
 
       {error && <pre style={{ color: "crimson" }}>{error}</pre>}
 
+      <section className="badges-hero">
+        <h4>🏆 All Possible Badges</h4>
+        <p>Every badge, what it means, and how to earn it.</p>
+        <div className="badge-guide-grid">
+          {allBadgeCatalog.map((badge) => (
+            <article className="badge-guide-card" key={badge.badgeId}>
+              <h5>{badge.label} {badge.unlocked ? "✅" : "🔒"}</h5>
+              <p>{badge.description}</p>
+              <p><strong>How to earn:</strong> {badge.howToEarn}</p>
+              <p className="badge-description">{badge.trackedProgress ? `Tracked progress: ${Math.round((badge.trackedProgress.progress ?? 0) * 100)}%` : "Tracked progress: calculated when unlocked in projects."}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
       <h4>🎯 Badge Progress Tracker (Uncompleted)</h4>
       {inProgress.length === 0 ? (
         <p>All tracked progress badges are complete 🎉</p>
       ) : (
-        <ul style={{ listStyle: "none", paddingLeft: 0 }}>
+        <ul className="in-progress-list">
           {inProgress.map((b) => (
-            <li key={b.badge_id} style={{ marginBottom: 12, border: "1px solid #2f4d6f", borderRadius: 8, padding: 10 }}>
+            <li key={b.badge_id} className="progress-card">
               <strong>{b.label}</strong> — {Math.round((b.progress ?? 0) * 100)}%
-              <div style={{ height: 10, borderRadius: 999, background: "#21344a", marginTop: 8, overflow: "hidden" }}>
-                <div style={{ width: `${Math.round((b.progress ?? 0) * 100)}%`, height: "100%", background: "#55BDCA" }} />
+              <div className="progress-track">
+                <div className="progress-fill" style={{ width: `${Math.round((b.progress ?? 0) * 100)}%` }} />
               </div>
               <small>
                 {b.metric}: {(b.current ?? 0).toFixed(2)} / {b.target} • Closest project: {b.project?.name ?? "N/A"} • ⏳ In progress
               </small>
+              <p className="badge-description">{b.description}</p>
+              <p className="badge-description"><strong>How to earn:</strong> {b.howToEarn}</p>
             </li>
           ))}
         </ul>
       )}
 
-      <h4>🏅 Achieved Badges</h4>
+      <h4>🏅 Unlocked Badges</h4>
       {achievedBadges.length === 0 ? (
         <p>No achieved badges yet. Upload and analyze projects to start earning them.</p>
       ) : (
@@ -404,6 +590,8 @@ function Badges() {
           {achievedBadges.map((badge) => (
             <li key={`achieved-${badge.badge_id}`}>
               ✅ <strong>{badge.label ?? badge.badge_id}</strong>
+              <p className="badge-description">{badge.description}</p>
+              <p className="badge-description"><strong>How to earn:</strong> {badge.howToEarn}</p>
               <ul>
                 {badge.projects.map((projectEntry, idx) => (
                   <li key={`achieved-${badge.badge_id}-${projectEntry.project}-${idx}`}>
@@ -416,30 +604,40 @@ function Badges() {
           ))}
         </ul>
       )}
-
       <h4>🎉 Yearly Wrapped</h4>
       {wrapped.length === 0 ? (
         <p>No yearly wrapped history available yet.</p>
       ) : (
-        wrapped.map((yearBlock) => (
-          <div key={yearBlock.year} style={{ marginBottom: 14, border: "1px solid #3f638c", borderRadius: 12, padding: 12, background: "linear-gradient(135deg, rgba(85,189,202,0.12), rgba(242,125,66,0.10))" }}>
-            <h5>{yearBlock.vibe_title}</h5>
+        <div className="wrapped-buttons">
+          {wrappedButtons.map((button) => (
+            <button key={button.year} onClick={() => openWrappedYear(button.year)}>
+              {button.label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {selectedWrapped ? (
+        <div className="wrapped-modal-backdrop" onClick={() => setActiveWrappedYear(null)}>
+          <div className="wrapped-modal" onClick={(event) => event.stopPropagation()}>
+            <button className="wrapped-close" onClick={() => setActiveWrappedYear(null)}>✕</button>
+            <h5>{selectedWrapped.year} — {selectedWrapped.vibe_title}</h5>
             <p>
-              Projects: {yearBlock.projects_count} • LOC: {yearBlock.total_loc} • Files: {yearBlock.total_files} • Avg test ratio: {(yearBlock.avg_test_file_ratio * 100).toFixed(1)}%
+              Projects: {selectedWrapped.projects_count} • LOC: {selectedWrapped.total_loc} • Files: {selectedWrapped.total_files} • Avg test ratio: {(selectedWrapped.avg_test_file_ratio * 100).toFixed(1)}%
             </p>
-            {yearBlock.highlights?.length ? (
+            {selectedWrapped.highlights?.length ? (
               <ul>
-                {yearBlock.highlights.map((line, idx) => (
-                  <li key={`${yearBlock.year}-highlight-${idx}`}>{line}</li>
+                {selectedWrapped.highlights.map((line, idx) => (
+                  <li key={`${selectedWrapped.year}-highlight-${idx}`}>{line}</li>
                 ))}
               </ul>
             ) : null}
             <p><strong>Milestones:</strong></p>
-            {yearBlock.milestones?.length ? (
+            {selectedWrapped.milestones?.length ? (
               <ul>
-                {yearBlock.milestones.map((m, idx) => (
-                  <li key={`${yearBlock.year}-${m.badge_id}-${idx}`}>
-                    🏅 {m.badge_id} earned in <strong>{m.project}</strong>{m.achieved_on ? ` on ${m.achieved_on}` : ""}
+                {selectedWrapped.milestones.map((m, idx) => (
+                  <li key={`${selectedWrapped.year}-${m.badge_id}-${idx}`}>
+                    🏅 {(ALL_BADGE_DETAILS[m.badge_id]?.label ?? progressLookup[m.badge_id]?.label ?? formatBadgeLabel(m.badge_id))} earned in <strong>{m.project}</strong>{m.achieved_on ? ` on ${m.achieved_on}` : ""}
                   </li>
                 ))}
               </ul>
@@ -447,8 +645,8 @@ function Badges() {
               <p>No badge milestones recorded for this year.</p>
             )}
           </div>
-        ))
-      )}
+        </div>
+      ) : null}
 
       <h4>🔥 Skill Heatmap</h4>
       {skills.length === 0 ? (
@@ -466,226 +664,8 @@ function Badges() {
   );
 }
 
-function Resume() {
-  const [loading, setLoading] = useState(false);
-  const [msg, setMsg] = useState("");
-
-  async function handleExport() {
-    setLoading(true);
-    setMsg("");
-    try {
-      await setPrivacyConsent(true);
-      const { projects } = await listProjects();
-      const ids = (projects ?? []).map((p) => p.id);
-
-      if (ids.length === 0) {
-        setMsg("No projects found. Upload a project first.");
-        return;
-      }
-
-      const created = await createReport({
-        title: "Resume Report",
-        sort_by: "resume_score",
-        notes: "Generated from UI",
-        project_ids: ids,
-      });
-
-      const reportId = created.report.id;
-
-      const exp = await exportResume({
-        report_id: reportId,
-        template: "jake",
-        output_name: "resume.pdf",
-      });
-
-      window.open(`http://localhost:8000${exp.download_url}`, "_blank");
-      setMsg("Resume export started — opened download in a new tab.");
-    } catch (e) {
-      setMsg(e.message ?? "Failed to export resume");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  return (
-    <>
-      <h3>Resume</h3>
-      <button onClick={handleExport} disabled={loading}>
-        {loading ? "Exporting..." : "Export Resume PDF"}
-      </button>
-      {msg && <p>{msg}</p>}
-    </>
-  );
-}
-
-function Portfolio() {
-  const [loading, setLoading] = useState(false);
-  const [msg, setMsg] = useState("");
-  const [portfolio, setPortfolio] = useState(null);
-  const [openProjects, setOpenProjects] = useState({});
-
-  async function handleGenerateWebPortfolio() {
-    setLoading(true);
-    setMsg("");
-    setPortfolio(null);
-    setOpenProjects({});
-    try {
-      await setPrivacyConsent(true);
-
-      const { projects } = await listProjects();
-      const allProjects = projects ?? [];
-      const ids = allProjects.map((p) => p.id);
-
-      if (!ids.length) {
-        setMsg("No projects found. Upload a project first.");
-        return;
-      }
-
-      const created = await createReport({
-        title: "Portfolio Report",
-        sort_by: "resume_score",
-        notes: "Generated web portfolio from UI",
-        project_ids: ids,
-      });
-
-      const reportId = created?.report?.id;
-      if (!reportId) throw new Error("Failed to create report for portfolio generation.");
-
-      const names = allProjects.map((p) => p.name).filter(Boolean);
-
-      await generatePortfolioDetailsForReport({
-        report_id: reportId,
-        project_names: names,
-      });
-
-      const response = await getPortfolio(reportId);
-      const nextPortfolio = response?.portfolio ?? null;
-      setPortfolio(nextPortfolio);
-
-      const initialOpen = {};
-      (nextPortfolio?.projects ?? []).forEach((p, idx) => {
-        const key = `${p?.project_name ?? "project"}-${idx}`;
-        initialOpen[key] = idx === 0;
-      });
-      setOpenProjects(initialOpen);
-
-      setMsg("Web portfolio generated.");
-    } catch (e) {
-      setMsg(e.message ?? "Failed to generate web portfolio");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  function toggleProject(key) {
-    setOpenProjects((prev) => ({
-      ...prev,
-      [key]: !prev[key],
-    }));
-  }
-
-  const projects = portfolio?.projects ?? [];
-  const resumeBulletCount = projects.reduce((acc, p) => acc + (p?.bullets?.length ?? 0), 0);
-  const teamProjectCount = projects.filter((p) => {
-    const contributors = p?.portfolio_details?.contributor_roles ?? [];
-    return p?.collaboration_status === "collaborative" || contributors.length > 1;
-  }).length;
-
-  return (
-    <>
-      <h3>Portfolio</h3>
-      <button onClick={handleGenerateWebPortfolio} disabled={loading}>
-        {loading ? "Generating..." : "Generate Web Portfolio"}
-      </button>
-      {msg && <p>{msg}</p>}
-
-      {portfolio ? (
-        <section className="portfolio-panel">
-          <div className="portfolio-summary-strip">
-            <div className="summary-pill"><span className="summary-label">Projects</span><strong>{projects.length}</strong></div>
-            <div className="summary-pill"><span className="summary-label">Resume bullets</span><strong>{resumeBulletCount}</strong></div>
-            <div className="summary-pill"><span className="summary-label">Team projects</span><strong>{teamProjectCount}</strong></div>
-          </div>
-
-          <h4>{portfolio.title || "Portfolio"}</h4>
-
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            {projects.map((project, idx) => {
-              const details = project?.portfolio_details ?? {};
-              const contributorRoles = details?.contributor_roles ?? [];
-              const summaryText = project?.summary?.trim() || details?.overview || "No project summary available.";
-              const bullets = (project?.bullets ?? []).slice(0, 3);
-              const key = `${project?.project_name ?? "project"}-${idx}`;
-              const isOpen = !!openProjects[key];
-
-              return (
-                <article className="portfolio-card" key={key}>
-                  <button
-                    onClick={() => toggleProject(key)}
-                    style={{
-                      width: "100%",
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      background: "transparent",
-                      border: "none",
-                      color: "inherit",
-                      fontSize: "1rem",
-                      cursor: "pointer",
-                      padding: 0,
-                    }}
-                  >
-                    <span><strong>{project?.project_name ?? "Untitled Project"}</strong></span>
-                    <span>{isOpen ? "▾ Collapse" : "▸ Expand"}</span>
-                  </button>
-
-                  {isOpen && (
-                    <div style={{ marginTop: 10 }}>
-                      <p className="portfolio-meta">
-                        <strong>{details?.role || "Contributor"}</strong> • {details?.timeline || "Timeline unavailable"}
-                      </p>
-                      <p className="portfolio-overview">{summaryText}</p>
-
-                      {bullets.length ? (
-                        <>
-                          <strong>Key contributions</strong>
-                          <ul>
-                            {bullets.map((b, i) => <li key={`b-${i}`}>{b}</li>)}
-                          </ul>
-                        </>
-                      ) : null}
-
-                      {contributorRoles.length ? (
-                        <>
-                          <strong>Contributors</strong>
-                          <ul className="contrib-list">
-                            {contributorRoles.map((c, i) => (
-                              <li key={`cr-${i}`}>
-                                <span>{c.name}</span>
-                                <span className="confidence-chip">{c.role}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </>
-                      ) : null}
-                    </div>
-                  )}
-                </article>
-              );
-            })}
-          </div>
-        </section>
-      ) : null}
-    </>
-  );
-}
-
 function Help() {
-  return (
-    <>
-      <h3>This is the Help page.</h3>
-    </>
-  );
+  return <><h3>This is the Help page.</h3></>;
 }
 
 export default App;
