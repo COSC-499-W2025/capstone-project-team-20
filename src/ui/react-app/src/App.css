@@ -13,11 +13,10 @@ html, body, #root {
   background-color: var(--secondary);
   width: 100%;
   overflow: hidden;
-  
 }
 
 .button-on,
-.button-on:hover{
+.button-on:hover {
   color: var(--primary);
   background: var(--secondary);
   border: solid 6px var(--secondary_low);
@@ -26,53 +25,52 @@ html, body, #root {
   border-bottom: solid 3px var(--secondary_low);
 }
 
-.button-off{
+.button-off {
   color: var(--secondary);
   background: var(--primary);
   border: solid 6px var(--secondary_low);
   border-top: solid 3px var(--secondary_low);
   border-bottom: solid 3px var(--secondary_low);
 }
-.button-off:hover{
+
+.button-off:hover {
   border: solid 6px var(--primary_desat);
   border-top: solid 3px var(--primary_desat);
   border-bottom: solid 3px var(--primary_desat);
 }
 
-.screen{
-  display:flex;
+.screen {
+  display: flex;
   width: auto;
-  height:100vh;
+  height: 100vh;
   background-color: var(--secondary_low);
   overflow: hidden;
 }
 
-.stacked-buttons{
-  width:fit-content;
+.stacked-buttons {
+  width: fit-content;
   height: 100%;
   display: flex;
-  flex-direction:column;
+  flex-direction: column;
   margin-right: 0;
-  margin-top:3px;
+  margin-top: 3px;
   background-color: var(--secondary_low);
 }
 
-.stacked-buttons button{
+.stacked-buttons button {
   min-width: 125px;
   aspect-ratio: 1/1;
   border-radius: 0;
   font-weight: bold;
 }
 
-.menu{
+.menu {
   background-color: var(--secondary);
   margin: 6px;
   margin-left: 0;
   flex: 1;
   overflow-y: auto;
   min-height: 0;
-}
-.menu {
   color: #e9f7ff;
   border-radius: 16px;
   padding: 16px 20px;
@@ -190,9 +188,73 @@ html, body, #root {
   top: 10px;
 }
 
-
 .badge-description {
   margin: 6px 0 0;
   color: #cfeaf7;
   font-size: 0.92rem;
+}
+
+.portfolio-panel {
+  margin-top: 14px;
+  padding: 10px;
+  border: 1px solid var(--primary);
+  border-radius: 10px;
+  background: rgba(85, 189, 202, 0.06);
+}
+
+.portfolio-summary-strip {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.summary-pill {
+  background: var(--secondary_low);
+  border: 1px solid var(--primary);
+  color: var(--primary_desat);
+  padding: 6px 10px;
+  border-radius: 999px;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.summary-label {
+  opacity: 0.8;
+  font-size: 0.85rem;
+}
+
+.portfolio-card {
+  border: 1px solid var(--primary_desat);
+  border-radius: 10px;
+  padding: 12px;
+  background: rgba(2, 36, 69, 0.6);
+}
+
+.portfolio-meta {
+  opacity: 0.9;
+  margin: 6px 0 8px;
+}
+
+.portfolio-overview {
+  margin: 8px 0;
+}
+
+.contrib-list {
+  list-style: none;
+  padding-left: 0;
+}
+
+.contrib-list li {
+  display: flex;
+  justify-content: space-between;
+  margin: 4px 0;
+}
+
+.confidence-chip {
+  border: 1px solid var(--primary);
+  border-radius: 999px;
+  padding: 1px 7px;
+  font-size: 0.8rem;
 }

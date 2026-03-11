@@ -6,19 +6,15 @@ import {
   listProjects,
   getProject,
   listSkills,
-  getBadgeProgress, 
+  getBadgeProgress,
   getYearlyWrapped,
   getConfig,
-  setPrivacyConsent,
   getPrivacyConsent,
-  createReport,
-  exportResume,
-  exportPortfolio,
   uploadProjectZip,
   uploadProjectFromPath,
   clearProjects
 } from "./api/client";
-import './App.css'
+import "./App.css";
 
 const formatBadgeLabel = (badgeId = "") =>
   badgeId
@@ -28,11 +24,7 @@ const formatBadgeLabel = (badgeId = "") =>
 
 const formatBadgeRequirement = (metric, target) => {
   const label = (metric || "metric").toLowerCase();
-
-  if (label.includes("ratio") || label.includes("share")) {
-    return `Reach at least ${(target * 100).toFixed(0)}% ${label}.`;
-  }
-
+  if (label.includes("ratio") || label.includes("share")) return `Reach at least ${(target * 100).toFixed(0)}% ${label}.`;
   return `Reach at least ${target} ${label}.`;
 };
 
@@ -161,73 +153,45 @@ const ALL_BADGE_DETAILS = {
 };
 
 function App() {
-  //starts the actual app itself, all pages are gathered here
-
-  //creates a variable 'current' with a method 'setcurrent' that updates it, we set to 1 by default here.
   const [profileReady, setProfileReady] = useState(null);
   const [current, setCurrent] = useState(1);
 
   useEffect(() => {
-    getConfig()
-      .then((cfg) => setProfileReady(!!(cfg?.name && cfg?.email && cfg?.phone)))
-      .catch(() => setProfileReady(false));
+    getConfig().then((cfg) => setProfileReady(!!(cfg?.name && cfg?.email && cfg?.phone))).catch(() => setProfileReady(false));
   }, []);
 
   const buttons = [
-    //id for use with 'current', label is a placeholder as of now
-    {id:0, label:"Settings"},
-    {id:1, label:"Projects"},
-    {id:2, label:"Badges"},
-    {id:3, label:"Reports"},
-    {id:4, label:"Help"}
+    { id: 0, label: "Settings" },
+    { id: 1, label: "Projects" },
+    { id: 2, label: "Badges" },
+    { id: 3, label: "Reports" },
+    { id: 4, label: "Help" }
   ];
 
-  const whenClick = (id) => {
-    //takes the button of the id clicked and sets our 'current' variable to it
-    console.log("Clicked:",id);
-    setCurrent(id);
-  };
-
   const menuRender = () => {
-    //ran on render, renders correct page based on selection
-    //menu pages currently stored as individual functions within this file. Scroll down to locate.
-    
-    switch(current) {
+    switch (current) {
       case 0: return <Settings />;
       case 1: return <Projects />;
       case 2: return <Badges />;
-      case 3: return <Reports />
+      case 3: return <Reports />;
       case 4: return <Help />;
       default: return <Projects />;
     }
-  }
-  // ensure name, phone, email are set
+  };
+
   if (profileReady === null) return <div className="ps-loading">Loading…</div>;
   if (!profileReady) return <ProfileSetup onComplete={() => setProfileReady(true)} />;
 
-  //on app construction/refresh, builds our UI
-  return(
+  return (
     <div className="screen">
-      {/* Left Side Buttons */}
       <div className="stacked-buttons">
-        {buttons.map(button => (
-          <button
-            key = {button.id}
-            className={
-              button.id === current
-                ? "button-on"
-                : "button-off"
-            }
-            onClick={()=>whenClick(button.id)}
-          >
+        {buttons.map((button) => (
+          <button key={button.id} className={button.id === current ? "button-on" : "button-off"} onClick={() => setCurrent(button.id)}>
             {button.label}
           </button>
         ))}
       </div>
-      {/* Right Side Content */}
-      <div className="menu">
-        {menuRender()}
-      </div>
+      <div className="menu">{menuRender()}</div>
     </div>
   );
 }
@@ -238,7 +202,6 @@ function Projects() {
   const [error, setError] = useState(null);
   const [uploadStatus, setUploadStatus] = useState(null);
   const fileInputRef = useRef(null);
-
   const [projects, setProjects] = useState([]);
   const [currentProjects, setCurrentProjects] = useState([]);
   const [previousProjects, setPreviousProjects] = useState([]);
@@ -268,7 +231,7 @@ function Projects() {
     setLoading(true);
     setError(null);
     try {
-      const data = await getProject(id); // { project: {...} }
+      const data = await getProject(id);
       setSelected(data.project ?? null);
     } catch (e) {
       setError(e.message ?? "Failed to load project");
@@ -278,6 +241,17 @@ function Projects() {
   }
 
   async function handleUploadPath() {
+<<<<<<< feature/portfolio-web-page
+    if (!pathInput.trim()) {
+      setError("Enter a path first (example: testResources/sample.zip)");
+      return;
+    }
+    const consent = await getPrivacyConsent();
+    if (!consent) {
+      setError("You must grant consent in Settings in order to upload projects.");
+      return;
+    }
+=======
   if (!pathInput.trim()) {
     setError("Enter a path first (example: TestResources/sample.zip)");
     return;
@@ -290,14 +264,24 @@ function Projects() {
   setUploadStatus("Uploading and analyzing… this may take a moment.");
 
   try {
+>>>>>>> main
 
-    const res = await uploadProjectFromPath(pathInput.trim());
+    setUploading(true);
+    setError(null);
 
-    await loadProjects();
+    try {
+      const res = await uploadProjectFromPath(pathInput.trim());
+      await loadProjects();
 
-    if (res?.projects?.length) {
-      await handleSelect(res.projects[0].id);
+      if (res?.projects?.length) await handleSelect(res.projects[0].id);
+      setPathInput("");
+    } catch (e) {
+      setError(e.message ?? "Path upload failed");
+    } finally {
+      setUploading(false);
     }
+<<<<<<< feature/portfolio-web-page
+=======
 
     setUploadStatus(`Done! Loaded ${res?.projects?.length ?? 0} project(s).`);
     setPathInput("");
@@ -306,10 +290,21 @@ function Projects() {
     setUploadStatus(null);
   } finally {
     setUploading(false);
+>>>>>>> main
   }
-}
 
   async function handleUpload() {
+<<<<<<< feature/portfolio-web-page
+    if (!zipFile) {
+      setError("Pick a .zip file first.");
+      return;
+    }
+    const consent = await getPrivacyConsent();
+    if (!consent) {
+      setError("You must grant consent in Settings in order to upload projects.");
+      return;
+    }
+=======
   if (!zipFile) {
     setError("Pick a .zip file first.");
     return;
@@ -322,17 +317,24 @@ function Projects() {
   setUploadStatus("Uploading and analyzing… this may take a moment.");
 
   try {
+>>>>>>> main
 
-    // upload zip, backend creates projects
-    const res = await uploadProjectZip(zipFile);
+    setUploading(true);
+    setError(null);
 
-    // refresh list
-    await loadProjects();
+    try {
+      const res = await uploadProjectZip(zipFile);
+      await loadProjects();
 
-    // auto-select first created project
-    if (res?.projects?.length) {
-      await handleSelect(res.projects[0].id);
+      if (res?.projects?.length) await handleSelect(res.projects[0].id);
+      setZipFile(null);
+    } catch (e) {
+      setError(e.message ?? "Upload failed");
+    } finally {
+      setUploading(false);
     }
+<<<<<<< feature/portfolio-web-page
+=======
 
     setUploadStatus(`Done! Loaded ${res?.projects?.length ?? 0} project(s).`);
     setZipFile(null);
@@ -341,8 +343,8 @@ function Projects() {
     setUploadStatus(null);
   } finally {
     setUploading(false);
+>>>>>>> main
   }
-}
 
   useEffect(() => {
     loadProjects();
@@ -374,9 +376,25 @@ function Projects() {
       >
         {loading ? "Clearing..." : "Clear Database"}
       </button>
-      <div style={{ marginTop: 12, padding: 12, border: "1px solid #ddd", borderRadius: 8 }}>
-      <h4>Add Project (Upload ZIP)</h4>
 
+      <div style={{ marginTop: 12, padding: 12, border: "1px solid #ddd", borderRadius: 8 }}>
+        <h4>Add Project (Upload ZIP)</h4>
+
+<<<<<<< feature/portfolio-web-page
+        <input
+          type="file"
+          accept=".zip"
+          onChange={(e) => setZipFile(e.target.files?.[0] ?? null)}
+          disabled={loading}
+        />
+
+        <button onClick={handleUpload} disabled={uploading || !zipFile} style={{ marginLeft: 8 }}>
+          {uploading ? "Uploading..." : "Upload ZIP"}
+        </button>
+
+        {zipFile && <p style={{ marginTop: 8, opacity: 0.8 }}>Selected: {zipFile.name}</p>}
+      </div>
+=======
       <input
         ref={fileInputRef}
         type="file"
@@ -402,6 +420,7 @@ function Projects() {
         </p>
       )}
     </div>
+>>>>>>> main
 
       <div style={{ marginTop: 12, padding: 12, border: "1px solid #ddd", borderRadius: 8 }}>
         <h4>Quick Load Test Projects</h4>
@@ -414,43 +433,34 @@ function Projects() {
         ].map((p) => (
           <div key={p} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
             <code style={{ flex: 1 }}>{p}</code>
-
-            <button onClick={() => setPathInput(p)} disabled={uploading}>
-              Use
-            </button>
+            <button onClick={() => setPathInput(p)} disabled={uploading}>Use</button>
           </div>
         ))}
       </div>
 
-    <div style={{ marginTop: 12, padding: 12, border: "1px solid #ddd", borderRadius: 8 }}>
-      <h4>Or Load from Local Path (Dev)</h4>
+      <div style={{ marginTop: 12, padding: 12, border: "1px solid #ddd", borderRadius: 8 }}>
+        <h4>Or Load from Local Path (Dev)</h4>
 
-      <input
-        type="text"
-        placeholder="TestResources/sample.zip"
-        value={pathInput}
-        onChange={(e) => setPathInput(e.target.value)}
-        disabled={loading}
-        style={{ width: 320 }}
-      />
+        <input
+          type="text"
+          placeholder="testResources/sample.zip"
+          value={pathInput}
+          onChange={(e) => setPathInput(e.target.value)}
+          disabled={loading}
+          style={{ width: 320 }}
+        />
 
-      <button
-        onClick={handleUploadPath}
-        disabled={uploading || !pathInput.trim()}
-        style={{ marginLeft: 8 }}
-      >
-        {uploading ? "Loading..." : "Load From Path"}
-      </button>
-    </div>
+        <button onClick={handleUploadPath} disabled={uploading || !pathInput.trim()} style={{ marginLeft: 8 }}>
+          {uploading ? "Loading..." : "Load From Path"}
+        </button>
+      </div>
 
       {error && <pre style={{ color: "crimson" }}>{error}</pre>}
 
       <div style={{ display: "flex", gap: 16, marginTop: 12 }}>
         <div style={{ minWidth: 320 }}>
           <h4>Current Projects</h4>
-          {currentProjects.length === 0 ? (
-            <p>No projects in the current import batch yet.</p>
-          ) : (
+          {currentProjects.length === 0 ? <p>No projects in the current import batch yet.</p> : (
             <ul>
               {currentProjects.map((p) => (
                 <li key={`current-${p.id}`}>
@@ -467,9 +477,7 @@ function Projects() {
           )}
 
           <h4>Previous Projects</h4>
-          {previousProjects.length === 0 ? (
-            <p>No previous projects yet.</p>
-          ) : (
+          {previousProjects.length === 0 ? <p>No previous projects yet.</p> : (
             <ul>
               {previousProjects.map((p) => (
                 <li key={`previous-${p.id}`}>
@@ -490,11 +498,7 @@ function Projects() {
 
         <div style={{ flex: 1 }}>
           <h4>Selected Project</h4>
-          {selected ? (
-            <pre>{JSON.stringify(selected, null, 2)}</pre>
-          ) : (
-            <p>Click a project to view details.</p>
-          )}
+          {selected ? <pre>{JSON.stringify(selected, null, 2)}</pre> : <p>Click a project to view details.</p>}
         </div>
       </div>
     </>
@@ -514,16 +518,16 @@ function Badges() {
     setError(null);
     try {
       const [skillsData, progressData, wrappedData] = await Promise.all([
-          listSkills(),
-          getBadgeProgress(),
-          getYearlyWrapped(),
-        ]);
-        setSkills(skillsData.skills ?? []);
-        setProgress(progressData.badges ?? []);
-        setWrapped(wrappedData.wrapped ?? []);
-      } catch (e) {
-        setError(e.message ?? "Failed to load badges and wrapped stats");
-      } finally {
+        listSkills(),
+        getBadgeProgress(),
+        getYearlyWrapped(),
+      ]);
+      setSkills(skillsData.skills ?? []);
+      setProgress(progressData.badges ?? []);
+      setWrapped(wrappedData.wrapped ?? []);
+    } catch (e) {
+      setError(e.message ?? "Failed to load badges and wrapped stats");
+    } finally {
       setLoading(false);
     }
   }
@@ -569,13 +573,9 @@ function Badges() {
       achievedBadgeMap.set(b.badge_id, { badge_id: b.badge_id, label: b.label, projects: [] });
     }
     const badge = achievedBadgeMap.get(b.badge_id);
-    if (!badge.label) {
-      badge.label = b.label;
-    }
+    if (!badge.label) badge.label = b.label;
     const alreadyListed = badge.projects.some((p) => p.project === projectName);
-    if (!alreadyListed) {
-      badge.projects.push({ project: projectName, achieved_on: null });
-    }
+    if (!alreadyListed) badge.projects.push({ project: projectName, achieved_on: null });
   });
 
   const achievedBadges = Array.from(achievedBadgeMap.values())
@@ -622,7 +622,6 @@ function Badges() {
   return (
     <>
       <h3>Badges</h3>
-
       <button onClick={loadBadgeData} disabled={loading}>
         {loading ? "Loading..." : "Refresh Badge Data"}
       </button>
@@ -732,7 +731,6 @@ function Badges() {
       ) : null}
 
       <h4>🔥 Skill Heatmap</h4>
-
       {skills.length === 0 ? (
         <p>No skills found yet. Upload a project first.</p>
       ) : (
@@ -748,12 +746,8 @@ function Badges() {
   );
 }
 
-function Help(){
-    return(
-        <>
-        <h3>This is the Help page.</h3>
-        </>
-    );
+function Help() {
+  return <><h3>This is the Help page.</h3></>;
 }
 
 export default App;
