@@ -112,24 +112,25 @@ class ContributorMergeBatchRequest(BaseModel):
 
 
 def _run_post_upload_analyses(analyzer: ProjectAnalyzer, projects):
-    """Run non-interactive analyses so uploaded projects have usable dashboard data."""
     changed = [p for p in projects if p.name in analyzer.changed_project_names]
     pending_duplicates = []
 
     if not changed:
         return pending_duplicates
-    
-    for method_name in ("analyze_git_and_contributions", "analyze_metadata", "analyze_categories", "analyze_languages", "analyze_skills", "generate_insights_noninteractive"):
+
+    pending_duplicates = analyzer.analyze_git_and_contributions(projects=changed, interactive=False) or []
+
+    pending_ids = {p["project_id"] for p in pending_duplicates}
+    clean = [p for p in changed if p.id not in pending_ids]
+
+    for method_name in ("analyze_metadata", "analyze_categories", "analyze_languages", "analyze_skills", "generate_insights_noninteractive"):
         method = getattr(analyzer, method_name, None)
         if not callable(method):
             continue
-
-        if method_name == "analyze_git_and_contributions":
-            pending_duplicates = method(projects=changed, interactive=False) or []
-        elif method_name == "analyze_skills":
-            method(projects=changed, silent=True)
+        if method_name == "analyze_skills":
+            method(projects=clean, silent=True)
         else:
-            method(projects=changed)
+            method(projects=clean)
 
     return pending_duplicates
 

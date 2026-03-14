@@ -538,6 +538,13 @@ class ProjectAnalyzer:
 
         pending = self.analyze_git_and_contributions(projects=[project], interactive=False)
 
+        if not pending:
+            self.analyze_metadata(projects=[project])
+            self.analyze_categories(projects=[project])
+            self.analyze_languages(projects=[project])
+            self.analyze_skills(projects=[project], silent=True)
+            self.generate_insights_noninteractive(projects=[project])
+
         return {
             "project_id": project.id,
             "project_name": project.name,

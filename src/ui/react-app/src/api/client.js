@@ -60,6 +60,10 @@ export function clearProjects() {
   return request("/projects/clear", { method: "POST" });
 }
 
+export function deleteProject(id) {
+  return request(`/projects/${id}`, { method: "DELETE" });
+}
+
 export function resolveContributors(project_id, resolutions) {
   return request("/projects/resolve-contributors", {
     method: "POST",
