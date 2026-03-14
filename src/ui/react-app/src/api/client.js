@@ -60,6 +60,17 @@ export function clearProjects() {
   return request("/projects/clear", { method: "POST" });
 }
 
+export function resolveContributors(project_id, resolutions) {
+  return request("/projects/resolve-contributors", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      project_id,
+      resolutions,
+    }),
+  });
+}
+
 // Skills
 
 export function listSkills() {

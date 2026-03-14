@@ -515,7 +515,7 @@ class ProjectAnalyzer:
             }
         ]
         """
-        project = self.project_manager.get_by_id(project_id)
+        project = self.project_manager.get(project_id)
         if not project:
             raise ValueError(f"Project with id {project_id} not found.")
 

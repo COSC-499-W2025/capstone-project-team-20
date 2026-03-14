@@ -6,6 +6,7 @@ import {
   uploadProjectZip,
   uploadProjectFromPath,
   clearProjects,
+  resolveContributors,
 } from "../api/client";
 
 function Projects() {
@@ -20,6 +21,10 @@ function Projects() {
   const [selected, setSelected] = useState(null);
   const [zipFile, setZipFile] = useState(null);
   const [pathInput, setPathInput] = useState("");
+  const [pendingDuplicates, setPendingDuplicates] = useState([]);
+  const [showMergeModal, setShowMergeModal] = useState(false);
+  const [mergeSelections, setMergeSelections] = useState({});
+
 
   async function loadProjects() {
     setLoading(true);
@@ -74,7 +79,15 @@ function Projects() {
       await handleSelect(res.projects[0].id);
     }
     
-    setUploadStatus(`Done! Loaded ${res?.projects?.length ?? 0} project(s).`);
+    if (res?.status === "needs_resolution" && res?.pending_duplicates?.length) {
+        setPendingDuplicates(res.pending_duplicates);
+        setMergeSelections(buildInitialMergeSelections(res.pending_duplicates));
+        setShowMergeModal(true);
+        setUploadStatus("Upload complete. Contributor merges need review.");
+    } else {
+        setUploadStatus(`Done! Loaded ${res?.projects?.length ?? 0} project(s).`);
+    }
+    
     setPathInput("");
 
   } catch (e) {
@@ -107,12 +120,78 @@ function Projects() {
     if (res?.projects?.length) 
       await handleSelect(res.projects[0].id);
     
-    setUploadStatus(`Done! Loaded ${res?.projects?.length ?? 0} project(s).`);
+    if (res?.status === "needs_resolution" && res?.pending_duplicates?.length) {
+        setPendingDuplicates(res.pending_duplicates);
+        setMergeSelections(buildInitialMergeSelections(res.pending_duplicates));
+        setShowMergeModal(true);
+        setUploadStatus("Upload complete. Contributor merges need review.");
+    } else {
+        setUploadStatus(`Done! Loaded ${res?.projects?.length ?? 0} project(s).`);
+    }
+
     setZipFile(null);
 
   } catch (e) {
     setError(e.message ?? "Upload failed");
     setUploadStatus(null);
+  } finally {
+    setUploading(false);
+  }
+}
+
+function buildInitialMergeSelections(pending) {
+  const selections = {};
+
+  for (const project of pending ?? []) {
+    for (const group of project.duplicate_groups ?? []) {
+      const key = `${project.project_id}::${group.display_name}`;
+      selections[key] = group.suggested_canonical;
+    }
+  }
+
+  return selections;
+}
+
+function updateMergeSelection(projectId, displayName, canonical) {
+  const key = `${projectId}::${displayName}`;
+  setMergeSelections((prev) => ({
+    ...prev,
+    [key]: canonical,
+  }));
+}
+
+async function handleApplyContributorMerges() {
+  try {
+    setUploading(true);
+    setError(null);
+
+    for (const project of pendingDuplicates) {
+      const resolutions = (project.duplicate_groups ?? []).map((group) => {
+        const key = `${project.project_id}::${group.display_name}`;
+        return {
+          canonical: mergeSelections[key] || group.suggested_canonical,
+          merge: group.candidates,
+        };
+      });
+
+      await resolveContributors(project.project_id, resolutions);
+    }
+
+    await loadProjects();
+
+    if (pendingDuplicates?.length) {
+      const firstProjectId = pendingDuplicates[0]?.project_id;
+      if (firstProjectId) {
+        await handleSelect(firstProjectId);
+      }
+    }
+
+    setPendingDuplicates([]);
+    setMergeSelections({});
+    setShowMergeModal(false);
+    setUploadStatus("Contributor merges applied.");
+  } catch (e) {
+    setError(e.message ?? "Failed to apply contributor merges");
   } finally {
     setUploading(false);
   }
@@ -257,6 +336,120 @@ function Projects() {
           {selected ? <pre>{JSON.stringify(selected, null, 2)}</pre> : <p>Click a project to view details.</p>}
         </div>
       </div>
+            {showMergeModal && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.45)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+          }}
+        >
+          <div
+            style={{
+              background: "white",
+              color: "black",
+              width: "min(900px, 90vw)",
+              maxHeight: "85vh",
+              overflowY: "auto",
+              borderRadius: 12,
+              padding: 20,
+              boxShadow: "0 10px 30px rgba(0,0,0,0.2)",
+            }}
+          >
+            <h3>Resolve Duplicate Contributors</h3>
+            <p>
+              We found contributors that look like the same person using different
+              emails or usernames. Choose which identity should be kept.
+            </p>
+
+            {pendingDuplicates.map((project) => (
+              <div
+                key={project.project_id}
+                style={{
+                  marginBottom: 20,
+                  padding: 12,
+                  border: "1px solid #ddd",
+                  borderRadius: 8,
+                }}
+              >
+                <h4 style={{ marginTop: 0 }}>{project.project_name}</h4>
+
+                {(project.duplicate_groups ?? []).map((group) => {
+                  const key = `${project.project_id}::${group.display_name}`;
+                  const selectedCanonical =
+                    mergeSelections[key] || group.suggested_canonical;
+
+                  return (
+                    <div
+                      key={key}
+                      style={{
+                        marginBottom: 16,
+                        padding: 12,
+                        border: "1px solid #eee",
+                        borderRadius: 8,
+                      }}
+                    >
+                      <div style={{ marginBottom: 8 }}>
+                        <strong>{group.display_name}</strong>
+                      </div>
+
+                      <div style={{ marginBottom: 8 }}>
+                        <div style={{ marginBottom: 4 }}>Detected identities:</div>
+                        <ul style={{ marginTop: 0 }}>
+                          {group.candidates.map((candidate) => (
+                            <li key={candidate}>{candidate}</li>
+                          ))}
+                        </ul>
+                      </div>
+
+                      <label>
+                        Keep as:
+                        <select
+                          value={selectedCanonical}
+                          onChange={(e) =>
+                            updateMergeSelection(
+                              project.project_id,
+                              group.display_name,
+                              e.target.value
+                            )
+                          }
+                          style={{ marginLeft: 8 }}
+                        >
+                          {group.candidates.map((candidate) => (
+                            <option key={candidate} value={candidate}>
+                              {candidate}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    </div>
+                  );
+                })}
+              </div>
+            ))}
+
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+              <button
+                onClick={() => {
+                  setShowMergeModal(false);
+                  setPendingDuplicates([]);
+                  setMergeSelections({});
+                }}
+                disabled={uploading}
+              >
+                Cancel
+              </button>
+              <button onClick={handleApplyContributorMerges} disabled={uploading}>
+                {uploading ? "Applying..." : "Apply Merges"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
