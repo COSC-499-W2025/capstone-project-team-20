@@ -241,110 +241,70 @@ function Projects() {
   }
 
   async function handleUploadPath() {
-<<<<<<< feature/portfolio-web-page
-    if (!pathInput.trim()) {
-      setError("Enter a path first (example: testResources/sample.zip)");
-      return;
-    }
-    const consent = await getPrivacyConsent();
-    if (!consent) {
-      setError("You must grant consent in Settings in order to upload projects.");
-      return;
-    }
-=======
   if (!pathInput.trim()) {
     setError("Enter a path first (example: TestResources/sample.zip)");
     return;
   }
   const consent = await getPrivacyConsent();
-  if (!consent) { setError("You must grant consent in Settings in order to upload projects."); return; }
+  if (!consent) { 
+    setError("You must grant consent in Settings in order to upload projects."); 
+    return; }
 
   setUploading(true);
   setError(null);
   setUploadStatus("Uploading and analyzing… this may take a moment.");
 
   try {
->>>>>>> main
+    const res = await uploadProjectFromPath(pathInput.trim());
+    await loadProjects();
 
-    setUploading(true);
-    setError(null);
-
-    try {
-      const res = await uploadProjectFromPath(pathInput.trim());
-      await loadProjects();
-
-      if (res?.projects?.length) await handleSelect(res.projects[0].id);
-      setPathInput("");
-    } catch (e) {
-      setError(e.message ?? "Path upload failed");
-    } finally {
-      setUploading(false);
+    if (res?.projects?.length) {
+      await handleSelect(res.projects[0].id);
     }
-<<<<<<< feature/portfolio-web-page
-=======
-
+    
     setUploadStatus(`Done! Loaded ${res?.projects?.length ?? 0} project(s).`);
     setPathInput("");
+
   } catch (e) {
     setError(e.message ?? "Path upload failed");
     setUploadStatus(null);
   } finally {
     setUploading(false);
->>>>>>> main
   }
+}
 
   async function handleUpload() {
-<<<<<<< feature/portfolio-web-page
-    if (!zipFile) {
-      setError("Pick a .zip file first.");
-      return;
-    }
-    const consent = await getPrivacyConsent();
-    if (!consent) {
-      setError("You must grant consent in Settings in order to upload projects.");
-      return;
-    }
-=======
   if (!zipFile) {
     setError("Pick a .zip file first.");
     return;
   }
   const consent = await getPrivacyConsent();
-  if (!consent) { setError("You must grant consent in Settings in order to upload projects."); return; }
+  if (!consent) { 
+    setError("You must grant consent in Settings in order to upload projects."); 
+    return; }
 
   setUploading(true);
   setError(null);
   setUploadStatus("Uploading and analyzing… this may take a moment.");
 
   try {
->>>>>>> main
 
-    setUploading(true);
-    setError(null);
+    const res = await uploadProjectZip(zipFile);
+    await loadProjects();
 
-    try {
-      const res = await uploadProjectZip(zipFile);
-      await loadProjects();
-
-      if (res?.projects?.length) await handleSelect(res.projects[0].id);
-      setZipFile(null);
-    } catch (e) {
-      setError(e.message ?? "Upload failed");
-    } finally {
-      setUploading(false);
-    }
-<<<<<<< feature/portfolio-web-page
-=======
-
+    if (res?.projects?.length) 
+      await handleSelect(res.projects[0].id);
+    
     setUploadStatus(`Done! Loaded ${res?.projects?.length ?? 0} project(s).`);
     setZipFile(null);
+
   } catch (e) {
     setError(e.message ?? "Upload failed");
     setUploadStatus(null);
   } finally {
     setUploading(false);
->>>>>>> main
   }
+}
 
   useEffect(() => {
     loadProjects();
@@ -380,21 +340,6 @@ function Projects() {
       <div style={{ marginTop: 12, padding: 12, border: "1px solid #ddd", borderRadius: 8 }}>
         <h4>Add Project (Upload ZIP)</h4>
 
-<<<<<<< feature/portfolio-web-page
-        <input
-          type="file"
-          accept=".zip"
-          onChange={(e) => setZipFile(e.target.files?.[0] ?? null)}
-          disabled={loading}
-        />
-
-        <button onClick={handleUpload} disabled={uploading || !zipFile} style={{ marginLeft: 8 }}>
-          {uploading ? "Uploading..." : "Upload ZIP"}
-        </button>
-
-        {zipFile && <p style={{ marginTop: 8, opacity: 0.8 }}>Selected: {zipFile.name}</p>}
-      </div>
-=======
       <input
         ref={fileInputRef}
         type="file"
@@ -420,7 +365,6 @@ function Projects() {
         </p>
       )}
     </div>
->>>>>>> main
 
       <div style={{ marginTop: 12, padding: 12, border: "1px solid #ddd", borderRadius: 8 }}>
         <h4>Quick Load Test Projects</h4>
@@ -748,6 +692,7 @@ function Badges() {
 
 function Help() {
   return <><h3>This is the Help page.</h3></>;
-}
+  }
 
 export default App;
+
