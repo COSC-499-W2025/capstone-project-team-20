@@ -6,6 +6,7 @@ import {
   uploadProjectZip,
   uploadProjectFromPath,
   clearProjects,
+  deleteProject,
   resolveContributorsBatch,
 } from "../api/client";
 
@@ -24,7 +25,7 @@ function Projects() {
   const [pendingDuplicates, setPendingDuplicates] = useState([]);
   const [showMergeModal, setShowMergeModal] = useState(false);
   const [mergeSelections, setMergeSelections] = useState({});
-
+  const [confirmCancel, setConfirmCancel] = useState(false);
 
   async function loadProjects() {
     setLoading(true);
@@ -160,7 +161,6 @@ function Projects() {
       setError(null);
 
       await resolveContributorsBatch(pendingDuplicates, mergeSelections);
-
       await loadProjects();
 
       const firstProjectId = pendingDuplicates[0]?.project_id;
@@ -169,11 +169,30 @@ function Projects() {
       setPendingDuplicates([]);
       setMergeSelections({});
       setShowMergeModal(false);
+      setConfirmCancel(false);
       setUploadStatus("Contributor merges applied.");
     } catch (e) {
       setError(e.message ?? "Failed to apply contributor merges");
     } finally {
       setUploading(false);
+    }
+  }
+
+  async function handleCancelAnalysis() {
+    try {
+      await Promise.all(
+        pendingDuplicates.map((p) => deleteProject(p.project_id))
+      );
+      await loadProjects();
+    } catch (e) {
+      setError(e.message ?? "Failed to cancel upload");
+    } finally {
+      setShowMergeModal(false);
+      setConfirmCancel(false);
+      setPendingDuplicates([]);
+      setMergeSelections({});
+      setUploadStatus(null);
+      setSelected(null);
     }
   }
 
@@ -323,70 +342,95 @@ function Projects() {
           <div className="pj-modal">
             <div className="pj-bar" aria-hidden="true" />
 
-            <div className="pj-modal-header">
-              <h2 className="pj-modal-title">Resolve duplicate contributors</h2>
-              <p className="pj-modal-sub">
-                These contributors appear to be the same person using different emails. Choose which identity to keep.
-              </p>
-            </div>
-
-            <div className="pj-modal-body">
-              {pendingDuplicates.map((project) => (
-                <div key={project.project_id} className="pj-project-group">
-                  <p className="pj-project-label">{project.project_name}</p>
-                  {(project.duplicate_groups ?? []).map((group) => {
-                    const key = `${project.project_id}::${group.suggested_canonical}`;
-                    const selectedCanonical = mergeSelections[key] || group.suggested_canonical;
-                    return (
-                      <div key={key} className="pj-dup-group">
-                        <p className="pj-dup-name">{group.display_name}</p>
-                        <div className="pj-candidates">
-                          {group.candidates.map((c) => (
-                            <span key={c} className="pj-candidate">{c}</span>
-                          ))}
-                        </div>
-                        <label className="pj-keep-label">
-                          <span className="pj-keep-text">Keep as</span>
-                          <select
-                            className="pj-select"
-                            value={selectedCanonical}
-                            onChange={(e) =>
-                              updateMergeSelection(project.project_id, group.display_name, e.target.value)
-                            }
-                          >
-                            {group.candidates.map((c) => (
-                              <option key={c} value={c}>{c}</option>
-                            ))}
-                          </select>
-                        </label>
-                      </div>
-                    );
-                  })}
+            {confirmCancel ? (
+              <>
+                <div className="pj-confirm-body">
+                  <div className="pj-confirm-icon">⚠️</div>
+                  <h2 className="pj-confirm-title">Cancel analysis?</h2>
+                  <p className="pj-confirm-sub">
+                    This will delete the {pendingDuplicates.length === 1 ? "project" : `${pendingDuplicates.length} projects`} that were just uploaded. This cannot be undone — you'll need to re-upload to analyze them.
+                  </p>
                 </div>
-              ))}
-            </div>
+                <div className="pj-modal-footer">
+                  <button
+                    className="pj-btn pj-btn--ghost"
+                    disabled={uploading}
+                    onClick={() => setConfirmCancel(false)}
+                  >
+                    ← Go back
+                  </button>
+                  <button
+                    className="pj-btn pj-btn--ghost pj-btn--danger"
+                    disabled={uploading}
+                    onClick={handleCancelAnalysis}
+                  >
+                    {uploading ? "Cancelling…" : "Yes, cancel analysis"}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="pj-modal-header">
+                  <h2 className="pj-modal-title">Resolve duplicate contributors</h2>
+                  <p className="pj-modal-sub">
+                    These contributors appear to be the same person using different emails. Choose which identity to keep.
+                  </p>
+                </div>
 
-            <div className="pj-modal-footer">
-              <button
-                className="pj-btn pj-btn--ghost"
-                disabled={uploading}
-                onClick={() => {
-                  setShowMergeModal(false);
-                  setPendingDuplicates([]);
-                  setMergeSelections({});
-                  setUploadStatus(null);
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                className="pj-btn pj-btn--primary"
-                disabled={uploading}
-                onClick={handleApplyContributorMerges}
-              >
-                {uploading ? "Applying…" : "Apply merges →"}
-              </button>
-            </div>
+                <div className="pj-modal-body">
+                  {pendingDuplicates.map((project) => (
+                    <div key={project.project_id} className="pj-project-group">
+                      <p className="pj-project-label">{project.project_name}</p>
+                      {(project.duplicate_groups ?? []).map((group) => {
+                        const key = `${project.project_id}::${group.suggested_canonical}`;
+                        const selectedCanonical = mergeSelections[key] || group.suggested_canonical;
+                        return (
+                          <div key={key} className="pj-dup-group">
+                            <p className="pj-dup-name">{group.display_name}</p>
+                            <div className="pj-candidates">
+                              {group.candidates.map((c) => (
+                                <span key={c} className="pj-candidate">{c}</span>
+                              ))}
+                            </div>
+                            <label className="pj-keep-label">
+                              <span className="pj-keep-text">Keep as</span>
+                              <select
+                                className="pj-select"
+                                value={selectedCanonical}
+                                onChange={(e) =>
+                                  updateMergeSelection(project.project_id, group.display_name, e.target.value)
+                                }
+                              >
+                                {group.candidates.map((c) => (
+                                  <option key={c} value={c}>{c}</option>
+                                ))}
+                              </select>
+                            </label>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ))}
+                </div>
+
+                <div className="pj-modal-footer">
+                  <button
+                    className="pj-btn pj-btn--ghost pj-btn--danger"
+                    disabled={uploading}
+                    onClick={() => setConfirmCancel(true)}
+                  >
+                    Cancel Analysis
+                  </button>
+                  <button
+                    className="pj-btn pj-btn--primary"
+                    disabled={uploading}
+                    onClick={handleApplyContributorMerges}
+                  >
+                    {uploading ? "Applying…" : "Apply merges →"}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -490,7 +534,25 @@ const CSS = `
 .pj-modal-footer {
   padding: 14px 24px; flex-shrink: 0;
   border-top: 1px solid var(--border);
-  display: flex; justify-content: flex-end; gap: 8px;
+  display: flex; justify-content: flex-end; align-items: center; gap: 8px;
+}
+.pj-confirm-body {
+  flex: 1;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 48px 32px 32px;
+  text-align: center;
+}
+.pj-confirm-icon {
+  font-size: 40px; margin-bottom: 16px;
+}
+.pj-confirm-title {
+  font-size: 20px; font-weight: 700; color: var(--text);
+  margin: 0 0 12px;
+}
+.pj-confirm-sub {
+  font-size: 14px; color: var(--muted); line-height: 1.6;
+  max-width: 380px; margin: 0;
 }
 .pj-btn {
   display: inline-flex; align-items: center; justify-content: center;
@@ -511,4 +573,8 @@ const CSS = `
   background: transparent; color: var(--muted); border-color: var(--border);
 }
 .pj-btn--ghost:hover:not(:disabled) { border-color: var(--muted); color: var(--text); }
+.pj-modal .pj-btn--danger {
+  background: transparent; color: #f85149; border-color: #f85149;
+}
+.pj-modal .pj-btn--danger:hover:not(:disabled) { background: transparent; border-color: #ff7b72; color: #ff7b72; }
 `;
