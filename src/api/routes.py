@@ -107,6 +107,10 @@ class ContributorMergeApplyRequest(BaseModel):
     resolutions: List[ContributorMergeResolutionRequest]
 
 
+class ContributorMergeBatchRequest(BaseModel):
+    projects: List[ContributorMergeApplyRequest]
+
+
 def _run_post_upload_analyses(analyzer: ProjectAnalyzer, projects):
     """Run non-interactive analyses so uploaded projects have usable dashboard data."""
     changed = [p for p in projects if p.name in analyzer.changed_project_names]
@@ -257,6 +261,32 @@ def resolve_contributors(req: ContributorMergeApplyRequest):
     )
 
     return {"ok": True, **result}
+
+
+@router.post("/projects/resolve-contributors-batch")
+def resolve_contributors_batch(req: ContributorMergeBatchRequest):
+    """Resolve contributor duplicates for multiple projects in a single request."""
+    pm = ProjectManager()
+    results = []
+
+    for item in req.projects:
+        project = pm.get(item.project_id)
+        if not project:
+            raise HTTPException(status_code=404, detail=f"Project {item.project_id} not found.")
+
+        analyzer = ProjectAnalyzer(
+            ConfigManager(),
+            root_folders=[],
+            zip_path=Path(project.file_path)
+        )
+
+        result = analyzer.apply_contributor_merge_resolutions(
+            project_id=item.project_id,
+            resolutions=[r.model_dump() for r in item.resolutions],
+        )
+        results.append({"project_id": item.project_id, **result})
+
+    return {"ok": True, "results": results}
 
 
 @router.get("/skills", response_model=SkillsListResponse)

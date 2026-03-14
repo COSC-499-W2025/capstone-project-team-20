@@ -71,6 +71,25 @@ export function resolveContributors(project_id, resolutions) {
   });
 }
 
+export function resolveContributorsBatch(pendingDuplicates, mergeSelections) {
+  const projects = pendingDuplicates.map((project) => ({
+    project_id: project.project_id,
+    resolutions: (project.duplicate_groups ?? []).map((group) => {
+      const key = `${project.project_id}::${group.suggested_canonical}`;
+      return {
+        canonical: mergeSelections[key] || group.suggested_canonical,
+        merge: group.candidates,
+      };
+    }),
+  }));
+
+  return request("/projects/resolve-contributors-batch", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ projects }),
+  });
+}
+
 // Skills
 
 export function listSkills() {
