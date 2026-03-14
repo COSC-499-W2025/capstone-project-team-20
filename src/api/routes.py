@@ -98,21 +98,10 @@ class UploadPathRequest(BaseModel):
 
 def _run_post_upload_analyses(analyzer: ProjectAnalyzer, projects):
     """Run non-interactive analyses so uploaded projects have usable dashboard data."""
-<<<<<<< feature/portfolio-web-page
-    for method_name in (
-        "analyze_git_and_contributions",
-        "analyze_metadata",
-        "analyze_categories",
-        "analyze_languages",
-        "analyze_skills",
-        "generate_insights_noninteractive",
-    ):
-=======
     changed = [p for p in projects if p.name in analyzer.changed_project_names]
     if not changed:
         return
     for method_name in ("analyze_git_and_contributions", "analyze_metadata", "analyze_categories", "analyze_languages", "analyze_skills", "generate_insights_noninteractive"):
->>>>>>> main
         method = getattr(analyzer, method_name, None)
         if callable(method):
             if method_name == "analyze_skills":
