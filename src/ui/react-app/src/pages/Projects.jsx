@@ -6,7 +6,7 @@ import {
   uploadProjectZip,
   uploadProjectFromPath,
   clearProjects,
-  resolveContributors,
+  resolveContributorsBatch,
 } from "../api/client";
 
 function Projects() {
@@ -58,144 +58,124 @@ function Projects() {
   }
 
   async function handleUploadPath() {
-  if (!pathInput.trim()) {
-    setError("Enter a path first (example: TestResources/sample.zip)");
-    return;
-  }
-  const consent = await getPrivacyConsent();
-  if (!consent) { 
-    setError("You must grant consent in Settings in order to upload projects."); 
-    return; }
-
-  setUploading(true);
-  setError(null);
-  setUploadStatus("Uploading and analyzing… this may take a moment.");
-
-  try {
-    const res = await uploadProjectFromPath(pathInput.trim());
-    await loadProjects();
-
-    if (res?.projects?.length) {
-      await handleSelect(res.projects[0].id);
+    if (!pathInput.trim()) {
+      setError("Enter a path first (example: TestResources/sample.zip)");
+      return;
     }
-    
-    if (res?.status === "needs_resolution" && res?.pending_duplicates?.length) {
-        setPendingDuplicates(res.pending_duplicates);
-        setMergeSelections(buildInitialMergeSelections(res.pending_duplicates));
-        setShowMergeModal(true);
-        setUploadStatus("Upload complete. Contributor merges need review.");
-    } else {
-        setUploadStatus(`Done! Loaded ${res?.projects?.length ?? 0} project(s).`);
-    }
-    
-    setPathInput("");
-
-  } catch (e) {
-    setError(e.message ?? "Path upload failed");
-    setUploadStatus(null);
-  } finally {
-    setUploading(false);
-  }
-}
-
-  async function handleUpload() {
-  if (!zipFile) {
-    setError("Pick a .zip file first.");
-    return;
-  }
-  const consent = await getPrivacyConsent();
-  if (!consent) { 
-    setError("You must grant consent in Settings in order to upload projects."); 
-    return; }
-
-  setUploading(true);
-  setError(null);
-  setUploadStatus("Uploading and analyzing… this may take a moment.");
-
-  try {
-
-    const res = await uploadProjectZip(zipFile);
-    await loadProjects();
-
-    if (res?.projects?.length) 
-      await handleSelect(res.projects[0].id);
-    
-    if (res?.status === "needs_resolution" && res?.pending_duplicates?.length) {
-        setPendingDuplicates(res.pending_duplicates);
-        setMergeSelections(buildInitialMergeSelections(res.pending_duplicates));
-        setShowMergeModal(true);
-        setUploadStatus("Upload complete. Contributor merges need review.");
-    } else {
-        setUploadStatus(`Done! Loaded ${res?.projects?.length ?? 0} project(s).`);
+    const consent = await getPrivacyConsent();
+    if (!consent) {
+      setError("You must grant consent in Settings in order to upload projects.");
+      return;
     }
 
-    setZipFile(null);
-
-  } catch (e) {
-    setError(e.message ?? "Upload failed");
-    setUploadStatus(null);
-  } finally {
-    setUploading(false);
-  }
-}
-
-function buildInitialMergeSelections(pending) {
-  const selections = {};
-
-  for (const project of pending ?? []) {
-    for (const group of project.duplicate_groups ?? []) {
-      const key = `${project.project_id}::${group.display_name}`;
-      selections[key] = group.suggested_canonical;
-    }
-  }
-
-  return selections;
-}
-
-function updateMergeSelection(projectId, displayName, canonical) {
-  const key = `${projectId}::${displayName}`;
-  setMergeSelections((prev) => ({
-    ...prev,
-    [key]: canonical,
-  }));
-}
-
-async function handleApplyContributorMerges() {
-  try {
     setUploading(true);
     setError(null);
+    setUploadStatus("Uploading and analyzing… this may take a moment.");
 
-    for (const project of pendingDuplicates) {
-      const resolutions = (project.duplicate_groups ?? []).map((group) => {
-        const key = `${project.project_id}::${group.display_name}`;
-        return {
-          canonical: mergeSelections[key] || group.suggested_canonical,
-          merge: group.candidates,
-        };
-      });
+    try {
+      const res = await uploadProjectFromPath(pathInput.trim());
+      await loadProjects();
 
-      await resolveContributors(project.project_id, resolutions);
+      if (res?.projects?.length) {
+        await handleSelect(res.projects[0].id);
+      }
+
+      if (res?.status === "needs_resolution" && res?.pending_duplicates?.length) {
+        setPendingDuplicates(res.pending_duplicates);
+        setMergeSelections(buildInitialMergeSelections(res.pending_duplicates));
+        setShowMergeModal(true);
+        setUploadStatus("Upload complete. Contributor merges need review.");
+      } else {
+        setUploadStatus(`Done! Loaded ${res?.projects?.length ?? 0} project(s).`);
+      }
+
+      setPathInput("");
+    } catch (e) {
+      setError(e.message ?? "Path upload failed");
+      setUploadStatus(null);
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function handleUpload() {
+    if (!zipFile) {
+      setError("Pick a .zip file first.");
+      return;
+    }
+    const consent = await getPrivacyConsent();
+    if (!consent) {
+      setError("You must grant consent in Settings in order to upload projects.");
+      return;
     }
 
-    await loadProjects();
+    setUploading(true);
+    setError(null);
+    setUploadStatus("Uploading and analyzing… this may take a moment.");
 
-    if (pendingDuplicates?.length) {
-      const firstProjectId = pendingDuplicates[0]?.project_id;
-      if (firstProjectId) {
-        await handleSelect(firstProjectId);
+    try {
+      const res = await uploadProjectZip(zipFile);
+      await loadProjects();
+
+      if (res?.projects?.length)
+        await handleSelect(res.projects[0].id);
+
+      if (res?.status === "needs_resolution" && res?.pending_duplicates?.length) {
+        setPendingDuplicates(res.pending_duplicates);
+        setMergeSelections(buildInitialMergeSelections(res.pending_duplicates));
+        setShowMergeModal(true);
+        setUploadStatus("Upload complete. Contributor merges need review.");
+      } else {
+        setUploadStatus(`Done! Loaded ${res?.projects?.length ?? 0} project(s).`);
+      }
+
+      setZipFile(null);
+    } catch (e) {
+      setError(e.message ?? "Upload failed");
+      setUploadStatus(null);
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  function buildInitialMergeSelections(pending) {
+    const selections = {};
+    for (const project of pending ?? []) {
+      for (const group of project.duplicate_groups ?? []) {
+        const key = `${project.project_id}::${group.suggested_canonical}`;
+        selections[key] = group.suggested_canonical;
       }
     }
-
-    setPendingDuplicates([]);
-    setMergeSelections({});
-    setShowMergeModal(false);
-    setUploadStatus("Contributor merges applied.");
-  } catch (e) {
-    setError(e.message ?? "Failed to apply contributor merges");
-  } finally {
-    setUploading(false);
+    return selections;
   }
-}
+
+  function updateMergeSelection(projectId, displayName, canonical) {
+    const key = `${projectId}::${displayName}`;
+    setMergeSelections((prev) => ({ ...prev, [key]: canonical }));
+  }
+
+  async function handleApplyContributorMerges() {
+    try {
+      setUploading(true);
+      setError(null);
+
+      await resolveContributorsBatch(pendingDuplicates, mergeSelections);
+
+      await loadProjects();
+
+      const firstProjectId = pendingDuplicates[0]?.project_id;
+      if (firstProjectId) await handleSelect(firstProjectId);
+
+      setPendingDuplicates([]);
+      setMergeSelections({});
+      setShowMergeModal(false);
+      setUploadStatus("Contributor merges applied.");
+    } catch (e) {
+      setError(e.message ?? "Failed to apply contributor merges");
+    } finally {
+      setUploading(false);
+    }
+  }
 
   useEffect(() => {
     loadProjects();
@@ -203,6 +183,7 @@ async function handleApplyContributorMerges() {
 
   return (
     <>
+      <style>{CSS}</style>
       <h3>Projects</h3>
 
       <button onClick={loadProjects} disabled={loading}>
@@ -231,31 +212,31 @@ async function handleApplyContributorMerges() {
       <div style={{ marginTop: 12, padding: 12, border: "1px solid #ddd", borderRadius: 8 }}>
         <h4>Add Project (Upload ZIP)</h4>
 
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept=".zip"
-        onChange={(e) => setZipFile(e.target.files?.[0] ?? null)}
-        disabled={loading}
-        style={{ display: "none" }}
-      />
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".zip"
+          onChange={(e) => setZipFile(e.target.files?.[0] ?? null)}
+          disabled={loading}
+          style={{ display: "none" }}
+        />
 
-      <button
-        onClick={() => zipFile ? handleUpload() : fileInputRef.current?.click()}
-        disabled={uploading}
-        style={{ marginLeft: 8 }}
-      >
-        {uploading ? "Uploading..." : zipFile ? "Upload ZIP" : "Choose ZIP"}
-      </button>
+        <button
+          onClick={() => zipFile ? handleUpload() : fileInputRef.current?.click()}
+          disabled={uploading}
+          style={{ marginLeft: 8 }}
+        >
+          {uploading ? "Uploading..." : zipFile ? "Upload ZIP" : "Choose ZIP"}
+        </button>
 
-      {uploadStatus && <p style={{ marginTop: 8, opacity: 0.8 }}>{uploadStatus}</p>}
+        {uploadStatus && <p style={{ marginTop: 8, opacity: 0.8 }}>{uploadStatus}</p>}
 
-      {zipFile && (
-        <p style={{ marginTop: 8, opacity: 0.8 }}>
-          Selected: {zipFile.name}
-        </p>
-      )}
-    </div>
+        {zipFile && (
+          <p style={{ marginTop: 8, opacity: 0.8 }}>
+            Selected: {zipFile.name}
+          </p>
+        )}
+      </div>
 
       <div style={{ marginTop: 12, padding: 12, border: "1px solid #ddd", borderRadius: 8 }}>
         <h4>Quick Load Test Projects</h4>
@@ -336,115 +317,74 @@ async function handleApplyContributorMerges() {
           {selected ? <pre>{JSON.stringify(selected, null, 2)}</pre> : <p>Click a project to view details.</p>}
         </div>
       </div>
-            {showMergeModal && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0,0,0,0.45)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 1000,
-          }}
-        >
-          <div
-            style={{
-              background: "white",
-              color: "black",
-              width: "min(900px, 90vw)",
-              maxHeight: "85vh",
-              overflowY: "auto",
-              borderRadius: 12,
-              padding: 20,
-              boxShadow: "0 10px 30px rgba(0,0,0,0.2)",
-            }}
-          >
-            <h3>Resolve Duplicate Contributors</h3>
-            <p>
-              We found contributors that look like the same person using different
-              emails or usernames. Choose which identity should be kept.
-            </p>
 
-            {pendingDuplicates.map((project) => (
-              <div
-                key={project.project_id}
-                style={{
-                  marginBottom: 20,
-                  padding: 12,
-                  border: "1px solid #ddd",
-                  borderRadius: 8,
-                }}
-              >
-                <h4 style={{ marginTop: 0 }}>{project.project_name}</h4>
+      {showMergeModal && (
+        <div className="pj-overlay">
+          <div className="pj-modal">
+            <div className="pj-bar" aria-hidden="true" />
 
-                {(project.duplicate_groups ?? []).map((group) => {
-                  const key = `${project.project_id}::${group.display_name}`;
-                  const selectedCanonical =
-                    mergeSelections[key] || group.suggested_canonical;
+            <div className="pj-modal-header">
+              <h2 className="pj-modal-title">Resolve duplicate contributors</h2>
+              <p className="pj-modal-sub">
+                These contributors appear to be the same person using different emails. Choose which identity to keep.
+              </p>
+            </div>
 
-                  return (
-                    <div
-                      key={key}
-                      style={{
-                        marginBottom: 16,
-                        padding: 12,
-                        border: "1px solid #eee",
-                        borderRadius: 8,
-                      }}
-                    >
-                      <div style={{ marginBottom: 8 }}>
-                        <strong>{group.display_name}</strong>
-                      </div>
-
-                      <div style={{ marginBottom: 8 }}>
-                        <div style={{ marginBottom: 4 }}>Detected identities:</div>
-                        <ul style={{ marginTop: 0 }}>
-                          {group.candidates.map((candidate) => (
-                            <li key={candidate}>{candidate}</li>
+            <div className="pj-modal-body">
+              {pendingDuplicates.map((project) => (
+                <div key={project.project_id} className="pj-project-group">
+                  <p className="pj-project-label">{project.project_name}</p>
+                  {(project.duplicate_groups ?? []).map((group) => {
+                    const key = `${project.project_id}::${group.suggested_canonical}`;
+                    const selectedCanonical = mergeSelections[key] || group.suggested_canonical;
+                    return (
+                      <div key={key} className="pj-dup-group">
+                        <p className="pj-dup-name">{group.display_name}</p>
+                        <div className="pj-candidates">
+                          {group.candidates.map((c) => (
+                            <span key={c} className="pj-candidate">{c}</span>
                           ))}
-                        </ul>
+                        </div>
+                        <label className="pj-keep-label">
+                          <span className="pj-keep-text">Keep as</span>
+                          <select
+                            className="pj-select"
+                            value={selectedCanonical}
+                            onChange={(e) =>
+                              updateMergeSelection(project.project_id, group.display_name, e.target.value)
+                            }
+                          >
+                            {group.candidates.map((c) => (
+                              <option key={c} value={c}>{c}</option>
+                            ))}
+                          </select>
+                        </label>
                       </div>
+                    );
+                  })}
+                </div>
+              ))}
+            </div>
 
-                      <label>
-                        Keep as:
-                        <select
-                          value={selectedCanonical}
-                          onChange={(e) =>
-                            updateMergeSelection(
-                              project.project_id,
-                              group.display_name,
-                              e.target.value
-                            )
-                          }
-                          style={{ marginLeft: 8 }}
-                        >
-                          {group.candidates.map((candidate) => (
-                            <option key={candidate} value={candidate}>
-                              {candidate}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                    </div>
-                  );
-                })}
-              </div>
-            ))}
-
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+            <div className="pj-modal-footer">
               <button
+                className="pj-btn pj-btn--ghost"
+                disabled={uploading}
                 onClick={() => {
                   setShowMergeModal(false);
                   setPendingDuplicates([]);
                   setMergeSelections({});
+                  setUploadStatus(null);
                 }}
-                disabled={uploading}
               >
                 Cancel
               </button>
-              <button onClick={handleApplyContributorMerges} disabled={uploading}>
-                {uploading ? "Applying..." : "Apply Merges"}
+              <button
+                className="pj-btn pj-btn--primary"
+                disabled={uploading}
+                onClick={handleApplyContributorMerges}
+              >
+                {uploading ? "Applying…" : "Apply merges →"}
               </button>
             </div>
           </div>
@@ -453,4 +393,122 @@ async function handleApplyContributorMerges() {
     </>
   );
 }
+
 export default Projects;
+
+// ── Styles ────────────────────────────────────────────────────────────────────
+
+const CSS = `
+.pj-overlay {
+  position: fixed; inset: 0; z-index: 1000;
+  background: rgba(0,0,0,0.6);
+  display: flex; align-items: center; justify-content: center;
+}
+.pj-modal {
+  --accent:  #58a6ff;
+  --accent2: #f78166;
+  --bg:      #0d1117;
+  --surface: #161b22;
+  --border:  #30363d;
+  --text:    #e6edf3;
+  --muted:   #8b949e;
+  --r:       10px;
+  width: min(620px, 92vw); max-height: 80vh;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 16px; overflow: hidden;
+  display: flex; flex-direction: column;
+  box-shadow: 0 24px 64px rgba(0,0,0,.6), 0 0 0 1px rgba(88,166,255,.06);
+  font-family: 'DM Sans', 'Segoe UI', system-ui, sans-serif;
+  animation: pj-fadein .2s ease both;
+}
+@keyframes pj-fadein {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.pj-bar {
+  height: 3px; flex-shrink: 0;
+  background: linear-gradient(90deg, var(--accent), var(--accent2), var(--accent));
+  background-size: 200% 100%;
+  animation: pj-shimmer 3s linear infinite;
+}
+@keyframes pj-shimmer {
+  0%   { background-position: 200% center; }
+  100% { background-position: -200% center; }
+}
+.pj-modal-header {
+  padding: 20px 24px 16px; flex-shrink: 0;
+  border-bottom: 1px solid var(--border);
+}
+.pj-modal-title {
+  font-size: 17px; font-weight: 700; margin: 0 0 6px;
+  color: var(--text);
+}
+.pj-modal-sub {
+  font-size: 13px; color: var(--muted); line-height: 1.6; margin: 0;
+}
+.pj-modal-body {
+  padding: 16px 24px; overflow-y: auto; flex: 1;
+}
+.pj-project-group { margin-bottom: 20px; }
+.pj-project-label {
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .06em; color: var(--muted); margin: 0 0 10px;
+}
+.pj-dup-group {
+  margin-bottom: 10px; padding: 14px 16px;
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: var(--r);
+}
+.pj-dup-name {
+  font-size: 14px; font-weight: 600; color: var(--text); margin: 0 0 8px;
+}
+.pj-candidates {
+  display: flex; flex-direction: column; gap: 3px; margin-bottom: 12px;
+}
+.pj-candidate {
+  font-size: 12px; color: var(--muted);
+}
+.pj-keep-label {
+  display: flex; align-items: center; gap: 8px;
+}
+.pj-keep-text {
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .6px; color: var(--muted); white-space: nowrap;
+}
+.pj-select {
+  flex: 1; height: 36px; padding: 0 10px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r); color: var(--text);
+  font-size: 12px;
+  outline: none; cursor: pointer;
+  transition: border-color .15s, box-shadow .15s;
+}
+.pj-select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(88,166,255,.15);
+}
+.pj-modal-footer {
+  padding: 14px 24px; flex-shrink: 0;
+  border-top: 1px solid var(--border);
+  display: flex; justify-content: flex-end; gap: 8px;
+}
+.pj-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  height: 38px; padding: 0 18px; border-radius: var(--r);
+  font-size: 14px; font-weight: 600; cursor: pointer;
+  border: 1.5px solid transparent; font-family: inherit;
+  transition: all .15s;
+}
+.pj-btn--primary {
+  background: var(--accent); color: #0d1117; border-color: var(--accent);
+}
+.pj-btn--primary:hover:not(:disabled) {
+  background: #79c0ff; border-color: #79c0ff;
+  box-shadow: 0 0 14px rgba(88,166,255,.35); transform: translateY(-1px);
+}
+.pj-btn--primary:disabled { opacity: .5; cursor: not-allowed; }
+.pj-btn--ghost {
+  background: transparent; color: var(--muted); border-color: var(--border);
+}
+.pj-btn--ghost:hover:not(:disabled) { border-color: var(--muted); color: var(--text); }
+`;
