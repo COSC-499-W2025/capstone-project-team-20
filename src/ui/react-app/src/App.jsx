@@ -32,122 +32,122 @@ const formatBadgeRequirement = (metric, target) => {
 const ALL_BADGE_DETAILS = {
   gigantana: {
     label: "Gigantana",
-    description: "A massive project with heavyweight assets and scope.",
+    description: "Built for big ambitions—this project has enterprise-scale footprint and scope.",
     howToEarn: "Reach at least 1024 MB project size.",
   },
   slow_burn: {
     label: "Slow Burn",
-    description: "Steady long-term effort across a full year.",
+    description: "Consistent effort over time, showing long-term ownership and discipline.",
     howToEarn: "Keep project duration at 365+ days.",
   },
   flash_build: {
     label: "Flash Build",
-    description: "A fast sprint with meaningful output.",
+    description: "From idea to delivery in record time without sacrificing substance.",
     howToEarn: "Finish in 7 days or less with at least 20 files.",
   },
   fresh_breeze: {
     label: "Fresh Breeze",
-    description: "A compact project delivered quickly.",
+    description: "Lean execution: concise codebase, quick turnaround, clear output.",
     howToEarn: "Finish within 30 days and keep files under 50.",
   },
   marathoner: {
     label: "Marathoner",
-    description: "A multi-year commitment to growth.",
+    description: "Long-haul builder energy with sustained work across multiple years.",
     howToEarn: "Keep project duration at 730+ days.",
   },
   tiny_but_mighty: {
     label: "Tiny but Mighty",
-    description: "Small footprint, high impact.",
+    description: "Efficient and focused—small size with meaningful delivery impact.",
     howToEarn: "Keep size at 5 MB or less while shipping at least 10 files.",
   },
   rapid_builder: {
     label: "Rapid Builder",
-    description: "High-volume output in a tight window.",
+    description: "High-throughput execution: lots shipped quickly in a short timeline.",
     howToEarn: "Ship 500+ files within 120 days.",
   },
   jack_of_all_trades: {
     label: "Jack of All Trades",
-    description: "Excellent language diversity.",
+    description: "Wide technical breadth with confidence across many programming languages.",
     howToEarn: "Use at least 5 languages in a project.",
   },
   polyglot: {
     label: "Polyglot",
-    description: "Comfortable across multiple languages.",
+    description: "Strong cross-language versatility across multiple parts of the stack.",
     howToEarn: "Use at least 3 languages.",
   },
   language_specialist: {
     label: "Language Specialist",
-    description: "Deep specialization in one primary language.",
+    description: "Deep craft in a primary language with clear mastery and focus.",
     howToEarn: "Make one language at least 80% of code share.",
   },
   balanced_palette: {
     label: "Balanced Palette",
-    description: "Great balance across a mixed stack.",
+    description: "Healthy distribution of effort across several technologies.",
     howToEarn: "Use 3+ languages with top language at or below 50%.",
   },
   solo_runner: {
     label: "Solo Runner",
-    description: "Built independently end-to-end.",
+    description: "Independently scoped, built, and delivered from start to finish.",
     howToEarn: "Have 1 or fewer contributors.",
   },
   team_effort: {
     label: "Team Effort",
-    description: "Strong collaboration across contributors.",
+    description: "Collaboration-forward development with meaningful team participation.",
     howToEarn: "Have 3 or more contributors.",
   },
   test_pilot: {
     label: "Test Pilot",
-    description: "Testing takes a meaningful share of the repo.",
+    description: "Quality-first mindset with robust testing coverage.",
     howToEarn: "Keep test share at 15% or higher.",
   },
   test_scout: {
     label: "Test Scout",
-    description: "Testing is present and consistent.",
+    description: "Reliable testing baseline built into regular development flow.",
     howToEarn: "Keep test share between 5% and 15%.",
   },
   docs_guardian: {
     label: "Docs Guardian",
-    description: "Documentation-first mindset.",
+    description: "Documentation champion who keeps knowledge discoverable and maintained.",
     howToEarn: "Keep docs share at 20% or higher.",
   },
   doc_enthusiast: {
     label: "Doc Enthusiast",
-    description: "Good documentation coverage.",
+    description: "Strong documentation habits that improve onboarding and clarity.",
     howToEarn: "Keep docs share between 10% and 20%.",
   },
   pixel_perfect: {
     label: "Pixel Perfect",
-    description: "Strong visual/design emphasis.",
+    description: "High design fidelity with polished visual or game asset quality.",
     howToEarn: "Keep design or game assets at 25% or higher.",
   },
   visual_storyteller: {
     label: "Visual Storyteller",
-    description: "Visual assets are a key supporting strength.",
+    description: "Visual communication is a major strength of the project experience.",
     howToEarn: "Keep design or game assets between 15% and 25%.",
   },
   data_seedling: {
     label: "Data Seedling",
-    description: "Early signs of data-heavy work.",
+    description: "Early data-driven momentum with clear analytical direction.",
     howToEarn: "Keep data share between 10% and 25%.",
   },
   data_wrangler: {
     label: "Data Wrangler",
-    description: "Strong data footprint and tooling.",
+    description: "Data-focused implementation with meaningful datasets and tooling.",
     howToEarn: "Keep data share at 25%+ or use data stack skills.",
   },
   code_cruncher: {
     label: "Code Cruncher",
-    description: "Code-focused project composition.",
+    description: "Core strength is software implementation with code at the center.",
     howToEarn: "Keep code share at 60% or higher.",
   },
   container_captain: {
     label: "Container Captain",
-    description: "Deployment-ready with containers.",
+    description: "Operational maturity with containerized workflows and deployment readiness.",
     howToEarn: "Use Docker in the project skills.",
   },
   full_stack_explorer: {
     label: "Full Stack Explorer",
-    description: "Bridges frontend and backend confidently.",
+    description: "Connects UI and backend systems into cohesive end-to-end delivery.",
     howToEarn: "Use backend + frontend languages and React/Next.js.",
   },
 };
@@ -456,6 +456,8 @@ function Badges() {
   const [progress, setProgress] = useState([]);
   const [wrapped, setWrapped] = useState([]);
   const [activeWrappedYear, setActiveWrappedYear] = useState(null);
+  const [showAllBadges, setShowAllBadges] = useState(false);
+  const [activeHeatmapBadgeId, setActiveHeatmapBadgeId] = useState(null);
 
   async function loadBadgeData() {
     setLoading(true);
@@ -485,7 +487,7 @@ function Badges() {
     return acc;
   }, {});
 
-  const inProgress = progress.filter((b) => !b.earned).map((badge) => ({
+  const inProgress = progress.filter((b) => !b.earned && (b.progress ?? 0) > 0).map((badge) => ({
     ...badge,
     description: ALL_BADGE_DETAILS[badge.badge_id]?.description ?? "Keep building to unlock this badge.",
     howToEarn: ALL_BADGE_DETAILS[badge.badge_id]?.howToEarn ?? formatBadgeRequirement(badge.metric, badge.target),
@@ -541,6 +543,24 @@ function Badges() {
     }))
     .sort((a, b) => a.label.localeCompare(b.label));
 
+  const badgeHeatmapTiles = allBadgeCatalog.map((badge) => {
+    const progressValue = badge.unlocked ? 1 : (badge.trackedProgress?.progress ?? 0);
+    const completionPercent = Math.round(progressValue * 100);
+    const stateLabel = badge.unlocked ? "Unlocked" : completionPercent === 0 ? "Not started" : `${completionPercent}% complete`;
+
+    let intensityClass = "badge-heatmap-tile--cold";
+    if (badge.unlocked || completionPercent >= 90) intensityClass = "badge-heatmap-tile--hot";
+    else if (completionPercent >= 60) intensityClass = "badge-heatmap-tile--warm";
+    else if (completionPercent >= 30) intensityClass = "badge-heatmap-tile--mild";
+
+    return {
+      ...badge,
+      completionPercent,
+      stateLabel,
+      intensityClass,
+    };
+  });
+
   const now = new Date();
   const currentYear = now.getFullYear();
   const isCurrentYearComplete = now.getMonth() === 11 && now.getDate() === 31;
@@ -562,6 +582,9 @@ function Badges() {
 
   const openWrappedYear = (year) => setActiveWrappedYear(year);
   const selectedWrapped = activeWrappedYear ? wrappedByYear[activeWrappedYear] : null;
+  const selectedHeatmapBadge = activeHeatmapBadgeId
+    ? badgeHeatmapTiles.find((badge) => badge.badgeId === activeHeatmapBadgeId) ?? null
+    : null;
 
   return (
     <>
@@ -572,24 +595,35 @@ function Badges() {
 
       {error && <pre style={{ color: "crimson" }}>{error}</pre>}
 
-      <section className="badges-hero">
-        <h4>🏆 All Possible Badges</h4>
-        <p>Every badge, what it means, and how to earn it.</p>
-        <div className="badge-guide-grid">
-          {allBadgeCatalog.map((badge) => (
-            <article className="badge-guide-card" key={badge.badgeId}>
-              <h5>{badge.label} {badge.unlocked ? "✅" : "🔒"}</h5>
-              <p>{badge.description}</p>
-              <p><strong>How to earn:</strong> {badge.howToEarn}</p>
-              <p className="badge-description">{badge.trackedProgress ? `Tracked progress: ${Math.round((badge.trackedProgress.progress ?? 0) * 100)}%` : "Tracked progress: calculated when unlocked in projects."}</p>
-            </article>
+      <section className="badge-heatmap">
+        <h4>🗺️ Badge Completion Heatmap</h4>
+        <p>Click any badge tile to view details. Darker tiles indicate higher completion progress.</p>
+        <div className="badge-heatmap-grid">
+          {badgeHeatmapTiles.map((badge) => (
+            <button
+              type="button"
+              key={`heatmap-${badge.badgeId}`}
+              className={`badge-heatmap-tile ${badge.intensityClass}`}
+              onClick={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                setActiveHeatmapBadgeId(badge.badgeId);
+              }}
+              aria-label={`Open ${badge.label} badge details`}
+            >
+              <div className="badge-heatmap-header">
+                <strong>{badge.label}</strong>
+                <span>{badge.unlocked ? "✅" : "🔒"}</span>
+              </div>
+              <p>{badge.stateLabel}</p>
+            </button>
           ))}
         </div>
       </section>
 
-      <h4>🎯 Badge Progress Tracker (Uncompleted)</h4>
+      <h4>🎯 Badge Progress Tracker (Started, Uncompleted)</h4>
       {inProgress.length === 0 ? (
-        <p>All tracked progress badges are complete 🎉</p>
+        <p>No started in-progress badges yet. Start building to unlock more badges.</p>
       ) : (
         <ul className="in-progress-list">
           {inProgress.map((b) => (
@@ -607,6 +641,29 @@ function Badges() {
           ))}
         </ul>
       )}
+
+      <div className="all-badges-toggle">
+        <button type="button" onClick={() => setShowAllBadges((prev) => !prev)}>
+          {showAllBadges ? "Hide All Badges" : "All Badges"}
+        </button>
+      </div>
+
+      {showAllBadges ? (
+        <section className="badges-hero">
+          <h4>🏆 All Possible Badges</h4>
+          <p>Every badge, what it means, and how to earn it.</p>
+          <div className="badge-guide-grid">
+            {allBadgeCatalog.map((badge) => (
+              <article className="badge-guide-card" key={badge.badgeId}>
+                <h5>{badge.label} {badge.unlocked ? "✅" : "🔒"}</h5>
+                <p>{badge.description}</p>
+                <p><strong>How to earn:</strong> {badge.howToEarn}</p>
+                <p className="badge-description">{badge.trackedProgress ? `Tracked progress: ${Math.round((badge.trackedProgress.progress ?? 0) * 100)}%` : "Tracked progress: calculated when unlocked in projects."}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       <h4>🏅 Unlocked Badges</h4>
       {achievedBadges.length === 0 ? (
@@ -642,6 +699,21 @@ function Badges() {
           ))}
         </div>
       )}
+
+      {selectedHeatmapBadge ? (
+        <div className="badge-detail-backdrop" onClick={() => setActiveHeatmapBadgeId(null)}>
+          <div className="badge-detail-modal" role="dialog" aria-modal="true" aria-label={`${selectedHeatmapBadge.label} badge details`} onClick={(event) => event.stopPropagation()}>
+            <button className="wrapped-close" onClick={() => setActiveHeatmapBadgeId(null)}>✕</button>
+            <h5>{selectedHeatmapBadge.label}</h5>
+            <p>{selectedHeatmapBadge.description}</p>
+            <p><strong>How to earn:</strong> {selectedHeatmapBadge.howToEarn}</p>
+            <p>
+              <strong>Progress:</strong> {selectedHeatmapBadge.stateLabel}
+              {selectedHeatmapBadge.trackedProgress?.project?.name ? ` • Closest project: ${selectedHeatmapBadge.trackedProgress.project.name}` : ""}
+            </p>
+          </div>
+        </div>
+      ) : null}
 
       {selectedWrapped ? (
         <div className="wrapped-modal-backdrop" onClick={() => setActiveWrappedYear(null)}>
@@ -695,4 +767,3 @@ function Help() {
   }
 
 export default App;
-

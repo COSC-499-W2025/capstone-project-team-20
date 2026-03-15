@@ -194,6 +194,106 @@ html, body, #root {
   font-size: 0.92rem;
 }
 
+
+.badge-heatmap {
+  margin: 14px 0 18px;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid #356487;
+  background: linear-gradient(135deg, rgba(7, 33, 56, 0.95), rgba(3, 24, 42, 0.95));
+}
+
+.badge-heatmap-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+  align-items: stretch;
+}
+
+.badge-heatmap-tile {
+  border-radius: 10px;
+  padding: 12px;
+  border: 1px solid transparent;
+  min-height: 96px;
+  text-align: left;
+  width: 100%;
+  cursor: pointer;
+  background: transparent;
+  color: #f2fbff;
+  display: block;
+}
+
+.badge-heatmap-tile:hover {
+  filter: brightness(1.05);
+}
+
+
+.badge-detail-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(1, 8, 18, 0.78);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1200;
+  padding: 20px;
+}
+
+.badge-detail-modal {
+  width: min(620px, 92vw);
+  max-height: 82vh;
+  overflow-y: auto;
+  background: linear-gradient(135deg, rgba(5, 40, 74, 0.98), rgba(2, 24, 48, 0.98));
+  border: 1px solid #4a7ba1;
+  border-radius: 16px;
+  padding: 18px;
+  position: relative;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+}
+
+.all-badges-toggle {
+  margin: 14px 0;
+}
+
+.badge-detail-modal p {
+  color: #d8edf8;
+  margin: 8px 0;
+}
+
+.badge-heatmap-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.badge-heatmap-tile p {
+  margin: 0;
+  color: #d8edf8;
+  font-size: 0.88rem;
+}
+
+.badge-heatmap-tile.badge-heatmap-tile--cold {
+  background: rgba(45, 67, 89, 0.45);
+  border-color: rgba(123, 146, 170, 0.55);
+}
+
+.badge-heatmap-tile.badge-heatmap-tile--mild {
+  background: rgba(22, 97, 122, 0.45);
+  border-color: rgba(95, 194, 218, 0.65);
+}
+
+.badge-heatmap-tile.badge-heatmap-tile--warm {
+  background: rgba(20, 116, 105, 0.48);
+  border-color: rgba(113, 227, 186, 0.72);
+}
+
+.badge-heatmap-tile.badge-heatmap-tile--hot {
+  background: rgba(36, 138, 90, 0.56);
+  border-color: rgba(152, 255, 199, 0.8);
+  box-shadow: inset 0 0 0 1px rgba(171, 255, 213, 0.35);
+}
+
 .portfolio-panel {
   margin-top: 14px;
   padding: 10px;
