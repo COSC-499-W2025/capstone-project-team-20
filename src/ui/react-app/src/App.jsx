@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import Settings from "./Settings";
+import Help from "./Help";
 import ProfileSetup from "./pages/ProfileSetup";
 import ResumePage from "./pages/ResumePage";
 import PortfolioPage from "./pages/PortfolioPage";
@@ -696,6 +697,17 @@ function Badges() {
 function Help() {
   return <><h3>This is the Help page.</h3></>;
   }
+
+  return (
+    <>
+      <h3>Portfolio</h3>
+      <button onClick={handleExport} disabled={loading}>
+        {loading ? "Exporting..." : "Export Portfolio PDF"}
+      </button>
+      {msg && <p>{msg}</p>}
+    </>
+  );
+}
 
 export default App;
 
