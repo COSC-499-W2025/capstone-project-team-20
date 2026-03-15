@@ -17,31 +17,60 @@ html, body, #root {
   background: transparent;
   color: var(--text);
   width: 100%;
+  overflow: hidden;
 }
 
-/* main app layout */
-.screen{
-  display:flex;
-  height:100vh;
-  padding: 24px;
-  gap: 20px;
+.button-on,
+.button-on:hover {
+  color: var(--primary);
+  background: var(--secondary);
+  border: solid 6px var(--secondary_low);
+  border-right: solid 6px var(--secondary);
+  border-top: solid 3px var(--secondary_low);
+  border-bottom: solid 3px var(--secondary_low);
+}
+
+.button-off {
+  color: var(--secondary);
+  background: var(--primary);
+  border: solid 6px var(--secondary_low);
+  border-top: solid 3px var(--secondary_low);
+  border-bottom: solid 3px var(--secondary_low);
+}
+
+.button-off:hover {
+  border: solid 6px var(--primary_desat);
+  border-top: solid 3px var(--primary_desat);
+  border-bottom: solid 3px var(--primary_desat);
+}
+
+.screen {
+  display: flex;
+  width: auto;
+  height: 100vh;
+  background-color: var(--secondary_low);
+  overflow: hidden;
 }
 
 /* LEFT SIDEBAR */
 
-.stacked-buttons{
-  width:180px;
-  display:flex;
-  flex-direction:column;
-  gap:8px;
-  background: transparent;
+.stacked-buttons {
+  width: fit-content;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  margin-right: 0;
+  margin-top: 3px;
+  background-color: var(--secondary_low);
 }
 
 /* sidebar buttons */
-.stacked-buttons button{
+.stacked-buttons button {
   height:44px;
   border-radius:10px;
-  font-weight:600;
+  font-weight: bold;
+  aspect-ratio: 1/1;
+  min-width: 125px;
   font-size:14px;
   cursor:pointer;
   border:1px solid var(--border);
@@ -69,7 +98,7 @@ html, body, #root {
 
 /* RIGHT CONTENT PANEL */
 
-.menu{
+.menu {
   flex:1;
   background: var(--surface);
   border:1px solid var(--border);
@@ -217,4 +246,190 @@ html, body, #root {
 .screen{
   position:relative;
   z-index:1;
+  color: #e9f7ff;
+  border-radius: 16px;
+  padding: 16px 20px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.28);
+}
+
+.menu h3,
+.menu h4,
+.menu h5 {
+  color: #f2fbff;
+}
+
+.menu button {
+  border: 1px solid #4e799d;
+  background: linear-gradient(180deg, #23557f, #1a3f61);
+  color: #ecfbff;
+  border-radius: 10px;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+.menu button:hover {
+  filter: brightness(1.1);
+}
+
+.badges-hero {
+  background: linear-gradient(135deg, rgba(85, 189, 202, 0.18), rgba(242, 125, 66, 0.16));
+  border: 1px solid #3b7096;
+  border-radius: 14px;
+  padding: 14px;
+  margin: 14px 0;
+}
+
+.badge-guide-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.badge-guide-card {
+  background: rgba(1, 18, 43, 0.75);
+  border: 1px solid #3d6d92;
+  border-radius: 12px;
+  padding: 10px;
+}
+
+.badge-guide-card h5 {
+  margin: 0 0 6px;
+}
+
+.badge-guide-card p {
+  margin: 0;
+  color: #cfeaf7;
+  font-size: 0.94rem;
+}
+
+.in-progress-list {
+  list-style: none;
+  padding-left: 0;
+}
+
+.progress-card {
+  margin-bottom: 12px;
+  border: 1px solid #2f4d6f;
+  border-radius: 12px;
+  padding: 12px;
+  background: rgba(2, 32, 62, 0.6);
+}
+
+.progress-track {
+  height: 10px;
+  border-radius: 999px;
+  background: #21344a;
+  margin-top: 8px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #55bdca, #98ffff);
+}
+
+.wrapped-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.wrapped-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(1, 8, 18, 0.72);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+  padding: 20px;
+}
+
+.wrapped-modal {
+  width: min(760px, 92vw);
+  max-height: 86vh;
+  overflow-y: auto;
+  background: linear-gradient(135deg, rgba(5, 40, 74, 0.98), rgba(2, 24, 48, 0.98));
+  border: 1px solid #4a7ba1;
+  border-radius: 16px;
+  padding: 18px;
+  position: relative;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+}
+
+.wrapped-close {
+  position: absolute;
+  right: 12px;
+  top: 10px;
+}
+
+.badge-description {
+  margin: 6px 0 0;
+  color: #cfeaf7;
+  font-size: 0.92rem;
+}
+
+.portfolio-panel {
+  margin-top: 14px;
+  padding: 10px;
+  border: 1px solid var(--primary);
+  border-radius: 10px;
+  background: rgba(85, 189, 202, 0.06);
+}
+
+.portfolio-summary-strip {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.summary-pill {
+  background: var(--secondary_low);
+  border: 1px solid var(--primary);
+  color: var(--primary_desat);
+  padding: 6px 10px;
+  border-radius: 999px;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.summary-label {
+  opacity: 0.8;
+  font-size: 0.85rem;
+}
+
+.portfolio-card {
+  border: 1px solid var(--primary_desat);
+  border-radius: 10px;
+  padding: 12px;
+  background: rgba(2, 36, 69, 0.6);
+}
+
+.portfolio-meta {
+  opacity: 0.9;
+  margin: 6px 0 8px;
+}
+
+.portfolio-overview {
+  margin: 8px 0;
+}
+
+.contrib-list {
+  list-style: none;
+  padding-left: 0;
+}
+
+.contrib-list li {
+  display: flex;
+  justify-content: space-between;
+  margin: 4px 0;
+}
+
+.confidence-chip {
+  border: 1px solid var(--primary);
+  border-radius: 999px;
+  padding: 1px 7px;
+  font-size: 0.8rem;
 }

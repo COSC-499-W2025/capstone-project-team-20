@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { saveConfig } from "./api/client";
+import { saveConfig } from "../api/client";
 
 export default function ProfileSetup({ onComplete }) {
   const [step, setStep]     = useState(0);
