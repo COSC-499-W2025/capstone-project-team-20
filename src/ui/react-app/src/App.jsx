@@ -189,7 +189,7 @@ function App() {
     }
   };
 
-  if (profileReady === null) return <div className="ps-loading">Loading…</div>;
+  if (profileReady === null) return <div className="loading">Loading…</div>;
   if (!profileReady) return <ProfileSetup onComplete={() => setProfileReady(true)} />;
 
   //on app construction/refresh, builds our UI
@@ -199,15 +199,15 @@ function App() {
       
       <div className="screen">
         {/* Left Side Buttons */}
-        <div className="stacked-buttons">
-          <div className="ps-bar" aria-hidden="true" />
+        <div className="sidebar">
+          <div className="bar" aria-hidden="true" />
           {buttons.map(button => (
             <button
               key = {button.id}
               className={
                 button.id === current
-                  ? "button-on"
-                  : "button-off"
+                  ? "nav-btn nav-btn--active"
+                  : "nav-btn"
               }
               onClick={()=>whenClick(button.id)}
             >
@@ -217,6 +217,7 @@ function App() {
         </div>
         {/* Right Side Content */}
         <div className="menu">
+          <div className="bar" aria-hidden="true" style={{ marginLeft: "-30px", marginRight: "-30px"}} />
           {menuRender()}
         </div>
       </div>
