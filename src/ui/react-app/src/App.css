@@ -4,7 +4,7 @@ html, body, #root {
 }
 
 #root {
-  /* reuse ProfileSetup color system */
+  /* colours from profile setup */
   --accent:  #58a6ff;
   --accent2: #f78166;
   --bg:      #0d1117;
@@ -12,6 +12,9 @@ html, body, #root {
   --border:  #30363d;
   --text:    #e6edf3;
   --muted:   #8b949e;
+  --success: #3fb950;
+  --error:   #f85149;
+  --r:       10px;
 
   font-family: 'DM Sans', 'Segoe UI', system-ui, sans-serif;
   background: transparent;
@@ -81,10 +84,12 @@ html, body, #root {
 .button-off{
   background: transparent;
   color: var(--muted);
+  margin-top: 10px;
+  margin-bottom: 10px;
 }
 
 .button-off:hover{
-  border-color: var(--muted);
+  border-color: var(--accent);
   color: var(--text);
 }
 
@@ -94,6 +99,12 @@ html, body, #root {
   color:#0d1117;
   border-color: var(--accent);
   box-shadow:0 0 14px rgba(88,166,255,.35);
+  margin-top: 10px;
+  margin-bottom: 10px;
+}
+.button-on:hover{
+  background: var(--accent);
+  border-color: var(--accent);
 }
 
 /* RIGHT CONTENT PANEL */
@@ -197,50 +208,25 @@ html, body, #root {
   background: var(--bg);
 }
 
-/* animated background grid */
-
-.grid-bg{
-  position:fixed;
-  inset:0;
-  z-index:-1;
-
-  background:
-    linear-gradient(var(--border) 1px, transparent 1px),
-    linear-gradient(90deg, var(--border) 1px, transparent 1px);
-
-  background-size: 40px 40px;
-
-  mask-image: radial-gradient(circle at center, black 30%, transparent 80%);
-  opacity:.35;
-
-  animation:gridMove 30s linear infinite;
+.grid.bg {
+  position: absolute; inset: 0; pointer-events: none;
+  background-image:
+    linear-gradient(rgba(88,166,255,.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(88,166,255,.05) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(ellipse 70% 60% at 50% 40%, black 20%, transparent 100%);
 }
 
-/* animation */
-
-@keyframes gridMove{
-  from{
-    transform:translateY(0);
-  }
-  to{
-    transform:translateY(40px);
-  }
+/*borrowed 1-1 including ps-prefix, could use a refactor later*/
+.ps-bar {
+  height: 3px;
+  background: linear-gradient(90deg, var(--accent), var(--accent2), var(--accent));
+  background-size: 200% 100%;
+  animation: ps-shimmer 3s linear infinite;
 }
-
-.grid-bg{
-  position:fixed;
-  inset:0;
-  z-index:0;
-
-  background:
-    linear-gradient(var(--border) 1px, transparent 1px),
-    linear-gradient(90deg, var(--border) 1px, transparent 1px);
-
-  background-size:40px 40px;
-
-  opacity:.35;
-
-  animation:gridMove 30s linear infinite;
+@keyframes ps-shimmer {
+  0%   { background-position: 200% center; }
+  100% { background-position: -200% center; }
 }
 
 .screen{

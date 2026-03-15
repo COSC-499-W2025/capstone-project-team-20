@@ -3,13 +3,17 @@ import Settings from "./Settings";
 import ProfileSetup from "./pages/ProfileSetup";
 import Reports from "./pages/Reports";
 import {
-  listProjects,
+ listProjects,
   getProject,
   listSkills,
-  getBadgeProgress,
+  getBadgeProgress, 
   getYearlyWrapped,
   getConfig,
+  setPrivacyConsent,
   getPrivacyConsent,
+  createReport,
+  exportResume,
+  exportPortfolio,
   uploadProjectZip,
   uploadProjectFromPath,
   clearProjects
@@ -168,6 +172,12 @@ function App() {
     { id: 4, label: "Help" }
   ];
 
+  const whenClick = (id) => {
+    //takes the button of the id clicked and sets our 'current' variable to it
+    console.log("Clicked:",id);
+    setCurrent(id);
+  };
+
   const menuRender = () => {
     switch (current) {
       case 0: return <Settings />;
@@ -190,6 +200,7 @@ function App() {
       <div className="screen">
         {/* Left Side Buttons */}
         <div className="stacked-buttons">
+          <div className="ps-bar" aria-hidden="true" />
           {buttons.map(button => (
             <button
               key = {button.id}
