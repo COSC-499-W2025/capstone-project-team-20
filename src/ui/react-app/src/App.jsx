@@ -147,7 +147,7 @@ const ALL_BADGE_DETAILS = {
   },
   full_stack_explorer: {
     label: "Full Stack Explorer",
-    description: "Bridges frontend and backend confidently.",
+    description: "Connects UI and backend systems into cohesive end-to-end delivery.",
     howToEarn: "Use backend + frontend languages and React/Next.js.",
   },
 };
@@ -541,6 +541,24 @@ function Badges() {
     }))
     .sort((a, b) => a.label.localeCompare(b.label));
 
+    const badgeHeatmapTiles = allBadgeCatalog.map((badge) => {
+    const progressValue = badge.unlocked ? 1 : (badge.trackedProgress?.progress ?? 0);
+    const completionPercent = Math.round(progressValue * 100);
+    const stateLabel = badge.unlocked ? "Unlocked" : completionPercent === 0 ? "Not started" : `${completionPercent}% complete`;
+
+    let intensityClass = "badge-heatmap-tile--cold";
+    if (badge.unlocked || completionPercent >= 90) intensityClass = "badge-heatmap-tile--hot";
+    else if (completionPercent >= 60) intensityClass = "badge-heatmap-tile--warm";
+    else if (completionPercent >= 30) intensityClass = "badge-heatmap-tile--mild";
+
+    return {
+      ...badge,
+      completionPercent,
+      stateLabel,
+      intensityClass,
+    };
+  });
+
   const now = new Date();
   const currentYear = now.getFullYear();
   const isCurrentYearComplete = now.getMonth() === 11 && now.getDate() === 31;
@@ -582,6 +600,22 @@ function Badges() {
               <p>{badge.description}</p>
               <p><strong>How to earn:</strong> {badge.howToEarn}</p>
               <p className="badge-description">{badge.trackedProgress ? `Tracked progress: ${Math.round((badge.trackedProgress.progress ?? 0) * 100)}%` : "Tracked progress: calculated when unlocked in projects."}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="badge-heatmap">
+        <h4>🗺️ Badge Completion Heatmap</h4>
+        <p>Darker tiles indicate higher completion progress. Unlocked badges are fully lit.</p>
+        <div className="badge-heatmap-grid">
+          {badgeHeatmapTiles.map((badge) => (
+            <article key={`heatmap-${badge.badgeId}`} className={`badge-heatmap-tile ${badge.intensityClass}`}>
+              <div className="badge-heatmap-header">
+                <strong>{badge.label}</strong>
+                <span>{badge.unlocked ? "✅" : "🔒"}</span>
+              </div>
+              <p>{badge.stateLabel}</p>
             </article>
           ))}
         </div>
