@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../App'
@@ -120,8 +120,10 @@ describe('App badges heatmap', () => {
     })
     await user.click(polyglotTileButton)
 
-    expect(await screen.findByRole('heading', { name: 'Polyglot' })).toBeInTheDocument()
-    expect(screen.getByText(/how to earn:/i)).toBeInTheDocument()
+    const detailDialog = await screen.findByRole('dialog', { name: /polyglot badge details/i })
+    expect(detailDialog).toBeInTheDocument()
+    expect(within(detailDialog).getByRole('heading', { name: 'Polyglot' })).toBeInTheDocument()
+    expect(within(detailDialog).getByText(/how to earn:/i)).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: '✕' }))
     expect(screen.queryByRole('heading', { name: 'Polyglot' })).not.toBeInTheDocument()
@@ -129,7 +131,7 @@ describe('App badges heatmap', () => {
 
   it('only shows started badges in progress list and gates full catalog behind All Badges button', async () => {
     const user = userEvent.setup()
-    render(<App />)
+    const { container } = render(<App />)
 
     await waitFor(() =>
       expect(screen.getByRole('button', { name: /badges/i })).toBeInTheDocument()
@@ -138,8 +140,11 @@ describe('App badges heatmap', () => {
     await user.click(screen.getByRole('button', { name: /badges/i }))
 
     expect(await screen.findByRole('heading', { name: /badge progress tracker \(started, uncompleted\)/i })).toBeInTheDocument()
-    expect(screen.getByText(/polyglot — 65%/i)).toBeInTheDocument()
-    expect(screen.queryByText(/team effort — 0%/i)).not.toBeInTheDocument()
+    const inProgressList = container.querySelector('.in-progress-list')
+    expect(inProgressList).toBeInTheDocument()
+    expect(inProgressList?.textContent).toContain('Polyglot')
+    expect(inProgressList?.textContent).toContain('65%')
+    expect(inProgressList?.textContent).not.toContain('Team Effort')
 
     expect(screen.queryByRole('heading', { name: /all possible badges/i })).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: /all badges/i }))
