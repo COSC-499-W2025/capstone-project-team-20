@@ -10,10 +10,11 @@ from src.models.ReportProject import ReportProject
 
 class ReportManager(StorageManager):
     """ Manages persistence of Report objects."""
-    
+
     def __init__(self, db_path: str = "reports.db") -> None:
         super().__init__(db_path)
         self.report_project_manager = ReportProjectManager()
+        self._ensure_portfolio_columns()
 
     def _retrieve_id(self, cursor: sqlite3.Cursor, row: Dict[str, Any]) -> None:
         """
@@ -22,7 +23,7 @@ class ReportManager(StorageManager):
         """
         if "id" not in row or row["id"] is None:
             row["id"] = cursor.lastrowid
-    
+
     @property
     def create_table_query(self) -> str:
         """SQL query to create the reports table"""
@@ -31,28 +32,30 @@ class ReportManager(StorageManager):
             title TEXT NOT NULL,
             date_created TEXT NOT NULL,
             sort_by TEXT DEFAULT 'resume_score',
-            notes TEXT
+            notes TEXT,
+            portfolio_mode TEXT DEFAULT 'private',
+            portfolio_published_at TEXT
         )"""
-    
+
     @property
     def table_name(self) -> str:
         return "reports"
-    
+
     @property
     def primary_key(self) -> str:
         return "id"
-    
+
     @property
     def columns(self) -> str:
-        return "id, title, date_created, sort_by, notes"
-    
+        return "id, title, date_created, sort_by, notes, portfolio_mode, portfolio_published_at"
+
     def create_report(self, report: Report) -> int:
         """
         Create a new report with its projects.
-        
+
         Args:
             report: Report object to store
-            
+
         Returns:
             id of created report
         """
@@ -64,16 +67,16 @@ class ReportManager(StorageManager):
 
         for project in report.projects:
             self.report_project_manager.set_from_report_project(id, project)
-        
+
         return id
-    
+
     def get_report(self, id: int) -> Optional[Report]:
         """
         Retrieve a report with all its projects.
-        
+
         Args:
             id: ID of report to retrieve
-            
+
         Returns:
             Report object or None if not found
         """
@@ -89,17 +92,23 @@ class ReportManager(StorageManager):
             date_created=datetime.fromisoformat(report_dict["date_created"]),
             sort_by=report_dict["sort_by"],
             projects=projects,
-            notes=report_dict.get("notes")
+            notes=report_dict.get("notes"),
+            portfolio_mode=report_dict.get("portfolio_mode", "private") or "private",
+            portfolio_published_at=(
+                datetime.fromisoformat(report_dict["portfolio_published_at"])
+                if report_dict.get("portfolio_published_at")
+                else None
+            )
         )
-    
+
     def set_title(self, id: int, title: str) -> bool:
         """
         Update report title.
-        
+
         Args:
             id: ID of report to update
             title: New title
-            
+
         Returns:
             True if updated successfully
         """
@@ -112,11 +121,11 @@ class ReportManager(StorageManager):
     def set_notes(self, id: int, notes: Optional[str]) -> bool:
         """
         Update report notes.
-        
+
         Args:
             id: ID of report to update
             notes: New notes (can be None to clear)
-            
+
         Returns:
             True if updated successfully
         """
@@ -129,11 +138,11 @@ class ReportManager(StorageManager):
     def set_sort_by(self, id: int, sort_by: Literal["resume_score", "date_created", "last_modified"]) -> bool:
         """
         Update report sort order.
-        
+
         Args:
             id: ID of report to update
             sort_by: New sort method
-            
+
         Returns:
             True if updated successfully
         """
@@ -142,15 +151,15 @@ class ReportManager(StorageManager):
             query = f"UPDATE {self.table_name} SET sort_by = ? WHERE {self.primary_key} = ?"
             cursor.execute(query, (sort_by, id))
             return cursor.rowcount > 0
-    
+
     def add_project_to_report(self, id: int, project: ReportProject) -> bool:
         """
         Add a project to an existing report.
-        
+
         Args:
             id: ID of report to add project to
             project: ReportProject to add
-            
+
         Returns:
             True if added successfully
         """
@@ -159,37 +168,37 @@ class ReportManager(StorageManager):
             return True
         except Exception:
             return False
-    
+
     def remove_project_from_report(self, id: int, project_name: str) -> bool:
         """
         Remove a project from a report by name.
-        
+
         Args:
             id: ID of report
             project_name: Name of project to remove
-            
+
         Returns:
             True if removed successfully
         """
         return self.report_project_manager.delete_by_name(id, project_name)
-    
+
     def delete_report(self, id: int) -> bool:
         """
         Delete a Report and all its ReportProjects.
-        
+
         Args:
             id: ID of report to delete
-            
+
         Returns:
             True if deleted successfully
         """
         # ReportProjects deleted automatically via ON DELETE CASCADE
         return self.delete(id)
-    
+
     def list_reports(self) -> List[Report]:
         """
         Retrieve all reports with their projects.
-        
+
         Returns:
             List of Report objects
         """
@@ -203,16 +212,22 @@ class ReportManager(StorageManager):
                 date_created=datetime.fromisoformat(row_dict["date_created"]),
                 sort_by=row_dict["sort_by"],
                 projects=projects,
-                notes=row_dict.get("notes")
+                notes=row_dict.get("notes"),
+                portfolio_mode=row_dict.get("portfolio_mode", "private") or "private",
+                portfolio_published_at=(
+                    datetime.fromisoformat(row_dict["portfolio_published_at"])
+                    if row_dict.get("portfolio_published_at")
+                    else None
+                )
             ))
-        
+
         return reports
-    
+
     def list_reports_summary(self) -> List[Dict[str, Any]]:
         """
         Get lightweight report summaries without loading full projects.
         Useful for displaying report lists in menus.
-        
+
         Returns:
             List of dicts with id, title, date_created, project_count
         """
@@ -220,7 +235,7 @@ class ReportManager(StorageManager):
         with self._get_connection() as conn:
             cursor = conn.cursor()
             query = """
-                SELECT 
+                SELECT
                     r.id,
                     r.title,
                     r.date_created,
@@ -231,7 +246,7 @@ class ReportManager(StorageManager):
                 ORDER BY r.date_created DESC
             """
             cursor.execute(query)
-            
+
             for row in cursor.fetchall():
                 summaries.append({
                     "id": row[0],
@@ -239,9 +254,9 @@ class ReportManager(StorageManager):
                     "date_created": row[2],
                     "project_count": row[3]
                 })
-        
+
         return summaries
-    
+
     def update_report(self, report: Report) -> bool:
         """
         Persist edits to an existing report and all its ReportProjects.
@@ -262,8 +277,18 @@ class ReportManager(StorageManager):
 
         return True
 
-    
+
     def get_all(self) -> Generator[Report, None, None]:
         """Yield all reports with their projects"""
         for report in self.list_reports():
             yield report
+
+    def _ensure_portfolio_columns(self) -> None:
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("PRAGMA table_info(reports)")
+            existing = {row[1] for row in cursor.fetchall()}
+            if "portfolio_mode" not in existing:
+                cursor.execute("ALTER TABLE reports ADD COLUMN portfolio_mode TEXT DEFAULT 'private'")
+            if "portfolio_published_at" not in existing:
+                cursor.execute("ALTER TABLE reports ADD COLUMN portfolio_published_at TEXT")
