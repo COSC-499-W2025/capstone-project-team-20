@@ -61,6 +61,23 @@ class FileCategorizer:
         # Extending 'language_source' into real lists
         self.categories = self._expand_category_sources(self.categories_yaml)
 
+        # Pre-built fast lookup tables — avoids per-call list rebuilds and loops
+        self._ext_to_category: Dict[str, str] = {}
+        self._lang_to_category: Dict[str, str] = {}
+        self._category_path_patterns: List[tuple] = []  # [(category, [patterns])]
+        self._build_fast_lookups()
+
+    
+    def _build_fast_lookups(self):
+        """Pre-compute extension and language -> category maps for O(1) classify_file lookups."""
+        for category, conf in self.categories.items():
+            for ext in conf.get("extensions", []):
+                self._ext_to_category.setdefault(ext.lower(), category)
+            for lang in conf.get("languages", []):
+                self._lang_to_category.setdefault(lang, category)
+            if "path_patterns" in conf:
+                self._category_path_patterns.append((category, conf["path_patterns"]))
+
     # ------------------------------------------------------------------
     # Ignore helpers
     # ------------------------------------------------------------------
@@ -111,10 +128,11 @@ class FileCategorizer:
 
     def _should_ignore(self, path: str) -> bool:
         """Checks if path contains any of the ignored directories or ignored extensions/filenames."""
-        path_obj = Path(path)
-        parts = set(path_obj.parts)
-        ext = path_obj.suffix.lstrip(".").lower()
-        filename = path_obj.name.lower()
+        lower = path.replace("\\", "/").lower()
+        parts = set(lower.split("/"))
+        dot = path.rfind(".")
+        ext = path[dot + 1:].lower() if dot != -1 and dot > path.rfind("/") else ""
+        filename = lower.split("/")[-1] if "/" in lower else lower
 
         if not self.ignored_dirs.isdisjoint(parts):
             return True
@@ -153,14 +171,15 @@ class FileCategorizer:
         Classify a file into one of the configured categories.
 
         file_info:
-          {
+        {
             "path": "relative/path/to/file.ext",
             "language": "Python" | "JavaScript" | ...
-          }
+        }
         """
         path = file_info.get("path", "")
         lang = (file_info.get("language") or "").strip()
-        ext = Path(path).suffix.lower().lstrip(".")
+        dot = path.rfind(".")
+        ext = path[dot + 1:].lower() if dot != -1 and dot > path.rfind("/") else ""
 
         # First, ignore if it matches ignored dirs/exts/filenames
         if self._should_ignore(path):
@@ -171,22 +190,22 @@ class FileCategorizer:
             return self._classify_no_extension(path)
 
         # Explicit test classification heuristics
-        test_cat = self._classify_test_like(path, lang, ext)
-        if test_cat == "test":
+        if self._classify_test_like(path, lang, ext) == "test":
             return "test"
 
-        # Match by YML-defined categories
-        for category, conf in self.categories.items():
-            if "path_patterns" in conf and self._match_path_patterns(
-                path, conf["path_patterns"]
-            ):
-                return category
-            if "languages" in conf and lang in conf["languages"]:
-                return category
-            if "extensions" in conf and ext in [e.lower() for e in conf["extensions"]]:
+        # Fast path: direct extension lookup (replaces category loop)
+        if ext in self._ext_to_category:
+            return self._ext_to_category[ext]
+
+        # Fast path: direct language lookup
+        if lang and lang in self._lang_to_category:
+            return self._lang_to_category[lang]
+
+        # Slow path: path pattern matching (only reached if ext/lang didn't match)
+        for category, patterns in self._category_path_patterns:
+            if self._match_path_patterns(path, patterns):
                 return category
 
-        # Fallback: tests expect unmatched stuff to be "other"
         return "other"
 
     def _classify_test_like(self, path: str, lang: str, ext: str) -> str:

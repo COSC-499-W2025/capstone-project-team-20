@@ -102,7 +102,7 @@ def test_initialize_projects_skips_older_zip_update(tmp_path, mock_config_manage
         analyzer.initialize_projects()
 
     updated = analyzer.project_manager.get_by_name("project-a")
-    assert updated.file_path == "/old/path"
+    assert updated.file_path == str(project_dir)
     assert updated.last_modified == datetime(2024, 1, 1)
 
 
@@ -347,7 +347,7 @@ def test_analyze_git_and_contributions_non_interactive_uses_configured_usernames
     }
 
     with patch("pathlib.Path.exists", return_value=True), \
-         patch.object(analyzer.contribution_analyzer, "get_all_authors", return_value={"alice@example.com": "Alice", "bob@example.com": "Bob"}), \
+         patch.object(analyzer.contribution_analyzer, "get_name_map", return_value={"alice@example.com": "Alice", "bob@example.com": "Bob"}), \
          patch.object(analyzer.contribution_analyzer, "detect_and_write_mailmap", side_effect=lambda repo, m, config_manager=None: m), \
          patch.object(analyzer.contribution_analyzer, "analyze", return_value=fake_stats):
         analyzer.analyze_git_and_contributions(projects=[project], interactive=False)

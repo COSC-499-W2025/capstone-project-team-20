@@ -117,6 +117,10 @@ export function generatePortfolioDetailsForReport({ report_id, project_names }) 
   });
 }
 
+export function getPortfolio(report_id) {
+  return request(`/portfolio/${report_id}`);
+}
+
 // Exports
 
 export function exportResume({ report_id, template = "jake", output_name = "resume.pdf" }) {

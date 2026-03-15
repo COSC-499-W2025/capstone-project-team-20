@@ -60,6 +60,7 @@ class ProjectAnalyzer:
         self.cached_extract_dir: Optional[Path] = None
         self.cached_projects: List[Project] = []
         self.import_batch_id: str = uuid4().hex
+        self.changed_project_names: set = set()  # tracks new/changed projects for run_all
 
         self.report_manager = ReportManager()
         self.report_exporter = ReportExporter()
@@ -80,6 +81,9 @@ class ProjectAnalyzer:
             old_stdout, old_stderr, sys.stdout, sys.stderr = sys.stdout, sys.stderr, devnull, devnull
             try:
                 yield
+            except Exception:
+                sys.stdout, sys.stderr = old_stdout, old_stderr
+                raise
             finally:
                 sys.stdout, sys.stderr = old_stdout, old_stderr
 
@@ -110,14 +114,16 @@ class ProjectAnalyzer:
         project_root = Path(project.file_path)
         if not project_root.exists():
             return False
+        file_count = 0
         for root, _, files in os.walk(project_root):
             for name in files:
                 file_path = Path(root) / name
                 file_hash = compute_file_hash(file_path)
+                file_count += 1
                 if not file_hash:
                     continue
                 if not self.file_hash_manager.has_hash(file_hash):
-                    return True  # found a new/changed file
+                    return True
         return False
 
     def _register_project_files(self, project: Project) -> Dict[str, int]:
@@ -125,21 +131,16 @@ class ProjectAnalyzer:
         if not project_root.exists():
             return {"new": 0, "duplicate": 0}
 
-        new_count = 0
-        duplicate_count = 0
+        entries = []
         for root, _, files in os.walk(project_root):
             for name in files:
                 file_path = Path(root) / name
                 file_hash = compute_file_hash(file_path)
-                if not file_hash:
-                    continue
-                if self.file_hash_manager.register_hash(
-                    file_hash, str(file_path), project.name
-                ):
-                    new_count += 1
-                else:
-                    duplicate_count += 1
-        return {"new": new_count, "duplicate": duplicate_count}
+                if file_hash:
+                    entries.append((file_hash, str(file_path), project.name))
+
+        result = self.file_hash_manager.register_hashes_batch(entries)
+        return result
 
 
     def _ensure_scores_are_calculated(self) -> List[Project]:
@@ -222,6 +223,7 @@ class ProjectAnalyzer:
             print("No projects found to build.")
             return []
         print(f"Found {len(projects_from_builder)} project(s). Saving initial records...")
+        changed_names: set = set()
         for proj_new in projects_from_builder:
             if summary := self._get_zip_project_summary(proj_new.name):
                 if summary.get("total_files") is not None:
@@ -238,7 +240,8 @@ class ProjectAnalyzer:
 
             if proj_existing:
                 proj_existing.import_batch_id = self.import_batch_id
-                if self._has_project_changed(proj_new):
+                changed = self._has_project_changed(proj_new)
+                if changed:
                     proj_existing.file_path, proj_existing.root_folder = proj_new.file_path, proj_new.root_folder
                     if proj_new.num_files:
                         proj_existing.num_files = proj_new.num_files
@@ -251,9 +254,12 @@ class ProjectAnalyzer:
                     proj_existing.last_accessed = datetime.now()
                     self.project_manager.set(proj_existing)
                     self._register_project_files(proj_existing)
+                    changed_names.add(proj_existing.name)
                     print(f"  - Updated existing project: {proj_existing.name}")
                 else:
                     proj_existing.last_accessed = datetime.now()
+                    proj_existing.file_path = proj_new.file_path
+                    proj_existing.root_folder = proj_new.root_folder
                     self.project_manager.set(proj_existing)
                     print(f"  - No changes detected, refreshed batch for: {proj_existing.name}")
                 created_projects.append(proj_existing)
@@ -262,9 +268,11 @@ class ProjectAnalyzer:
                 proj_new.import_batch_id = self.import_batch_id
                 self.project_manager.set(proj_new)
                 self._register_project_files(proj_new)
+                changed_names.add(proj_new.name)
                 print(f"  - Created new project record: {proj_new.name} with ID {proj_new.id}")
                 created_projects.append(proj_new)
         self.cached_projects = created_projects
+        self.changed_project_names = changed_names
         return created_projects
     # ------------------------------------------------------------------
     # Analysis Methods
@@ -385,81 +393,69 @@ class ProjectAnalyzer:
         }
 
         return mapping.get(role_key, role_key.capitalize())
+
     def analyze_git_and_contributions(self, projects: Optional[List[Project]] = None, interactive: bool = True) -> None:
-      """
-      Analyze contributions for each project:
-      - Use get_all_authors() to set total author_count reliably
-      - Optionally prompt for selected usernames if not configured
-      - Compute detailed stats where possible
-      """
-      print("\n--- Git Repository & Contribution Analysis ---")
-      target_projects = projects or self._get_projects()
-      if not target_projects:
-          return
-
-      for project in target_projects:
-          repo_path = Path(project.file_path)
-          if not (repo_path / ".git").exists():
-              continue
-
-          print(f"\n--- Analyzing contributions for: {project.name} ---")
-
-          with self.suppress_output():
-              author_map = self.contribution_analyzer.get_all_authors(str(repo_path), config_manager=self._config_manager)
-
-          # Detect duplicates and optionally write .mailmap
-          author_map = self.contribution_analyzer.detect_and_write_mailmap(str(repo_path), author_map, config_manager=self._config_manager)
-
-          project.author_count = len(author_map)
-          project.collaboration_status = "Collaborative" if project.author_count > 1 else "Individual"
-
-          if interactive:
-              selected_emails = self._get_or_select_usernames(author_map) or []
-          else:
-              configured_usernames = self._config_manager.get("usernames")
-              if isinstance(configured_usernames, list) and configured_usernames:
-                  selected_emails = configured_usernames
-              else:
-                  selected_emails = list(author_map.keys())
-
-          with self.suppress_output():
-              all_author_stats = self.contribution_analyzer.analyze(str(repo_path))
-
-          project.authors = sorted([author_map[e] for e in selected_emails if e in author_map])
-          project.contributor_roles = {}
-
-          if all_author_stats:
-              roles_obj = self.role_inference_analyzer.analyze(all_author_stats)
-              project.contributor_roles = {
-                  user: {
-                      "primary_role": r.primary_role.value,
-                      "confidence": float(r.confidence),
-                      "secondary_roles": [sr.value for sr in (r.secondary_roles or [])],
-                      "evidence": r.evidence or {},
-                  }
-                  for user, r in roles_obj.items()
-              }
-
-          if all_author_stats:
-              selected_stats = self._aggregate_stats(all_author_stats, selected_emails)
-              total_stats = self._aggregate_stats(all_author_stats)
-              project.author_contributions = [stats.to_dict() for stats in all_author_stats.values()]
-              project.individual_contributions = self.contribution_analyzer.calculate_share(selected_stats, total_stats)
-          else:
-              print("  - No detailed contribution stats available; using author list for collaboration status.")
-
-          project.last_accessed = datetime.now()
-          self.project_manager.set(project)
-          print(f"  - Total Contributors: {project.author_count}")
-          print(f"  - Collaboration Status: {project.collaboration_status}")
-          if project.contributor_roles:
-              print(" - Inferred Roles:")
-              for user, info in project.contributor_roles.items():
-                  pretty = self._pretty_role(info.get("primary_role", "none"))
-                  confidence_pct = int(float(info.get("confidence", 0.0)) * 100)
-                  print(f"    - {user} → User Role: {pretty} ({confidence_pct}%)")
-
-          print(f"  - Saved data for '{project.name}'.")
+        """
+        Analyze contributions for each project:
+        - Use get_all_authors() to set total author_count reliably
+        - Optionally prompt for selected usernames if not configured
+        - Compute detailed stats where possible
+        """
+        print("\n--- Git Repository & Contribution Analysis ---")
+        target_projects = projects or self._get_projects()
+        if not target_projects:
+            return
+        for project in target_projects:
+            repo_path = Path(project.file_path)
+            if not (repo_path / ".git").exists():
+                continue
+            print(f"\n--- Analyzing contributions for: {project.name} ---")
+            with self.suppress_output():
+                all_author_stats = self.contribution_analyzer.analyze(str(repo_path))
+                author_map = self.contribution_analyzer.get_name_map(str(repo_path), config_manager=self._config_manager)
+            # Detect duplicates and optionally write .mailmap
+            author_map = self.contribution_analyzer.detect_and_write_mailmap(str(repo_path), author_map, config_manager=self._config_manager)
+            project.author_count = len(author_map)
+            project.collaboration_status = "Collaborative" if project.author_count > 1 else "Individual"
+            if interactive:
+                selected_emails = self._get_or_select_usernames(author_map) or []
+            else:
+                configured_usernames = self._config_manager.get("usernames")
+                if isinstance(configured_usernames, list) and configured_usernames:
+                    selected_emails = configured_usernames
+                else:
+                    selected_emails = list(author_map.keys())
+            project.authors = sorted([author_map[e] for e in selected_emails if e in author_map])
+            project.contributor_roles = {}
+            if all_author_stats:
+                roles_obj = self.role_inference_analyzer.analyze(all_author_stats)
+                project.contributor_roles = {
+                    user: {
+                        "primary_role": r.primary_role.value,
+                        "confidence": float(r.confidence),
+                        "secondary_roles": [sr.value for sr in (r.secondary_roles or [])],
+                        "evidence": r.evidence or {},
+                    }
+                    for user, r in roles_obj.items()
+                }
+            if all_author_stats:
+                selected_stats = self._aggregate_stats(all_author_stats, selected_emails)
+                total_stats = self._aggregate_stats(all_author_stats)
+                project.author_contributions = [stats.to_dict() for stats in all_author_stats.values()]
+                project.individual_contributions = self.contribution_analyzer.calculate_share(selected_stats, total_stats)
+            else:
+                print("  - No detailed contribution stats available; using author list for collaboration status.")
+            project.last_accessed = datetime.now()
+            self.project_manager.set(project)
+            print(f"  - Total Contributors: {project.author_count}")
+            print(f"  - Collaboration Status: {project.collaboration_status}")
+            if project.contributor_roles:
+                print(" - Inferred Roles:")
+                for user, info in project.contributor_roles.items():
+                    pretty = self._pretty_role(info.get("primary_role", "none"))
+                    confidence_pct = int(float(info.get("confidence", 0.0)) * 100)
+                    print(f"    - {user} → User Role: {pretty} ({confidence_pct}%)")
+            print(f"  - Saved data for '{project.name}'.")
 
     def analyze_metadata(self, projects: Optional[List[Project]] = None) -> None:
         """Extracts and saves metadata for all projects or a specific list of them."""
@@ -540,41 +536,77 @@ class ProjectAnalyzer:
             if not silent:
                 print(f"\nAnalyzing skills for: {project.name}...")
 
-            with self.suppress_output():
-                if not Path(project.file_path).exists():
-                    if not silent:
-                        print(f"  - Warning: Path not found. Skipping.")
-                    continue
+            if not Path(project.file_path).exists():
+                if not silent:
+                    print(f"  - Warning: Path not found. Skipping.")
+                continue
 
-                result = SkillAnalyzer(Path(project.file_path)).analyze()
+            # --- moved outside silent block ---
+            result = SkillAnalyzer(Path(project.file_path)).analyze()
 
-                skills_raw = result.get("skills", [])
-                filtered_skills = []
-                for item in skills_raw:
-                    name, conf = (item.get("skill"), item.get("confidence")) if isinstance(item, dict) else (getattr(item, 'skill', None), getattr(item, 'confidence', 0.0))
-                    if name and conf >= MIN_DISPLAY_CONFIDENCE:
-                        filtered_skills.append(name.strip())
-                project.skills_used = sorted(list(set(filtered_skills)))
-                project.skills_selected = project.skills_used #Select all skills by default.
+            # skills
+            skills_raw = result.get("skills", [])
+            filtered_skills = []
+            for item in skills_raw:
+                name, conf = (
+                    (item.get("skill"), item.get("confidence"))
+                    if isinstance(item, dict)
+                    else (getattr(item, 'skill', None), getattr(item, 'confidence', 0.0))
+                )
+                if name and conf >= MIN_DISPLAY_CONFIDENCE:
+                    filtered_skills.append(name.strip())
+            project.skills_used = sorted(list(set(filtered_skills)))
+            project.skills_selected = project.skills_used
 
-                if dimensions := result.get("dimensions", {}):
-                    if td := dimensions.get("testing_discipline"):
-                        project.testing_discipline_score, project.testing_discipline_level = td.get("score", 0.0), td.get("level", "")
-                    if doc := dimensions.get("documentation_habits"):
-                        project.documentation_habits_score, project.documentation_habits_level = doc.get("score", 0.0), doc.get("level", "")
+            # tech_profile
+            tech = result.get("tech_profile", {}) or {}
+            project.frameworks = tech.get("frameworks", [])
+            project.dependencies_list = tech.get("dependencies_list", [])
+            project.dependency_files_list = tech.get("dependency_files_list", [])
+            project.build_tools = tech.get("build_tools", [])
+            project.has_dockerfile = tech.get("has_dockerfile", False)
+            project.has_database = tech.get("has_database", False)
+            project.has_frontend = tech.get("has_frontend", False)
+            project.has_backend = tech.get("has_backend", False)
+            project.has_test_files = tech.get("has_test_files", False)
+            project.has_readme = tech.get("has_readme", False)
+            project.readme_keywords = tech.get("readme_keywords", [])
 
-                if overall := result.get("stats", {}).get("overall"):
-                    project.total_loc = overall.get("total_lines_of_code", 0)
-                    project.comment_ratio = overall.get("comment_ratio", 0.0)
-                    project.test_file_ratio = overall.get("test_file_ratio", 0.0)
+            # dimensions
+            dimensions = result.get("dimensions", {}) or {}
+            if td := dimensions.get("testing_discipline"):
+                project.testing_discipline_score = td.get("score", 0.0)
+                project.testing_discipline_level = td.get("level", "")
+            if doc := dimensions.get("documentation_habits"):
+                project.documentation_habits_score = doc.get("score", 0.0)
+                project.documentation_habits_level = doc.get("level", "")
+            if mod := dimensions.get("modularity"):
+                project.modularity_score = mod.get("score", 0.0)
+                project.modularity_level = mod.get("level", "")
+            if ld := dimensions.get("language_depth"):
+                project.language_depth_score = ld.get("score", 0.0)
+                project.language_depth_level = ld.get("level", "")
 
-                ranker = ProjectRanker(project)
-                ranker.calculate_resume_score()
+            # stats
+            overall = result.get("stats", {}).get("overall", {}) or {}
+            project.total_loc = overall.get("total_lines_of_code", 0)
+            project.comment_ratio = overall.get("comment_ratio", 0.0)
+            project.test_file_ratio = overall.get("test_file_ratio", 0.0)
+            project.avg_functions_per_file = overall.get("avg_functions_per_file", 0.0)
+            project.max_function_length = overall.get("max_function_length", 0)
 
-                self.project_manager.set(project)
+            # resume score
+            ranker = ProjectRanker(project)
+            ranker.calculate_resume_score()
+
+            # --- persistence always happens ---
+            self.project_manager.set(project)
 
             if not silent:
                 print(f"  - Successfully enriched '{project.name}'. Resume Score: {project.resume_score:.2f}")
+
+
+
 
     def analyze_badges(self) -> None:
         """
@@ -640,18 +672,6 @@ class ProjectAnalyzer:
                 return
             metadata = (ProjectMetadataExtractor(root_folder).extract_metadata(repo_path=project.file_path) or {}).get("project_metadata", {})
 
-        try:
-            repo_path = Path(project.file_path)
-            if (repo_path / ".git").exists():
-                with self.suppress_output():
-                    repo_authors = self.contribution_analyzer.get_all_authors(str(repo_path))
-                if repo_authors:
-                    project.author_count = len(repo_authors)
-                    project.collaboration_status = "collaborative" if project.author_count > 1 else "individual"
-                    self.project_manager.set(project)
-        except Exception:
-            pass
-
         gen = ResumeInsightsGenerator(
             metadata, project.categories, project.language_share, project, project.languages
         )
@@ -685,6 +705,7 @@ class ProjectAnalyzer:
 
 
     def _generate_insights_for_project_noninteractive(self, project: Project):
+        """Generate resume + portfolio insights for a single project (non-interactive)."""
         # Ensure prerequisite analyses exist (like CLI)
         if not project.categories or not project.num_files or not project.languages:
             self.analyze_metadata(projects=[project])
@@ -693,42 +714,24 @@ class ProjectAnalyzer:
             project = self.project_manager.get_by_name(project.name)
 
         # Ensure contribution info if possible
-        if not project.author_count or project.author_count <= 1:
+        if project.author_count is None:
             self.analyze_git_and_contributions(projects=[project], interactive=False)
             project = self.project_manager.get_by_name(project.name)
-        """Generate resume + portfolio insights for a single project (non-interactive)."""
+
         # Find the root folder for metadata extraction
         with self.suppress_output():
-            with self.suppress_output():
-                root_folder = self._find_folder_by_name_recursive(project.name)
+            root_folder = self._find_folder_by_name_recursive(project.name)
 
-                # always try the repo path itself
-                if not root_folder:
-                    root_folder = project.file_path
-
+            if root_folder:
                 extracted = ProjectMetadataExtractor(root_folder).extract_metadata(
                     repo_path=project.file_path
                 ) or {}
                 metadata = (extracted.get("project_metadata", {}) or {})
-
-            extracted = ProjectMetadataExtractor(root_folder).extract_metadata(
-                repo_path=project.file_path
-            ) or {}
-            metadata = (extracted.get("project_metadata", {}) or {})
-
-        # Update collaboration info if repo has .git
-        try:
-            repo_path = Path(project.file_path)
-            if (repo_path / ".git").exists():
-                with self.suppress_output():
-                    repo_authors = self.contribution_analyzer.get_all_authors(str(repo_path))
-                if repo_authors:
-                    project.author_count = len(repo_authors)
-                    project.collaboration_status = (
-                        "collaborative" if project.author_count > 1 else "individual"
-                    )
-        except Exception:
-            pass
+            else:
+                metadata = {
+                    "start_date": (project.date_created.isoformat()[:10] if project.date_created else None),
+                    "end_date": (project.last_modified.isoformat()[:10] if project.last_modified else None),
+                }
 
         # Generate resume insights
         gen = ResumeInsightsGenerator(
@@ -1631,6 +1634,7 @@ class ProjectAnalyzer:
         self.root_folders, self.zip_path = root_folders, zip_path
         print("\nNew project loaded successfully\n")
         self.initialize_projects()
+        self.run_all()
 
     def select_thumbnail(self) -> None:
         sorted_projects = self.get_projects_sorted_by_score()
@@ -1688,20 +1692,52 @@ class ProjectAnalyzer:
             print(f"\nError copying file: {e}")
 
     def run_all(self) -> None:
+        import cProfile
+        import pstats
+        import io
+
         print("\n--- Running All Supported Analyses ---")
         if not self._get_projects():
             print("Initializing projects first...")
             self.initialize_projects()
-
         if not self.cached_projects:
             print("Initialization failed. No projects to analyze.")
             return
 
-        self.analyze_git_and_contributions()
-        self.analyze_metadata()
-        self.analyze_categories()
-        self.analyze_languages()
-        self.analyze_skills()
+        changed = [p for p in self.cached_projects if p.name in self.changed_project_names]
+        unchanged = [p for p in self.cached_projects if p.name not in self.changed_project_names]
+
+        if unchanged:
+            print(f"  - Skipping analysis for {len(unchanged)} unchanged project(s): {[p.name for p in unchanged]}")
+        if not changed:
+            print("  - All projects unchanged, skipping analyses.")
+            self.display_project_timeline()
+            print("\nAll analyses complete.\n")
+            return
+
+        print(f"  - Running analyses for {len(changed)} changed/new project(s): {[p.name for p in changed]}")
+
+        import time
+        start = time.perf_counter()
+
+        pr = cProfile.Profile()
+        pr.enable()
+        self.analyze_git_and_contributions(projects=changed)
+        pr.disable()
+
+        end = time.perf_counter()
+        print(f"Git & Contribution analysis took {end - start:.2f} seconds")
+
+        buf = io.StringIO()
+        ps = pstats.Stats(pr, stream=buf).sort_stats('cumulative')
+        ps.print_stats(35)  # top 20 rows -- raise if you want more
+        print(buf.getvalue())
+
+        self.analyze_metadata(projects=changed)
+        self.analyze_categories(projects=changed)
+        self.analyze_languages(projects=changed)
+        self.analyze_skills(projects=changed)
+        self.generate_insights_noninteractive(projects=changed)
         self.display_project_timeline()
         print("\nAll analyses complete.\n")
 
