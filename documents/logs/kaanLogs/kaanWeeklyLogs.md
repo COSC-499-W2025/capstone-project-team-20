@@ -352,3 +352,29 @@ Last week, we gave our presentation to the class, and this week we started worki
 Next week, I plan to start developing more features specifically for milestone 3, and help refurbish the frontend to make it more clear and easy on the eyes.
 
 **Any Issues or Blockers That I Encountered This Week and How I Addressed/Plan to Address Them:**  
+
+### Term 2 Week 10: March 9th – March 15th 
+
+![Term 2 Week 10 Log](imagesForKaanLogs/T2_W10_SS.png)
+
+### Weekly Goals
+
+This week I focused on improving the badges frontend to make it more interactive and easier to understand. While the changes from the previous week improved the readability of the badges page, it still lacked adaptability and meaningful visualization of progress. Based on requests from other group members and general feedback, I worked on adding new visual components and reducing clutter so users can better understand their badge progress.
+
+**Coding Tasks:**  
+I implemented a badge heatmap to visually represent how close a user is to earning different badges. This helps make badge progress easier to interpret compared to the previous static layout. I also modified the badges interface so that the full details of each badge can be accessed by clicking on the badge itself. This allowed us to remove a large amount of repetitive text and clutter that was previously always visible on the page. These changes improved both the visual clarity and usability of the achievements interface. The work was submitted in **PR #478**, which also included several smaller UI adjustments to improve layout consistency and presentation ahead of our upcoming peer reviews.
+
+**Testing Tasks:**  
+I manually tested the new heatmap visualization and the clickable badge detail functionality to ensure the correct information appears when interacting with each badge. I also verified that the changes did not break any of the existing badge progress features and checked the frontend display across different states of badge completion. I also did testing on the PR I was assigned this week for review.
+
+**Reviewing or Collaboration Tasks:**  
+I worked with other group members to refine how badge progress should be presented visually and incorporated their feedback into the heatmap feature. I also discussed UI adjustments to ensure the badges page aligns with the rest of the frontend design as we prepare for the peer reviews. I reviewed [PR #444] (https://github.com/COSC-499-W2025/capstone-project-team-20/pull/444), and find no issue in how the feature was implemented aside from the lack of frontend tests and merge conflicts that had occurred due to the PR being up for a while and new PRs being merged in the meanwhile.
+
+**Brief Description of Last Week Connecting This Week:**  
+Last week I worked on improving the badges page by adding badge descriptions and improving the layout. This week built directly on that work by focusing on better visualizing badge progress and reducing interface clutter through interactive elements.
+
+**Plan/Goals for Upcoming Week:**  
+Next week I plan to continue improving the frontend experience and help prepare the project for milestone 3. I will likely focus on refining visual elements across the dashboard and ensuring that the features we have implemented are clearly presented and easy for users to understand.
+
+**Any Issues or Blockers That I Encountered This Week and How I Addressed/Plan to Address Them:**  
+One challenge this week was balancing how much badge information should be visible on the page without overwhelming the user interface. I addressed this by moving badge details into clickable elements and using the heatmap visualization to communicate progress more effectively without requiring large amounts of text.
