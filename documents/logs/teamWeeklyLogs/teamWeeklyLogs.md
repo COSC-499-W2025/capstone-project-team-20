@@ -1,6 +1,7 @@
 ## Team 20 Weekly Log
 
 ### Table of contents
+- [Term 2 Week 10(March 9th - March 15th)](#term-2-week-10-march-9th---march-15th)
 - [Term 2 Week 9(March 2nd - March 8th)](#term-2-week-9-march-2nd---march-8th)
 - [Term 2 Week 8(February 23rd - March 1st)](#term-2-week-8-february-23rd---march-1st)
 - [Term 2 Week 7(February 16th - February 22nd)](#term-2-week-7-february-16th---february-22nd)
@@ -671,4 +672,41 @@ Continuuing to implement our current functionality into the frontend and expandi
 
 **Test Report:**
 ![Term 2 Week 9 Test Report](teamWeeklyLogsImages/T2_W9_tests.png)
+
+
+### Term 2 Week 10 (March 9th - March 15th)
+
+**Work Performed:**
+- Branden Kennedy (42474551):
+
+- Necmi Kaan Sapoglu (17014796):
+
+- Lex Nash (84668540): 
+
+- Dylan Alexander (16394025): This week, I spent an extensive amount of time hunting for inefficiencies in our analysis methods. Upload zip had been taking an absurd amount of time for quite a while. This included setting a timer for each method in the chain of method calls when uploading zips. I managed to get the total time taken from ~157 seconds to just ~15 seconds (with the zip i was using for testing).[PR #453](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/453)[PR #455](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/455) In addition, I did a few tasks related to our frontend, in an effort to get our frontend to an acceptable place in time for peer testing. This includes adding interactive prompts in our frontend (prompting for consent, prompting to confirm cancellation of analysis), and designing and extending the "merge contributors" modal that Branden implemented.[PR #471](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/471)[PR #475](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/475)
+
+- Sven Annist (42486720):
+  
+**Features included in the project plan for this milestone are:**
+Everything up to and including Issue
+
+**Continuing tasks from last week and plan for the next week:**
+Continuuing to implement our current functionality into the frontend and expanding on it as well. 
+
+**Burnup chart:**
+![Term 2 Week 10 Burnup chart]()
+
+
+**Table View of Completed Tasks on Project Board:**
+![Term 2 Week 10 completed]()
+
+
+**Table View of In-Progress Tasks on Project Board:**
+![Term 2 Week 10 In-progress Tasks]()
+
+
+**Test Report:**
+![Term 2 Week 10 Test Report]()
+
+
 
