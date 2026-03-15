@@ -1,6 +1,7 @@
 ## **Branden Weekly Logs**
 ### **Table of contents:**
 
+- [Term 2 Week 10](#term-2-week-10-march-9th---march-15th)
 - [Term 2 Week 9](#term-2-week-9-march-2nd---march-8th)
 - [Term 2 Week 8](#term-2-week-8-february-23rd---march-1st)
 - [Term 2 Week 7](#term-2-week-7-february-16th---february-22nd)
@@ -408,3 +409,26 @@ I am hoping to see the full Milestone 3 requirements and start picking away at t
 
 **Any issues or Blockers That I Encountered This Week and How I Addressed/Plan to Address Them:**
 None this week!
+
+### **Term 2 Week 10: March 9th - March 15th**
+**Screenshot of Tasks Worked On:**
+
+![Term 2 Week 10](imagesForBrandenLogs/T2_W10.png)
+
+**Coding Tasks:**
+This week, I worked on three PRs. These were [PR 463](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/463), [PR 465](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/465), and [PR 470](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/470). [PR 463](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/463) focused on fixing merge conflicts that had been merged to our main. They werent caught because the PR had been approved but there were merge conflicts with main, then it got merged before our tests could fully run and thus were not caught. [PR 465](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/465) focused on splitting our "Reports" tab into two seperate tabs, Resume and Portfolio. We decided to split these pages into two seperate pages because we will be implementing a flag in our Report model (Resume and portfolio are both created from a Report object) that will specify whether its a resume or a portfolio report, allowing us to implement seperate CRUD operations to each. [PR 470](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/470) focused on implementing the merging of GitHub usernames in the frontend. Previously, our CLI allowed our analyzer to find similar GitHub usernames in a project and merge it as 1 contributor, ensuring accuracy in our contribution analyzer. This ended up being a long task as it was geared towards CLI usage and needed quite the refactor to work properly in the frontend. This also included adding a modal that will pull up for this task, allowing the user to confirm whether the username merges are proper. I also added tests where needed for the frontend and updated corresponding tests in the backend for each PR. I also created and filled out the Peer testing 2 tasks and questionnaire for the upcoming peer testing.
+
+**Testing or Debugging Tasks:**
+I manually tested all PRs that I had reviewed as well as my own PRs. Automated tests were updated and added for the features that I had added in and the code that I had refactored. Debugging of main (from previous merge conflicts that had been merged to main) came in [PR 463](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/463).
+
+**Reviewing or Collaboration Tasks:**
+I have reviewed [PR 471](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/471), [PR 453](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/453), [PR 455](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/455), and [PR 475](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/475). At the time of writing this, I have reviewed all PRs that have been opened either than mine for the week, and all were Dylan's.
+
+**Brief Description of Last Week Connecting This Week:**
+Last week, we wanted to start implementing more into the frontend from our backend CLI, transferring all current functionality into the frontend. We have started on this, and we are trying to get our Milestone 3 requirements filled out as quickly as we can!
+
+**Plan/Goals for Upcoming Week:**
+To hopefully have the whole team implementing features so that we can really start getting through Milestone 3. I personally plan to have CRUD operations for both Resume and Portfolio pages done before peer testing on wednesday, and then selecting your own github username for project contribution calculations done as soon as possible. Ideally, this would be before peer testing, but I also have 2 midterms on Wednesday and Thurday this week so I need to focus on those too.
+
+**Any issues or Blockers That I Encountered This Week and How I Addressed/Plan to Address Them:**
+Well, it is crunch time for our project to try and get everything done as soon as possible (And most of it done before peer testing 2 as bowen requested), but for the last couple weeks, its been hard to get everyone aside from myself and Dylan to grind it out. I feel we are behind from where I wouldve liked to be at this time. but, as I had previously said, at the time of writing this, it has only been Dylan and myself working on pushing the project along. 
