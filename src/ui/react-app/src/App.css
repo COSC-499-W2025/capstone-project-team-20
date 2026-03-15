@@ -5,6 +5,13 @@ html, body, #root {
 
 #root {
   /* colours from profile setup */
+  --primary: #55BDCA;
+  --primary_high: #98FFFF;
+  --primary_desat: #C8EFF9;
+  --secondary: #022445;
+  --secondary_low: #03132e;
+  --tertiary: #F27D42;
+
   --accent:  #58a6ff;
   --accent2: #f78166;
   --bg:      #0d1117;
@@ -17,8 +24,9 @@ html, body, #root {
   --r:       10px;
 
   font-family: 'DM Sans', 'Segoe UI', system-ui, sans-serif;
-  background: transparent;
   color: var(--text);
+  
+  background-color: var(--secondary);
   width: 100%;
   overflow: hidden;
 }
@@ -114,6 +122,70 @@ body{
 .nav-btn:hover{
   border-color:var(--muted);
   color:var(--text);
+}
+
+.menu {
+  background-color: var(--secondary);
+  margin: 6px;
+  margin-left: 0;
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.help-page{
+  max-width:800px;
+}
+
+.help-section{
+  margin-bottom:12px;
+  border:1px solid var(--border);
+  border-radius:10px;
+  overflow:hidden;
+}
+
+.help-toggle{
+  width:100%;
+  text-align:left;
+  background:var(--surface);
+  color:var(--text);
+  border:none;
+  padding:14px 16px;
+  font-size:15px;
+  font-weight:600;
+  cursor:pointer;
+
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+
+.help-toggle:hover{
+  background:rgba(88,166,255,.1);
+}
+
+.help-arrow{
+  font-size:12px;
+}
+
+.help-content{
+  padding:16px;
+  border-top:1px solid var(--border);
+  background:rgba(255,255,255,.02);
+}
+
+.help-content ul,
+.help-content ol{
+  padding-left:20px;
+}
+
+.help-content h4{
+  margin-top:12px;
+}
+  color: #e9f7ff;
+  border-radius: 16px;
+  padding: 16px 20px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.28);
 }
 
 .nav-btn--active{
