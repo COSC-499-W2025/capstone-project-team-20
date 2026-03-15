@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Optional
 
 
-def compute_file_hash(path: Path, chunk_size: int = 8192) -> Optional[str]:
+def compute_file_hash(path: Path, chunk_size: int = 65536) -> Optional[str]:
     """Return SHA-256 hash for a file path, or None if unreadable."""
     try:
         hasher = hashlib.sha256()

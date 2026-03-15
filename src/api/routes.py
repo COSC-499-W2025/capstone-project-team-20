@@ -15,7 +15,6 @@ from src.exporters.ReportExporter import ReportExporter
 from src.generators.PortfolioGenerator import PortfolioGenerator
 from src.ZipParser import parse_zip_to_project_folders
 from src.services.badge_wrapped_service import build_badge_progress, build_yearly_wrapped
-from src.managers.ConfigManager import ConfigManager
 
 from src.api.schemas.skills import SkillsListResponse, SkillItem
 from src.api.schemas.projects import (
@@ -35,15 +34,13 @@ from src.api.schemas.portfolio import (
     PortfolioDetailsGenerateRequest, PortfolioDetailsGenerateResponse,
     PortfolioExportRequest, PortfolioExportResponse
 )
-
 from src.api.schemas import (
-  SkillsListResponse, SkillItem, PortfolioResponse, ConsentResponse, UploadProjectResponse, ProjectsListResponse, ProjectSummary,
-  ProjectDetailResponse, ProjectDetail, PortfolioGenerateRequest, PortfolioGenerateResponse, PortfolioUpdateRequest,
-  PortfolioReport, PortfolioProject, PortfolioDetailsResponse
+    PortfolioResponse, PortfolioUpdateRequest, PortfolioReport, PortfolioProject, PortfolioDetailsResponse
 )
 
 """For all our routes. Requirement 32, endpoints"""
 router = APIRouter()
+
 
 def _build_portfolio_project(project) -> PortfolioProject:
     details = project.portfolio_details
@@ -51,6 +48,8 @@ def _build_portfolio_project(project) -> PortfolioProject:
     return PortfolioProject(
         project_name=project.project_name,
         resume_score=project.resume_score,
+        summary=getattr(project, "summary", "") or "",
+        bullets=list(getattr(project, "bullets", []) or []),
         portfolio_details=PortfolioDetailsResponse(**details_payload),
         languages=list(project.languages or []),
         language_share=dict(project.language_share or {}),
@@ -59,6 +58,7 @@ def _build_portfolio_project(project) -> PortfolioProject:
         last_modified=project.last_modified,
         collaboration_status=project.collaboration_status,
     )
+
 
 def _build_portfolio_report(report) -> PortfolioReport:
     projects = [_build_portfolio_project(p) for p in (report.projects or [])]
@@ -70,16 +70,17 @@ def _build_portfolio_report(report) -> PortfolioReport:
         notes=report.notes,
         projects=projects,
     )
+
+
 def _copy_upload_to_temp_zip(upload: UploadFile) -> Path:
     """Persist an uploaded ZIP to a temp file, resetting stream position first."""
     if getattr(upload, "file", None) and hasattr(upload.file, "seek"):
         upload.file.seek(0)
-
     with tempfile.NamedTemporaryFile(delete=False, suffix=".zip") as tmp:
         tmp_path = Path(tmp.name)
         shutil.copyfileobj(upload.file, tmp)
-
     return tmp_path
+
 
 def require_consent():
     cm = ConsentManager()
@@ -90,20 +91,26 @@ def require_consent():
         )
     return True
 
+
 class UploadPathRequest(BaseModel):
     path: str
 
+
 def _run_post_upload_analyses(analyzer: ProjectAnalyzer, projects):
     """Run non-interactive analyses so uploaded projects have usable dashboard data."""
+    changed = [p for p in projects if p.name in analyzer.changed_project_names]
+    if not changed:
+        return
     for method_name in ("analyze_git_and_contributions", "analyze_metadata", "analyze_categories", "analyze_languages", "analyze_skills", "generate_insights_noninteractive"):
         method = getattr(analyzer, method_name, None)
         if callable(method):
             if method_name == "analyze_skills":
-                method(projects=projects, silent=True)
+                method(projects=changed, silent=True)
             elif method_name == "analyze_git_and_contributions":
-                method(projects=projects, interactive=False)
+                method(projects=changed, interactive=False)
             else:
-                method(projects=projects)
+                method(projects=changed)
+
 
 @router.post("/projects/upload-path", dependencies=[Depends(require_consent)])
 def upload_project_from_path(req: UploadPathRequest):
@@ -113,7 +120,6 @@ def upload_project_from_path(req: UploadPathRequest):
     DO NOT expose in production as it allows arbitrary path access on the API host.
     """
     zip_path = Path(req.path)
-
     if not zip_path.exists():
         raise HTTPException(status_code=404, detail="File not found at given path.")
 
@@ -125,18 +131,13 @@ def upload_project_from_path(req: UploadPathRequest):
     created_projects = analyzer.initialize_projects()
     _run_post_upload_analyses(analyzer, created_projects)
 
-    return {
-        "projects": [
-            {"id": p.id, "name": p.name}
-            for p in created_projects
-        ]
-    }
+    return {"projects": [{"id": p.id, "name": p.name} for p in created_projects]}
+
 
 @router.post("/projects/upload", response_model=UploadProjectResponse, status_code=status.HTTP_201_CREATED)
 def upload_project(zip_file: UploadFile = File(...)):
     """Upload a zip file, analyze projects inside, and persist project records."""
     tmp_path = _copy_upload_to_temp_zip(zip_file)
-
     root_folders = parse_zip_to_project_folders(str(tmp_path))
     if not root_folders:
         tmp_path.unlink(missing_ok=True)
@@ -144,18 +145,16 @@ def upload_project(zip_file: UploadFile = File(...)):
     analyzer = ProjectAnalyzer(ConfigManager(), root_folders, tmp_path)
     created_projects = analyzer.initialize_projects()
     _run_post_upload_analyses(analyzer, created_projects)
-
     tmp_path.unlink(missing_ok=True)
+    return UploadProjectResponse(projects=[ProjectSummary(id=p.id, name=p.name) for p in created_projects])
 
-    return UploadProjectResponse(
-        projects=[ProjectSummary(id=p.id, name=p.name) for p in created_projects]
-    )
 
 @router.get("/privacy-consent", response_model=ConsentResponse)
 def get_consent():
     """Return the user's current privacy consent status."""
     cm = ConsentManager()
     return ConsentResponse(consent=cm.has_user_consented())
+
 
 @router.post("/privacy-consent", response_model=ConsentResponse)
 def upload_consent(req: ConsentRequest):
@@ -164,12 +163,12 @@ def upload_consent(req: ConsentRequest):
     cm.set_consent(req.consent)
     return ConsentResponse(consent=req.consent)
 
+
 @router.get("/projects", response_model=ProjectsListResponse)
 def get_list_projects():
     """List all analyzed/uploaded projects."""
     pm = ProjectManager()
     grouped_projects = pm.get_project_groups()
-
     current_projects = [ProjectSummary(id=p.id, name=p.name) for p in grouped_projects["current"]]
     previous_projects = [ProjectSummary(id=p.id, name=p.name) for p in grouped_projects["previous"]]
     return ProjectsListResponse(
@@ -186,18 +185,16 @@ def clear_projects():
     pm.clear()
     return {"ok": True}
 
+
 @router.get("/projects/{id}", response_model=ProjectDetailResponse)
 def get_project(id: int):
     """Get metadata/details for a project by id."""
     pm = ProjectManager()
     project = pm.get(id)
-
     if not project:
         raise HTTPException(status_code=404, detail="Project not found.")
+    return ProjectDetailResponse(project=ProjectDetail(**project.__dict__))
 
-    return ProjectDetailResponse(
-        project=ProjectDetail(**project.__dict__)
-    )
 
 @router.delete("/projects/{id}", status_code=204)
 def delete_project(id: int):
@@ -209,32 +206,27 @@ def delete_project(id: int):
     project = pm.get(id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found.")
-
-    deleted = pm.delete(id)
-    if not deleted:
+    if not pm.delete(id):
         raise HTTPException(status_code=500, detail="Failed to delete project.")
-
     return None
+
 
 @router.get("/skills", response_model=SkillsListResponse)
 def get_skills_list():
     """List unique skills detected across all projects, plus their project usage count."""
     pm = ProjectManager()
     projects = list(pm.get_all())
-
     counts = Counter()
-
     for p in projects:
         for s in (p.skills_used or []):
             if s:
                 counts[s.strip()] += 1
-
     skills = [
         SkillItem(name=name, project_count=count)
         for name, count in sorted(counts.items(), key=lambda x: (-x[1], x[0].lower()))
     ]
-
     return SkillsListResponse(skills=skills)
+
 
 @router.get("/badges/progress", response_model=BadgeProgressResponse)
 def get_badge_progress():
@@ -249,9 +241,6 @@ def get_yearly_wrapped():
     pm = ProjectManager()
     return build_yearly_wrapped(list(pm.get_all()))
 
-# ---------------------------
-# Reports (saved templates)
-# ---------------------------
 
 @router.post("/reports", response_model=ReportDetailResponse, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_consent)])
 def create_report(req: ReportCreateRequest):
@@ -264,13 +253,7 @@ def create_report(req: ReportCreateRequest):
 
     pm = ProjectManager()
     rm = ReportManager()
-
-    report = Report(
-        title=req.title or "",
-        sort_by=req.sort_by,
-        notes=req.notes,
-        projects=[]
-    )
+    report = Report(title=req.title or "", sort_by=req.sort_by, notes=req.notes, projects=[])
 
     for pid in req.project_ids:
         p = pm.get(pid)
@@ -301,7 +284,6 @@ def create_report(req: ReportCreateRequest):
             last_modified=p.last_modified,
             collaboration_status=getattr(p, "collaboration_status", "individual") or "individual",
         )
-
         report.add_project(rp)
 
     report_id = rm.create_report(report)
@@ -340,6 +322,7 @@ def list_reports():
         ]
     )
 
+
 @router.get("/reports/{id}", response_model=ReportDetailResponse, dependencies=[Depends(require_consent)])
 def get_report(id: int):
     """Get a report (by id) and its summary info."""
@@ -358,6 +341,7 @@ def get_report(id: int):
         )
     )
 
+
 @router.delete("/reports/{id}", status_code=204, dependencies=[Depends(require_consent)])
 def delete_report(id: int):
     """
@@ -368,12 +352,10 @@ def delete_report(id: int):
     report = rm.get_report(id)
     if not report:
         raise HTTPException(status_code=404, detail="Report not found.")
-
-    deleted = rm.delete_report(id)
-    if not deleted:
+    if not rm.delete_report(id):
         raise HTTPException(status_code=500, detail="Failed to delete report.")
-
     return None
+
 
 @router.get("/portfolio/{id}", response_model=PortfolioResponse, dependencies=[Depends(require_consent)])
 def get_portfolio(id: int):
@@ -385,6 +367,7 @@ def get_portfolio(id: int):
     portfolio = _build_portfolio_report(report)
     return PortfolioResponse(ok=True, portfolio=portfolio, message="Portfolio retrieved.")
 
+
 @router.post("/portfolio/export", response_model=PortfolioExportResponse, dependencies=[Depends(require_consent)])
 def export_portfolio(req: PortfolioExportRequest):
     """
@@ -394,19 +377,18 @@ def export_portfolio(req: PortfolioExportRequest):
     report = rm.get_report(req.report_id)
     if not report:
         raise HTTPException(status_code=404, detail="Report not found.")
-
     try:
         export_id, out_path = export_report_pdf(report, template="portfolio", output_name=req.output_name)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except RuntimeError as e:
         raise HTTPException(status_code=500, detail=str(e))
-
     return PortfolioExportResponse(
         export_id=export_id,
         filename=out_path.name,
         download_url=f"/portfolio/exports/{export_id}/download"
     )
+
 
 @router.get("/portfolio/exports/{export_id}/download", dependencies=[Depends(require_consent)])
 def download_portfolio(export_id: str):
@@ -417,6 +399,7 @@ def download_portfolio(export_id: str):
         raise HTTPException(status_code=404, detail="Export not found.")
     p = matches[0]
     return FileResponse(str(p), filename=p.name)
+
 
 @router.post("/portfolio/{id}/edit", response_model=PortfolioResponse, dependencies=[Depends(require_consent)])
 def edit_portfolio(id: int, payload: PortfolioUpdateRequest):
@@ -435,11 +418,8 @@ def edit_portfolio(id: int, payload: PortfolioUpdateRequest):
     portfolio = _build_portfolio_report(report)
     return PortfolioResponse(ok=True, portfolio=portfolio, message="Portfolio updated.")
 
-@router.post(
-    "/reports/{id}/portfolio-details/generate",
-    response_model=PortfolioDetailsGenerateResponse,
-    dependencies=[Depends(require_consent)]
-)
+
+@router.post("/reports/{id}/portfolio-details/generate", response_model=PortfolioDetailsGenerateResponse, dependencies=[Depends(require_consent)])
 def generate_report_portfolio_details(id: int, req: PortfolioDetailsGenerateRequest):
     """
     Generates PortfolioDetails for selected ReportProjects in a report
@@ -489,6 +469,7 @@ def generate_report_portfolio_details(id: int, req: PortfolioDetailsGenerateRequ
     rm.update_report(report)
     return PortfolioDetailsGenerateResponse(updated_project_names=updated)
 
+
 def export_report_pdf(report, template: str, output_name: str) -> tuple[str, Path]:
     export_id = uuid4().hex
     out_dir = Path("resumes") if template != "portfolio" else Path("portfolios")
@@ -507,6 +488,7 @@ def export_report_pdf(report, template: str, output_name: str) -> tuple[str, Pat
     if not out_path.exists():
         raise HTTPException(status_code=500, detail="Export failed: output file not created.")
     return export_id, out_path
+
 
 @router.post("/resume/export", response_model=ResumeExportResponse, dependencies=[Depends(require_consent)])
 def export_resume(req: ResumeExportRequest):
@@ -533,11 +515,12 @@ def export_resume(req: ResumeExportRequest):
 
 
 class ConfigSaveRequest(BaseModel):
-    name:     str | None = None
-    email:    str | None = None
-    phone:    str | None = None
-    github:   str | None = None
+    name: str | None = None
+    email: str | None = None
+    phone: str | None = None
+    github: str | None = None
     linkedin: str | None = None
+
 
 @router.get("/resume/exports/{export_id}/download", dependencies=[Depends(require_consent)])
 def download_resume(export_id: str):
@@ -549,11 +532,13 @@ def download_resume(export_id: str):
     p = matches[0]
     return FileResponse(str(p), filename=p.name)
 
+
 @router.get("/config")
 def get_config():
     """Return all stored config values as a flat dict."""
     cm = ConfigManager()
     return {"ok": True, "config": cm.get_all()}
+
 
 @router.post("/config")
 def save_config(req: ConfigSaveRequest):
@@ -563,4 +548,3 @@ def save_config(req: ConfigSaveRequest):
         if value is not None and str(value).strip():
             cm.set(key, str(value).strip())
     return {"ok": True, "config": cm.get_all()}
-

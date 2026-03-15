@@ -6,8 +6,6 @@ from src.models.ReportProject import PortfolioDetails
 class PortfolioGenerator:
     """
     Generates structured portfolio entries for projects.
-    This class is responsible for creating a detailed, structured
-    PortfolioDetails object for a single project.
     """
 
     def __init__(
@@ -25,48 +23,38 @@ class PortfolioGenerator:
         self.language_list = language_list
 
     def generate_portfolio_details(self) -> PortfolioDetails:
-        """
-        Generates a structured PortfolioDetails object with no Markdown.
-        """
-        code_files, _, _, _ = self._get_category_counts()
+        code_files, doc_files, test_files, _ = self._get_category_counts()
         total_files = sum((self.categorized_files or {}).values())
 
         days = self._compute_days()
         duration_str = self._format_duration(days)
+        langs = ", ".join(self.language_list) if self.language_list else "multiple languages"
 
-        langs = ", ".join(self.language_list) if self.language_list else "various technologies"
-
-        team_count = getattr(self.project, "author_count", 0)
+        team_count = self._resolve_team_count()
         contributor_roles = self._build_contributor_roles()
         role = self._select_project_role(team_count, contributor_roles)
 
         if team_count > 1:
-            collaboration_text = f"collaborated with {team_count-1} other developers to build"
+            collaboration_line = f"Built collaboratively by a team of {team_count} contributors."
         else:
-            collaboration_text = "independently designed and implemented"
-
-        project_name = getattr(self.project, "name", "Project")
+            collaboration_line = "Developed independently."
 
         overview = (
-            f"A software solution {collaboration_text} over a {duration_str} period. "
-            f"The codebase consists of {total_files} files, including {code_files} source modules, "
-            f"structured for maintainability and scalability."
+            f"This project was implemented using {langs}. "
+            f"It includes {total_files} files with {code_files} source modules, "
+            f"{test_files} test files, and {doc_files} documentation files. "
+            f"{collaboration_line}"
         )
 
-        achievements = []
-        test_ratio = getattr(self.project, "test_file_ratio", 0)
-        if test_ratio > 0.15:
-            achievements.append("Implemented a robust automated testing suite ensuring high code reliability.")
-        elif test_ratio > 0:
-            achievements.append("Integrated automated tests to support continuous integration.")
-        doc_score = getattr(self.project, "documentation_habits_score", 0)
-        if doc_score > 75:
-            achievements.append("Maintained comprehensive documentation to facilitate developer onboarding and maintenance.")
-        loc = getattr(self.project, "total_loc", 0)
-        if loc > 5000:
-            achievements.append(f"Architected a substantial codebase of over {loc:,} lines of code.")
-        if not achievements:
-            achievements.append("Delivered a functional codebase using modern development practices.")
+        key_points = self._build_key_contributions(
+            langs=langs,
+            code_files=code_files,
+            test_files=test_files,
+            doc_files=doc_files,
+            team_count=team_count,
+        )
+
+        project_name = getattr(self.project, "name", "Project")
 
         return PortfolioDetails(
             project_name=project_name,
@@ -74,9 +62,49 @@ class PortfolioGenerator:
             timeline=duration_str,
             technologies=langs,
             overview=overview,
-            achievements=achievements,
+            achievements=key_points,
             contributor_roles=contributor_roles,
         )
+
+    def _build_key_contributions(
+        self,
+        langs: str,
+        code_files: int,
+        test_files: int,
+        doc_files: int,
+        team_count: int,
+    ) -> List[str]:
+        points: List[str] = []
+
+        points.append(f"Implemented project functionality using {langs} across {code_files} source files.")
+
+        if test_files > 0 and doc_files > 0:
+            points.append(f"Maintained {test_files} test files and {doc_files} documentation files.")
+        elif test_files > 0:
+            points.append(f"Maintained {test_files} test files to support quality checks.")
+        elif doc_files > 0:
+            points.append(f"Maintained {doc_files} documentation files for maintainability.")
+        else:
+            points.append("Maintained project structure and code organization.")
+
+        if team_count > 1:
+            points.append("Collaborated with team members through shared repository workflows.")
+        else:
+            points.append("Handled implementation and maintenance responsibilities independently.")
+
+        return points[:3]
+
+    def _resolve_team_count(self) -> int:
+        authors = list(getattr(self.project, "authors", []) or [])
+        explicit_author_count = int(getattr(self.project, "author_count", 0) or 0)
+
+        if authors:
+            return max(len(authors), explicit_author_count)
+        if explicit_author_count > 0:
+            return explicit_author_count
+
+        status = getattr(self.project, "collaboration_status", "individual")
+        return 2 if status == "collaborative" else 1
 
     def _get_category_counts(self) -> tuple[int, int, int, int]:
         counts = self.categorized_files or {}
@@ -98,6 +126,8 @@ class PortfolioGenerator:
         return max((end - start).days, 0)
 
     def _format_duration(self, days: int) -> str:
+        if days <= 0:
+            return "N/A"
         if days < 30:
             return f"{days} days"
         months, rem = divmod(days, 30)
@@ -122,25 +152,35 @@ class PortfolioGenerator:
 
     def _build_contributor_roles(self) -> List[Dict[str, Any]]:
         roles = getattr(self.project, "contributor_roles", {}) or {}
-        if not roles:
-            return []
         selected_users = list(getattr(self.project, "authors", []) or [])
-        role_users = selected_users if selected_users else list(roles.keys())
-        entries = []
-        for user in role_users:
-            info = roles.get(user)
-            if not info:
-                continue
-            role_key = info.get("primary_role", "role_none")
-            role_name = self._pretty_role(role_key)
-            confidence = float(info.get("confidence", 0.0) or 0.0)
-            entries.append({
-                "name": user,
-                "role": role_name if role_name != "None" else "Contributor",
-                "confidence": confidence,
-                "confidence_pct": int(round(confidence * 100)),
-            })
-        entries.sort(key=lambda item: (-item["confidence"], item["name"].lower()))
+        entries: List[Dict[str, Any]] = []
+
+        if roles:
+            role_users = selected_users if selected_users else list(roles.keys())
+            for user in role_users:
+                info = roles.get(user)
+                if not info:
+                    continue
+                role_key = info.get("primary_role", "role_none")
+                role_name = self._pretty_role(role_key)
+                confidence = float(info.get("confidence", 0.0) or 0.0)
+                entries.append({
+                    "name": user,
+                    "role": role_name if role_name != "None" else "Contributor",
+                    "confidence": confidence,
+                    "confidence_pct": int(round(confidence * 100)),
+                })
+
+        if not entries and selected_users:
+            for user in selected_users:
+                entries.append({
+                    "name": user,
+                    "role": "Contributor",
+                    "confidence": 0.0,
+                    "confidence_pct": 0,
+                })
+
+        entries.sort(key=lambda item: item["name"].lower())
         return entries
 
     def _select_project_role(self, team_count: int, contributor_roles: List[Dict[str, Any]]) -> str:
@@ -150,6 +190,7 @@ class PortfolioGenerator:
                 if team_count > 1:
                     return f"{primary_role} Contributor (Team of {team_count})"
                 return f"{primary_role} Developer"
+
         if team_count > 1:
             return f"Team Contributor (Team of {team_count})"
         return "Solo Developer"

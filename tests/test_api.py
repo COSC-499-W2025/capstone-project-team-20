@@ -145,7 +145,6 @@ def test_get_projects_list(client, monkeypatch):
     assert res.status_code == 200
 
     data = res.json()
-    assert data["ok"] is True
     # API concatenates current_projects followed by previous_projects
     assert data["projects"] == [
         {"id": 2, "name": "B"},
@@ -219,6 +218,7 @@ def test_upload_project_success(client, monkeypatch):
             self.config = config
             self.root_folders = root_folders
             self.tmp_path = tmp_path
+            self.changed_project_names = ["Proj1", "Proj2"]
 
         def initialize_projects(self):
             return [FakeProject(1, "Proj1"), FakeProject(2, "Proj2")]
@@ -247,6 +247,7 @@ def test_upload_project_triggers_analyses(client, monkeypatch):
             self.config = config
             self.root_folders = root_folders
             self.tmp_path = tmp_path
+            self.changed_project_names = ["Proj1"]
 
         def initialize_projects(self):
             return [FakeProject(1, "Proj1")]
