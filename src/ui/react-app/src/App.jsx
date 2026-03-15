@@ -6,20 +6,8 @@ import Badges from "./pages/Badges"
 import ResumePage from "./pages/ResumePage";
 import PortfolioPage from "./pages/PortfolioPage";
 import Help from "./pages/Help";
-import {
-  listProjects,
-  getProject,
-  listSkills,
-  getBadgeProgress,
-  getYearlyWrapped,
-  getConfig,
-  getPrivacyConsent,
-  uploadProjectZip,
-  uploadProjectFromPath,
-  clearProjects
-} from "./api/client";
+import {getConfig,} from "./api/client";
 import "./App.css";
-import { getConfig } from "./api/client";
 
 function App() {
   const [profileReady, setProfileReady] = useState(null);
