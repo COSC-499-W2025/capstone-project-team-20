@@ -679,7 +679,7 @@ Continuuing to implement our current functionality into the frontend and expandi
 **Work Performed:**
 - Branden Kennedy (42474551):
 
-- Necmi Kaan Sapoglu (17014796):
+- Necmi Kaan Sapoglu (17014796): This week I spent some time working on bettering the badges frontend, as even though some of the changes I made last week did better the frontend's legibility for the badges, it was lacking some adaptability that would be very welcome. This week with other group member's request I added a badge heatmap, showcasing how close a person is to getting some badges, and adding the details for all the badges to be accessible by clicking on the badges themselves, removing all of the clutter and repetition there was beforehand. This is the PR for all of the changes I have listed and some more minor details that were changed so everything looks better for the peer reviews on wednesday: [PR #478](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/478).
 
 - Lex Nash (84668540): 
 
