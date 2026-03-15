@@ -1,6 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from src.api.routes import router
+import os
 
 app = FastAPI(title="Project Analyzer API")
 
@@ -18,3 +20,6 @@ app.add_middleware(
 )
 
 app.include_router(router)
+
+if os.path.exists("src/ui/react-app/dist"):
+    app.mount("/", StaticFiles(directory="src/ui/react-app/dist", html=True), name="static")
