@@ -194,6 +194,61 @@ html, body, #root {
   font-size: 0.92rem;
 }
 
+.badge-heatmap {
+  margin: 14px 0 18px;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid #356487;
+  background: linear-gradient(135deg, rgba(7, 33, 56, 0.95), rgba(3, 24, 42, 0.95));
+}
+
+.badge-heatmap-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+}
+
+.badge-heatmap-tile {
+  border-radius: 10px;
+  padding: 10px;
+  border: 1px solid transparent;
+  min-height: 86px;
+}
+
+.badge-heatmap-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.badge-heatmap-tile p {
+  margin: 0;
+  color: #d8edf8;
+  font-size: 0.88rem;
+}
+
+.badge-heatmap-tile--cold {
+  background: rgba(45, 67, 89, 0.45);
+  border-color: rgba(123, 146, 170, 0.55);
+}
+
+.badge-heatmap-tile--mild {
+  background: rgba(22, 97, 122, 0.45);
+  border-color: rgba(95, 194, 218, 0.65);
+}
+
+.badge-heatmap-tile--warm {
+  background: rgba(20, 116, 105, 0.48);
+  border-color: rgba(113, 227, 186, 0.72);
+}
+
+.badge-heatmap-tile--hot {
+  background: rgba(36, 138, 90, 0.56);
+  border-color: rgba(152, 255, 199, 0.8);
+  box-shadow: inset 0 0 0 1px rgba(171, 255, 213, 0.35);
+}
+
 .portfolio-panel {
   margin-top: 14px;
   padding: 10px;
