@@ -58,6 +58,16 @@ beforeEach(() => {
         project: { name: 'Alpha' },
       },
       {
+        badge_id: 'team_effort',
+        label: 'Team Effort',
+        earned: false,
+        progress: 0,
+        metric: 'contributors',
+        current: 0,
+        target: 3,
+        project: { name: 'Alpha' },
+      },
+      {
         badge_id: 'gigantana',
         label: 'Gigantana',
         earned: true,
@@ -93,7 +103,7 @@ beforeEach(() => {
 })
 
 describe('App badges heatmap', () => {
-  it('renders heatmap tiles with completion intensity and improved descriptions', async () => {
+  it('shows heatmap first and opens badge detail modal on tile click', async () => {
     const user = userEvent.setup()
     render(<App />)
 
@@ -104,14 +114,35 @@ describe('App badges heatmap', () => {
     await user.click(screen.getByRole('button', { name: /badges/i }))
 
     expect(await screen.findByRole('heading', { name: /badge completion heatmap/i })).toBeInTheDocument()
-    expect(await screen.findByText(/consistent effort over time, showing long-term ownership and discipline/i)).toBeInTheDocument()
 
-    const polyglotLabel = await screen.findByText('Polyglot')
-    const polyglotTile = polyglotLabel.closest('article')
-    expect(polyglotTile).toHaveClass('badge-heatmap-tile--warm')
+    const polyglotTileButton = await screen.findByRole('button', {
+      name: /open polyglot badge details/i,
+    })
+    await user.click(polyglotTileButton)
 
-    const unlockedState = await screen.findByText('Unlocked')
-    const unlockedTile = unlockedState.closest('article')
-    expect(unlockedTile).toHaveClass('badge-heatmap-tile--hot')
+    expect(await screen.findByRole('heading', { name: 'Polyglot' })).toBeInTheDocument()
+    expect(screen.getByText(/how to earn:/i)).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '✕' }))
+    expect(screen.queryByRole('heading', { name: 'Polyglot' })).not.toBeInTheDocument()
+  })
+
+  it('only shows started badges in progress list and gates full catalog behind All Badges button', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /badges/i })).toBeInTheDocument()
+    )
+
+    await user.click(screen.getByRole('button', { name: /badges/i }))
+
+    expect(await screen.findByRole('heading', { name: /badge progress tracker \(started, uncompleted\)/i })).toBeInTheDocument()
+    expect(screen.getByText(/polyglot — 65%/i)).toBeInTheDocument()
+    expect(screen.queryByText(/team effort — 0%/i)).not.toBeInTheDocument()
+
+    expect(screen.queryByRole('heading', { name: /all possible badges/i })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /all badges/i }))
+    expect(await screen.findByRole('heading', { name: /all possible badges/i })).toBeInTheDocument()
   })
 })

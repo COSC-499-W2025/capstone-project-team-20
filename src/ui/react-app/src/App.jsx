@@ -456,6 +456,8 @@ function Badges() {
   const [progress, setProgress] = useState([]);
   const [wrapped, setWrapped] = useState([]);
   const [activeWrappedYear, setActiveWrappedYear] = useState(null);
+  const [showAllBadges, setShowAllBadges] = useState(false);
+  const [activeHeatmapBadgeId, setActiveHeatmapBadgeId] = useState(null);
 
   async function loadBadgeData() {
     setLoading(true);
@@ -485,7 +487,7 @@ function Badges() {
     return acc;
   }, {});
 
-  const inProgress = progress.filter((b) => !b.earned).map((badge) => ({
+  const inProgress = progress.filter((b) => !b.earned && (b.progress ?? 0) > 0).map((badge) => ({
     ...badge,
     description: ALL_BADGE_DETAILS[badge.badge_id]?.description ?? "Keep building to unlock this badge.",
     howToEarn: ALL_BADGE_DETAILS[badge.badge_id]?.howToEarn ?? formatBadgeRequirement(badge.metric, badge.target),
@@ -541,7 +543,7 @@ function Badges() {
     }))
     .sort((a, b) => a.label.localeCompare(b.label));
 
-    const badgeHeatmapTiles = allBadgeCatalog.map((badge) => {
+  const badgeHeatmapTiles = allBadgeCatalog.map((badge) => {
     const progressValue = badge.unlocked ? 1 : (badge.trackedProgress?.progress ?? 0);
     const completionPercent = Math.round(progressValue * 100);
     const stateLabel = badge.unlocked ? "Unlocked" : completionPercent === 0 ? "Not started" : `${completionPercent}% complete`;
@@ -581,6 +583,10 @@ function Badges() {
   const openWrappedYear = (year) => setActiveWrappedYear(year);
   const selectedWrapped = activeWrappedYear ? wrappedByYear[activeWrappedYear] : null;
 
+  const selectedHeatmapBadge = activeHeatmapBadgeId
+    ? badgeHeatmapTiles.find((badge) => badge.badgeId === activeHeatmapBadgeId) ?? null
+    : null;
+
   return (
     <>
       <h3>Badges</h3>
@@ -590,40 +596,35 @@ function Badges() {
 
       {error && <pre style={{ color: "crimson" }}>{error}</pre>}
 
-      <section className="badges-hero">
-        <h4>🏆 All Possible Badges</h4>
-        <p>Every badge, what it means, and how to earn it.</p>
-        <div className="badge-guide-grid">
-          {allBadgeCatalog.map((badge) => (
-            <article className="badge-guide-card" key={badge.badgeId}>
-              <h5>{badge.label} {badge.unlocked ? "✅" : "🔒"}</h5>
-              <p>{badge.description}</p>
-              <p><strong>How to earn:</strong> {badge.howToEarn}</p>
-              <p className="badge-description">{badge.trackedProgress ? `Tracked progress: ${Math.round((badge.trackedProgress.progress ?? 0) * 100)}%` : "Tracked progress: calculated when unlocked in projects."}</p>
-            </article>
-          ))}
-        </div>
-      </section>
-
       <section className="badge-heatmap">
         <h4>🗺️ Badge Completion Heatmap</h4>
-        <p>Darker tiles indicate higher completion progress. Unlocked badges are fully lit.</p>
+        <p>Click any badge tile to view details. Darker tiles indicate higher completion progress.</p>
         <div className="badge-heatmap-grid">
           {badgeHeatmapTiles.map((badge) => (
-            <article key={`heatmap-${badge.badgeId}`} className={`badge-heatmap-tile ${badge.intensityClass}`}>
+            <button
+              type="button"
+              key={`heatmap-${badge.badgeId}`}
+              className={`badge-heatmap-tile ${badge.intensityClass}`}
+              onClick={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                setActiveHeatmapBadgeId(badge.badgeId);
+              }}
+              aria-label={`Open ${badge.label} badge details`}
+            >
               <div className="badge-heatmap-header">
                 <strong>{badge.label}</strong>
                 <span>{badge.unlocked ? "✅" : "🔒"}</span>
               </div>
               <p>{badge.stateLabel}</p>
-            </article>
+            </button>
           ))}
         </div>
       </section>
 
-      <h4>🎯 Badge Progress Tracker (Uncompleted)</h4>
+      <h4>🎯 Badge Progress Tracker (Started, Uncompleted)</h4>
       {inProgress.length === 0 ? (
-        <p>All tracked progress badges are complete 🎉</p>
+        <p>No started in-progress badges yet. Start building to unlock more badges.</p>
       ) : (
         <ul className="in-progress-list">
           {inProgress.map((b) => (
@@ -641,6 +642,29 @@ function Badges() {
           ))}
         </ul>
       )}
+
+      <div className="all-badges-toggle">
+        <button type="button" onClick={() => setShowAllBadges((prev) => !prev)}>
+          {showAllBadges ? "Hide All Badges" : "All Badges"}
+        </button>
+      </div>
+
+      {showAllBadges ? (
+        <section className="badges-hero">
+          <h4>🏆 All Possible Badges</h4>
+          <p>Every badge, what it means, and how to earn it.</p>
+          <div className="badge-guide-grid">
+            {allBadgeCatalog.map((badge) => (
+              <article className="badge-guide-card" key={badge.badgeId}>
+                <h5>{badge.label} {badge.unlocked ? "✅" : "🔒"}</h5>
+                <p>{badge.description}</p>
+                <p><strong>How to earn:</strong> {badge.howToEarn}</p>
+                <p className="badge-description">{badge.trackedProgress ? `Tracked progress: ${Math.round((badge.trackedProgress.progress ?? 0) * 100)}%` : "Tracked progress: calculated when unlocked in projects."}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       <h4>🏅 Unlocked Badges</h4>
       {achievedBadges.length === 0 ? (
@@ -676,6 +700,21 @@ function Badges() {
           ))}
         </div>
       )}
+
+      {selectedHeatmapBadge ? (
+        <div className="wrapped-modal-backdrop" onClick={() => setActiveHeatmapBadgeId(null)}>
+          <div className="wrapped-modal badge-detail-modal" onClick={(event) => event.stopPropagation()}>
+            <button className="wrapped-close" onClick={() => setActiveHeatmapBadgeId(null)}>✕</button>
+            <h5>{selectedHeatmapBadge.label}</h5>
+            <p>{selectedHeatmapBadge.description}</p>
+            <p><strong>How to earn:</strong> {selectedHeatmapBadge.howToEarn}</p>
+            <p>
+              <strong>Progress:</strong> {selectedHeatmapBadge.stateLabel}
+              {selectedHeatmapBadge.trackedProgress?.project?.name ? ` • Closest project: ${selectedHeatmapBadge.trackedProgress.project.name}` : ""}
+            </p>
+          </div>
+        </div>
+      ) : null}
 
       {selectedWrapped ? (
         <div className="wrapped-modal-backdrop" onClick={() => setActiveWrappedYear(null)}>
