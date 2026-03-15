@@ -32,117 +32,117 @@ const formatBadgeRequirement = (metric, target) => {
 const ALL_BADGE_DETAILS = {
   gigantana: {
     label: "Gigantana",
-    description: "A massive project with heavyweight assets and scope.",
+    description: "Built for big ambitions—this project has enterprise-scale footprint and scope.",
     howToEarn: "Reach at least 1024 MB project size.",
   },
   slow_burn: {
     label: "Slow Burn",
-    description: "Steady long-term effort across a full year.",
+    description: "Consistent effort over time, showing long-term ownership and discipline.",
     howToEarn: "Keep project duration at 365+ days.",
   },
   flash_build: {
     label: "Flash Build",
-    description: "A fast sprint with meaningful output.",
+    description: "From idea to delivery in record time without sacrificing substance.",
     howToEarn: "Finish in 7 days or less with at least 20 files.",
   },
   fresh_breeze: {
     label: "Fresh Breeze",
-    description: "A compact project delivered quickly.",
+    description: "Lean execution: concise codebase, quick turnaround, clear output.",
     howToEarn: "Finish within 30 days and keep files under 50.",
   },
   marathoner: {
     label: "Marathoner",
-    description: "A multi-year commitment to growth.",
+    description: "Long-haul builder energy with sustained work across multiple years.",
     howToEarn: "Keep project duration at 730+ days.",
   },
   tiny_but_mighty: {
     label: "Tiny but Mighty",
-    description: "Small footprint, high impact.",
+    description: "Efficient and focused—small size with meaningful delivery impact.",
     howToEarn: "Keep size at 5 MB or less while shipping at least 10 files.",
   },
   rapid_builder: {
     label: "Rapid Builder",
-    description: "High-volume output in a tight window.",
+    description: "High-throughput execution: lots shipped quickly in a short timeline.",
     howToEarn: "Ship 500+ files within 120 days.",
   },
   jack_of_all_trades: {
     label: "Jack of All Trades",
-    description: "Excellent language diversity.",
+    description: "Wide technical breadth with confidence across many programming languages.",
     howToEarn: "Use at least 5 languages in a project.",
   },
   polyglot: {
     label: "Polyglot",
-    description: "Comfortable across multiple languages.",
+    description: "Strong cross-language versatility across multiple parts of the stack.",
     howToEarn: "Use at least 3 languages.",
   },
   language_specialist: {
     label: "Language Specialist",
-    description: "Deep specialization in one primary language.",
+    description: "Deep craft in a primary language with clear mastery and focus.",
     howToEarn: "Make one language at least 80% of code share.",
   },
   balanced_palette: {
     label: "Balanced Palette",
-    description: "Great balance across a mixed stack.",
+    description: "Healthy distribution of effort across several technologies.",
     howToEarn: "Use 3+ languages with top language at or below 50%.",
   },
   solo_runner: {
     label: "Solo Runner",
-    description: "Built independently end-to-end.",
+    description: "Independently scoped, built, and delivered from start to finish.",
     howToEarn: "Have 1 or fewer contributors.",
   },
   team_effort: {
     label: "Team Effort",
-    description: "Strong collaboration across contributors.",
+    description: "Collaboration-forward development with meaningful team participation.",
     howToEarn: "Have 3 or more contributors.",
   },
   test_pilot: {
     label: "Test Pilot",
-    description: "Testing takes a meaningful share of the repo.",
+    description: "Quality-first mindset with robust testing coverage.",
     howToEarn: "Keep test share at 15% or higher.",
   },
   test_scout: {
     label: "Test Scout",
-    description: "Testing is present and consistent.",
+    description: "Reliable testing baseline built into regular development flow.",
     howToEarn: "Keep test share between 5% and 15%.",
   },
   docs_guardian: {
     label: "Docs Guardian",
-    description: "Documentation-first mindset.",
+    description: "Documentation champion who keeps knowledge discoverable and maintained.",
     howToEarn: "Keep docs share at 20% or higher.",
   },
   doc_enthusiast: {
     label: "Doc Enthusiast",
-    description: "Good documentation coverage.",
+    description: "Strong documentation habits that improve onboarding and clarity.",
     howToEarn: "Keep docs share between 10% and 20%.",
   },
   pixel_perfect: {
     label: "Pixel Perfect",
-    description: "Strong visual/design emphasis.",
+    description: "High design fidelity with polished visual or game asset quality.",
     howToEarn: "Keep design or game assets at 25% or higher.",
   },
   visual_storyteller: {
     label: "Visual Storyteller",
-    description: "Visual assets are a key supporting strength.",
+    description: "Visual communication is a major strength of the project experience.",
     howToEarn: "Keep design or game assets between 15% and 25%.",
   },
   data_seedling: {
     label: "Data Seedling",
-    description: "Early signs of data-heavy work.",
+    description: "Early data-driven momentum with clear analytical direction.",
     howToEarn: "Keep data share between 10% and 25%.",
   },
   data_wrangler: {
     label: "Data Wrangler",
-    description: "Strong data footprint and tooling.",
+    description: "Data-focused implementation with meaningful datasets and tooling.",
     howToEarn: "Keep data share at 25%+ or use data stack skills.",
   },
   code_cruncher: {
     label: "Code Cruncher",
-    description: "Code-focused project composition.",
+    description: "Core strength is software implementation with code at the center.",
     howToEarn: "Keep code share at 60% or higher.",
   },
   container_captain: {
     label: "Container Captain",
-    description: "Deployment-ready with containers.",
+    description: "Operational maturity with containerized workflows and deployment readiness.",
     howToEarn: "Use Docker in the project skills.",
   },
   full_stack_explorer: {
@@ -582,7 +582,6 @@ function Badges() {
 
   const openWrappedYear = (year) => setActiveWrappedYear(year);
   const selectedWrapped = activeWrappedYear ? wrappedByYear[activeWrappedYear] : null;
-
   const selectedHeatmapBadge = activeHeatmapBadgeId
     ? badgeHeatmapTiles.find((badge) => badge.badgeId === activeHeatmapBadgeId) ?? null
     : null;
@@ -702,8 +701,8 @@ function Badges() {
       )}
 
       {selectedHeatmapBadge ? (
-        <div className="wrapped-modal-backdrop" onClick={() => setActiveHeatmapBadgeId(null)}>
-          <div className="wrapped-modal badge-detail-modal" onClick={(event) => event.stopPropagation()}>
+        <div className="badge-detail-backdrop" onClick={() => setActiveHeatmapBadgeId(null)}>
+          <div className="badge-detail-modal" role="dialog" aria-modal="true" aria-label={`${selectedHeatmapBadge.label} badge details`} onClick={(event) => event.stopPropagation()}>
             <button className="wrapped-close" onClick={() => setActiveHeatmapBadgeId(null)}>✕</button>
             <h5>{selectedHeatmapBadge.label}</h5>
             <p>{selectedHeatmapBadge.description}</p>
@@ -768,4 +767,3 @@ function Help() {
   }
 
 export default App;
-
