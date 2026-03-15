@@ -63,4 +63,8 @@ thumbnails/
 src/ui/
 src/ui/react-app/
 
+# misc
+cloned_repos/
+zipped_repos/
+
 
