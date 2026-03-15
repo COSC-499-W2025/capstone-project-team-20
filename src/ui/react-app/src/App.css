@@ -14,6 +14,15 @@ body {
   --secondary: #022445;
   --secondary_low: #03132e;
   --tertiary: #F27D42;
+
+  --accent:  #58a6ff;
+  --accent2: #f78166;
+  --bg:      #0d1117;
+  --surface: #161b22;
+  --border:  #30363d;
+  --text:    #e6edf3;
+  --muted:   #8b949e;
+  
   background-color: var(--secondary);
   width: 100%;
   overflow: hidden;
@@ -75,6 +84,57 @@ body {
   flex: 1;
   overflow-y: auto;
   min-height: 0;
+}
+
+.help-page{
+  max-width:800px;
+}
+
+.help-section{
+  margin-bottom:12px;
+  border:1px solid var(--border);
+  border-radius:10px;
+  overflow:hidden;
+}
+
+.help-toggle{
+  width:100%;
+  text-align:left;
+  background:var(--surface);
+  color:var(--text);
+  border:none;
+  padding:14px 16px;
+  font-size:15px;
+  font-weight:600;
+  cursor:pointer;
+
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+
+.help-toggle:hover{
+  background:rgba(88,166,255,.1);
+}
+
+.help-arrow{
+  font-size:12px;
+}
+
+.help-content{
+  padding:16px;
+  border-top:1px solid var(--border);
+  background:rgba(255,255,255,.02);
+}
+
+.help-content ul,
+.help-content ol{
+  padding-left:20px;
+}
+
+.help-content h4{
+  margin-top:12px;
+}
   color: #e9f7ff;
   border-radius: 16px;
   padding: 16px 20px;

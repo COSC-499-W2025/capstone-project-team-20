@@ -1,10 +1,23 @@
 import { useState, useEffect } from "react";
 import Settings from "./Settings";
 import ProfileSetup from "./pages/ProfileSetup";
-import Reports from "./pages/Reports";
 import Projects from "./pages/Projects";
 import Badges from "./pages/Badges"
+import ResumePage from "./pages/ResumePage";
+import PortfolioPage from "./pages/PortfolioPage";
 import Help from "./pages/Help";
+import {
+  listProjects,
+  getProject,
+  listSkills,
+  getBadgeProgress,
+  getYearlyWrapped,
+  getConfig,
+  getPrivacyConsent,
+  uploadProjectZip,
+  uploadProjectFromPath,
+  clearProjects
+} from "./api/client";
 import "./App.css";
 import { getConfig } from "./api/client";
 
@@ -20,8 +33,9 @@ function App() {
     { id: 0, label: "Settings" },
     { id: 1, label: "Projects" },
     { id: 2, label: "Badges" },
-    { id: 3, label: "Reports" },
-    { id: 4, label: "Help" }
+    { id: 3, label: "Resume" },
+    { id: 4, label: "Portfolio"},
+    { id: 5, label: "Help" }
   ];
 
   const menuRender = () => {
@@ -29,8 +43,9 @@ function App() {
       case 0: return <Settings />;
       case 1: return <Projects />;
       case 2: return <Badges />;
-      case 3: return <Reports />;
-      case 4: return <Help />;
+      case 3: return <ResumePage />;
+      case 4: return <PortfolioPage />;
+      case 5: return <Help />;
       default: return <Projects />;
     }
   };
@@ -53,4 +68,3 @@ function App() {
 }
 
 export default App;
-

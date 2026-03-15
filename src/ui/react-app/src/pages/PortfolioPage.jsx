@@ -4,21 +4,20 @@ import {
   createReport,
   listReports,
   getReport,
-  exportResume,
   exportPortfolio,
   generatePortfolioDetailsForReport,
   getPortfolio,
   setPrivacyConsent,
 } from "../api/client";
 
-function Reports() {
+function PortfolioPage() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [projects, setProjects] = useState([]);
   const [selectedProjectIds, setSelectedProjectIds] = useState([]);
   const [reports, setReports] = useState([]);
   const [selectedReport, setSelectedReport] = useState(null);
-  const [reportTitle, setReportTitle] = useState("My Report");
+  const [reportTitle, setReportTitle] = useState("My Portfolio Report");
   const [reportNotes, setReportNotes] = useState("");
   const [portfolio, setPortfolio] = useState(null);
   const [openProjects, setOpenProjects] = useState({});
@@ -36,12 +35,13 @@ function Reports() {
       setProjects(allProjects);
       setSelectedProjectIds(allProjects.map((p) => p.id));
       setReports(reportData.reports ?? []);
+
       if (selectedReport?.id) {
         const refreshed = (reportData.reports ?? []).find((r) => r.id === selectedReport.id);
         setSelectedReport(refreshed ?? selectedReport);
       }
     } catch (e) {
-      setMessage(e.message ?? "Failed to load reports page data");
+      setMessage(e.message ?? "Failed to load portfolio page data");
     } finally {
       setLoading(false);
     }
@@ -58,16 +58,19 @@ function Reports() {
     setMessage("");
     try {
       await setPrivacyConsent(true);
+
       if (!selectedProjectIds.length) {
         setMessage("Select at least one project first.");
         return;
       }
+
       const created = await createReport({
         title: reportTitle,
         sort_by: "resume_score",
         notes: reportNotes,
         project_ids: selectedProjectIds,
       });
+
       setSelectedReport(created.report ?? null);
       setMessage(`Created report "${created.report?.title ?? "Untitled"}"`);
       await loadInitialData();
@@ -93,33 +96,12 @@ function Reports() {
     }
   }
 
-  async function handleExportResume() {
-    if (!selectedReport?.id) {
-      setMessage("Select or create a report first.");
-      return;
-    }
-    setLoading(true);
-    setMessage("");
-    try {
-      const exp = await exportResume({
-        report_id: selectedReport.id,
-        template: "jake",
-        output_name: "resume.pdf",
-      });
-      window.open(`http://localhost:8000${exp.download_url}`, "_blank");
-      setMessage("Resume export started.");
-    } catch (e) {
-      setMessage(e.message ?? "Failed to export resume");
-    } finally {
-      setLoading(false);
-    }
-  }
-
   async function handleExportPortfolioPdf() {
     if (!selectedReport?.id) {
       setMessage("Select or create a report first.");
       return;
     }
+
     setLoading(true);
     setMessage("");
     try {
@@ -127,6 +109,7 @@ function Reports() {
         report_id: selectedReport.id,
         output_name: "portfolio.pdf",
       });
+
       window.open(`http://localhost:8000${exp.download_url}`, "_blank");
       setMessage("Portfolio export started.");
     } catch (e) {
@@ -141,12 +124,15 @@ function Reports() {
       setMessage("Select or create a report first.");
       return;
     }
+
     setLoading(true);
     setMessage("");
     setPortfolio(null);
     setOpenProjects({});
+
     try {
       await setPrivacyConsent(true);
+
       const names = projects
         .filter((p) => selectedProjectIds.includes(p.id))
         .map((p) => p.name)
@@ -193,13 +179,15 @@ function Reports() {
 
   return (
     <>
-      <h3>Reports</h3>
+      <h3>Portfolio</h3>
+
       <button onClick={loadInitialData} disabled={loading}>
-        {loading ? "Loading..." : "Refresh Reports Page"}
+        {loading ? "Loading..." : "Refresh Portfolio Page"}
       </button>
 
       <div style={{ marginTop: 16, padding: 12, border: "1px solid #ddd", borderRadius: 8 }}>
-        <h4>Create Report</h4>
+        <h4>Create Portfolio Report</h4>
+
         <div style={{ marginBottom: 12 }}>
           <label>Title</label><br />
           <input
@@ -209,6 +197,7 @@ function Reports() {
             style={{ width: "100%", maxWidth: 400 }}
           />
         </div>
+
         <div style={{ marginBottom: 12 }}>
           <label>Notes</label><br />
           <textarea
@@ -241,7 +230,7 @@ function Reports() {
         )}
 
         <button onClick={handleCreateReport} disabled={loading}>
-          {loading ? "Working..." : "Create Report"}
+          {loading ? "Working..." : "Create Portfolio Report"}
         </button>
       </div>
 
@@ -269,16 +258,23 @@ function Reports() {
 
         <div style={{ flex: 1 }}>
           <h4>Selected Report</h4>
-          {selectedReport ? <pre>{JSON.stringify(selectedReport, null, 2)}</pre> : <p>Select a report to view details.</p>}
+          {selectedReport ? (
+            <pre>{JSON.stringify(selectedReport, null, 2)}</pre>
+          ) : (
+            <p>Select a report to view details.</p>
+          )}
         </div>
       </div>
 
       <div style={{ marginTop: 12 }}>
-        <button onClick={handleExportResume} disabled={loading || !selectedReport?.id}>Export Resume PDF</button>
-        <button onClick={handleExportPortfolioPdf} disabled={loading || !selectedReport?.id} style={{ marginLeft: 8 }}>
+        <button onClick={handleExportPortfolioPdf} disabled={loading || !selectedReport?.id}>
           Export Portfolio PDF
         </button>
-        <button onClick={handleGenerateWebPortfolio} disabled={loading || !selectedReport?.id} style={{ marginLeft: 8 }}>
+        <button
+          onClick={handleGenerateWebPortfolio}
+          disabled={loading || !selectedReport?.id}
+          style={{ marginLeft: 8 }}
+        >
           {loading ? "Working..." : "Generate Web Portfolio"}
         </button>
       </div>
@@ -286,9 +282,18 @@ function Reports() {
       {portfolio ? (
         <section className="portfolio-panel">
           <div className="portfolio-summary-strip">
-            <div className="summary-pill"><span className="summary-label">Projects</span><strong>{portfolioProjects.length}</strong></div>
-            <div className="summary-pill"><span className="summary-label">Resume bullets</span><strong>{resumeBulletCount}</strong></div>
-            <div className="summary-pill"><span className="summary-label">Team projects</span><strong>{teamProjectCount}</strong></div>
+            <div className="summary-pill">
+              <span className="summary-label">Projects</span>
+              <strong>{portfolioProjects.length}</strong>
+            </div>
+            <div className="summary-pill">
+              <span className="summary-label">Resume bullets</span>
+              <strong>{resumeBulletCount}</strong>
+            </div>
+            <div className="summary-pill">
+              <span className="summary-label">Team projects</span>
+              <strong>{teamProjectCount}</strong>
+            </div>
           </div>
 
           <h4>{portfolio.title || "Portfolio"}</h4>
@@ -300,13 +305,23 @@ function Reports() {
               const isOpen = !!openProjects[key];
               const bullets = (project?.bullets ?? []).slice(0, 3);
               const contributorRoles = details?.contributor_roles ?? [];
-              const summaryText = project?.summary?.trim() || details?.overview || "No project summary available.";
+              const summaryText =
+                project?.summary?.trim() || details?.overview || "No project summary available.";
 
               return (
                 <article className="portfolio-card" key={key}>
                   <button
                     onClick={() => togglePortfolioProject(key)}
-                    style={{ width: "100%", display: "flex", justifyContent: "space-between", background: "transparent", border: "none", color: "inherit", cursor: "pointer", padding: 0 }}
+                    style={{
+                      width: "100%",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      background: "transparent",
+                      border: "none",
+                      color: "inherit",
+                      cursor: "pointer",
+                      padding: 0,
+                    }}
                   >
                     <span><strong>{project?.project_name ?? "Untitled Project"}</strong></span>
                     <span>{isOpen ? "▾ Collapse" : "▸ Expand"}</span>
@@ -315,7 +330,8 @@ function Reports() {
                   {isOpen ? (
                     <div style={{ marginTop: 10 }}>
                       <p className="portfolio-meta">
-                        <strong>{details?.role || "Contributor"}</strong> • {details?.timeline || "Timeline unavailable"}
+                        <strong>{details?.role || "Contributor"}</strong> •{" "}
+                        {details?.timeline || "Timeline unavailable"}
                       </p>
                       <p className="portfolio-overview">{summaryText}</p>
 
@@ -353,4 +369,4 @@ function Reports() {
   );
 }
 
-export default Reports;
+export default PortfolioPage;
