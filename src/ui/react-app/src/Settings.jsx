@@ -122,17 +122,18 @@ export default function Settings() {
     <>
       <style>{`
         .s-nav-btn {
-          display: block;
-          width: 100%;
-          padding: 22px 32px;
-          font-size: 14px;
-          font-weight: bold;
-          font-family: inherit;
-          aspect-ratio: unset;
-          border: none;
-          border-radius: 0;
-          cursor: pointer;
-          text-align: left;
+          border-radius:var(--r);
+          border:1px solid var(--border);
+
+          background:transparent;
+          color:var(--muted);
+
+          font-weight:600;
+          font-size:14px;
+
+          cursor:pointer;
+
+          transition:all .15s;
         }
         .s-nav-btn--off {
           background: var(--primary);
@@ -146,6 +147,10 @@ export default function Settings() {
           background: var(--secondary);
           color: var(--primary);
           cursor: default;
+        }
+          .nav-btn:hover{
+          border-color:var(--muted);
+          color:var(--text);
         }
 
         .s-btn {
@@ -194,7 +199,7 @@ export default function Settings() {
       <div style={{ display: "flex", height: "100%", overflow: "hidden" }}>
 
         {/* Sidebar */}
-        <div style={{ display: "flex", flexDirection: "column", width: 120, flexShrink: 0, background: "var(--secondary_low)" }}>
+        <div style={{ display: "flex", flexDirection: "column", width: 120, flexShrink: 0, gap: 10,marginTop: 30, background: "var(--secondary_low)" }}>
           {[["profile","Profile"],["privacy","Privacy"],["data","Data"]].map(([id, label]) => (
             <button
               key={id}

@@ -1,17 +1,21 @@
 import { useState, useEffect, useRef } from "react";
 import Settings from "./Settings";
-import Help from "./Help";
+import Help from "./pages/Help";
 import ProfileSetup from "./pages/ProfileSetup";
 import ResumePage from "./pages/ResumePage";
 import PortfolioPage from "./pages/PortfolioPage";
 import {
-  listProjects,
+ listProjects,
   getProject,
   listSkills,
-  getBadgeProgress,
+  getBadgeProgress, 
   getYearlyWrapped,
   getConfig,
+  setPrivacyConsent,
   getPrivacyConsent,
+  createReport,
+  exportResume,
+  exportPortfolio,
   uploadProjectZip,
   uploadProjectFromPath,
   clearProjects
@@ -171,6 +175,12 @@ function App() {
     { id: 5, label: "Help" }
   ];
 
+  const whenClick = (id) => {
+    //takes the button of the id clicked and sets our 'current' variable to it
+    console.log("Clicked:",id);
+    setCurrent(id);
+  };
+
   const menuRender = () => {
     switch (current) {
       case 0: return <Settings />;
@@ -183,19 +193,38 @@ function App() {
     }
   };
 
-  if (profileReady === null) return <div className="ps-loading">Loading…</div>;
+  if (profileReady === null) return <div className="loading">Loading…</div>;
   if (!profileReady) return <ProfileSetup onComplete={() => setProfileReady(true)} />;
 
-  return (
-    <div className="screen">
-      <div className="stacked-buttons">
-        {buttons.map((button) => (
-          <button key={button.id} className={button.id === current ? "button-on" : "button-off"} onClick={() => setCurrent(button.id)}>
-            {button.label}
-          </button>
-        ))}
+  //on app construction/refresh, builds our UI
+  return(
+    <div className="app-shell">
+      <div className="grid-bg"></div>
+      
+      <div className="screen">
+        {/* Left Side Buttons */}
+        <div className="sidebar">
+          <div className="bar" aria-hidden="true" />
+          {buttons.map(button => (
+            <button
+              key = {button.id}
+              className={
+                button.id === current
+                  ? "nav-btn nav-btn--active"
+                  : "nav-btn"
+              }
+              onClick={()=>whenClick(button.id)}
+            >
+              {button.label}
+            </button>
+          ))}
+        </div>
+        {/* Right Side Content */}
+        <div className="menu">
+          <div className="bar" aria-hidden="true" style={{ marginLeft: "-30px", marginRight: "-30px"}} />
+          {menuRender()}
+        </div>
       </div>
-      <div className="menu">{menuRender()}</div>
     </div>
   );
 }
@@ -690,21 +719,6 @@ function Badges() {
           ))}
         </ul>
       )}
-    </>
-  );
-}
-
-function Help() {
-  return <><h3>This is the Help page.</h3></>;
-  }
-
-  return (
-    <>
-      <h3>Portfolio</h3>
-      <button onClick={handleExport} disabled={loading}>
-        {loading ? "Exporting..." : "Export Portfolio PDF"}
-      </button>
-      {msg && <p>{msg}</p>}
     </>
   );
 }
