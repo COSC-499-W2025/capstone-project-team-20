@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import Settings from "./Settings";
-import Help from "./Help";
+import Help from "./pages/Help";
 import ProfileSetup from "./pages/ProfileSetup";
 import ResumePage from "./pages/ResumePage";
 import PortfolioPage from "./pages/PortfolioPage";
