@@ -277,3 +277,104 @@ Next week, I plan to continue developing the yearly wrapped-style summary featur
 
 **Any Issues or Blockers That I Encountered This Week and How I Addressed/Plan to Address Them:**  
 One challenge this week was that I was unable to attend the peer review session, but convened with my group to learn about the feedback that we had received from it, in order to make effective changes in the future.
+
+### Term 2 Week 5: February 2nd – February 8th
+
+![Term 2 Week 5 Log](imagesForKaanLogs/T2_W5_SS.png)
+
+### Weekly Goals
+
+This week, I finished up expanding the badges system, adding more badges, as well as improving the detection of badges to normalize the values used, as to make the system less likely to make mistakes. I also helped in creating a manual editing section for users to add their education, past work experiences, and other information that would be relevant to put into a resume.
+
+**Coding Tasks:**  
+I finished extending the existing badges system by designing additional badge categories and refining the logic behind how users earn achievements. This involved identifying key user actions that should be rewarded and mapping those actions to clear progression milestones. I also implemented a manual editing style for the resume information, so that the users could include their past education and work experiences to their resumes. I connected this to the API that was present in Dylan's work, beforehand, and he helped me make sure that this addition was implemented accurately to his code.
+
+**Testing Tasks:**  
+I performed manual testing on the updated badges logic to confirm that achievements were being triggered correctly under different usage scenarios. And tested the manual profile information addition on the minimal frontend we have right now. As well as testing some PRs that I had reviewed, that were assigned to me this week.
+
+**Reviewing or Collaboration Tasks:**  
+I reviewed PR #340, and #319 focusing on code quality, maintainability, and alignment with existing project conventions. I left feedback on areas that could be simplified or made more consistent with the current architecture.
+
+**Brief Description of Last Week Connecting This Week:**  
+Last week I had started expanding on the badges feature, which I completed this week.
+
+**Plan/Goals for Upcoming Week:**  
+Next week, I plan to continue developing the yearly wrapped-style summary feature. I also aim to address any remaining feedback from PR reviews and assist the team with final integration tasks leading up to Milestone 2 evaluation.
+
+**Any Issues or Blockers That I Encountered This Week and How I Addressed/Plan to Address Them:**  
+
+### Term 2 Week 8: February 23rd – March 1st
+
+![Term 2 Week 8 Log](imagesForKaanLogs/T2_W8_SS.png)
+
+### Weekly Goals
+
+This week we presented our milestone 2 requirements to the class, as well as the TAs and the prof. We had finished up most of our features for the requirements, but I also added some code to freshen up some of the existing features, as well as adding a frontend for the badges/achievements system, and the new yearly wrapped feature that summarizes yearly achievements. I reviewed other people's PR's and helped add more features to make sure we have everything covered for our requirements as well as our Milestone 2 Demo video.
+
+**Coding Tasks:**  
+I created the yearly wrapped feature, as well as making the necessary react frontend changes to implement both the badges/achievements system, and the yearly wrapped feature to our frontend PR #398. I also helped implement a feature that was requested from Branden's changes, where there was a confusion with the current projects being stored, as previous projects would not be distinguished, making it difficult to test. I made the previous projects distinction, as well as adding a delete databases button in the frontend to make future testing much easier PR #417.
+
+**Testing Tasks:**  
+I performed manual testing on the yearly wrapped feature, as well as the new previous projects, and deleting databases features that I had added. I also tested the PRs that I had reviewed, that were assigned to me this week.
+
+**Reviewing or Collaboration Tasks:**  
+I reviewed PR #411, #403, and #409 focusing on code quality, maintainability, and alignment with existing project conventions. I left feedback on areas that could be simplified or made more consistent with the current architecture.
+
+**Brief Description of Last Week Connecting This Week:**  
+Last week, we were getting ready for the presentation, this week we delivered our presentation as well as reviewing other people's presentations, and made some adjustments that we saw were necessary from the presentation of our and others' projects.
+
+**Plan/Goals for Upcoming Week:**  
+Next week, I plan to start planning for milestone 3, and refurbish the badges/achievements in the frontend to make it more clear and easy on the eyes.
+
+**Any Issues or Blockers That I Encountered This Week and How I Addressed/Plan to Address Them:**  
+
+### Term 2 Week 9: March 2nd – March 8th
+
+![Term 2 Week 9 Log](imagesForKaanLogs/T2_W9_SS.png)
+
+### Weekly Goals
+
+This week we mainly focused on studying for the quiz on wednesday, and after that focused on making our frontent look better, and add more of the functionality to be displayed that we already had in the backend. I specifically wanted to add more visuals, and explanation for the achievements page, as from the feedback that we have gotten from our presentations that was a feature that a lot of people had liked.
+
+**Coding Tasks:**  
+I changed the badges page to include the descriptions of the badges, as well as having them display the status in which some badges were in to support the in progress section, with just informing the user of what badges are achievable. I also worked on fixing some of the logic behind badges that would produce faulty results at times, made the yearly wrapped feature a little more different so it is displayed better, and fixed a common issue we had with CORS by widening the available domains.
+
+**Testing Tasks:**  
+I performed manual testing on frontend, along with the new frontend test we had implemented to github. I also tested the PRs that I had reviewed, that were assigned to me this week.
+
+**Reviewing or Collaboration Tasks:**  
+I reviewed PR #438 and, #440 focusing on code quality, maintainability, and alignment with existing project conventions. The PRs that were assigned to me this week were very well made, so I didn't have any feedback in the overall features implemented that wasn't mentioned already by another reviewer, or the PR's author through github automated tests.
+
+**Brief Description of Last Week Connecting This Week:**  
+Last week, we gave our presentation to the class, and this week we started working on the feedback that we had received from our presentation to make sure we deliver the best product we can.
+
+**Plan/Goals for Upcoming Week:**  
+Next week, I plan to start developing more features specifically for milestone 3, and help refurbish the frontend to make it more clear and easy on the eyes.
+
+**Any Issues or Blockers That I Encountered This Week and How I Addressed/Plan to Address Them:**  
+
+### Term 2 Week 10: March 9th – March 15th 
+
+![Term 2 Week 10 Log](imagesForKaanLogs/T2_W10_SS.png)
+
+### Weekly Goals
+
+This week I focused on improving the badges frontend to make it more interactive and easier to understand. While the changes from the previous week improved the readability of the badges page, it still lacked adaptability and meaningful visualization of progress. Based on requests from other group members and general feedback, I worked on adding new visual components and reducing clutter so users can better understand their badge progress.
+
+**Coding Tasks:**  
+I implemented a badge heatmap to visually represent how close a user is to earning different badges. This helps make badge progress easier to interpret compared to the previous static layout. I also modified the badges interface so that the full details of each badge can be accessed by clicking on the badge itself. This allowed us to remove a large amount of repetitive text and clutter that was previously always visible on the page. These changes improved both the visual clarity and usability of the achievements interface. The work was submitted in **PR #478**, which also included several smaller UI adjustments to improve layout consistency and presentation ahead of our upcoming peer reviews.
+
+**Testing Tasks:**  
+I manually tested the new heatmap visualization and the clickable badge detail functionality to ensure the correct information appears when interacting with each badge. I also verified that the changes did not break any of the existing badge progress features and checked the frontend display across different states of badge completion. I also did testing on the PR I was assigned this week for review.
+
+**Reviewing or Collaboration Tasks:**  
+I worked with other group members to refine how badge progress should be presented visually and incorporated their feedback into the heatmap feature. I also discussed UI adjustments to ensure the badges page aligns with the rest of the frontend design as we prepare for the peer reviews. I reviewed [PR #444] (https://github.com/COSC-499-W2025/capstone-project-team-20/pull/444), and find no issue in how the feature was implemented aside from the lack of frontend tests and merge conflicts that had occurred due to the PR being up for a while and new PRs being merged in the meanwhile.
+
+**Brief Description of Last Week Connecting This Week:**  
+Last week I worked on improving the badges page by adding badge descriptions and improving the layout. This week built directly on that work by focusing on better visualizing badge progress and reducing interface clutter through interactive elements.
+
+**Plan/Goals for Upcoming Week:**  
+Next week I plan to continue improving the frontend experience and help prepare the project for milestone 3. I will likely focus on refining visual elements across the dashboard and ensuring that the features we have implemented are clearly presented and easy for users to understand.
+
+**Any Issues or Blockers That I Encountered This Week and How I Addressed/Plan to Address Them:**  
+One challenge this week was balancing how much badge information should be visible on the page without overwhelming the user interface. I addressed this by moving badge details into clickable elements and using the heatmap visualization to communicate progress more effectively without requiring large amounts of text.

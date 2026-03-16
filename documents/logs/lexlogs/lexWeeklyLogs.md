@@ -280,4 +280,43 @@ We discussed as a team what menus/screens would be necessary for the front end, 
         - implement project editor
     - implement badge viewing in the badges menu
     - (and more later on...)
-    
+
+## T2 Week 6-8
+**Types of tasks worked on**
+![Week 2 Tasks](imagesForLexLogs/w678t2.png)
+
+Tasks these three weeks:
+
+RECREATE UI IN REACT:
+So, turns out when I asked if tkinter was fine and everyone gave me the go ahead I probably should have made doubly sure there wasnt anything the rest of my group would prefer to use. As a result of this, upon completing my tkinter PRs, most of the team requested I switch to react, and so over the course of a week I learned react for the first time and recreated my entire tkinter front end in react, as shown in the following pr:
+[PR #377](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/377)
+
+COMPARE PROJECTS FEATURE (req 23):
+In the process of cleaning up some requirements for Milestone 2 I implemented a feature to compare projects, the programming was rather tedious as I wished to allow the user to compare based on any piece of data we track about projects and I did just that. It displays a list of projects, and based on user selection, sorts them based on one of 18 project statistics. Helps users easily find which projects are the most valuable for which criteria. Comes with comprehensive testing.
+[PR #410](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/410)
+
+COMPARE PROJECTS FEATURE (req 23):
+In the process of cleaning up some requirements for Milestone 2 I implemented a feature to select skills to include in showcases. Basically involves a menu which allows you to select a project, then presents a list of the skills in that project, and allows you to toggle them on and off. Required adding a variable to the database and editing existing features that implement skills. Has comprehensive testing.
+[PR #410](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/410)
+
+Also participated in team meetings, 
+created clips for the milestone 2 video, 
+made slides/script for the powerpoint presentation, 
+reviewed assigned PRs.
+
+Goals moving forward:
+create more UI icons, unify UI design, more interactive elements (like drag and drops)
+
+## Week 9
+**Types of tasks worked on**
+![Week 9 Tasks](imagesForLexLogs/w9t2.png)
+
+This week has been all about getting the front end fully functional as we are still waiting on the milestone 3 requirements, I tackled the issue of Implementing the help menu if users are confused about using our system.
+![Issue 466](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/446)
+Associated PR:
+![PR 444](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/444)
+
+This week I reviewed the following PR (which is all the PRs i was assigned):
+![PR 436](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/436)
+
+Next week im planning to update the rest of the UI appearance-wise to match the account setup UI that was implemented recently and that the whole team really enjoys. I'm already mostly done with it.

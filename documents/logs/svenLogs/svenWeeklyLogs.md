@@ -386,3 +386,89 @@ Balancing API schema changes with existing data structures required careful adju
 
 ### Looking Ahead:
 I plan to incorporate additional portfolio enhancements (e.g., optional highlights based on badges) and refine and prepare our materials for the Milestone 2 presentation.
+Thank you for clarifying. Here are revised draft entries for your team weekly log and personal weekly log, incorporating your additional info and following your requests, including PR links. Please review and let me know if you want any aspect further adjusted.
+
+---
+
+# Term 2 Week 8: Feb 17 – Feb 23
+
+![Sven's Tasks for T2W8](./imagesForSvenLogs/t2w8.png)
+
+### Tasks worked on
+- Integrated contributor roles into portfolio details and updated PDF output so roles appear under each project title, retaining team size.
+- Implemented report-backed portfolio API endpoints for retrieve, generate PDF, and update metadata, aligning with FastAPI and Pydantic conventions.
+- Expanded schemas and tests to support new API response structures with role data.
+- Cleaned up legacy API endpoints for improved consistency and updated system documentation/architecture, including refreshed system and DFD diagrams.
+- Recorded the system architecture and introduction sections for the Milestone 2 video demo.
+
+### PRs reviewed
+- Reviewed [User key role PR (#385)](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/385)
+- Reviewed [Incremental ZIPs PR (#391)](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/391)
+- Reviewed [API Routes and Docs Cleanup PR (#411)](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/411)
+- Reviewed [System Diagrams and README Update PR (#422)](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/422)
+
+### PRs opened
+- Opened [Portfolio API endpoints and role-aware portfolio output updates PR (#403)](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/403)
+
+### Problems encountered
+Coordinating API schema changes with existing data structures required careful updates to preserve the report export pipeline. I addressed this by close alignment with FastAPI/Pydantic guides and added targeted tests.
+
+### Looking ahead
+My next focus is to prepare for the upcoming class quiz and for the beginning of milestone 3.
+
+# Term 2 Week 9
+![Sven's Tasks for T2W9](./imagesForSvenLogs/t2w9.png)-->
+
+### Tasks worked on:
+- **Portfolio Generation Direction Change (PDF → Web)**: Reworked the portfolio flow to align with the updated milestone expectation of a web portfolio instead of a LaTeX PDF export workflow.
+- **Portfolio UI Implementation**: Built the in-app web portfolio rendering flow (generate report → generate portfolio details → fetch portfolio data → render in UI), and replaced the old portfolio export action in the Portfolio page.
+- **Portfolio UX Cleanup**: Cleaned up the generated portfolio copy to remove misleading score/share wording, simplified section content, and switched project display to a stacked accordion-style layout so projects can be expanded/collapsed for readability.
+- **API/Schema Integration Updates**: Updated portfolio response handling to include summary/bullets data from report snapshots so the web portfolio uses more polished resume-quality content.
+- **Testing & Stabilization**: Updated backend and frontend tests to match the new portfolio behavior and validated full test suite pass locally.
+
+### Weekly Goals Recap:
+My goal this week was to pivot the existing portfolio work to the web portfolio requirement and get a stable, submit-ready version in place quickly. That goal was achieved: the Portfolio page now generates and displays a web portfolio in-app, content was cleaned up for better presentation, and tests are passing.
+
+### PRs I reviewed this week:
+- **PR #437**: [tests: add tests for ProfileSetup.jsx](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/437)
+- **PR #431**: [tests: install vitest and RTL](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/431)
+- **PR #428**: [Updated the consent requirement in our API and added more tests for full coverage](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/428)
+
+### PRs I opened this week:
+- **PR #447**: [Feature/portfolio web page](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/447)
+
+### Problems Encountered:
+I ran into schema/startup errors and the contents of portfolio entries being off (misleading percentage/score language), which required iterative cleanup and test updates to fix but these have been put in place.
+
+### Looking Ahead:
+Next week I’m planning to focus on preparing ahead for our peer testing, including any final UI cleanup and scope-contained fixes needed after R feedback.
+
+# Term 2 Week 10
+![Sven's Tasks for T2W10](./imagesForSvenLogs/t2w10.png)-->
+
+### Tasks worked on:
+- **Portfolio Private/Public API + Data Model Support**: Added backend support for portfolio mode state (`private` / `public`), publish timestamp handling, and per-project portfolio customizations (title/overview/achievements/hidden flag).
+- **Portfolio Web Editing Workflow**: Implemented frontend support for private-mode editing with in-place controls, save flow, and mode toggle behavior (lock/unlock flow).
+- **Public View Behavior Improvements**: Added public-mode filtering/search behavior and ensured rendering prioritizes user-edited values while preserving generated defaults.
+- **Portfolio Text Output Revision**: Refined portfolio generation output to restore stronger default narrative quality while keeping output stable for tests and WYSIWYG editing.
+
+### Weekly Goals Recap:
+My goal this week was to complete and stabilize portfolio private/public controls and editing flow in accordance with our milestone 3 portfolio requirement.
+
+### PRs I reviewed this week:
+- **PR #453**: [Performance/efficiency refactor](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/453)
+- **PR #455**: [Performance/refactor contribution analyzer](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/455)
+- **PR #463**: [Fixed our merge conflicts that were in main.](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/463)
+- **PR #465**: [Split the reports tab into seperate resume and portfolio pages and moved the tests to corresponding new test files](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/465)
+- **PR #482**: [tests: add frontend tests for help page](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/482)
+
+### PRs I opened this week:
+- **PR #484**: [Feature/portfolio private public api](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/484)
+- **PR #485**: [Portfolio private/public frontend + customization flow](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/485)
+
+### Problems Encountered:
+- Needed a few iterations on portfolio text generation to both improve readability and satisfy existing test expectations.
+- Resolved with rebases, route alignment checks, and targeted generator/test-safe wording updates.
+
+### Looking Ahead:
+As peer testing is close ahead I want to make some final touch ups on our portfolios with our styling changes to be prepared to showcase it to other students.

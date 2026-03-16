@@ -51,10 +51,10 @@ coverage.xml
 *.whl
 dist/
 build/
-# 
+
+# reports
 resumes/
 portfolios/
-src/ui/
 
 # project thumbnails
 thumbnails/
@@ -62,3 +62,12 @@ thumbnails/
 # misc
 cloned_repos/
 zipped_repos/
+# frontend 
+src/ui/
+src/ui/react-app/
+
+# misc
+cloned_repos/
+zipped_repos/
+
+
