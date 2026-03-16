@@ -71,12 +71,13 @@ function ThumbPlaceholder({ project, size = 56 }) {
 }
 
 // ── Upload zone ───────────────────────────────────────────────────────────────
-function UploadZone({ onFile, uploading, uploadStatus, error }) {
+function UploadZone({ onFile, uploading, uploadStatus, error, hasProjects }) {
   const [drag, setDrag] = useState(false);
   const ref = useRef();
+  const big = !hasProjects;
   return (
     <div
-      className={`pj-drop${drag?" pj-drop--over":""}${uploading?" pj-drop--busy":""}`}
+      className={`pj-drop${drag?" pj-drop--over":""}${uploading?" pj-drop--busy":""}${big?" pj-drop--big":""}`}
       onDragOver={e => { e.preventDefault(); setDrag(true); }}
       onDragLeave={() => setDrag(false)}
       onDrop={e => { e.preventDefault(); setDrag(false); const f = e.dataTransfer.files?.[0]; if (f?.name.endsWith(".zip")) onFile(f); }}
@@ -87,12 +88,17 @@ function UploadZone({ onFile, uploading, uploadStatus, error }) {
       {uploading
         ? <><div className="pj-spinner" /><span className="pj-drop-label">{uploadStatus ?? "Analyzing…"}</span></>
         : <>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ opacity:.45 }}>
+            <svg width={big?36:20} height={big?36:20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ opacity:.45, flexShrink:0 }}>
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
               <polyline points="17 8 12 3 7 8"/>
               <line x1="12" y1="3" x2="12" y2="15"/>
             </svg>
-            <span className="pj-drop-label">Drop <strong>.zip</strong> or click</span>
+            <div style={{ textAlign: big ? "center" : "left" }}>
+              <span className="pj-drop-label" style={{ fontSize: big ? 14 : 12 }}>
+                Drop <strong>.zip</strong> or click to browse
+              </span>
+              {big && <div style={{ fontSize:11, color:"rgba(255,255,255,.25)", marginTop:4 }}>Upload a ZIP of your project to get started</div>}
+            </div>
           </>
       }
       {error && <span style={{ fontSize:11, color:"#f87171", marginTop:4, display:"block" }}>{error}</span>}
@@ -101,27 +107,62 @@ function UploadZone({ onFile, uploading, uploadStatus, error }) {
 }
 
 // ── Project list item ─────────────────────────────────────────────────────────
-function ProjectItem({ project, isSelected, onClick }) {
+function ProjectItem({ project, isSelected, onClick, onDelete }) {
   const color = lc(project.languages?.[0] ?? "");
+  const [hovered, setHovered] = useState(false);
   return (
-    <button
-      onClick={onClick}
+    <div
       className={`pj-item${isSelected ? " pj-item--active" : ""}`}
-      style={{ "--lang": color }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
     >
-      <div className="pj-item-accent" />
-      <div style={{ flex:1, minWidth:0 }}>
-        <div className="pj-item-name">{project.name}</div>
-        {project.languages?.length > 0 && (
-          <div className="pj-item-lang">{project.languages[0]}</div>
+      <button
+        onClick={onClick}
+        style={{
+          display:"flex", alignItems:"center", gap:10, flex:1, minWidth:0,
+          background:"none", border:"none", cursor:"pointer",
+          padding:"8px 4px 8px 10px", textAlign:"left",
+          color:"inherit", fontFamily:"inherit",
+          height:"auto", borderRadius:0, transform:"none", boxShadow:"none",
+        }}
+      >
+        {isSelected && <div className="pj-item-accent" style={{ background: color }} />}
+        <div style={{ flex:1, minWidth:0 }}>
+          <div className="pj-item-name">{project.name}</div>
+          {project.languages?.length > 0 && (
+            <div className="pj-item-lang">{project.languages[0]}</div>
+          )}
+        </div>
+        {project.resume_score > 0 && (
+          <span className="pj-item-score" style={{ color: scoreColor(project.resume_score) }}>
+            {project.resume_score.toFixed(1)}
+          </span>
         )}
-      </div>
-      {project.resume_score > 0 && (
-        <span className="pj-item-score" style={{ color: scoreColor(project.resume_score) }}>
-          {project.resume_score.toFixed(1)}
-        </span>
-      )}
-    </button>
+      </button>
+      <button
+        onClick={e => { e.stopPropagation(); onDelete(project.id); }}
+        title="Delete project"
+        style={{
+          background:"none", border:"none", cursor:"pointer",
+          color: hovered ? "rgba(255,255,255,.25)" : "rgba(255,255,255,.25)",
+          padding:"8px 10px 8px 4px",
+          display:"flex", alignItems:"center", flexShrink:0,
+          height:"auto", borderRadius:5, transform:"none", boxShadow:"none",
+          opacity: hovered ? 1 : 0,
+          transition:"opacity .15s, color .15s",
+          lineHeight:1,
+        }}
+        onMouseOver={e => { e.currentTarget.style.color = "#f85149"; }}
+        onMouseOut={e => { e.currentTarget.style.color = "rgba(255,255,255,.25)"; }}
+      >
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <polyline points="3 6 5 6 21 6"/>
+          <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+          <path d="M10 11v6M14 11v6"/>
+          <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+        </svg>
+      </button>
+    </div>
   );
 }
 
@@ -495,12 +536,34 @@ function Projects() {
 
       <div style={{ display:"flex", gap:0, minHeight:"calc(100vh - 60px)", fontFamily:"'DM Sans','Segoe UI',system-ui,sans-serif" }}>
 
+        {/* ── FULL PAGE UPLOAD (no projects yet) ── */}
+        {currentProjects.length === 0 && previousProjects.length === 0 && (
+          <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:40 }}>
+            <UploadZone onFile={handleFile} uploading={uploading} uploadStatus={uploadStatus} error={error} hasProjects={false}/>
+          </div>
+        )}
+
+        {/* ── NORMAL LAYOUT (has projects) ── */}
+        {(currentProjects.length > 0 || previousProjects.length > 0) && (<>
+
         {/* ── LEFT PANEL ── */}
-        <div style={{ width:300, flexShrink:0, borderRight:"1px solid rgba(255,255,255,.07)", display:"flex", flexDirection:"column", padding:"24px 16px", gap:8, overflowY:"auto" }}>
+        <div style={{ width:340, flexShrink:0, borderRight:"1px solid rgba(255,255,255,.07)", display:"flex", flexDirection:"column", padding:"24px 16px", gap:8, overflowY:"auto" }}>
 
           <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:8 }}>
             <h2 style={{ fontSize:18, fontWeight:700, margin:0, color:"#f1f5f9", letterSpacing:"-.3px" }}>Projects</h2>
-            <button className="pj-icon-btn" onClick={loadProjects} disabled={loading} title="Refresh">
+            <button
+              onClick={loadProjects} disabled={loading} title="Refresh"
+              style={{
+                background:"none", border:"1px solid rgba(255,255,255,.1)",
+                borderRadius:6, color:"rgba(255,255,255,.35)",
+                cursor:"pointer", padding:"6px 8px",
+                display:"flex", alignItems:"center",
+                height:"auto", transform:"none", boxShadow:"none",
+                transition:"border-color .15s, color .15s",
+              }}
+              onMouseOver={e => { e.currentTarget.style.borderColor="rgba(255,255,255,.3)"; e.currentTarget.style.color="rgba(255,255,255,.7)"; }}
+              onMouseOut={e => { e.currentTarget.style.borderColor="rgba(255,255,255,.1)"; e.currentTarget.style.color="rgba(255,255,255,.35)"; }}
+            >
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
                 style={{ animation:loading ? "pj-spin 1s linear infinite" : "none" }}>
                 <polyline points="23 4 23 10 17 10"/>
@@ -509,7 +572,8 @@ function Projects() {
             </button>
           </div>
 
-          <UploadZone onFile={handleFile} uploading={uploading} uploadStatus={uploadStatus} error={error}/>
+          <UploadZone onFile={handleFile} uploading={uploading} uploadStatus={uploadStatus} error={error}
+            hasProjects={currentProjects.length > 0 || previousProjects.length > 0}/>
 
           {currentProjects.length > 0 && (
             <div>
@@ -521,7 +585,8 @@ function Projects() {
               {currentProjects.map(p => (
                 <ProjectItem key={p.id} project={p}
                   isSelected={selected?.id === p.id}
-                  onClick={() => handleSelect(p.id)}/>
+                  onClick={() => handleSelect(p.id)}
+                  onDelete={id => setConfirmDeleteId(id)}/>
               ))}
             </div>
           )}
@@ -536,15 +601,14 @@ function Projects() {
               {previousProjects.map(p => (
                 <ProjectItem key={p.id} project={p}
                   isSelected={selected?.id === p.id}
-                  onClick={() => handleSelect(p.id)}/>
+                  onClick={() => handleSelect(p.id)}
+                  onDelete={id => setConfirmDeleteId(id)}/>
               ))}
             </div>
           )}
 
-          {!loading && currentProjects.length === 0 && previousProjects.length === 0 && (
-            <p style={{ fontSize:12, color:"rgba(255,255,255,.2)", textAlign:"center", padding:"24px 0", margin:0 }}>
-              No projects yet
-            </p>
+          {!loading && currentProjects.length === 0 && previousProjects.length === 0 && !uploading && (
+            <div style={{ flex:1 }}/>
           )}
         </div>
 
@@ -557,6 +621,7 @@ function Projects() {
             onThumbnailUpload={handleThumbnailUpload}
           />
         </div>
+        </>)}
       </div>
 
       {/* delete confirm */}
@@ -662,6 +727,12 @@ const CSS = `
     border-color: rgba(88,166,255,.5); background: rgba(88,166,255,.04); color: rgba(255,255,255,.65);
   }
   .pj-drop--busy { cursor: default; pointer-events: none; }
+  .pj-drop--big {
+    flex-direction: column; justify-content: center; align-items: center;
+    padding: 64px 40px; gap: 16px;
+    width: 100%; max-width: 480px;
+    border-radius: 16px;
+  }
   .pj-drop-label { font-size: 12px; }
   .pj-spinner {
     width: 18px; height: 18px; flex-shrink: 0;
@@ -690,33 +761,47 @@ const CSS = `
 
   /* project list item */
   .pj-item {
-    display: flex; align-items: center; gap: 10px;
-    width: 100%; padding: 8px 10px;
-    background: none; border: none; border-radius: 7px;
-    cursor: pointer; text-align: left;
+    display: flex; align-items: center;
+    border-radius: 7px;
     transition: background .12s;
-    position: relative; overflow: hidden;
   }
   .pj-item:hover { background: rgba(255,255,255,.04); }
-  .pj-item--active { background: rgba(88,166,255,.08) !important; }
+  .pj-item--active { background: rgba(255,255,255,.06) !important; }
   .pj-item-accent {
-    width: 2.5px; height: 28px; border-radius: 99px;
-    background: var(--lang, rgba(255,255,255,.15)); flex-shrink: 0;
-    opacity: .7;
+    width: 3px; height: 32px; border-radius: 99px;
+    flex-shrink: 0;
   }
-  .pj-item--active .pj-item-accent { opacity: 1; }
   .pj-item-name {
-    font-size: 13px; font-weight: 500;
-    color: rgba(255,255,255,.7);
+    font-size: 15px; font-weight: 500;
+    color: rgba(255,255,255,.5);
     overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
     line-height: 1.2;
+    transition: color .12s;
   }
+  .pj-item:hover .pj-item-name { color: rgba(255,255,255,.8); }
   .pj-item--active .pj-item-name { color: #f1f5f9; font-weight: 600; }
-  .pj-item-lang { font-size: 10px; color: rgba(255,255,255,.25); margin-top: 1px; }
+  .pj-item-lang { font-size: 12px; color: rgba(255,255,255,.2); margin-top: 2px; }
   .pj-item-score {
-    font-size: 11px; font-weight: 700;
+    font-size: 13px; font-weight: 700;
     font-family: 'DM Mono', monospace;
-    flex-shrink: 0; margin-left: auto;
+    flex-shrink: 0;
+    opacity: .5;
+  }
+  .pj-item--active .pj-item-score { opacity: 1; }
+  .pj-item-trash {
+    background: none; border: none; cursor: pointer;
+    color: rgba(255,255,255,.2); padding: 8px 12px 8px 4px;
+    display: flex; align-items: center; flex-shrink: 0;
+    border-radius: 5px; transition: color .15s;
+    opacity: 0; line-height: 1;
+  }
+  .pj-item:hover .pj-item-trash { opacity: 1; }
+  .pj-item-trash:hover { color: #f85149 !important; }
+  .pj-item-inner-btn {
+    display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0;
+    background: none; border: none; cursor: pointer;
+    padding: 10px 4px 10px 10px; text-align: left;
+    color: inherit; font-family: inherit;
   }
 
   /* thumbnail hover overlay */
@@ -753,12 +838,12 @@ const CSS = `
   .pj-confirm-icon { font-size:40px;margin-bottom:16px; }
   .pj-confirm-title { font-size:20px;font-weight:700;color:var(--text);margin:0 0 12px; }
   .pj-confirm-sub { font-size:14px;color:var(--muted);line-height:1.6;max-width:380px;margin:0; }
-  .pj-btn { display:inline-flex;align-items:center;justify-content:center;height:38px;padding:0 18px;border-radius:var(--r);font-size:14px;font-weight:600;cursor:pointer;border:1.5px solid transparent;font-family:inherit;transition:all .15s; }
-  .pj-btn--primary { background:var(--accent);color:#0d1117;border-color:var(--accent); }
-  .pj-btn--primary:hover:not(:disabled) { background:#79c0ff;box-shadow:0 0 14px rgba(88,166,255,.35);transform:translateY(-1px); }
+  .pj-btn { display:inline-flex;align-items:center;justify-content:center;height:38px !important;padding:0 18px;border-radius:var(--r);font-size:14px;font-weight:600;cursor:pointer;border:1.5px solid transparent;font-family:inherit;transition:all .15s;transform:none; }
+  .pj-btn--primary { background:var(--accent) !important;color:#0d1117 !important;border-color:var(--accent); }
+  .pj-btn--primary:hover:not(:disabled) { background:#79c0ff !important;box-shadow:0 0 14px rgba(88,166,255,.35);transform:translateY(-1px); }
   .pj-btn--primary:disabled { opacity:.5;cursor:not-allowed; }
-  .pj-btn--ghost { background:transparent;color:var(--muted);border-color:var(--border); }
-  .pj-btn--ghost:hover:not(:disabled) { border-color:var(--muted);color:var(--text); }
-  .pj-modal .pj-btn--danger { background:transparent;color:#f85149;border-color:#f85149; }
-  .pj-modal .pj-btn--danger:hover:not(:disabled) { border-color:#ff7b72;color:#ff7b72; }
+  .pj-btn--ghost { background:transparent !important;color:var(--muted) !important;border-color:var(--border); }
+  .pj-btn--ghost:hover:not(:disabled) { border-color:var(--muted);color:var(--text) !important; }
+  .pj-modal .pj-btn--danger { background:transparent !important;color:#f85149 !important;border-color:#f85149; }
+  .pj-modal .pj-btn--danger:hover:not(:disabled) { border-color:#ff7b72;color:#ff7b72 !important; }
 `;
