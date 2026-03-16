@@ -6,6 +6,8 @@ from pathlib import Path
 
 import src.api.routes as routes
 from src.api.api_main import app
+from src.managers.ProjectManager import ProjectManager
+from src.models.Project import Project
 from src.models.Report import Report
 from src.models.ReportProject import ReportProject, PortfolioDetails
 
@@ -851,3 +853,84 @@ def test_create_report_project_not_found(client, monkeypatch):
 
     assert res.status_code == 404
     assert "not found" in res.json()["detail"].lower()
+
+def test_upload_thumbnail_success(client, tmp_path, monkeypatch):
+    class FakeProjectManager:
+        def __init__(self):
+            self.p = Project(
+                id=1,
+                name="ThumbTest",
+                file_path="dummy.zip",
+                languages=[],
+                frameworks=[],
+                skills_used=[],
+            )
+
+        def get(self, id):
+            return self.p if id == 1 else None
+
+        def set(self, project):
+            self.p = project
+
+    monkeypatch.setattr(routes, "ProjectManager", FakeProjectManager)
+
+    monkeypatch.chdir(tmp_path)
+
+    file_bytes = b"fake image bytes"
+    response = client.post(
+        "/projects/1/thumbnail",
+        files={"file": ("thumb.png", io.BytesIO(file_bytes), "image/png")},
+    )
+
+    assert response.status_code == 200
+
+
+
+def test_upload_thumbnail_invalid_extension(client):
+    pm = ProjectManager()
+    p = Project(
+        name="BadExt",
+        file_path="dummy.zip",
+        languages=[],
+        frameworks=[],
+        skills_used=[],
+    )
+    pm.set(p)
+
+    response = client.post(
+        f"/projects/{p.id}/thumbnail",
+        files={"file": ("thumb.txt", io.BytesIO(b"nope"), "text/plain")},
+    )
+
+    assert response.status_code == 400
+    assert "Invalid image format" in response.json()["detail"]
+
+
+def test_upload_thumbnail_project_not_found(client):
+    response = client.post(
+        "/projects/999999/thumbnail",
+        files={"file": ("thumb.png", io.BytesIO(b"fake"), "image/png")},
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Project not found."
+
+
+def test_serve_thumbnail_success(client, tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+
+    filename = "test_thumb.png"
+    file_path = tmp_path / "thumbnails" / filename
+    file_path.parent.mkdir(exist_ok=True)
+    file_path.write_bytes(b"imagebytes")
+
+    response = client.get(f"/thumbnails/{filename}")
+
+    assert response.status_code == 200
+    assert response.content == b"imagebytes"
+
+
+def test_serve_thumbnail_not_found(client):
+    response = client.get("/thumbnails/does_not_exist.png")
+    assert response.status_code == 404
+    assert "not found" in response.json()["detail"].lower()
