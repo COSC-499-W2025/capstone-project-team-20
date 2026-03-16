@@ -313,8 +313,12 @@ function PortfolioPage() {
             <ul>
               {reports.map((r)=>(
                 <li key={r.id}>
-                  <button onClick={()=>handleSelectReport(r.id)} disabled={loading} style={{background:"transparent",border:"none",cursor:"pointer",padding:0}}>
-                    {r.title??`Report #${r.id}`}
+                  <button
+                    onClick={() => handleSelectReport(r.id)}
+                    disabled={loading}
+                    style={{ background: "transparent", border: "none", cursor: "pointer", padding: 0, color: "var(--text)" }}
+                  >
+                    {r.title ?? `Report #${r.id}`}
                   </button>
                 </li>
               ))}
