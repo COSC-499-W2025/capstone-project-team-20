@@ -681,7 +681,7 @@ Continuuing to implement our current functionality into the frontend and expandi
 
 - Necmi Kaan Sapoglu (17014796): This week I spent some time working on bettering the badges frontend, as even though some of the changes I made last week did better the frontend's legibility for the badges, it was lacking some adaptability that would be very welcome. This week with other group member's request I added a badge heatmap, showcasing how close a person is to getting some badges, and adding the details for all the badges to be accessible by clicking on the badges themselves, removing all of the clutter and repetition there was beforehand. This is the PR for all of the changes I have listed and some more minor details that were changed so everything looks better for the peer reviews on wednesday: [PR #478](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/478).
 
-- Lex Nash (84668540): 
+- Lex Nash (84668540): This week I learned how to write tests in react for the front end and wrote tests for the help page. As for tasks this week I updated all of the UI to match the most up to date UI we have on the front end, [PR #479](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/479). Plans for the rest of the project are just updating the front end's UI as new features are added, I have a list of potential tasks for improving the front end. Reviewed 2 PRs as assigned.
 
 - Dylan Alexander (16394025): This week, I spent an extensive amount of time hunting for inefficiencies in our analysis methods. Upload zip had been taking an absurd amount of time for quite a while. This included setting a timer for each method in the chain of method calls when uploading zips. I managed to get the total time taken from ~157 seconds to just ~15 seconds (with the zip i was using for testing).[PR #453](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/453)[PR #455](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/455) In addition, I did a few tasks related to our frontend, in an effort to get our frontend to an acceptable place in time for peer testing. This includes adding interactive prompts in our frontend (prompting for consent, prompting to confirm cancellation of analysis), and designing and extending the "merge contributors" modal that Branden implemented.[PR #471](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/471)[PR #475](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/475)
 
@@ -694,19 +694,20 @@ Everything up to and including Issue
 Continuuing to implement our current functionality into the frontend and expanding on it as well. 
 
 **Burnup chart:**
-![Term 2 Week 10 Burnup chart]()
+![Term 2 Week 10 Burnup chart](teamWeeklyLogsImages/w10burnup.png)
 
 
 **Table View of Completed Tasks on Project Board:**
-![Term 2 Week 10 completed]()
+![Term 2 Week 10 completed](teamWeeklyLogsImages/w10completed.png)
 
 
 **Table View of In-Progress Tasks on Project Board:**
-![Term 2 Week 10 In-progress Tasks]()
+![Term 2 Week 10 In-progress Tasks](teamWeeklyLogsImages/w10inprogress.png)
 
 
 **Test Report:**
-![Term 2 Week 10 Test Report]()
+![Term 2 Week 10 BACK END Test Report](teamWeeklyLogsImages/w10BEtest.png)
+![Term 2 Week 10 BACK END Test Report](teamWeeklyLogsImages/w10FEtest.png)
 
 
 
