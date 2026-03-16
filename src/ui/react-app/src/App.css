@@ -3,6 +3,10 @@ html, body, #root {
   margin: 0;
 }
 
+body {
+  font-family: 'DM Sans', 'Segoe UI', system-ui, sans-serif;
+}
+
 #root {
   /* colours from profile setup */
   --primary: #55BDCA;

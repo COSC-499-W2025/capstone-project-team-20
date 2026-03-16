@@ -3,11 +3,12 @@ import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import ProfileSetup from '../pages/ProfileSetup'
 
-// Mock the API call so tests never hit the network
+// Mock the API calls so tests never hit the network
 vi.mock('../api/client', () => ({
   saveConfig: vi.fn(),
+  setPrivacyConsent: vi.fn(),
 }))
-import { saveConfig } from '../api/client'
+import { saveConfig, setPrivacyConsent } from '../api/client'
 
 const onComplete = vi.fn()
 
@@ -102,12 +103,12 @@ describe('Step 2 — Links', () => {
     })
   })
 
-  it('advances to step 3 after a successful save', async () => {
+  it('advances to the consent step after a successful save', async () => {
     saveConfig.mockResolvedValue({})
     const user = await goToStep2()
     await user.click(screen.getByRole('button', { name: /save profile/i }))
     await waitFor(() =>
-      expect(screen.getByText(/you're all set/i)).toBeInTheDocument()
+      expect(screen.getByText(/one last thing/i)).toBeInTheDocument()
     )
   })
 
@@ -133,25 +134,23 @@ describe('Step 2 — Links', () => {
     expect(screen.getByText(/your identity/i)).toBeInTheDocument()
   })
 
-  it("sends undefined for empty optional fields", async () => {
+  it('sends undefined for empty optional fields', async () => {
     saveConfig.mockResolvedValue({})
     const user = await goToStep2()
     await user.click(screen.getByRole('button', { name: /save profile/i }))
     expect(saveConfig).toHaveBeenCalledWith(
       expect.objectContaining({
-        github: undefined,
+        github:   undefined,
         linkedin: undefined,
       })
     )
   })
-
-  
 })
 
-// ── Step 3: Done ──────────────────────────────────────────────────────────────
+// ── Step 3: Consent ───────────────────────────────────────────────────────────
 
-describe('Step 3 — Done', () => {
-  async function goToStep3() {
+describe('Step 3 — Consent', () => {
+  async function goToConsent() {
     saveConfig.mockResolvedValue({})
     const user = userEvent.setup()
     render(<ProfileSetup onComplete={onComplete} />)
@@ -161,17 +160,67 @@ describe('Step 3 — Done', () => {
     await user.type(screen.getByLabelText(/phone/i), '5558675309')
     await user.click(screen.getByRole('button', { name: /continue/i }))
     await user.click(screen.getByRole('button', { name: /save profile/i }))
+    await waitFor(() => screen.getByText(/one last thing/i))
+    return user
+  }
+
+  it('renders the consent screen after saving links', async () => {
+    await goToConsent()
+    expect(screen.getByText(/one last thing/i)).toBeInTheDocument()
+  })
+
+  it('calls setPrivacyConsent(true) and advances to done when consent is granted', async () => {
+    setPrivacyConsent.mockResolvedValue({})
+    const user = await goToConsent()
+    await user.click(screen.getByRole('button', { name: /grant consent/i }))
+    expect(setPrivacyConsent).toHaveBeenCalledWith(true)
+    await waitFor(() =>
+      expect(screen.getByText(/you're all set/i)).toBeInTheDocument()
+    )
+  })
+
+  it('advances to done without calling setPrivacyConsent when skipped', async () => {
+    const user = await goToConsent()
+    await user.click(screen.getByRole('button', { name: /skip for now/i }))
+    expect(setPrivacyConsent).not.toHaveBeenCalled()
+    await waitFor(() =>
+      expect(screen.getByText(/you're all set/i)).toBeInTheDocument()
+    )
+  })
+})
+
+// ── Step 4: Done ──────────────────────────────────────────────────────────────
+
+describe('Step 4 — Done', () => {
+  async function goToDone() {
+    saveConfig.mockResolvedValue({})
+    setPrivacyConsent.mockResolvedValue({})
+    const user = userEvent.setup()
+    render(<ProfileSetup onComplete={onComplete} />)
+    await user.click(screen.getByRole('button', { name: /let's get started/i }))
+    await user.type(screen.getByLabelText(/full name/i), 'Ada Lovelace')
+    await user.type(screen.getByLabelText(/email/i), 'ada@lovelace.dev')
+    await user.type(screen.getByLabelText(/phone/i), '5558675309')
+    await user.click(screen.getByRole('button', { name: /continue/i }))
+    await user.click(screen.getByRole('button', { name: /save profile/i }))
+    await waitFor(() => screen.getByText(/one last thing/i))
+    await user.click(screen.getByRole('button', { name: /grant consent/i }))
     await waitFor(() => screen.getByText(/you're all set/i))
     return user
   }
 
-  it('shows the user\'s first name in the completion message', async () => {
-    await goToStep3()
+  it("shows the user's first name in the completion message", async () => {
+    await goToDone()
     expect(screen.getByText(/you're all set, ada/i)).toBeInTheDocument()
   })
 
+  it('hints that exports can be enabled in Settings → Privacy', async () => {
+    await goToDone()
+    expect(screen.getByText(/settings.*privacy/i)).toBeInTheDocument()
+  })
+
   it('calls onComplete when "Go to Projects" is clicked', async () => {
-    const user = await goToStep3()
+    const user = await goToDone()
     await user.click(screen.getByRole('button', { name: /go to projects/i }))
     expect(onComplete).toHaveBeenCalledOnce()
   })

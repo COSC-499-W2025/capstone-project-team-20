@@ -347,11 +347,24 @@ def test_analyze_git_and_contributions_non_interactive_uses_configured_usernames
     }
 
     with patch("pathlib.Path.exists", return_value=True), \
-         patch.object(analyzer.contribution_analyzer, "get_name_map", return_value={"alice@example.com": "Alice", "bob@example.com": "Bob"}), \
-         patch.object(analyzer.contribution_analyzer, "detect_and_write_mailmap", side_effect=lambda repo, m, config_manager=None: m), \
-         patch.object(analyzer.contribution_analyzer, "analyze", return_value=fake_stats):
-        analyzer.analyze_git_and_contributions(projects=[project], interactive=False)
+         patch.object(
+             analyzer.contribution_analyzer,
+             "get_name_map",
+             return_value={"alice@example.com": "Alice", "bob@example.com": "Bob"}
+         ), \
+         patch.object(
+             analyzer.contribution_analyzer,
+             "detect_duplicate_contributors",
+             return_value=[]
+         ), \
+         patch.object(
+             analyzer.contribution_analyzer,
+             "analyze",
+             return_value=fake_stats
+         ):
+        pending = analyzer.analyze_git_and_contributions(projects=[project], interactive=False)
 
+    assert pending == []
     assert project.authors == ["Alice"]
     assert project.individual_contributions["contribution_share_percent"] == 50.0
 
