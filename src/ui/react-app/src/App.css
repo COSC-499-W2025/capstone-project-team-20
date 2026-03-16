@@ -401,3 +401,77 @@ body{
   right:12px;
   top:10px;
 }
+
+/* ── Portfolio ── */
+
+.portfolio-panel {
+  margin-top: 20px;
+}
+
+.portfolio-summary-strip {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.summary-pill {
+  background: rgba(88,166,255,.08);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 6px 14px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 13px;
+}
+
+.summary-label {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.portfolio-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+
+.portfolio-meta {
+  font-size: 13px;
+  color: var(--muted);
+  margin: 6px 0 10px;
+}
+
+.portfolio-overview {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text);
+  margin: 8px 0;
+}
+
+.contrib-list {
+  list-style: none;
+  padding-left: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.contrib-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+}
+
+.confidence-chip {
+  background: rgba(88,166,255,.08);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 11px;
+  color: var(--accent);
+}
