@@ -58,3 +58,7 @@ src/ui/
 
 # project thumbnails
 thumbnails/
+
+# misc
+cloned_repos/
+zipped_repos/

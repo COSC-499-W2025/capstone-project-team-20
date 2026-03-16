@@ -1,6 +1,7 @@
 ## Team 20 Weekly Log
 
 ### Table of contents
+- [Term 2 Week 10(March 9th - March 15th)](#term-2-week-10-march-9th---march-15th)
 - [Term 2 Week 9(March 2nd - March 8th)](#term-2-week-9-march-2nd---march-8th)
 - [Term 2 Week 8(February 23rd - March 1st)](#term-2-week-8-february-23rd---march-1st)
 - [Term 2 Week 7(February 16th - February 22nd)](#term-2-week-7-february-16th---february-22nd)
@@ -649,13 +650,13 @@ We have no continuuing tasks! Now, we should be able to polish/refactor the back
 
 - Dylan Alexander (16394025): This week, I made a PR implementing a new settings page for the frontend. This page has three submenus. 1. Profile, for users to change their name/email/phone/github/linkedin (all information displayed on resume/portfolios). 2. Privacy (gives users the option to grant/revoke consent) 3. Data (gives users the option to delete all stored project data). Additionally, I made a PR installing Vitest and React Testing Library, and another adding tests for my profile-setup page from last week, now that we have a frontend component testing framework.
 
-- Sven Annist (42486720): 
+- Sven Annist (42486720): This week, I pivoted our portfolio implementation from a PDF workflow to a web portfolio workflow to match updated milestone expectations. I implemented the in-app generation/render path for portfolio data, updated API/schema wiring so report summary and bullet content can be surfaced in the portfolio view, and refined the generated portfolio content for cleaner presentation. I also improved portfolio usability by changing project rendering to an accordion layout so entries can be expanded/collapsed, and updated tests to keep coverage aligned with the new behavior. I opened [PR #447](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/447), and reviewed [PR #437](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/437), [PR #431](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/431), and [PR #428](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/428).
   
 **Features included in the project plan for this milestone are:**
 Everything up to and including Issue [COSC-499-W2025/capstone-project-team-20#443](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/443)
 
 **Continuing tasks from last week and plan for the next week:**
-
+Continuuing to implement our current functionality into the frontend and expanding on it as well. 
 
 **Burnup chart:**
 ![Term 2 Week 9 Burnup chart](teamWeeklyLogsImages/T2_W9_burnup.png)
@@ -671,4 +672,41 @@ Everything up to and including Issue [COSC-499-W2025/capstone-project-team-20#44
 
 **Test Report:**
 ![Term 2 Week 9 Test Report](teamWeeklyLogsImages/T2_W9_tests.png)
+
+
+### Term 2 Week 10 (March 9th - March 15th)
+
+**Work Performed:**
+- Branden Kennedy (42474551): This week, I worked on three PRs: [PR 463](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/463), [PR 465](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/465), and [PR 470](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/470). [PR 463](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/463) fixed merge conflicts that had accidentally been merged into main before our tests finished running. [PR 465](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/465) split the "Reports" tab into separate Resume and Portfolio pages in preparation for adding a flag to the Report model that will distinguish between the two and allow separate CRUD operations. [PR 470](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/470) implemented GitHub username merging in the frontend, adapting functionality originally built for the CLI and adding a confirmation modal so users can verify suggested merges. I added/updated frontend and backend tests where needed and manually tested all my PRs and all the ones that I reviewed during code review. I also created the Peer Testing 2 tasks and questionnaire for the upcoming testing session, and reviewed [PR 471](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/471), [PR 453](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/453), [PR 455](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/455), and [PR 475](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/475).
+
+- Necmi Kaan Sapoglu (17014796): This week I spent some time working on bettering the badges frontend, as even though some of the changes I made last week did better the frontend's legibility for the badges, it was lacking some adaptability that would be very welcome. This week with other group member's request I added a badge heatmap, showcasing how close a person is to getting some badges, and adding the details for all the badges to be accessible by clicking on the badges themselves, removing all of the clutter and repetition there was beforehand. This is the PR for all of the changes I have listed and some more minor details that were changed so everything looks better for the peer reviews on wednesday: [PR #478](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/478).
+
+- Lex Nash (84668540): 
+
+- Dylan Alexander (16394025): This week, I spent an extensive amount of time hunting for inefficiencies in our analysis methods. Upload zip had been taking an absurd amount of time for quite a while. This included setting a timer for each method in the chain of method calls when uploading zips. I managed to get the total time taken from ~157 seconds to just ~15 seconds (with the zip i was using for testing).[PR #453](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/453)[PR #455](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/455) In addition, I did a few tasks related to our frontend, in an effort to get our frontend to an acceptable place in time for peer testing. This includes adding interactive prompts in our frontend (prompting for consent, prompting to confirm cancellation of analysis), and designing and extending the "merge contributors" modal that Branden implemented.[PR #471](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/471)[PR #475](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/475)
+
+- Sven Annist (42486720): This week I focused on finishing and stabilizing our portfolio workflow ahead of peer testing by implementing private/public portfolio mode support, adding per-project customization persistence (custom title/overview/achievements/hidden flag), wiring mode + customization endpoints in the backend, and connecting the frontend flow so portfolios can be locked/unlocked and edited in private mode while still presenting filtered/searchable views in public mode; I also refined generated portfolio text output so defaults read better while staying compatible with tests, handled rebases/integration after recent merges, and opened [PR #484](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/484) and [PR #485](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/485), while reviewing [PR #453](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/453), [PR #455](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/455), [PR #463](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/463), [PR #465](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/465), and [PR #482](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/482), with next steps being final regression checks and demo prep for peer testing .
+  
+**Features included in the project plan for this milestone are:**
+Everything up to and including Issue
+
+**Continuing tasks from last week and plan for the next week:**
+Continuuing to implement our current functionality into the frontend and expanding on it as well. 
+
+**Burnup chart:**
+![Term 2 Week 10 Burnup chart]()
+
+
+**Table View of Completed Tasks on Project Board:**
+![Term 2 Week 10 completed]()
+
+
+**Table View of In-Progress Tasks on Project Board:**
+![Term 2 Week 10 In-progress Tasks]()
+
+
+**Test Report:**
+![Term 2 Week 10 Test Report]()
+
+
 
