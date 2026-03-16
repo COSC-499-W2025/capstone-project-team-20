@@ -444,7 +444,7 @@ function Projects() {
                   <button
                     onClick={() => handleSelect(p.id)}
                     disabled={loading}
-                    style={{ background: "transparent", border: "none", cursor: "pointer", padding: 0 }}
+                    style={{ background: "transparent", border: "none", cursor: "pointer", padding: 0, color: "var(--text)"}}
                   >
                     {p.name} (#{p.id})
                   </button>
@@ -461,7 +461,7 @@ function Projects() {
                   <button
                     onClick={() => handleSelect(p.id)}
                     disabled={loading}
-                    style={{ background: "transparent", border: "none", cursor: "pointer", padding: 0 }}
+                    style={{ background: "transparent", border: "none", cursor: "pointer", padding: 0, color: "var(--text)" }}
                   >
                     {p.name} (#{p.id})
                   </button>
