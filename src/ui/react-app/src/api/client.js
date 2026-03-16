@@ -192,3 +192,26 @@ export function saveConfig({ name, email, phone, github, linkedin }) {
     body: JSON.stringify({ name, email, phone, github, linkedin }),
   });
 }
+export function updatePortfolioMode(report_id, mode) {
+  return request(`/portfolio/${report_id}/mode`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ mode }),
+  });
+}
+
+export function updatePortfolioProject(report_id, project_name, payload) {
+  return request(`/portfolio/${report_id}/projects/${encodeURIComponent(project_name)}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+}
+
+export function publishPortfolio(report_id) {
+  return request(`/portfolio/${report_id}/publish`, { method: "POST" });
+}
+
+export function unpublishPortfolio(report_id) {
+  return request(`/portfolio/${report_id}/unpublish`, { method: "POST" });
+}
