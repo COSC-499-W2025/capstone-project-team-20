@@ -59,6 +59,9 @@ portfolios/
 # project thumbnails
 thumbnails/
 
+# misc
+cloned_repos/
+zipped_repos/
 # frontend 
 src/ui/
 src/ui/react-app/
