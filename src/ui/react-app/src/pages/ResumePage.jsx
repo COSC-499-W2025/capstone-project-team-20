@@ -4,6 +4,7 @@ import {
   createReport,
   listReports,
   getReport,
+  deleteReport,
   exportResume,
   setPrivacyConsent,
   getResumeContext,
@@ -12,12 +13,12 @@ import {
 } from "../api/client";
 
 // ---------------------------------------------------------------------------
-// Pencil button
+// Pencil + Trash icon buttons
 // ---------------------------------------------------------------------------
 function Pencil({ onClick }) {
   return (
     <button onClick={onClick} style={pencilBtn} title="Edit">
-      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
         <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
       </svg>
@@ -29,13 +30,51 @@ const pencilBtn = {
   background: "none",
   border: "none",
   cursor: "pointer",
-  fontSize: 11,
   padding: "0 3px",
-  opacity: 0.55,
+  opacity: 0.5,
   lineHeight: 1,
-  color: "#444",
+  color: "currentColor",
   verticalAlign: "middle",
 };
+
+function Trash({ onClick }) {
+  return (
+    <button onClick={onClick} style={{ ...pencilBtn, opacity: 0.45 }} title="Delete report">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="3 6 5 6 21 6"/>
+        <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+        <path d="M10 11v6M14 11v6"/>
+        <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+      </svg>
+    </button>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Confirm modal — same visual language as Projects.jsx
+// ---------------------------------------------------------------------------
+function ConfirmModal({ title, message, confirmLabel = "Delete", onConfirm, onCancel }) {
+  return (
+    <>
+      <style>{MODAL_CSS}</style>
+      <div className="rs-overlay">
+        <div className="rs-modal">
+          <div className="rs-bar" aria-hidden="true" />
+          <div className="rs-confirm-body">
+            <div className="rs-confirm-icon">⚠️</div>
+            <h2 className="rs-confirm-title">{title}</h2>
+            <p className="rs-confirm-sub">{message}</p>
+          </div>
+          <div className="rs-modal-footer">
+            <button className="rs-btn rs-btn--ghost" onClick={onCancel}>← Go back</button>
+            <button className="rs-btn rs-btn--danger" onClick={onConfirm}>{confirmLabel}</button>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
 
 const smallBtn = {
   fontSize: 10,
@@ -62,15 +101,25 @@ const inlineInput = {
 };
 
 // ---------------------------------------------------------------------------
-// Inline single-line text editor
+// Inline single-line text editor — width tracks content length
 // ---------------------------------------------------------------------------
 function InlineText({ value, onSave, style: extraStyle = {} }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value);
   const inputRef = useRef();
+  const sizerRef = useRef();
 
   useEffect(() => { setDraft(value); }, [value]);
   useEffect(() => { if (editing) inputRef.current?.focus(); }, [editing]);
+
+  // Measure text width via a hidden sizer span so input grows with content
+  const [inputWidth, setInputWidth] = useState(80);
+  useEffect(() => {
+    if (sizerRef.current) {
+      const w = sizerRef.current.offsetWidth;
+      setInputWidth(Math.max(80, w + 16));
+    }
+  }, [draft]);
 
   function commit() {
     setEditing(false);
@@ -79,17 +128,32 @@ function InlineText({ value, onSave, style: extraStyle = {} }) {
 
   if (editing) {
     return (
-      <input
-        ref={inputRef}
-        value={draft}
-        onChange={(e) => setDraft(e.target.value)}
-        onBlur={commit}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") commit();
-          if (e.key === "Escape") { setDraft(value); setEditing(false); }
-        }}
-        style={{ ...inlineInput, ...extraStyle }}
-      />
+      <>
+        {/* Hidden sizer — mirrors input text to measure natural width */}
+        <span
+          ref={sizerRef}
+          aria-hidden
+          style={{
+            ...inlineInput,
+            ...extraStyle,
+            position: "absolute",
+            visibility: "hidden",
+            whiteSpace: "pre",
+            pointerEvents: "none",
+          }}
+        >{draft || " "}</span>
+        <input
+          ref={inputRef}
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={commit}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") commit();
+            if (e.key === "Escape") { setDraft(value); setEditing(false); }
+          }}
+          style={{ ...inlineInput, ...extraStyle, width: inputWidth }}
+        />
+      </>
     );
   }
 
@@ -347,7 +411,7 @@ function ExperienceEditor({ experience, onSave }) {
 // ---------------------------------------------------------------------------
 // Resume preview with full inline editing
 // ---------------------------------------------------------------------------
-function ResumePreview({ ctx, reportId, onContextChange }) {
+function ResumePreview({ ctx, reportId, reportNotes, onContextChange }) {
   if (!ctx) return null;
 
   const {
@@ -494,6 +558,29 @@ function ResumePreview({ ctx, reportId, onContextChange }) {
 // ---------------------------------------------------------------------------
 // Styles
 // ---------------------------------------------------------------------------
+const formLabel = {
+  display: "block",
+  fontSize: 11,
+  fontWeight: 600,
+  color: "#555",
+  marginBottom: 4,
+  textTransform: "uppercase",
+  letterSpacing: 0.4,
+};
+
+const formInput = {
+  width: "100%",
+  boxSizing: "border-box",
+  fontSize: 13,
+  padding: "6px 8px",
+  border: "1px solid #d0d0d0",
+  borderRadius: 5,
+  outline: "none",
+  background: "var(--bg, #fff)",
+  color: "var(--text, #000)",
+  fontFamily: "inherit",
+};
+
 const styles = {
   page: {
     fontFamily: "'Times New Roman', Times, serif",
@@ -537,6 +624,7 @@ function ResumePage() {
   const [reportNotes, setReportNotes] = useState("");
   const [previewCtx, setPreviewCtx] = useState(null);
   const [previewLoading, setPreviewLoading] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
 
   useEffect(() => { loadInitialData(); }, []);
 
@@ -631,6 +719,25 @@ function ResumePage() {
     }
   }
 
+  async function handleDeleteReport(id) {
+    try {
+      await deleteReport(id);
+    } catch (e) {
+      // 204 No Content comes back as empty string from request() — not a real error
+      if (e.message && e.message !== "") {
+        setMessage(e.message);
+        return;
+      }
+    }
+    // Always run cleanup regardless — deletion succeeded even if response parsing threw
+    setConfirmDeleteId(null);
+    setReports((prev) => prev.filter((r) => r.id !== id));
+    if (selectedReport?.id === id) {
+      setSelectedReport(null);
+      setPreviewCtx(null);
+    }
+  }
+
   return (
     <>
       <h3>Resume</h3>
@@ -646,21 +753,22 @@ function ResumePage() {
           <div style={{ padding: 12, border: "1px solid #ddd", borderRadius: 8, marginBottom: 16 }}>
             <h4 style={{ marginTop: 0 }}>Create Report</h4>
             <div style={{ marginBottom: 10 }}>
-              <label>Title</label><br />
+              <label style={formLabel}>Title</label>
               <input
                 type="text"
                 value={reportTitle}
                 onChange={(e) => setReportTitle(e.target.value)}
-                style={{ width: "100%" }}
+                style={formInput}
               />
             </div>
             <div style={{ marginBottom: 10 }}>
-              <label>Notes</label><br />
+              <label style={formLabel}>Notes</label>
               <textarea
                 value={reportNotes}
                 onChange={(e) => setReportNotes(e.target.value)}
                 rows={3}
-                style={{ width: "100%" }}
+                placeholder="e.g. Use for software engineering roles"
+                style={{ ...formInput, resize: "vertical", lineHeight: 1.4 }}
               />
             </div>
             <h4>Projects</h4>
@@ -689,9 +797,9 @@ function ResumePage() {
           <div>
             <h4>Saved Reports</h4>
             {reports.length === 0 ? <p>No reports yet.</p> : (
-              <ul style={{ paddingLeft: 16 }}>
+              <ul style={{ paddingLeft: 0, listStyle: "none" }}>
                 {reports.map((r) => (
-                  <li key={r.id}>
+                  <li key={r.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
                     <button
                       onClick={() => handleSelectReport(r.id)}
                       disabled={loading}
@@ -699,13 +807,20 @@ function ResumePage() {
                         background: "transparent", border: "none", cursor: "pointer", padding: 0,
                         color: selectedReport?.id === r.id ? "var(--accent, #0066cc)" : "var(--text)",
                         fontWeight: selectedReport?.id === r.id ? "bold" : "normal",
+                        textAlign: "left", flex: 1,
                       }}
                     >
                       {r.title ?? `Report #${r.id}`}
                     </button>
+                    <Trash onClick={() => setConfirmDeleteId(r.id)} />
                   </li>
                 ))}
               </ul>
+            )}
+            {selectedReport?.notes && (
+              <p style={{ fontSize: 12, color: "#666", fontStyle: "italic", marginTop: 6, borderLeft: "2px solid #ddd", paddingLeft: 8 }}>
+                {selectedReport.notes}
+              </p>
             )}
           </div>
 
@@ -728,14 +843,103 @@ function ResumePage() {
             <ResumePreview
               ctx={previewCtx}
               reportId={selectedReport?.id}
+              reportNotes={selectedReport?.notes}
               onContextChange={setPreviewCtx}
             />
           )}
         </div>
 
       </div>
+
+      {confirmDeleteId && (
+        <ConfirmModal
+          title="Delete report?"
+          message="This will permanently delete the report. Your projects won't be affected."
+          confirmLabel="Yes, delete"
+          onConfirm={() => handleDeleteReport(confirmDeleteId)}
+          onCancel={() => setConfirmDeleteId(null)}
+        />
+      )}
     </>
   );
 }
 
 export default ResumePage;
+
+// ---------------------------------------------------------------------------
+// Modal CSS — mirrors Projects.jsx pj-* pattern under rs-* namespace
+// ---------------------------------------------------------------------------
+const MODAL_CSS = `
+.rs-overlay {
+  position: fixed; inset: 0; z-index: 1000;
+  background: rgba(0,0,0,0.6);
+  display: flex; align-items: center; justify-content: center;
+}
+.rs-modal {
+  --accent:  #58a6ff;
+  --accent2: #f78166;
+  --bg:      #0d1117;
+  --surface: #161b22;
+  --border:  #30363d;
+  --text:    #e6edf3;
+  --muted:   #8b949e;
+  --r:       10px;
+  width: min(420px, 90vw);
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 16px; overflow: hidden;
+  display: flex; flex-direction: column;
+  box-shadow: 0 24px 64px rgba(0,0,0,.6), 0 0 0 1px rgba(88,166,255,.06);
+  font-family: 'DM Sans', 'Segoe UI', system-ui, sans-serif;
+  animation: rs-fadein .2s ease both;
+}
+@keyframes rs-fadein {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.rs-bar {
+  height: 3px; flex-shrink: 0;
+  background: linear-gradient(90deg, var(--accent), var(--accent2), var(--accent));
+  background-size: 200% 100%;
+  animation: rs-shimmer 3s linear infinite;
+}
+@keyframes rs-shimmer {
+  0%   { background-position: 200% center; }
+  100% { background-position: -200% center; }
+}
+.rs-confirm-body {
+  flex: 1;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 36px 32px 24px;
+  text-align: center;
+}
+.rs-confirm-icon { font-size: 32px; margin-bottom: 12px; }
+.rs-confirm-title {
+  font-size: 18px; font-weight: 700; color: var(--text);
+  margin: 0 0 10px;
+}
+.rs-confirm-sub {
+  font-size: 13px; color: var(--muted); line-height: 1.6;
+  max-width: 320px; margin: 0;
+}
+.rs-modal-footer {
+  padding: 12px 24px; flex-shrink: 0;
+  border-top: 1px solid var(--border);
+  display: flex; justify-content: flex-end; align-items: center; gap: 8px;
+}
+.rs-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  height: 36px; padding: 0 16px; border-radius: var(--r);
+  font-size: 13px; font-weight: 600; cursor: pointer;
+  border: 1.5px solid transparent; font-family: inherit;
+  transition: all .15s;
+}
+.rs-btn--ghost {
+  background: transparent; color: var(--muted); border-color: var(--border);
+}
+.rs-btn--ghost:hover { border-color: var(--muted); color: var(--text); }
+.rs-btn--danger {
+  background: transparent; color: #f85149; border-color: #f85149;
+}
+.rs-btn--danger:hover { border-color: #ff7b72; color: #ff7b72; }
+`;

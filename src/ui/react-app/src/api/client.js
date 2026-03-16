@@ -141,6 +141,14 @@ export function getReport(id) {
   return request(`/reports/${id}`);
 }
 
+export async function deleteReport(id) {
+  const res = await fetch(`${BASE_URL}/reports/${id}`, { method: "DELETE" });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || `HTTP ${res.status}`);
+  }
+}
+
 // Portfolio details generation (for a report)
 
 export function generatePortfolioDetailsForReport({ report_id, project_names }) {
