@@ -688,10 +688,10 @@ Continuuing to implement our current functionality into the frontend and expandi
 - Sven Annist (42486720): This week I focused on finishing and stabilizing our portfolio workflow ahead of peer testing by implementing private/public portfolio mode support, adding per-project customization persistence (custom title/overview/achievements/hidden flag), wiring mode + customization endpoints in the backend, and connecting the frontend flow so portfolios can be locked/unlocked and edited in private mode while still presenting filtered/searchable views in public mode; I also refined generated portfolio text output so defaults read better while staying compatible with tests, handled rebases/integration after recent merges, and opened [PR #484](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/484) and [PR #485](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/485), while reviewing [PR #453](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/453), [PR #455](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/455), [PR #463](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/463), [PR #465](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/465), and [PR #482](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/482), with next steps being final regression checks and demo prep for peer testing .
   
 **Features included in the project plan for this milestone are:**
-Everything up to and including Issue
+Everything up to and including Issue [COSC-499-W2025/capstone-project-team-20#483](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/483)
 
 **Continuing tasks from last week and plan for the next week:**
-Continuuing to implement our current functionality into the frontend and expanding on it as well. 
+Continuuing tasks include implementing CRUD operations into both resume and portfolio pages to finish implementing the last of our backend functionality into the frontend. The plans for this week are finishing any remaining functionality from our CLI into the frontend, as well as getting through the rest of Milestone 3!
 
 **Burnup chart:**
 ![Term 2 Week 10 Burnup chart](teamWeeklyLogsImages/w10burnup.png)
