@@ -183,7 +183,7 @@ function ResumePage() {
                   <button
                     onClick={() => handleSelectReport(r.id)}
                     disabled={loading}
-                    style={{ background: "transparent", border: "none", cursor: "pointer", padding: 0 }}
+                    style={{ background: "transparent", border: "none", cursor: "pointer", padding: 0, color: "var(--text)" }}
                   >
                     {r.title ?? `Report #${r.id}`}
                   </button>

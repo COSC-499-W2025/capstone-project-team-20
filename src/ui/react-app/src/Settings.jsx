@@ -122,17 +122,18 @@ export default function Settings() {
     <>
       <style>{`
         .s-nav-btn {
-          display: block;
-          width: 100%;
-          padding: 22px 32px;
-          font-size: 14px;
-          font-weight: bold;
-          font-family: inherit;
-          aspect-ratio: unset;
-          border: none;
-          border-radius: 0;
-          cursor: pointer;
-          text-align: left;
+          border-radius:var(--r);
+          border:1px solid var(--border);
+
+          background:transparent;
+          color:var(--muted);
+
+          font-weight:600;
+          font-size:14px;
+
+          cursor:pointer;
+
+          transition:all .15s;
         }
         .s-nav-btn--off {
           background: var(--primary);
@@ -146,6 +147,10 @@ export default function Settings() {
           background: var(--secondary);
           color: var(--primary);
           cursor: default;
+        }
+          .nav-btn:hover{
+          border-color:var(--muted);
+          color:var(--text);
         }
 
         .s-btn {
@@ -194,7 +199,7 @@ export default function Settings() {
       <div style={{ display: "flex", height: "100%", overflow: "hidden" }}>
 
         {/* Sidebar */}
-        <div style={{ display: "flex", flexDirection: "column", width: 120, flexShrink: 0, background: "var(--secondary_low)" }}>
+        <div style={{ display: "flex", flexDirection: "column", width: 120, flexShrink: 0, gap: 10, marginTop: 30, background: "var(--surface)"}}>
           {[["profile","Profile"],["privacy","Privacy"],["data","Data"]].map(([id, label]) => (
             <button
               key={id}
@@ -220,13 +225,13 @@ export default function Settings() {
 
               <div style={{ display: "flex", gap: 16 }}>
                 <div style={{ flex: 1 }}>
-                  <label style={labelStyle}>Full name *</label>
-                  <input style={inputStyle} value={form.name} onChange={change("name")} placeholder="Ada Lovelace" />
+                  <label style={labelStyle}>Full Name *</label>
+                  <input style={{ ...inputStyle, minWidth: 240 }} value={form.name} onChange={change("name")} placeholder="Ada Lovelace" />
                   {touched.name && errors.name && <span style={errorStyle}>{errors.name}</span>}
                 </div>
                 <div style={{ flex: 1 }}>
                   <label style={labelStyle}>Email *</label>
-                  <input style={inputStyle} type="email" value={form.email} onChange={change("email")} placeholder="ada@lovelace.dev" />
+                  <input style={{ ...inputStyle, minWidth: 300 }} type="email" value={form.email} onChange={change("email")} placeholder="ada@lovelace.dev" />
                   {touched.email && errors.email && <span style={errorStyle}>{errors.email}</span>}
                 </div>
               </div>
@@ -234,7 +239,7 @@ export default function Settings() {
               <div style={{ display: "flex", gap: 16 }}>
                 <div style={{ flex: 1 }}>
                   <label style={labelStyle}>Phone *</label>
-                  <input style={inputStyle} type="tel" value={form.phone} onChange={change("phone")} placeholder="+1 (555) 867-5309" />
+                  <input style={{ ...inputStyle, minWidth: 240 }} type="tel" value={form.phone} onChange={change("phone")} placeholder="+1 (555) 867-5309" />
                   {touched.phone && errors.phone && <span style={errorStyle}>{errors.phone}</span>}
                 </div>
                 <div style={{ flex: 1 }} />
@@ -246,11 +251,11 @@ export default function Settings() {
               <div style={{ display: "flex", gap: 16 }}>
                 <div style={{ flex: 1 }}>
                   <label style={labelStyle}>GitHub</label>
-                  <input style={inputStyle} value={form.github} onChange={change("github")} placeholder="ada-lovelace" />
+                  <input style={{ ...inputStyle, minWidth: 240 }} value={form.github} onChange={change("github")} placeholder="ada-lovelace" />
                 </div>
                 <div style={{ flex: 1 }}>
                   <label style={labelStyle}>LinkedIn</label>
-                  <input style={inputStyle} value={form.linkedin} onChange={change("linkedin")} placeholder="ada-lovelace" />
+                  <input style={{ ...inputStyle, minWidth: 300 }} value={form.linkedin} onChange={change("linkedin")} placeholder="ada-lovelace" />
                 </div>
               </div>
 
