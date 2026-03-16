@@ -442,3 +442,33 @@ I ran into schema/startup errors and the contents of portfolio entries being off
 
 ### Looking Ahead:
 Next week I’m planning to focus on preparing ahead for our peer testing, including any final UI cleanup and scope-contained fixes needed after R feedback.
+
+# Term 2 Week 10
+![Sven's Tasks for T2W10](./imagesForSvenLogs/t2w10.png)-->
+
+### Tasks worked on:
+- **Portfolio Private/Public API + Data Model Support**: Added backend support for portfolio mode state (`private` / `public`), publish timestamp handling, and per-project portfolio customizations (title/overview/achievements/hidden flag).
+- **Portfolio Web Editing Workflow**: Implemented frontend support for private-mode editing with in-place controls, save flow, and mode toggle behavior (lock/unlock flow).
+- **Public View Behavior Improvements**: Added public-mode filtering/search behavior and ensured rendering prioritizes user-edited values while preserving generated defaults.
+- **Portfolio Text Output Revision**: Refined portfolio generation output to restore stronger default narrative quality while keeping output stable for tests and WYSIWYG editing.
+
+### Weekly Goals Recap:
+My goal this week was to complete and stabilize portfolio private/public controls and editing flow in accordance with our milestone 3 portfolio requirement.
+
+### PRs I reviewed this week:
+- **PR #453**: [Performance/efficiency refactor](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/453)
+- **PR #455**: [Performance/refactor contribution analyzer](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/455)
+- **PR #463**: [Fixed our merge conflicts that were in main.](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/463)
+- **PR #465**: [Split the reports tab into seperate resume and portfolio pages and moved the tests to corresponding new test files](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/465)
+- **PR #482**: [tests: add frontend tests for help page](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/482)
+
+### PRs I opened this week:
+- **PR #484**: [Feature/portfolio private public api](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/484)
+- **PR #485**: [Portfolio private/public frontend + customization flow](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/485)
+
+### Problems Encountered:
+- Needed a few iterations on portfolio text generation to both improve readability and satisfy existing test expectations.
+- Resolved with rebases, route alignment checks, and targeted generator/test-safe wording updates.
+
+### Looking Ahead:
+As peer testing is close ahead I want to make some final touch ups on our portfolios with our styling changes to be prepared to showcase it to other students.
