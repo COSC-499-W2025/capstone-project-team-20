@@ -592,6 +592,22 @@ def export_resume(req: ResumeExportRequest):
         download_url=f"/resume/exports/{export_id}/download"
     )
 
+@router.get("/resume/context/{id}", dependencies=[Depends(require_consent)])
+def get_resume_context(id: int):
+    """
+    Return the resume template context for a report as JSON.
+    Used by the frontend to render a live HTML preview.
+    """
+    rm = ReportManager()
+    report = rm.get_report(id)
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found.")
+    context = ReportExporter()._build_context(report, ConfigManager())
+    # Convert date objects to strings so they're JSON-serialisable
+    for proj in context.get("projects", []):
+        pass  # dates are already formatted strings in _build_context
+    return context
+
 
 class ConfigSaveRequest(BaseModel):
     name: str | None = None

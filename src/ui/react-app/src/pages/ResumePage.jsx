@@ -6,8 +6,195 @@ import {
   getReport,
   exportResume,
   setPrivacyConsent,
+  getResumeContext,
+  getConfig,
 } from "../api/client";
 
+// ---------------------------------------------------------------------------
+// Jake-style resume rendered in HTML
+// ---------------------------------------------------------------------------
+function ResumePreview({ ctx }) {
+  if (!ctx) return null;
+
+  const {
+    name, phone, email,
+    github_url, github_display,
+    linkedin_url, linkedin_display,
+    education = [], experience = [], projects = [], skills = {},
+  } = ctx;
+
+  return (
+    <div style={styles.page}>
+      {/* HEADING */}
+      <div style={styles.heading}>
+        <div style={styles.headingName}>{name}</div>
+        <div style={styles.headingContact}>
+          {phone}
+          {email && <> &nbsp;|&nbsp; <a href={`mailto:${email}`} style={styles.link}>{email}</a></>}
+          {linkedin_url && <> &nbsp;|&nbsp; <a href={linkedin_url} style={styles.link}>{linkedin_display}</a></>}
+          {github_url && <> &nbsp;|&nbsp; <a href={github_url} style={styles.link}>{github_display}</a></>}
+        </div>
+      </div>
+
+      {/* EDUCATION */}
+      {education.length > 0 && (
+        <section>
+          <div style={styles.sectionTitle}>Education</div>
+          <hr style={styles.rule} />
+          {education.map((edu, i) => (
+            <div key={i} style={styles.subheading}>
+              <div style={styles.subheadingRow}>
+                <strong>{edu.school}</strong>
+                <span>{edu.location}</span>
+              </div>
+              <div style={styles.subheadingRow}>
+                <em style={styles.small}>{edu.degree}</em>
+                <em style={styles.small}>{edu.dates}</em>
+              </div>
+            </div>
+          ))}
+        </section>
+      )}
+
+      {/* EXPERIENCE */}
+      {experience.length > 0 && (
+        <section>
+          <div style={styles.sectionTitle}>Experience</div>
+          <hr style={styles.rule} />
+          {experience.map((job, i) => (
+            <div key={i} style={styles.subheading}>
+              <div style={styles.subheadingRow}>
+                <strong>{job.title}</strong>
+                <span>{job.dates}</span>
+              </div>
+              <div style={styles.subheadingRow}>
+                <em style={styles.small}>{job.company}</em>
+                <em style={styles.small}>{job.location}</em>
+              </div>
+              <ul style={styles.bulletList}>
+                {(job.bullets || []).map((b, j) => (
+                  <li key={j} style={styles.bulletItem}>{b}</li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </section>
+      )}
+
+      {/* PROJECTS */}
+      {projects.length > 0 && (
+        <section>
+          <div style={styles.sectionTitle}>Projects</div>
+          <hr style={styles.rule} />
+          {projects.map((proj, i) => (
+            <div key={i} style={styles.subheading}>
+              <div style={styles.subheadingRow}>
+                <span>
+                  <strong>{proj.name}</strong>
+                  {proj.stack && <> &nbsp;|&nbsp; <em>{proj.stack}</em></>}
+                </span>
+                <span style={styles.small}>{proj.dates}</span>
+              </div>
+              <ul style={styles.bulletList}>
+                {(proj.bullets || []).map((b, j) => (
+                  <li key={j} style={styles.bulletItem}>{b}</li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </section>
+      )}
+
+      {/* TECHNICAL SKILLS */}
+      {Object.keys(skills).length > 0 && (
+        <section>
+          <div style={styles.sectionTitle}>Technical Skills</div>
+          <hr style={styles.rule} />
+          <ul style={{ ...styles.bulletList, marginTop: 4 }}>
+            {Object.entries(skills).map(([cat, items]) => (
+              <li key={cat} style={{ ...styles.bulletItem, listStyle: "none", paddingLeft: 0 }}>
+                <strong>{cat}:</strong> {Array.isArray(items) ? items.join(", ") : items}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Jake resume styles — letter-page feel, tight spacing
+// ---------------------------------------------------------------------------
+const styles = {
+  page: {
+    fontFamily: "'Times New Roman', Times, serif",
+    fontSize: 11,
+    color: "#000",
+    background: "#fff",
+    width: 740,
+    minHeight: 960,
+    padding: "36px 48px",
+    boxSizing: "border-box",
+    boxShadow: "0 2px 12px rgba(0,0,0,0.15)",
+    margin: "0 auto",
+  },
+  heading: {
+    textAlign: "center",
+    marginBottom: 8,
+  },
+  headingName: {
+    fontSize: 22,
+    fontWeight: "bold",
+    fontVariant: "small-caps",
+    letterSpacing: 1,
+  },
+  headingContact: {
+    fontSize: 11,
+    marginTop: 2,
+  },
+  link: {
+    color: "#000",
+    textDecoration: "underline",
+  },
+  sectionTitle: {
+    fontSize: 13,
+    fontVariant: "small-caps",
+    fontWeight: "bold",
+    marginTop: 10,
+    marginBottom: 2,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  rule: {
+    border: "none",
+    borderTop: "1px solid #000",
+    margin: "2px 0 6px 0",
+  },
+  subheading: {
+    marginBottom: 6,
+  },
+  subheadingRow: {
+    display: "flex",
+    justifyContent: "space-between",
+    fontSize: 11,
+  },
+  small: {
+    fontSize: 10,
+  },
+  bulletList: {
+    margin: "2px 0 0 0",
+    paddingLeft: 20,
+  },
+  bulletItem: {
+    fontSize: 10,
+    marginBottom: 1,
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Main page
+// ---------------------------------------------------------------------------
 function ResumePage() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
@@ -17,6 +204,8 @@ function ResumePage() {
   const [selectedReport, setSelectedReport] = useState(null);
   const [reportTitle, setReportTitle] = useState("My Resume Report");
   const [reportNotes, setReportNotes] = useState("");
+  const [previewCtx, setPreviewCtx] = useState(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
 
   useEffect(() => {
     loadInitialData();
@@ -45,7 +234,7 @@ function ResumePage() {
 
   function toggleProject(id) {
     setSelectedProjectIds((prev) =>
-      prev.includes(id) ? prev.filter((projectId) => projectId !== id) : [...prev, id]
+      prev.includes(id) ? prev.filter((pid) => pid !== id) : [...prev, id]
     );
   }
 
@@ -67,9 +256,14 @@ function ResumePage() {
         project_ids: selectedProjectIds,
       });
 
-      setSelectedReport(created.report ?? null);
-      setMessage(`Created report "${created.report?.title ?? "Untitled"}"`);
+      const report = created.report ?? null;
+      setSelectedReport(report);
+      setMessage(`Created report "${report?.title ?? "Untitled"}"`);
       await loadInitialData();
+
+      if (report?.id) {
+        await loadPreview(report.id);
+      }
     } catch (e) {
       setMessage(e.message ?? "Failed to create report");
     } finally {
@@ -82,11 +276,28 @@ function ResumePage() {
     setMessage("");
     try {
       const data = await getReport(id);
-      setSelectedReport(data.report ?? null);
+      const report = data.report ?? null;
+      setSelectedReport(report);
+      if (report?.id) {
+        await loadPreview(report.id);
+      }
     } catch (e) {
       setMessage(e.message ?? "Failed to load report");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function loadPreview(reportId) {
+    setPreviewLoading(true);
+    setPreviewCtx(null);
+    try {
+      const ctx = await getResumeContext(reportId);
+      setPreviewCtx(ctx);
+    } catch (e) {
+      setMessage(e.message ?? "Failed to load preview");
+    } finally {
+      setPreviewLoading(false);
     }
   }
 
@@ -122,94 +333,109 @@ function ResumePage() {
         {loading ? "Loading..." : "Refresh Resume Page"}
       </button>
 
-      <div style={{ marginTop: 16, padding: 12, border: "1px solid #ddd", borderRadius: 8 }}>
-        <h4>Create Resume Report</h4>
+      <div style={{ display: "flex", gap: 24, marginTop: 16, alignItems: "flex-start" }}>
 
-        <div style={{ marginBottom: 12 }}>
-          <label>Title</label><br />
-          <input
-            type="text"
-            value={reportTitle}
-            onChange={(e) => setReportTitle(e.target.value)}
-            style={{ width: "100%", maxWidth: 400 }}
-          />
+        {/* LEFT PANEL — controls */}
+        <div style={{ minWidth: 300, maxWidth: 340 }}>
+
+          <div style={{ padding: 12, border: "1px solid #ddd", borderRadius: 8, marginBottom: 16 }}>
+            <h4 style={{ marginTop: 0 }}>Create Resume Report</h4>
+
+            <div style={{ marginBottom: 12 }}>
+              <label>Title</label><br />
+              <input
+                type="text"
+                value={reportTitle}
+                onChange={(e) => setReportTitle(e.target.value)}
+                style={{ width: "100%" }}
+              />
+            </div>
+
+            <div style={{ marginBottom: 12 }}>
+              <label>Notes</label><br />
+              <textarea
+                value={reportNotes}
+                onChange={(e) => setReportNotes(e.target.value)}
+                rows={3}
+                style={{ width: "100%" }}
+              />
+            </div>
+
+            <h4>Select Projects</h4>
+            {projects.length === 0 ? (
+              <p>No projects found. Upload a project first.</p>
+            ) : (
+              <ul style={{ listStyle: "none", paddingLeft: 0 }}>
+                {projects.map((p) => (
+                  <li key={p.id} style={{ marginBottom: 6 }}>
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={selectedProjectIds.includes(p.id)}
+                        onChange={() => toggleProject(p.id)}
+                        style={{ marginRight: 8 }}
+                      />
+                      {p.name} (#{p.id})
+                    </label>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            <button onClick={handleCreateReport} disabled={loading}>
+              {loading ? "Working..." : "Create Resume Report"}
+            </button>
+          </div>
+
+          <div>
+            <h4>Saved Reports</h4>
+            {reports.length === 0 ? (
+              <p>No reports created yet.</p>
+            ) : (
+              <ul style={{ paddingLeft: 16 }}>
+                {reports.map((r) => (
+                  <li key={r.id}>
+                    <button
+                      onClick={() => handleSelectReport(r.id)}
+                      disabled={loading}
+                      style={{
+                        background: "transparent",
+                        border: "none",
+                        cursor: "pointer",
+                        padding: 0,
+                        color: selectedReport?.id === r.id ? "var(--accent, #0066cc)" : "var(--text)",
+                        fontWeight: selectedReport?.id === r.id ? "bold" : "normal",
+                      }}
+                    >
+                      {r.title ?? `Report #${r.id}`}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          <div style={{ marginTop: 12 }}>
+            <button onClick={handleExportResume} disabled={loading || !selectedReport?.id}>
+              Export Resume PDF
+            </button>
+          </div>
+
+          {message && <p style={{ marginTop: 12, fontSize: 13 }}>{message}</p>}
         </div>
 
-        <div style={{ marginBottom: 12 }}>
-          <label>Notes</label><br />
-          <textarea
-            value={reportNotes}
-            onChange={(e) => setReportNotes(e.target.value)}
-            rows={4}
-            style={{ width: "100%", maxWidth: 400 }}
-          />
-        </div>
-
-        <h4>Select Projects</h4>
-        {projects.length === 0 ? (
-          <p>No projects found. Upload a project first.</p>
-        ) : (
-          <ul style={{ listStyle: "none", paddingLeft: 0 }}>
-            {projects.map((p) => (
-              <li key={p.id} style={{ marginBottom: 8 }}>
-                <label>
-                  <input
-                    type="checkbox"
-                    checked={selectedProjectIds.includes(p.id)}
-                    onChange={() => toggleProject(p.id)}
-                    style={{ marginRight: 8 }}
-                  />
-                  {p.name} (#{p.id})
-                </label>
-              </li>
-            ))}
-          </ul>
-        )}
-
-        <button onClick={handleCreateReport} disabled={loading}>
-          {loading ? "Working..." : "Create Resume Report"}
-        </button>
-      </div>
-
-      <div style={{ display: "flex", gap: 16, marginTop: 16 }}>
-        <div style={{ minWidth: 300 }}>
-          <h4>Saved Reports</h4>
-          {reports.length === 0 ? (
-            <p>No reports created yet.</p>
-          ) : (
-            <ul>
-              {reports.map((r) => (
-                <li key={r.id}>
-                  <button
-                    onClick={() => handleSelectReport(r.id)}
-                    disabled={loading}
-                    style={{ background: "transparent", border: "none", cursor: "pointer", padding: 0, color: "var(--text)" }}
-                  >
-                    {r.title ?? `Report #${r.id}`}
-                  </button>
-                </li>
-              ))}
-            </ul>
+        {/* RIGHT PANEL — live preview */}
+        <div style={{ flex: 1, overflowX: "auto" }}>
+          {previewLoading && <p>Loading preview...</p>}
+          {!previewLoading && !previewCtx && (
+            <p style={{ color: "#888" }}>Select or create a report to see the preview.</p>
+          )}
+          {!previewLoading && previewCtx && (
+            <ResumePreview ctx={previewCtx} />
           )}
         </div>
 
-        <div style={{ flex: 1 }}>
-          <h4>Selected Report</h4>
-          {selectedReport ? (
-            <pre>{JSON.stringify(selectedReport, null, 2)}</pre>
-          ) : (
-            <p>Select a report to view details.</p>
-          )}
-        </div>
       </div>
-
-      <div style={{ marginTop: 12 }}>
-        <button onClick={handleExportResume} disabled={loading || !selectedReport?.id}>
-          Export Resume PDF
-        </button>
-      </div>
-
-      {message && <p style={{ marginTop: 12 }}>{message}</p>}
     </>
   );
 }

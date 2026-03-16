@@ -169,6 +169,10 @@ export function downloadResumeUrl(export_id) {
   return `${BASE_URL}/resume/exports/${export_id}/download`;
 }
 
+export function getResumeContext(report_id) {
+  return request(`/resume/context/${report_id}`);
+}
+
 export function exportPortfolio({ report_id, output_name = "portfolio.pdf" }) {
   return request("/portfolio/export", {
     method: "POST",
