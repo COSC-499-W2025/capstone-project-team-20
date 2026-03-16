@@ -1,3 +1,5 @@
+from typing import List
+
 from fastapi import APIRouter, UploadFile, File, HTTPException, status, Depends
 from fastapi.responses import FileResponse
 from pathlib import Path
@@ -95,21 +97,42 @@ def require_consent():
 class UploadPathRequest(BaseModel):
     path: str
 
+class ContributorMergeResolutionRequest(BaseModel):
+    canonical: str
+    merge: List[str]
+
+
+class ContributorMergeApplyRequest(BaseModel):
+    project_id: int
+    resolutions: List[ContributorMergeResolutionRequest]
+
+
+class ContributorMergeBatchRequest(BaseModel):
+    projects: List[ContributorMergeApplyRequest]
+
 
 def _run_post_upload_analyses(analyzer: ProjectAnalyzer, projects):
-    """Run non-interactive analyses so uploaded projects have usable dashboard data."""
     changed = [p for p in projects if p.name in analyzer.changed_project_names]
+    pending_duplicates = []
+
     if not changed:
-        return
-    for method_name in ("analyze_git_and_contributions", "analyze_metadata", "analyze_categories", "analyze_languages", "analyze_skills", "generate_insights_noninteractive"):
+        return pending_duplicates
+
+    pending_duplicates = analyzer.analyze_git_and_contributions(projects=changed, interactive=False) or []
+
+    pending_ids = {p["project_id"] for p in pending_duplicates}
+    clean = [p for p in changed if p.id not in pending_ids]
+
+    for method_name in ("analyze_metadata", "analyze_categories", "analyze_languages", "analyze_skills", "generate_insights_noninteractive"):
         method = getattr(analyzer, method_name, None)
-        if callable(method):
-            if method_name == "analyze_skills":
-                method(projects=changed, silent=True)
-            elif method_name == "analyze_git_and_contributions":
-                method(projects=changed, interactive=False)
-            else:
-                method(projects=changed)
+        if not callable(method):
+            continue
+        if method_name == "analyze_skills":
+            method(projects=clean, silent=True)
+        else:
+            method(projects=clean)
+
+    return pending_duplicates
 
 
 @router.post("/projects/upload-path", dependencies=[Depends(require_consent)])
@@ -129,9 +152,14 @@ def upload_project_from_path(req: UploadPathRequest):
 
     analyzer = ProjectAnalyzer(ConfigManager(), root_folders, zip_path)
     created_projects = analyzer.initialize_projects()
-    _run_post_upload_analyses(analyzer, created_projects)
+    pending_duplicates = _run_post_upload_analyses(analyzer, created_projects)
 
-    return {"projects": [{"id": p.id, "name": p.name} for p in created_projects]}
+    return {
+        "ok": True,
+        "status": "needs_resolution" if pending_duplicates else "complete",
+        "projects": [{"id": p.id, "name": p.name} for p in created_projects],
+        "pending_duplicates": pending_duplicates,
+        }
 
 
 @router.post("/projects/upload", response_model=UploadProjectResponse, status_code=status.HTTP_201_CREATED)
@@ -144,9 +172,14 @@ def upload_project(zip_file: UploadFile = File(...)):
         raise HTTPException(status_code=400, detail="Zip parsed no projects (invalid or empty zip.)")
     analyzer = ProjectAnalyzer(ConfigManager(), root_folders, tmp_path)
     created_projects = analyzer.initialize_projects()
-    _run_post_upload_analyses(analyzer, created_projects)
+    pending_duplicates = _run_post_upload_analyses(analyzer, created_projects)
     tmp_path.unlink(missing_ok=True)
-    return UploadProjectResponse(projects=[ProjectSummary(id=p.id, name=p.name) for p in created_projects])
+    return UploadProjectResponse(
+        ok=True,
+        status="needs_resolution" if pending_duplicates else "complete",
+        projects=[ProjectSummary(id=p.id, name=p.name) for p in created_projects],
+        pending_duplicates=pending_duplicates,
+        )
 
 
 @router.get("/privacy-consent", response_model=ConsentResponse)
@@ -209,6 +242,52 @@ def delete_project(id: int):
     if not pm.delete(id):
         raise HTTPException(status_code=500, detail="Failed to delete project.")
     return None
+
+@router.post("/projects/resolve-contributors")
+def resolve_contributors(req: ContributorMergeApplyRequest):
+    pm = ProjectManager()
+    project = pm.get(req.project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found.")
+
+    analyzer = ProjectAnalyzer(
+        ConfigManager(),
+        root_folders=[],
+        zip_path=Path(project.file_path)
+    )
+
+    result = analyzer.apply_contributor_merge_resolutions(
+        project_id=req.project_id,
+        resolutions=[r.model_dump() for r in req.resolutions],
+    )
+
+    return {"ok": True, **result}
+
+
+@router.post("/projects/resolve-contributors-batch")
+def resolve_contributors_batch(req: ContributorMergeBatchRequest):
+    """Resolve contributor duplicates for multiple projects in a single request."""
+    pm = ProjectManager()
+    results = []
+
+    for item in req.projects:
+        project = pm.get(item.project_id)
+        if not project:
+            raise HTTPException(status_code=404, detail=f"Project {item.project_id} not found.")
+
+        analyzer = ProjectAnalyzer(
+            ConfigManager(),
+            root_folders=[],
+            zip_path=Path(project.file_path)
+        )
+
+        result = analyzer.apply_contributor_merge_resolutions(
+            project_id=item.project_id,
+            resolutions=[r.model_dump() for r in item.resolutions],
+        )
+        results.append({"project_id": item.project_id, **result})
+
+    return {"ok": True, "results": results}
 
 
 @router.get("/skills", response_model=SkillsListResponse)

@@ -8,10 +8,22 @@ class ProjectSummary(BaseModel):
     id: Optional[int] = None
     name: str
 
+class DuplicateContributorGroupResponse(BaseModel):
+    display_name: str
+    candidates: List[str]
+    suggested_canonical: str
+
+class PendingDuplicateProjectResponse(BaseModel):
+    project_id: Optional[int] = None
+    project_name: str
+    repo_path: str
+    duplicate_groups: List[DuplicateContributorGroupResponse]
 
 class UploadProjectResponse(BaseModel):
     ok: bool = True
+    status: str = "complete"
     projects: List[ProjectSummary]
+    pending_duplicates: List[PendingDuplicateProjectResponse] = Field(default_factory=list)
 
 
 class ProjectsListResponse(BaseModel):

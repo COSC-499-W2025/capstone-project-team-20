@@ -222,6 +222,9 @@ def test_upload_project_success(client, monkeypatch):
 
         def initialize_projects(self):
             return [FakeProject(1, "Proj1"), FakeProject(2, "Proj2")]
+        
+        def analyze_git_and_contributions(self, projects, interactive=False):
+            return []
 
     monkeypatch.setattr(routes, "ProjectAnalyzer", FakeAnalyzer)
 
