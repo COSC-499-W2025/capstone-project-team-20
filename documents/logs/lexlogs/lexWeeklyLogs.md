@@ -320,3 +320,19 @@ This week I reviewed the following PR (which is all the PRs i was assigned):
 ![PR 436](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/436)
 
 Next week im planning to update the rest of the UI appearance-wise to match the account setup UI that was implemented recently and that the whole team really enjoys. I'm already mostly done with it.
+
+## Week 10
+**Types of tasks worked on**
+![Week 10 Tasks](imagesForLexLogs/t2w10.png)
+
+Figured out how to do react tests to write tests for the help menu.
+
+Worked on updating the UI as planned. [PR 479](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/479)
+
+Will continue to update UI as features are implemented to front end.
+
+Reviewed: 
+- https://github.com/COSC-499-W2025/capstone-project-team-20/pull/470
+- https://github.com/COSC-499-W2025/capstone-project-team-20/pull/471
+
+Thanks.
