@@ -312,18 +312,20 @@ class ProjectAnalyzer:
             print("\nOperation cancelled by user.")
             return None
 
-    def _get_or_select_usernames(self, authors: List[str]) -> Optional[List[str]]:
+    def _get_or_select_usernames(self, author_map: Dict[str, str]) -> Optional[List[str]]:
         usernames = self._config_manager.get("usernames")
         if usernames and isinstance(usernames, list):
             print(f"\nAnalyzing contributions for current users: {', '.join(usernames)}")
             return usernames
-        if authors:
+        
+        if author_map:
             print("\nNo usernames found in configuration. Let's set them up.")
-            new_usernames = self._prompt_for_usernames(authors)
+            new_usernames = self._prompt_for_usernames(author_map)
             if new_usernames:
                 self._config_manager.set("usernames", new_usernames)
                 print(f"Usernames '{', '.join(new_usernames)}' have been saved.")
                 return new_usernames
+            
         print("No authors found or selected. Skipping contribution analysis.")
         return None
 
@@ -394,29 +396,54 @@ class ProjectAnalyzer:
 
         return mapping.get(role_key, role_key.capitalize())
 
-    def analyze_git_and_contributions(self, projects: Optional[List[Project]] = None, interactive: bool = True) -> None:
+    def analyze_git_and_contributions(self, projects: Optional[List[Project]] = None, interactive: bool = True) -> List[Dict[str, Any]]:
         """
         Analyze contributions for each project:
-        - Use get_all_authors() to set total author_count reliably
-        - Optionally prompt for selected usernames if not configured
-        - Compute detailed stats where possible
+        In frontend/API mode (interactive=False):
+        - detects duplicate contributor identities
+        - returns them to caller
+        - skips final contribution saving for those projects until resolved
+
+        In CLI mode (interactive=True):
+        - continues with selected usernames flow
+        - assumes duplicate identities were already resolved elsewhere
         """
         print("\n--- Git Repository & Contribution Analysis ---")
         target_projects = projects or self._get_projects()
+        pending_duplicates: List[Dict[str, Any]] = []
+        
         if not target_projects:
-            return
+            return pending_duplicates
+        
         for project in target_projects:
             repo_path = Path(project.file_path)
             if not (repo_path / ".git").exists():
                 continue
+
             print(f"\n--- Analyzing contributions for: {project.name} ---")
+
             with self.suppress_output():
-                all_author_stats = self.contribution_analyzer.analyze(str(repo_path))
+                all_author_stats = self.contribution_analyzer.analyze(str(repo_path), config_manager=self._config_manager)
                 author_map = self.contribution_analyzer.get_name_map(str(repo_path), config_manager=self._config_manager)
-            # Detect duplicates and optionally write .mailmap
-            author_map = self.contribution_analyzer.detect_and_write_mailmap(str(repo_path), author_map, config_manager=self._config_manager)
+
+            duplicate_groups = self.contribution_analyzer.detect_duplicate_contributors(author_map)
+            if duplicate_groups:
+                pending_duplicates.append({
+                    "project_id": project.id,
+                    "project_name": project.name,
+                    "repo_path": str(repo_path),
+                    "duplicate_groups": [group.to_dict() for group in duplicate_groups],
+                })
+                print(f" Duplicate contributor identities detected for '{project.name}'.")
+
+                if not interactive:
+                    project.last_accessed = datetime.now()
+                    self.project_manager.set(project)
+                    continue
+            
             project.author_count = len(author_map)
             project.collaboration_status = "Collaborative" if project.author_count > 1 else "Individual"
+
             if interactive:
                 selected_emails = self._get_or_select_usernames(author_map) or []
             else:
@@ -425,8 +452,10 @@ class ProjectAnalyzer:
                     selected_emails = configured_usernames
                 else:
                     selected_emails = list(author_map.keys())
+
             project.authors = sorted([author_map[e] for e in selected_emails if e in author_map])
             project.contributor_roles = {}
+
             if all_author_stats:
                 roles_obj = self.role_inference_analyzer.analyze(all_author_stats)
                 project.contributor_roles = {
@@ -438,17 +467,24 @@ class ProjectAnalyzer:
                     }
                     for user, r in roles_obj.items()
                 }
-            if all_author_stats:
+
                 selected_stats = self._aggregate_stats(all_author_stats, selected_emails)
                 total_stats = self._aggregate_stats(all_author_stats)
-                project.author_contributions = [stats.to_dict() for stats in all_author_stats.values()]
+
+                project.author_contributions = [
+                    {"author": author, **stats.to_dict()}
+                    for author, stats in all_author_stats.items()]
+                
                 project.individual_contributions = self.contribution_analyzer.calculate_share(selected_stats, total_stats)
             else:
                 print("  - No detailed contribution stats available; using author list for collaboration status.")
+            
             project.last_accessed = datetime.now()
             self.project_manager.set(project)
+            
             print(f"  - Total Contributors: {project.author_count}")
             print(f"  - Collaboration Status: {project.collaboration_status}")
+            
             if project.contributor_roles:
                 print(" - Inferred Roles:")
                 for user, info in project.contributor_roles.items():
@@ -456,6 +492,65 @@ class ProjectAnalyzer:
                     confidence_pct = int(float(info.get("confidence", 0.0)) * 100)
                     print(f"    - {user} → User Role: {pretty} ({confidence_pct}%)")
             print(f"  - Saved data for '{project.name}'.")
+
+        return pending_duplicates
+    
+    def apply_contributor_merge_resolutions(
+        self,
+        project_id: int,
+        resolutions: List[Dict[str, Any]],
+    ) -> Dict[str, Any]:
+        """
+        Apply contributor merge decisions for a single project, then rerun
+        contribution analysis for that project.
+
+        Expected resolutions format:
+        [
+            {
+                "canonical": "brandenk88@gmail.com",
+                "merge": [
+                    "144386258+branden6@users.noreply.github.com",
+                    "brandenk88@gmail.com"
+                ]
+            }
+        ]
+        """
+        project = self.project_manager.get(project_id)
+        if not project:
+            raise ValueError(f"Project with id {project_id} not found.")
+
+        repo_path = Path(project.file_path)
+        if not (repo_path / ".git").exists():
+            raise ValueError(f"Project '{project.name}' is not a Git repository.")
+
+        with self.suppress_output():
+            author_map = self.contribution_analyzer.get_name_map(
+                str(repo_path),
+                config_manager=self._config_manager
+            )
+
+            self.contribution_analyzer.apply_mailmap_resolutions(
+                repo_path=str(repo_path),
+                resolutions=resolutions,
+                author_map=author_map,
+                config_manager=self._config_manager,
+            )
+
+        pending = self.analyze_git_and_contributions(projects=[project], interactive=False)
+
+        if not pending:
+            self.analyze_metadata(projects=[project])
+            self.analyze_categories(projects=[project])
+            self.analyze_languages(projects=[project])
+            self.analyze_skills(projects=[project], silent=True)
+            self.generate_insights_noninteractive(projects=[project])
+
+        return {
+            "project_id": project.id,
+            "project_name": project.name,
+            "status": "needs_resolution" if pending else "complete",
+            "pending_duplicates": pending,
+        }
 
     def analyze_metadata(self, projects: Optional[List[Project]] = None) -> None:
         """Extracts and saves metadata for all projects or a specific list of them."""
@@ -715,7 +810,7 @@ class ProjectAnalyzer:
 
         # Ensure contribution info if possible
         if project.author_count is None:
-            self.analyze_git_and_contributions(projects=[project], interactive=False)
+            pending = self.analyze_git_and_contributions(projects=[project], interactive=False)
             project = self.project_manager.get_by_name(project.name)
 
         # Find the root folder for metadata extraction
@@ -1722,7 +1817,7 @@ class ProjectAnalyzer:
 
         pr = cProfile.Profile()
         pr.enable()
-        self.analyze_git_and_contributions(projects=changed)
+        self.analyze_git_and_contributions(projects=changed, interactive=False)
         pr.disable()
 
         end = time.perf_counter()

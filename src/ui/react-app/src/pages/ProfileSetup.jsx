@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { saveConfig } from "../api/client";
+import { saveConfig, setPrivacyConsent } from "../api/client";
 
 export default function ProfileSetup({ onComplete }) {
   const [step, setStep]     = useState(0);
@@ -54,6 +54,18 @@ export default function ProfileSetup({ onComplete }) {
     }
   }
 
+  function handleGrantConsent() {
+    // Optimistic — fire and move on, latency is negligible for a local API call
+    setPrivacyConsent(true).catch(() => {});
+    setStep(4);
+  }
+
+  function handleSkipConsent() {
+    setStep(4);
+  }
+
+  const STEPS = ["Welcome", "Identity", "Links", "Consent"];
+
   return (
     <>
       <style>{CSS}</style>
@@ -63,10 +75,10 @@ export default function ProfileSetup({ onComplete }) {
         <div className="ps-card">
           <div className="ps-bar" aria-hidden="true" />
 
-          {/* stepper */}
-          {step < 3 && (
+          {/* stepper — hidden on done screen (step 4) */}
+          {step < 4 && (
             <div className="ps-stepper" role="list" aria-label="Setup progress">
-              {["Welcome", "Identity", "Links"].map((label, i) => (
+              {STEPS.map((label, i) => (
                 <div
                   key={label}
                   role="listitem"
@@ -80,7 +92,7 @@ export default function ProfileSetup({ onComplete }) {
                     {i < step ? <CheckSVG size={12} /> : <span>{i + 1}</span>}
                   </div>
                   <span className="ps-step-label">{label}</span>
-                  {i < 2 && <div className="ps-step-line" aria-hidden="true" />}
+                  {i < STEPS.length - 1 && <div className="ps-step-line" aria-hidden="true" />}
                 </div>
               ))}
             </div>
@@ -173,8 +185,41 @@ export default function ProfileSetup({ onComplete }) {
             </div>
           )}
 
-          {/* ── Step 3: Done ── */}
+          {/* ── Step 3: Consent ── */}
           {step === 3 && (
+            <div className="ps-panel ps-fade" key="consent">
+              <div className="ps-icon-wrap" aria-hidden="true"><ShieldSVG /></div>
+              <h2 className="ps-h2">One last thing</h2>
+              <p className="ps-sub">
+                To generate PDFs, export resumes, and save reports, we need your consent
+                to process your data. Everything stays local — nothing leaves your machine.
+              </p>
+              <div className="ps-checklist" role="list">
+                {[
+                  ["◉", "Resume & portfolio PDF exports"],
+                  ["◈", "Report saving & management"],
+                  ["✦", "Data stored locally only"],
+                ].map(([icon, text]) => (
+                  <div className="ps-check-row" role="listitem" key={text}>
+                    <span className="ps-check-icon" aria-hidden="true">{icon}</span>
+                    <span>{text}</span>
+                  </div>
+                ))}
+              </div>
+              <button className="ps-btn ps-btn--primary" onClick={handleGrantConsent}>
+                Grant consent <ArrowSVG />
+              </button>
+              <button
+                className="ps-btn ps-btn--ghost ps-btn--skip"
+                onClick={handleSkipConsent}
+              >
+                Skip for now
+              </button>
+            </div>
+          )}
+
+          {/* ── Step 4: Done ── */}
+          {step === 4 && (
             <div className="ps-panel ps-panel--done ps-fade" key="done">
               <div className="ps-burst" aria-hidden="true">
                 <div className="ps-ring ps-ring--1" />
@@ -188,6 +233,9 @@ export default function ProfileSetup({ onComplete }) {
                 Profile saved. Upload your first project zip to get started —
                 we'll analyze it, score it, and help you build a standout resume.
               </p>
+              <p className="ps-done-hint">
+                Ready to export? Enable it anytime in <strong>Settings → Privacy</strong>.
+              </p>
               <button className="ps-btn ps-btn--primary" onClick={onComplete}>
                 Go to Projects <ArrowSVG />
               </button>
@@ -195,7 +243,7 @@ export default function ProfileSetup({ onComplete }) {
           )}
         </div>
 
-        {step < 3 && (
+        {step < 4 && (
           <p className="ps-footer" role="note">
             Your data is stored locally and never sent to a third party.
           </p>
@@ -263,6 +311,20 @@ function FolderSVG() {
       <circle cx="41" cy="11" r="1.5" fill="currentColor" />
       <circle cx="45" cy="7"  r="1"   fill="currentColor" />
       <circle cx="38" cy="7"  r="1"   fill="currentColor" />
+    </svg>
+  );
+}
+
+function ShieldSVG() {
+  return (
+    <svg width="48" height="48" viewBox="0 0 52 52" fill="none" aria-hidden="true">
+      <path
+        d="M26 6L8 13V26C8 35.4 16 43.6 26 46C36 43.6 44 35.4 44 26V13L26 6Z"
+        fill="currentColor" fillOpacity=".15" stroke="currentColor" strokeWidth="2"
+        strokeLinejoin="round" />
+      <path d="M19 26l4.5 4.5 9-9"
+        stroke="currentColor" strokeWidth="2"
+        strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -440,10 +502,14 @@ const CSS = `
 }
 .ps-btn--ghost:hover { border-color: var(--muted); color: var(--text); }
 
-/* full-width for welcome & done panels */
+/* full-width for welcome, consent & done panels */
 .ps-panel > .ps-btn--primary,
 .ps-panel--done .ps-btn--primary {
   width: 100%; height: 44px; font-size: 15px; margin-top: 4px;
+}
+/* skip button: full-width, sits below grant consent */
+.ps-btn--skip {
+  width: 100%; height: 38px; font-size: 13px; margin-top: 8px;
 }
 /* but NOT in ps-actions (two-button rows) */
 .ps-actions .ps-btn--primary { width: auto; height: 40px; font-size: 14px; margin-top: 0; }
@@ -471,6 +537,12 @@ const CSS = `
   color: var(--success); border: 2px solid var(--success);
   animation: ps-fadein .35s ease .2s both;
 }
+
+.ps-done-hint {
+  font-size: 12px; color: var(--muted); margin-top: 10px; margin-bottom: 2px;
+  opacity: .7;
+}
+.ps-done-hint strong { color: var(--text); opacity: 1; }
 
 .ps-footer {
   margin-top: 16px; font-size: 11px; color: var(--muted);

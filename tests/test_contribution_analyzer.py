@@ -297,8 +297,8 @@ def test_detect_and_write_mailmap_no_duplicates(analyzer, tmp_path):
         "alice@example.com": "Alice",
         "bob@example.com": "Bob"
     }
-    result = analyzer.detect_and_write_mailmap(str(tmp_path), author_map)
-    assert result == author_map
+    result = analyzer.detect_duplicate_contributors(author_map)
+    assert result == []
     assert not (tmp_path / ".mailmap").exists()
 
 def test_detect_and_write_mailmap_same_name_different_emails(analyzer, tmp_path):
@@ -306,29 +306,37 @@ def test_detect_and_write_mailmap_same_name_different_emails(analyzer, tmp_path)
         "bob@example.com": "bob",
         "123+bob@users.noreply.github.com": "bob"
     }
-    with patch("builtins.input", return_value="y"):
-        result = analyzer.detect_and_write_mailmap(str(tmp_path), author_map)
-    assert len(result) == 1
-    assert (tmp_path / ".mailmap").exists()
+    groups = analyzer.detect_duplicate_contributors(author_map)
+
+    assert len(groups) == 1
+    assert sorted(groups[0].candidates) == sorted([
+        "bob@example.com",
+        "123+bob@users.noreply.github.com"
+    ])
+    assert groups[0].suggested_canonical == "bob@example.com"
 
 def test_detect_and_write_mailmap_similar_names_noreply(analyzer, tmp_path):
     author_map = {
         "alice@example.com": "Alice Smith",
         "123+alicesmith@users.noreply.github.com": "Alice J Smith"
     }
-    with patch("builtins.input", return_value="y"):
-        result = analyzer.detect_and_write_mailmap(str(tmp_path), author_map)
-    assert len(result) == 1
-    assert (tmp_path / ".mailmap").exists()
+    groups = analyzer.detect_duplicate_contributors(author_map)
+
+    assert len(groups) == 1
+    assert sorted(groups[0].candidates) == sorted([
+        "alice@example.com",
+        "123+alicesmith@users.noreply.github.com"
+    ])
+    assert groups[0].suggested_canonical == "alice@example.com"
 
 def test_detect_and_write_mailmap_declined_merge(analyzer, tmp_path):
     author_map = {
         "bob@example.com": "bob",
         "123+bob@users.noreply.github.com": "bob"
     }
-    with patch("builtins.input", return_value="n"):
-        result = analyzer.detect_and_write_mailmap(str(tmp_path), author_map)
-    assert len(result) == 2
+    groups = analyzer.detect_duplicate_contributors(author_map)
+
+    assert len(groups) == 1
     assert not (tmp_path / ".mailmap").exists()
 
 def test_detect_and_write_mailmap_does_not_duplicate_existing_entries(analyzer, tmp_path):
@@ -339,8 +347,18 @@ def test_detect_and_write_mailmap_does_not_duplicate_existing_entries(analyzer, 
         "bob@example.com": "bob",
         "123+bob@users.noreply.github.com": "bob"
     }
-    with patch("builtins.input", return_value="y"):
-        analyzer.detect_and_write_mailmap(str(tmp_path), author_map)
+    analyzer.apply_mailmap_resolutions(
+        str(tmp_path),
+        resolutions=[{
+            "canonical": "bob@example.com",
+            "merge": [
+                "bob@example.com",
+                "123+bob@users.noreply.github.com"
+            ]
+        }],
+        author_map=author_map,
+    )
+
     content = mailmap.read_text()
     assert content.count(existing) == 1
 

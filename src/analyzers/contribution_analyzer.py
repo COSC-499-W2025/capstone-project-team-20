@@ -1,13 +1,13 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, asdict
 from pathlib import Path
 from typing import List, Dict, Set, Any, Tuple
-from git import Repo, GitCommandError
 import subprocess
 import re
+from src.FileCategorizer import FileCategorizer
+import yaml
 
 CONFIG_DIR = Path(__file__).parent.parent / "config"
 ROLE_SIGNALS_FILE = CONFIG_DIR / "role_signals.yml"
-
 
 class RoleSignals:
     def __init__(self):
@@ -54,9 +54,14 @@ class AuthorIdentity:
     display_name: str
 
 
-from src.FileCategorizer import FileCategorizer
-import yaml
+@dataclass
+class DuplicateContributorGroup:
+    display_name: str
+    candidates: List[str]
+    suggested_canonical: str
 
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
 
 @dataclass
 class ContributionStats:
@@ -93,6 +98,160 @@ class ContributionAnalyzer:
         self._cat_cache: Dict[str, str] = {}
         self._coarse_cache: Dict[str, str] = {}
         self._role_cache: Dict[Tuple[str, str, str], str] = {}
+
+    def detect_duplicate_contributors(
+        self,
+        author_map: Dict[str, str],
+    ) -> List[DuplicateContributorGroup]:
+        """
+            Detect possible duplicate contributor identities without prompting or writing files.
+            Returns structured duplicate groups for API/frontend resolution.
+        """
+        name_to_emails: Dict[str, List[str]] = {}
+        for email, name in author_map.items():
+            normalized_name = (name or "").lower().strip()
+            if not normalized_name:
+                continue
+            name_to_emails.setdefault(normalized_name, []).append(email)
+
+        duplicate_groups: List[List[str]] = [
+            sorted(list(set(emails)))
+            for emails in name_to_emails.values()
+            if len(set(emails)) > 1
+        ]
+
+        noreply_emails = [(e, n) for e, n in author_map.items() if "noreply.github.com" in e]
+        personal_emails = [(e, n) for e, n in author_map.items() if "noreply.github.com" not in e]
+
+        already_grouped = {e for group in duplicate_groups for e in group}
+
+        for noreply_email, noreply_name in noreply_emails:
+            if noreply_email in already_grouped:
+                continue
+
+            for personal_email, personal_name in personal_emails:
+                if personal_email in already_grouped:
+                    continue
+
+                if self._names_are_similar(noreply_name, personal_name):
+                    duplicate_groups.append([personal_email, noreply_email])
+                    already_grouped.update([personal_email, noreply_email])
+                    break
+
+        results: List[DuplicateContributorGroup] = []
+        seen_signatures = set()
+
+        for emails in duplicate_groups:
+            unique_emails = sorted(list(set(emails)))
+            if len(unique_emails) < 2:
+                continue
+
+            signature = tuple(unique_emails)
+            if signature in seen_signatures:
+                continue
+            seen_signatures.add(signature)
+
+            display_name = max((author_map.get(e, e) for e in unique_emails), key=len)
+            suggested_canonical = next(
+                (e for e in unique_emails if "noreply.github.com" not in e),
+                unique_emails[0]
+            )
+
+            results.append(
+                DuplicateContributorGroup(
+                    display_name=display_name,
+                    candidates=unique_emails,
+                    suggested_canonical=suggested_canonical,
+                )
+            )
+
+        return results
+    
+    def apply_mailmap_resolutions(
+        self,
+        repo_path: str,
+        resolutions: List[Dict[str, Any]],
+        author_map: Dict[str, str],
+        config_manager=None,
+    ) -> Dict[str, str]:
+        """
+        Apply chosen duplicate resolutions by writing .mailmap entries.
+        resolutions format:
+        [
+            {
+                "canonical": "brandenk88@gmail.com",
+                "merge": [
+                    "144386258+branden6@users.noreply.github.com",
+                    "brandenk88@gmail.com"
+                ]
+            }
+        ]
+        Returns updated author_map after merges.
+        """
+        mailmap_path = Path(repo_path) / ".mailmap"
+        existing_entries: set[str] = set()
+
+        if mailmap_path.exists():
+            with open(mailmap_path, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if line and not line.startswith("#"):
+                        existing_entries.add(line)
+
+        mailmap_entries: List[str] = []
+        updated_map = dict(author_map)
+
+        for resolution in resolutions:
+            canonical = (resolution.get("canonical") or "").strip().lower()
+            merge_emails = [
+                (e or "").strip().lower()
+                for e in resolution.get("merge", [])
+                if (e or "").strip()
+            ]
+
+            if not canonical or len(merge_emails) < 2:
+                continue
+
+            if canonical not in merge_emails:
+                merge_emails.append(canonical)
+
+            merge_emails = sorted(list(set(merge_emails)))
+
+            display_name = author_map.get(canonical)
+            if not display_name:
+                display_name = max(
+                    (author_map.get(e, e) for e in merge_emails),
+                    key=len,
+                    default=canonical
+                )
+
+            for raw_email in merge_emails:
+                if raw_email == canonical:
+                    continue
+
+                entry = f"{display_name} <{canonical}> <{raw_email}>"
+                if entry not in existing_entries:
+                    mailmap_entries.append(entry)
+                    existing_entries.add(entry)
+
+                updated_map.pop(raw_email, None)
+
+            updated_map[canonical] = display_name
+
+        if mailmap_entries:
+            with open(mailmap_path, "a", encoding="utf-8") as f:
+                if mailmap_path.stat().st_size == 0:
+                    f.write("# Auto-generated by Project Analyzer\n")
+                f.write("\n".join(mailmap_entries) + "\n")
+
+            if config_manager:
+                existing_config_entries = config_manager.get("mailmap_entries") or []
+                config_manager.set(
+                    "mailmap_entries",
+                    sorted(list(set(existing_config_entries + mailmap_entries)))
+                )
+
+        return updated_map
 
     # ------------------------------------------------------------------
     # Cached per-path helpers
@@ -186,13 +345,12 @@ class ContributionAnalyzer:
             raise RuntimeError("git executable not found on PATH")
 
         if result.returncode != 0:
-            raise GitCommandError("git log", result.returncode, result.stderr)
+            raise RuntimeError(result.stderr.strip() or "git log failed")
 
         # Parse into per-author buckets directly -- no intermediate data structure.
         author_data: Dict[str, Dict] = {}
         current_email: str | None = None
         current_files: Dict[str, Tuple[int, int]] = {}
-        is_first_commit_seen: Dict[str, bool] = {}  # sha -> True once
 
         # We need to know which commits are initial (no parents) to handle
         # them specially. git log --numstat already gives us the right diff
@@ -302,22 +460,29 @@ class ContributionAnalyzer:
     def _load_mailmap(self, repo_path: str, config_manager=None) -> Dict[str, str]:
         mailmap: Dict[str, str] = {}
         mailmap_path = Path(repo_path) / ".mailmap"
+
+        if mailmap_path.exists():
+            with open(mailmap_path, "r", encoding="utf-8", errors="ignore") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line or line.startswith("#"):
+                        continue
+                    emails = re.findall(r"<([^>]+)>", line)
+                    if len(emails) == 2:
+                        canonical_email, raw_email = emails[0].lower(), emails[1].lower()
+                        mailmap[raw_email] = canonical_email
+
         if config_manager:
             persisted = config_manager.get("mailmap_entries") or []
-            if persisted:
-                with open(mailmap_path, "a", encoding="utf-8") as f:
-                    f.write("\n".join(persisted) + "\n")
-        if not mailmap_path.exists():
-            return mailmap
-        with open(mailmap_path, "r", encoding="utf-8", errors="ignore") as f:
-            for line in f:
-                line = line.strip()
+            for line in persisted:
+                line = (line or "").strip()
                 if not line or line.startswith("#"):
                     continue
                 emails = re.findall(r"<([^>]+)>", line)
                 if len(emails) == 2:
                     canonical_email, raw_email = emails[0].lower(), emails[1].lower()
                     mailmap[raw_email] = canonical_email
+
         return mailmap
 
     def _resolve_email(self, email: str, mailmap: Dict[str, str]) -> str:
@@ -331,85 +496,6 @@ class ContributionAnalyzer:
     # Public API
     # ------------------------------------------------------------------
 
-    def detect_and_write_mailmap(
-        self, repo_path: str, author_map: Dict[str, str], config_manager=None
-    ) -> Dict[str, str]:
-        mailmap_path = Path(repo_path) / ".mailmap"
-        existing_entries: set[str] = set()
-        if mailmap_path.exists():
-            with open(mailmap_path, "r", encoding="utf-8") as f:
-                for line in f:
-                    line = line.strip()
-                    if line and not line.startswith("#"):
-                        existing_entries.add(line)
-
-        name_to_emails: Dict[str, List[str]] = {}
-        for email, name in author_map.items():
-            name_to_emails.setdefault(name.lower().strip(), []).append(email)
-
-        duplicate_groups: List[List[str]] = [
-            emails for emails in name_to_emails.values() if len(emails) > 1
-        ]
-
-        noreply_emails = [(e, n) for e, n in author_map.items() if "noreply.github.com" in e]
-        personal_emails = [(e, n) for e, n in author_map.items() if "noreply.github.com" not in e]
-        already_grouped = {e for group in duplicate_groups for e in group}
-
-        for noreply_email, noreply_name in noreply_emails:
-            if noreply_email in already_grouped:
-                continue
-            for personal_email, personal_name in personal_emails:
-                if personal_email in already_grouped:
-                    continue
-                if self._names_are_similar(noreply_name, personal_name):
-                    duplicate_groups.append([personal_email, noreply_email])
-                    already_grouped.update([noreply_email, personal_email])
-                    break
-
-        if not duplicate_groups:
-            return author_map
-
-        print("\nPossible duplicate contributors detected:")
-        mailmap_entries: List[str] = []
-        updated_map = dict(author_map)
-
-        for emails in duplicate_groups:
-            display_name = max((author_map[e] for e in emails), key=len)
-            print(f"\n  '{display_name}' appears with multiple emails:")
-            for i, email in enumerate(emails):
-                print(f"    {i + 1}: {email} ({author_map[email]})")
-            canonical = next((e for e in emails if "noreply" not in e), emails[0])
-            others = [e for e in emails if e != canonical]
-            print(f"  Suggested canonical: {canonical}")
-            try:
-                confirm = input("  Merge these into one? (y/n): ").strip().lower()
-            except KeyboardInterrupt:
-                print("\nSkipping merge.")
-                continue
-            if confirm == "y":
-                for raw_email in others:
-                    entry = f"{display_name} <{canonical}> <{raw_email}>"
-                    if entry not in existing_entries:
-                        mailmap_entries.append(entry)
-                    updated_map.pop(raw_email, None)
-                    updated_map[canonical] = display_name
-
-        if mailmap_entries:
-            with open(mailmap_path, "a", encoding="utf-8") as f:
-                if not existing_entries:
-                    f.write("# Auto-generated by Project Analyzer\n")
-                f.write("\n".join(mailmap_entries) + "\n")
-            print(f"\n.mailmap updated at {mailmap_path}")
-            print("Future runs will automatically apply these merges.")
-            if config_manager:
-                existing_config_entries = config_manager.get("mailmap_entries") or []
-                config_manager.set(
-                    "mailmap_entries",
-                    list(set(existing_config_entries + mailmap_entries))
-                )
-
-        return updated_map
-
     def get_all_authors(self, repo_path: str, config_manager=None) -> Dict[str, str]:
         """
         Returns {canonical_email: display_name} for all contributors.
@@ -419,9 +505,11 @@ class ContributionAnalyzer:
             mailmap = self._load_mailmap(repo_path, config_manager=config_manager)
             author_data = self._parse_log_numstat(repo_path, mailmap)
             return {email: data["name"] for email, data in author_data.items()}
-        except (GitCommandError, ValueError, RuntimeError) as e:
+        except (ValueError, RuntimeError) as e:
             print(f"  - Warning: Could not read Git authors from '{repo_path}'. Error: {e}")
             return {}
+        
+
     def get_name_map(self, repo_path: str, config_manager=None) -> Dict[str, str]:
         """
         Returns {canonical_email: display_name} with no diff work.
@@ -440,6 +528,10 @@ class ContributionAnalyzer:
             )
         except FileNotFoundError:
             raise RuntimeError("git executable not found on PATH")
+        
+        if result.returncode != 0:
+            raise RuntimeError(result.stderr.strip() or "git log failed")
+        
         author_map: Dict[str, str] = {}
         for line in result.stdout.splitlines():
             parts = line.split("\t", 1)
@@ -449,7 +541,7 @@ class ContributionAnalyzer:
                     author_map[email] = parts[1].strip()
         return author_map
     
-    def analyze(self, repo_path: str) -> Dict[str, ContributionStats]:
+    def analyze(self, repo_path: str, config_manager=None) -> Dict[str, ContributionStats]:
         """
         Analyze contributions for all authors.
 
@@ -463,13 +555,13 @@ class ContributionAnalyzer:
         Runtime is dominated by git's own I/O, typically 1-4s for most repos.
         """
         try:
-            mailmap = self._load_mailmap(repo_path)
+            mailmap = self._load_mailmap(repo_path, config_manager=config_manager)
             author_data = self._parse_log_numstat(repo_path, mailmap)
             return {
                 email: data["stats"]
                 for email, data in author_data.items()
             }
-        except (GitCommandError, ValueError, RuntimeError) as e:
+        except (ValueError, RuntimeError) as e:
             print(f"  - Warning: Could not analyze contributions for '{repo_path}'. Error: {e}")
             return {}
 
