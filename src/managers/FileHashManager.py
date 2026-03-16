@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any, Dict, Generator, Optional
+from typing import Any, Dict, Generator, List, Optional, Tuple
 import sqlite3
 
 from src.managers.StorageManager import StorageManager
@@ -10,6 +10,14 @@ class FileHashManager(StorageManager):
 
     def __init__(self, db_path: str = "projects.db") -> None:
         super().__init__(db_path)
+        self._cache: set = self._load_all_hashes()
+
+    def _load_all_hashes(self) -> set:
+        """Load all known hashes from DB into memory once at startup."""
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(f"SELECT file_hash FROM {self.table_name}")
+            return {row[0] for row in cursor.fetchall()}
 
     @property
     def create_table_query(self) -> str:
@@ -33,7 +41,8 @@ class FileHashManager(StorageManager):
         return "file_hash, file_path, project_name, last_seen"
 
     def has_hash(self, file_hash: str) -> bool:
-        return self.get(file_hash) is not None
+        """O(1) in-memory lookup."""
+        return file_hash in self._cache
 
     def register_hash(
         self,
@@ -42,7 +51,9 @@ class FileHashManager(StorageManager):
         project_name: str,
         seen_at: Optional[datetime] = None,
     ) -> bool:
-        """Register a hash; returns True if new, False if already known."""
+        """Register a single hash; returns True if new, False if already known."""
+        if file_hash in self._cache:
+            return False
         timestamp = (seen_at or datetime.now()).isoformat()
         with self._get_connection() as conn:
             cursor = conn.cursor()
@@ -53,12 +64,44 @@ class FileHashManager(StorageManager):
                 (file_hash, file_path, project_name, timestamp),
             )
             if cursor.rowcount > 0:
+                self._cache.add(file_hash)
                 return True
-            cursor.execute(
-                f"UPDATE {self.table_name} SET last_seen = ? WHERE file_hash = ?",
-                (timestamp, file_hash),
-            )
         return False
+
+    def register_hashes_batch(
+        self,
+        entries: List[Tuple[str, str, str]],
+        seen_at: Optional[datetime] = None,
+    ) -> Dict[str, int]:
+        """
+        Register multiple hashes in a single DB transaction.
+        entries: list of (file_hash, file_path, project_name)
+        Returns {"new": int, "duplicate": int}
+        """
+        timestamp = (seen_at or datetime.now()).isoformat()
+        new_count = 0
+        duplicate_count = 0
+
+        new_entries = []
+        for file_hash, file_path, project_name in entries:
+            if file_hash in self._cache:
+                duplicate_count += 1
+            else:
+                new_entries.append((file_hash, file_path, project_name, timestamp))
+                self._cache.add(file_hash)
+                new_count += 1
+
+        if new_entries:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.executemany(
+                    f"""INSERT OR IGNORE INTO {self.table_name}
+                    (file_hash, file_path, project_name, last_seen)
+                    VALUES (?, ?, ?, ?)""",
+                    new_entries,
+                )
+
+        return {"new": new_count, "duplicate": duplicate_count}
 
     def get_all(self) -> Generator[Dict[str, Any], None, None]:
         return super().get_all()
