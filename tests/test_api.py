@@ -702,6 +702,7 @@ def test_list_reports_success(client, monkeypatch):
             self.sort_by = "resume_score"
             self.notes = "notes"
             self.project_count = project_count
+            self.report_kind = "resume"
 
     class FakeReportManager:
         def list_reports(self):
@@ -737,6 +738,7 @@ def test_get_report_success(client, monkeypatch):
             self.sort_by = "resume_score"
             self.notes = "hello"
             self.project_count = 3
+            self.report_kind = "resume"
 
     class FakeReportManager:
         def get_report(self, id):
@@ -802,6 +804,7 @@ def test_create_report_success(client, monkeypatch):
             self.sort_by = "resume_score"
             self.notes = "notes"
             self.project_count = 2
+            self.report_kind = "resume"
 
     class FakeReportManager:
         def create_report(self, report):

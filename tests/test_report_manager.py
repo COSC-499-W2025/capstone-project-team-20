@@ -217,8 +217,8 @@ def test_list_reports_summary(rm):
     mock_cursor = MagicMock()
 
     mock_cursor.fetchall.return_value = [
-        (1, "R1", "2024-01-01T00:00:00", 2),
-        (2, "R2", "2024-01-02T00:00:00", 0),
+        (1, "R1", "2024-01-01T00:00:00", 2, "resume"),
+        (2, "R2", "2024-01-02T00:00:00", 0, "portfolio"),
     ]
 
     mock_conn.cursor.return_value = mock_cursor
@@ -229,6 +229,8 @@ def test_list_reports_summary(rm):
     assert len(summaries) == 2
     assert summaries[0]["project_count"] == 2
     assert summaries[1]["project_count"] == 0
+    assert summaries[0]["report_kind"] == "resume"
+    assert summaries[1]["report_kind"] == "portfolio"
 
 
 def test_get_all_generator(rm):

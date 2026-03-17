@@ -1,8 +1,7 @@
-from dataclasses import dataclass, field, asdict
-from typing import List, Optional, Dict
+from dataclasses import dataclass, field
+from typing import List, Optional, Dict, Literal
 from datetime import datetime
 from src.models.ReportProject import ReportProject
-from typing import List, Optional, Dict, Literal
 
 
 @dataclass
@@ -20,6 +19,7 @@ class Report:
     sort_by: Literal["resume_score", "date_created", "last_modified"] = "resume_score"
     projects: List[ReportProject] = field(default_factory=list)
     notes: Optional[str] = None # For the user, e.g. "Use this one for Software Engineering roles"
+    report_kind: Literal["resume", "portfolio"] = "resume"
     portfolio_mode: Literal["private", "public"] = "private"
     portfolio_published_at: Optional[datetime] = None
 
@@ -96,6 +96,7 @@ class Report:
             "date_created": self.date_created.isoformat(),
             "sort_by": self.sort_by,
             "notes": self.notes,
+            "report_kind": self.report_kind,
             "portfolio_mode": self.portfolio_mode,
             "portfolio_published_at": self.portfolio_published_at.isoformat() if self.portfolio_published_at else None,
         }

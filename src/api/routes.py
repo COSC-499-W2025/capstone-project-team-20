@@ -362,7 +362,7 @@ def create_report(req: ReportCreateRequest):
 
     pm = ProjectManager()
     rm = ReportManager()
-    report = Report(title=req.title or "", sort_by=req.sort_by, notes=req.notes, projects=[])
+    report = Report(title=req.title or "", sort_by=req.sort_by, notes=req.notes, report_kind=req.report_kind, projects=[])
 
     for pid in req.project_ids:
         p = pm.get(pid)
@@ -407,6 +407,7 @@ def create_report(req: ReportCreateRequest):
             date_created=saved.date_created,
             sort_by=saved.sort_by,
             notes=saved.notes,
+            report_kind=saved.report_kind,
             project_count=saved.project_count,
         )
     )
@@ -425,6 +426,7 @@ def list_reports():
                 date_created=r.date_created,
                 sort_by=r.sort_by,
                 notes=r.notes,
+                report_kind=r.report_kind,
                 project_count=r.project_count,
             )
             for r in reports
@@ -446,6 +448,7 @@ def get_report(id: int):
             date_created=r.date_created,
             sort_by=r.sort_by,
             notes=r.notes,
+            report_kind=r.report_kind,
             project_count=r.project_count,
         )
     )
