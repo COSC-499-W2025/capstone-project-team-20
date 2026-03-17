@@ -278,6 +278,8 @@ def delete_project(id: int):
     project = pm.get(id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found.")
+    if not pm.delete(id):
+        raise HTTPException(status_code=500, detail="Failed to delete project.")
     return None
 
 @router.post("/projects/resolve-contributors")
