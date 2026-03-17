@@ -135,7 +135,14 @@ describe('App badges heatmap', () => {
   })
 
   it('only shows started badges in progress list', async () => {
+    const user = userEvent.setup()
     const { container } = render(<App />)
+
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /badges/i })).toBeInTheDocument()
+    )
+
+    await user.click(screen.getByRole('button', { name: /badges/i }))
 
     expect(await screen.findByRole('heading', { name: /badge progress tracker \(started, uncompleted\)/i })).toBeInTheDocument()
     const inProgressList = container.querySelector('.in-progress-list')
