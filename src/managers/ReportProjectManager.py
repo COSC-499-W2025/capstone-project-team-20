@@ -12,6 +12,7 @@ class ReportProjectManager(StorageManager):
     def __init__(self, db_path: str = "reports.db") -> None:
         super().__init__(db_path)
         self._ensure_portfolio_details_column()
+        self._ensure_portfolio_columns()
 
     def _ensure_portfolio_details_column(self) -> None:
         with self._get_connection() as conn:
@@ -43,6 +44,7 @@ class ReportProjectManager(StorageManager):
             bullets TEXT,
             summary TEXT,
             portfolio_details TEXT,
+            portfolio_customizations TEXT,
             languages TEXT,
             language_share TEXT,
             frameworks TEXT,
@@ -64,7 +66,7 @@ class ReportProjectManager(StorageManager):
     def columns(self) -> str:
         return (
             "id, report_id, project_name, resume_score, bullets, summary, "
-            "portfolio_details, languages, language_share, frameworks, date_created, "
+            "portfolio_details, portfolio_customizations, languages, language_share, frameworks, date_created, "
             "last_modified, collaboration_status"
         )
 
@@ -91,6 +93,7 @@ class ReportProjectManager(StorageManager):
             "bullets": report_project.bullets,
             "summary": report_project.summary,
             "portfolio_details": report_project.portfolio_details.to_dict(),
+            "portfolio_customizations": report_project.portfolio_customizations,
             "languages": report_project.languages,
             "language_share": report_project.language_share,
             "frameworks": report_project.frameworks,
@@ -196,6 +199,7 @@ class ReportProjectManager(StorageManager):
             bullets=row_dict.get("bullets", []),
             summary=row_dict.get("summary", ""),
             portfolio_details=portfolio_details,
+            portfolio_customizations=row_dict.get("portfolio_customizations", {}) or {},
             languages=row_dict.get("languages", []),
             language_share=row_dict.get("language_share", {}),
             frameworks=row_dict.get("frameworks", []),
@@ -203,3 +207,13 @@ class ReportProjectManager(StorageManager):
             last_modified=last_modified,
             collaboration_status=row_dict.get("collaboration_status", "individual"),
         )
+
+    def _ensure_portfolio_columns(self) -> None:
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("PRAGMA table_info(report_projects)")
+            existing = {row[1] for row in cursor.fetchall()}
+            if "portfolio_details" not in existing:
+                cursor.execute("ALTER TABLE report_projects ADD COLUMN portfolio_details TEXT")
+            if "portfolio_customizations" not in existing:
+                cursor.execute("ALTER TABLE report_projects ADD COLUMN portfolio_customizations TEXT")
