@@ -577,6 +577,7 @@ def test_save_config_required_fields_only(client, monkeypatch):
     res = client.post("/config", json=payload)
     assert res.status_code == 200
     assert stored == {"name": "Ada Lovelace", "email": "ada@test.com", "phone": "555-1234"}
+
 def test_delete_project_success(client, monkeypatch):
     class FakeProject:
         def __init__(self, id, name):
@@ -970,6 +971,16 @@ def test_patch_report_project_updates_bullets(client, monkeypatch):
         def update_report(self, r):
             updated["bullets"] = r.projects[0].bullets
             return True
+
+    monkeypatch.setattr(routes, "ConsentManager", FakeConsentManager)
+    monkeypatch.setattr(routes, "ReportManager", FakeReportManager)
+
+    res = client.patch("/reports/1/projects/MyApp", json={"bullets": ["New bullet A", "New bullet B"]})
+    assert res.status_code == 200
+    assert res.json()["ok"] is True
+    assert updated["bullets"] == ["New bullet A", "New bullet B"]
+
+
 def test_update_portfolio_mode_success(client, monkeypatch):
     class FakeConsentManager:
         def has_user_consented(self): return True
@@ -1002,10 +1013,8 @@ def test_update_portfolio_project_rejects_when_public(client, monkeypatch):
     monkeypatch.setattr(routes, "ConsentManager", FakeConsentManager)
     monkeypatch.setattr(routes, "ReportManager", FakeReportManager)
 
-    res = client.patch("/reports/1/projects/MyApp", json={"bullets": ["New bullet A", "New bullet B"]})
-    assert res.status_code == 200
-    assert res.json()["ok"] is True
-    assert updated["bullets"] == ["New bullet A", "New bullet B"]
+    res = client.patch("/portfolio/12/projects/ProjA", json={"custom_overview": "New text"})
+    assert res.status_code == 409
 
 
 def test_patch_report_project_updates_stack(client, monkeypatch):
@@ -1037,8 +1046,17 @@ def test_patch_report_project_updates_stack(client, monkeypatch):
             updated["languages"] = r.projects[0].languages
             updated["frameworks"] = r.projects[0].frameworks
             return True
-    res = client.patch("/portfolio/12/projects/ProjA", json={"custom_overview": "New text"})
-    assert res.status_code == 409
+
+    monkeypatch.setattr(routes, "ConsentManager", FakeConsentManager)
+    monkeypatch.setattr(routes, "ReportManager", FakeReportManager)
+
+    res = client.patch("/reports/2/projects/MyApp", json={
+        "stack_languages": ["Python", "TypeScript"],
+        "stack_frameworks": ["FastAPI"],
+    })
+    assert res.status_code == 200
+    assert updated["languages"] == ["Python", "TypeScript"]
+    assert updated["frameworks"] == ["FastAPI"]
 
 def test_update_portfolio_project_customizations_success(client, monkeypatch):
     class FakeConsentManager:
@@ -1055,13 +1073,10 @@ def test_update_portfolio_project_customizations_success(client, monkeypatch):
     monkeypatch.setattr(routes, "ConsentManager", FakeConsentManager)
     monkeypatch.setattr(routes, "ReportManager", FakeReportManager)
 
-    res = client.patch("/reports/2/projects/MyApp", json={
-        "stack_languages": ["Python", "TypeScript"],
-        "stack_frameworks": ["FastAPI"],
-    })
+    res = client.patch("/portfolio/13/projects/ProjA", json={"custom_overview": "Updated", "custom_achievements": ["A1", "A2"]})
     assert res.status_code == 200
-    assert updated["languages"] == ["Python", "TypeScript"]
-    assert updated["frameworks"] == ["FastAPI"]
+    payload = res.json()
+    assert payload["portfolio"]["projects"][0]["portfolio_customizations"]["custom_overview"] == "Updated"
 
 
 def test_patch_report_project_not_found(client, monkeypatch):
@@ -1080,10 +1095,14 @@ def test_patch_report_project_not_found(client, monkeypatch):
     class FakeReportManager:
         def get_report(self, id):
             return report if id == 1 else None
-    res = client.patch("/portfolio/13/projects/ProjA", json={"custom_overview": "Updated","custom_achievements":["A1","A2"]})
-    assert res.status_code == 200
-    payload = res.json()
-    assert payload["portfolio"]["projects"][0]["portfolio_customizations"]["custom_overview"] == "Updated"
+
+    monkeypatch.setattr(routes, "ConsentManager", FakeConsentManager)
+    monkeypatch.setattr(routes, "ReportManager", FakeReportManager)
+
+    res = client.patch("/reports/1/projects/NonExistent", json={"bullets": ["x"]})
+    assert res.status_code == 404
+    assert "not found" in res.json()["detail"].lower()
+
 
 def test_publish_and_unpublish_portfolio(client, monkeypatch):
     class FakeConsentManager:
@@ -1098,9 +1117,15 @@ def test_publish_and_unpublish_portfolio(client, monkeypatch):
     monkeypatch.setattr(routes, "ConsentManager", FakeConsentManager)
     monkeypatch.setattr(routes, "ReportManager", FakeReportManager)
 
-    res = client.patch("/reports/1/projects/NonExistent", json={"bullets": ["x"]})
-    assert res.status_code == 404
-    assert "not found" in res.json()["detail"].lower()
+    pub = client.post("/portfolio/14/publish")
+    assert pub.status_code == 200
+    assert pub.json()["portfolio"]["portfolio_mode"] == "public"
+    assert pub.json()["portfolio"]["portfolio_published_at"] is not None
+
+    unpub = client.post("/portfolio/14/unpublish")
+    assert unpub.status_code == 200
+    assert unpub.json()["portfolio"]["portfolio_mode"] == "private"
+    assert unpub.json()["portfolio"]["portfolio_published_at"] is None
 
 
 def test_patch_report_project_report_not_found(client, monkeypatch):
@@ -1165,12 +1190,3 @@ def test_config_set_stores_dict_value(client, monkeypatch):
     res = client.post("/config/set", json={"key": "skills", "value": skills})
     assert res.status_code == 200
     assert stored["skills"] == skills
-    pub = client.post("/portfolio/14/publish")
-    assert pub.status_code == 200
-    assert pub.json()["portfolio"]["portfolio_mode"] == "public"
-    assert pub.json()["portfolio"]["portfolio_published_at"] is not None
-
-    unpub = client.post("/portfolio/14/unpublish")
-    assert unpub.status_code == 200
-    assert unpub.json()["portfolio"]["portfolio_mode"] == "private"
-    assert unpub.json()["portfolio"]["portfolio_published_at"] is None
