@@ -276,9 +276,12 @@ function Badges() {
   const selectedHeatmapBadge = activeHeatmapBadgeId
     ? badgeHeatmapTiles.find((badge) => badge.badgeId === activeHeatmapBadgeId) ?? null
     : null;
+  const selectedAchievedBadge = selectedHeatmapBadge
+    ? achievedBadges.find((badge) => badge.badge_id === selectedHeatmapBadge.badgeId) ?? null
+    : null;
   
   return (
-    <>
+    <div className="badges-page">
       <h3>Badges</h3>
       <button onClick={loadBadgeData} disabled={loading}>
         {loading ? "Loading..." : "Refresh Badge Data"}
@@ -288,7 +291,13 @@ function Badges() {
 
       <section className="badge-heatmap">
         <h4>🗺️ Badge Completion Heatmap</h4>
-        <p>Click any badge tile to view details. Darker tiles indicate higher completion progress.</p>
+        <p>
+          Click any badge tile to view details. Darker tiles indicate higher completion progress.
+          {" "}
+          {achievedBadges.length > 0
+            ? `${achievedBadges.length} unlocked badge${achievedBadges.length === 1 ? "" : "s"} are now listed directly in each badge modal.`
+            : "Unlock badges to see completion history by project."}
+        </p>
         <div className="badge-heatmap-grid">
           {badgeHeatmapTiles.map((badge) => (
             <button
@@ -356,28 +365,7 @@ function Badges() {
         </section>
       ) : null}
 
-      <h4>🏅 Unlocked Badges</h4>
-      {achievedBadges.length === 0 ? (
-        <p>No achieved badges yet. Upload and analyze projects to start earning them.</p>
-      ) : (
-        <ul>
-          {achievedBadges.map((badge) => (
-            <li key={`achieved-${badge.badge_id}`}>
-              ✅ <strong>{badge.label ?? badge.badge_id}</strong>
-              <p className="badge-description">{badge.description}</p>
-              <p className="badge-description"><strong>How to earn:</strong> {badge.howToEarn}</p>
-              <ul>
-                {badge.projects.map((projectEntry, idx) => (
-                  <li key={`achieved-${badge.badge_id}-${projectEntry.project}-${idx}`}>
-                    <strong>{projectEntry.project}</strong>
-                    {projectEntry.achieved_on ? ` — ${projectEntry.achieved_on}` : ""}
-                  </li>
-                ))}
-              </ul>
-            </li>
-          ))}
-        </ul>
-      )}
+      
       <h4>🎉 Yearly Wrapped</h4>
       {wrapped.length === 0 ? (
         <p>No yearly wrapped history available yet.</p>
@@ -402,6 +390,21 @@ function Badges() {
               <strong>Progress:</strong> {selectedHeatmapBadge.stateLabel}
               {selectedHeatmapBadge.trackedProgress?.project?.name ? ` • Closest project: ${selectedHeatmapBadge.trackedProgress.project.name}` : ""}
             </p>
+            {selectedAchievedBadge?.projects?.length ? (
+              <>
+                <p><strong>Completed in:</strong></p>
+                <ul>
+                  {selectedAchievedBadge.projects.map((projectEntry, idx) => (
+                    <li key={`modal-achieved-${selectedHeatmapBadge.badgeId}-${projectEntry.project}-${idx}`}>
+                      <strong>{projectEntry.project}</strong>
+                      {projectEntry.achieved_on ? ` — ${projectEntry.achieved_on}` : ""}
+                    </li>
+                  ))}
+                </ul>
+              </>
+            ) : (
+              <p>No completion milestones yet for this badge.</p>
+            )}
           </div>
         </div>
       ) : null}
@@ -449,7 +452,7 @@ function Badges() {
           ))}
         </ul>
       )}
-    </>
+    </div>
   );
 }
 
