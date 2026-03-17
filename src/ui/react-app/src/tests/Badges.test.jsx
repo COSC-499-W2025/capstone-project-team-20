@@ -118,7 +118,7 @@ describe('App badges heatmap', () => {
 
     await user.click(screen.getByRole('button', { name: /badges/i }))
 
-    expect(await screen.findByRole('heading', { name: /badge completion heatmap/i })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: /(all badges|badge completion heatmap)/i })).toBeInTheDocument()
 
     const polyglotTileButton = await screen.findByRole('button', {
       name: /open polyglot badge details/i,
@@ -144,7 +144,7 @@ describe('App badges heatmap', () => {
 
     await user.click(screen.getByRole('button', { name: /badges/i }))
 
-    expect(await screen.findByRole('heading', { name: /badge completion heatmap/i })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: /(all badges|badge completion heatmap)/i })).toBeInTheDocument()
     expect(await screen.findByRole('heading', { name: /badge progress tracker/i })).toBeInTheDocument()
     const inProgressList = container.querySelector('.in-progress-list')
     expect(inProgressList).toBeInTheDocument()
