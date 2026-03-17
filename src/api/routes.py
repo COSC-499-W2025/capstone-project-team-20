@@ -1,4 +1,4 @@
-from typing import List
+from typing import Any, List, Optional
 
 from fastapi import APIRouter, UploadFile, File, HTTPException, status, Depends
 from fastapi.responses import FileResponse
@@ -128,6 +128,17 @@ class ContributorMergeApplyRequest(BaseModel):
 
 class ContributorMergeBatchRequest(BaseModel):
     projects: List[ContributorMergeApplyRequest]
+
+
+class ReportProjectPatchRequest(BaseModel):
+    project_name: Optional[str] = None
+    stack_languages: Optional[List[str]] = None
+    stack_frameworks: Optional[List[str]] = None
+    bullets: Optional[List[str]] = None
+
+class ConfigSetRequest(BaseModel):
+    key: str
+    value: Any
 
 
 def _run_post_upload_analyses(analyzer: ProjectAnalyzer, projects):
@@ -439,6 +450,49 @@ def get_report(id: int):
         )
     )
 
+@router.get("/resume/context/{id}", dependencies=[Depends(require_consent)])
+def get_resume_context(id: int):
+    """
+    Return the resume template context for a report as JSON.
+    Used by the frontend live HTML preview.
+    """
+    rm = ReportManager()
+    report = rm.get_report(id)
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found.")
+    return ReportExporter()._build_context(report, ConfigManager())
+
+
+@router.patch("/reports/{id}/projects/{project_name}", dependencies=[Depends(require_consent)])
+def patch_report_project(id: int, project_name: str, req: ReportProjectPatchRequest):
+    """
+    Update editable fields on a single ReportProject within a report.
+    Only non-None fields are applied.
+    """
+    from urllib.parse import unquote
+    project_name = unquote(project_name)
+
+    rm = ReportManager()
+    report = rm.get_report(id)
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found.")
+
+    target = next((p for p in report.projects if p.project_name == project_name), None)
+    if not target:
+        raise HTTPException(status_code=404, detail=f"Project '{project_name}' not found in report.")
+
+    if req.project_name is not None:
+        target.project_name = req.project_name
+    if req.stack_languages is not None:
+        target.languages = req.stack_languages
+    if req.stack_frameworks is not None:
+        target.frameworks = req.stack_frameworks
+    if req.bullets is not None:
+        target.bullets = req.bullets
+
+    rm.update_report(report)
+    return {"ok": True, "project_name": target.project_name}
+
 
 @router.delete("/reports/{id}", status_code=204, dependencies=[Depends(require_consent)])
 def delete_report(id: int):
@@ -611,6 +665,22 @@ def export_resume(req: ResumeExportRequest):
         download_url=f"/resume/exports/{export_id}/download"
     )
 
+@router.get("/resume/context/{id}", dependencies=[Depends(require_consent)])
+def get_resume_context(id: int):
+    """
+    Return the resume template context for a report as JSON.
+    Used by the frontend to render a live HTML preview.
+    """
+    rm = ReportManager()
+    report = rm.get_report(id)
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found.")
+    context = ReportExporter()._build_context(report, ConfigManager())
+    # Convert date objects to strings so they're JSON-serialisable
+    for proj in context.get("projects", []):
+        pass  # dates are already formatted strings in _build_context
+    return context
+
 
 class ConfigSaveRequest(BaseModel):
     name: str | None = None
@@ -647,6 +717,15 @@ def save_config(req: ConfigSaveRequest):
             cm.set(key, str(value).strip())
     return {"ok": True, "config": cm.get_all()}
 
+@router.post("/config/set")
+def config_set(req: ConfigSetRequest):
+    """
+    Set a single config value by key. Accepts any JSON-serializable value,
+    so structured data like education/experience arrays round-trip correctly.
+    """
+    cm = ConfigManager()
+    cm.set(req.key, req.value)
+    return {"ok": True, "key": req.key}
 def _require_private_mode(report):
     mode = getattr(report, "portfolio_mode", "private") or "private"
     if mode != "private":

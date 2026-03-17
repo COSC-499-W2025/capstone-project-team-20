@@ -141,6 +141,14 @@ export function getReport(id) {
   return request(`/reports/${id}`);
 }
 
+export async function deleteReport(id) {
+  const res = await fetch(`${BASE_URL}/reports/${id}`, { method: "DELETE" });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || `HTTP ${res.status}`);
+  }
+}
+
 // Portfolio details generation (for a report)
 
 export function generatePortfolioDetailsForReport({ report_id, project_names }) {
@@ -169,6 +177,18 @@ export function downloadResumeUrl(export_id) {
   return `${BASE_URL}/resume/exports/${export_id}/download`;
 }
 
+export function getResumeContext(report_id) {
+  return request(`/resume/context/${report_id}`);
+}
+
+export function patchReportProject(report_id, project_name, patch) {
+  return request(`/reports/${report_id}/projects/${encodeURIComponent(project_name)}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(patch),
+  });
+}
+
 export function exportPortfolio({ report_id, output_name = "portfolio.pdf" }) {
   return request("/portfolio/export", {
     method: "POST",
@@ -190,5 +210,13 @@ export function saveConfig({ name, email, phone, github, linkedin }) {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ name, email, phone, github, linkedin }),
+  });
+}
+
+export function configSet(key, value) {
+  return request("/config/set", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ key, value }),
   });
 }
