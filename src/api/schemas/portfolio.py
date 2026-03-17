@@ -32,6 +32,8 @@ class PortfolioProject(BaseModel):
     date_created: Optional[datetime] = None
     last_modified: Optional[datetime] = None
     collaboration_status: str = "individual"
+    portfolio_customizations: Dict[str, object] = Field(default_factory=dict)
+
 
 
 class PortfolioReport(BaseModel):
@@ -41,6 +43,8 @@ class PortfolioReport(BaseModel):
     sort_by: str = "resume_score"
     notes: Optional[str] = None
     projects: List[PortfolioProject] = Field(default_factory=list)
+    portfolio_mode: str = "private"
+    portfolio_published_at: Optional[datetime] = None
 
 
 class PortfolioGenerateRequest(BaseModel):
@@ -86,3 +90,19 @@ class PortfolioExportResponse(BaseModel):
     export_id: str
     filename: str
     download_url: str
+
+class PortfolioModeUpdateRequest(BaseModel):
+    mode: str  # "private" or "public"
+
+
+class PortfolioProjectUpdateRequest(BaseModel):
+    custom_title: Optional[str] = None
+    custom_overview: Optional[str] = None
+    custom_achievements: Optional[List[str]] = None
+    is_hidden: Optional[bool] = None
+
+
+class PortfolioPublishResponse(BaseModel):
+    ok: bool = True
+    portfolio: Optional[PortfolioReport] = None
+    message: str = ""

@@ -34,7 +34,8 @@ from src.api.schemas.resume import (
 )
 from src.api.schemas.portfolio import (
     PortfolioDetailsGenerateRequest, PortfolioDetailsGenerateResponse,
-    PortfolioExportRequest, PortfolioExportResponse
+    PortfolioExportRequest, PortfolioExportResponse,
+    PortfolioModeUpdateRequest, PortfolioProjectUpdateRequest, PortfolioPublishResponse
 )
 from src.api.schemas import (
     PortfolioResponse, PortfolioUpdateRequest, PortfolioReport, PortfolioProject, PortfolioDetailsResponse
@@ -47,12 +48,28 @@ router = APIRouter()
 def _build_portfolio_project(project) -> PortfolioProject:
     details = project.portfolio_details
     details_payload = details.to_dict() if hasattr(details, "to_dict") else {}
+    custom = dict(getattr(project, "portfolio_customizations", {}) or {})
+
+    custom_title = (custom.get("custom_title") or "").strip()
+    custom_overview = (custom.get("custom_overview") or "").strip()
+    custom_achievements = custom.get("custom_achievements")
+    if not isinstance(custom_achievements, list):
+        custom_achievements = None
+
+    if custom_title:
+        details_payload["project_name"] = custom_title
+    if custom_overview:
+        details_payload["overview"] = custom_overview
+    if custom_achievements is not None:
+        details_payload["achievements"] = [str(x).strip() for x in custom_achievements if str(x).strip()]
+
     return PortfolioProject(
         project_name=project.project_name,
         resume_score=project.resume_score,
         summary=getattr(project, "summary", "") or "",
         bullets=list(getattr(project, "bullets", []) or []),
         portfolio_details=PortfolioDetailsResponse(**details_payload),
+        portfolio_customizations=custom,
         languages=list(project.languages or []),
         language_share=dict(project.language_share or {}),
         frameworks=list(project.frameworks or []),
@@ -70,6 +87,8 @@ def _build_portfolio_report(report) -> PortfolioReport:
         date_created=report.date_created,
         sort_by=report.sort_by,
         notes=report.notes,
+        portfolio_mode=getattr(report, "portfolio_mode", "private") or "private",
+        portfolio_published_at=getattr(report, "portfolio_published_at", None),
         projects=projects,
     )
 
@@ -672,3 +691,75 @@ def serve_thumbnail(filename: str):
     if not path.exists() or not path.is_file():
         raise HTTPException(status_code=404, detail="Thumbnail not found.")
     return FileResponse(str(path))
+def _require_private_mode(report):
+    mode = getattr(report, "portfolio_mode", "private") or "private"
+    if mode != "private":
+        raise HTTPException(status_code=409, detail="Portfolio is in public mode and cannot be edited.")
+
+@router.patch("/portfolio/{id}/mode", response_model=PortfolioResponse, dependencies=[Depends(require_consent)])
+def update_portfolio_mode(id: int, payload: PortfolioModeUpdateRequest):
+    report_manager = ReportManager()
+    report = report_manager.get_report(id)
+    if not report:
+        raise HTTPException(status_code=404, detail="Portfolio report not found.")
+
+    mode = (payload.mode or "").strip().lower()
+    if mode not in {"private", "public"}:
+        raise HTTPException(status_code=400, detail="mode must be 'private' or 'public'.")
+
+    report.portfolio_mode = mode
+    if mode == "private":
+        report.portfolio_published_at = None
+    report_manager.update_report(report)
+    return PortfolioResponse(ok=True, portfolio=_build_portfolio_report(report), message="Portfolio mode updated.")
+
+@router.patch("/portfolio/{id}/projects/{project_name}", response_model=PortfolioResponse, dependencies=[Depends(require_consent)])
+def update_portfolio_project_customizations(id: int, project_name: str, payload: PortfolioProjectUpdateRequest):
+    report_manager = ReportManager()
+    report = report_manager.get_report(id)
+    if not report:
+        raise HTTPException(status_code=404, detail="Portfolio report not found.")
+
+    _require_private_mode(report)
+
+    target = next((p for p in report.projects if p.project_name == project_name), None)
+    if not target:
+        raise HTTPException(status_code=404, detail="Portfolio project not found.")
+
+    custom = dict(getattr(target, "portfolio_customizations", {}) or {})
+    if payload.custom_title is not None:
+        custom["custom_title"] = payload.custom_title.strip()
+    if payload.custom_overview is not None:
+        custom["custom_overview"] = payload.custom_overview.strip()
+    if payload.custom_achievements is not None:
+        custom["custom_achievements"] = [x.strip() for x in payload.custom_achievements if x and x.strip()]
+    if payload.is_hidden is not None:
+        custom["is_hidden"] = bool(payload.is_hidden)
+
+    target.portfolio_customizations = custom
+    report_manager.update_report(report)
+    return PortfolioResponse(ok=True, portfolio=_build_portfolio_report(report), message="Portfolio project updated.")
+
+@router.post("/portfolio/{id}/unpublish", response_model=PortfolioPublishResponse, dependencies=[Depends(require_consent)])
+def unpublish_portfolio(id: int):
+    report_manager = ReportManager()
+    report = report_manager.get_report(id)
+    if not report:
+        raise HTTPException(status_code=404, detail="Portfolio report not found.")
+
+    report.portfolio_mode = "private"
+    report.portfolio_published_at = None
+    report_manager.update_report(report)
+    return PortfolioPublishResponse(ok=True, portfolio=_build_portfolio_report(report), message="Portfolio moved to private mode.")
+@router.post("/portfolio/{id}/publish", response_model=PortfolioPublishResponse, dependencies=[Depends(require_consent)])
+def publish_portfolio(id: int):
+    from datetime import datetime
+    report_manager = ReportManager()
+    report = report_manager.get_report(id)
+    if not report:
+        raise HTTPException(status_code=404, detail="Portfolio report not found.")
+
+    report.portfolio_mode = "public"
+    report.portfolio_published_at = datetime.now()
+    report_manager.update_report(report)
+    return PortfolioPublishResponse(ok=True, portfolio=_build_portfolio_report(report), message="Portfolio published.")

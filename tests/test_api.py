@@ -21,20 +21,20 @@ def client():
 # Fake Project
 class FakeProject:
     def __init__(
-        self, 
-        id, 
-        name, 
-        skills_used=None, 
-        categories=None, 
-        num_files=0, 
-        test_file_ratio=0.0, 
-        languages=None, 
-        language_share=None, 
-        author_count=1, 
-        collaboration_status="individual", 
-        size_kb=0, 
-        total_loc=0, 
-        date_created=None, 
+        self,
+        id,
+        name,
+        skills_used=None,
+        categories=None,
+        num_files=0,
+        test_file_ratio=0.0,
+        languages=None,
+        language_share=None,
+        author_count=1,
+        collaboration_status="individual",
+        size_kb=0,
+        total_loc=0,
+        date_created=None,
         last_modified=None,
         contributor_roles=None,
         bullets=None,
@@ -934,3 +934,80 @@ def test_serve_thumbnail_not_found(client):
     response = client.get("/thumbnails/does_not_exist.png")
     assert response.status_code == 404
     assert "not found" in response.json()["detail"].lower()
+def test_update_portfolio_mode_success(client, monkeypatch):
+    class FakeConsentManager:
+        def has_user_consented(self): return True
+
+    report = Report(id=11, title="R", date_created=datetime(2025,1,1), sort_by="resume_score", projects=[], notes=None)
+
+    class FakeReportManager:
+        def get_report(self, id): return report if id == 11 else None
+        def update_report(self, updated): return True
+
+    monkeypatch.setattr(routes, "ConsentManager", FakeConsentManager)
+    monkeypatch.setattr(routes, "ReportManager", FakeReportManager)
+
+    res = client.patch("/portfolio/11/mode", json={"mode": "public"})
+    assert res.status_code == 200
+    assert res.json()["portfolio"]["portfolio_mode"] == "public"
+
+def test_update_portfolio_project_rejects_when_public(client, monkeypatch):
+    class FakeConsentManager:
+        def has_user_consented(self): return True
+
+    rp = ReportProject(project_name="ProjA", portfolio_details=PortfolioDetails())
+    report = Report(id=12, title="R", date_created=datetime(2025,1,1), sort_by="resume_score", projects=[rp], notes=None)
+    report.portfolio_mode = "public"
+
+    class FakeReportManager:
+        def get_report(self, id): return report if id == 12 else None
+        def update_report(self, updated): return True
+
+    monkeypatch.setattr(routes, "ConsentManager", FakeConsentManager)
+    monkeypatch.setattr(routes, "ReportManager", FakeReportManager)
+
+    res = client.patch("/portfolio/12/projects/ProjA", json={"custom_overview": "New text"})
+    assert res.status_code == 409
+
+def test_update_portfolio_project_customizations_success(client, monkeypatch):
+    class FakeConsentManager:
+        def has_user_consented(self): return True
+
+    rp = ReportProject(project_name="ProjA", portfolio_details=PortfolioDetails(overview="Old"))
+    report = Report(id=13, title="R", date_created=datetime(2025,1,1), sort_by="resume_score", projects=[rp], notes=None)
+    report.portfolio_mode = "private"
+
+    class FakeReportManager:
+        def get_report(self, id): return report if id == 13 else None
+        def update_report(self, updated): return True
+
+    monkeypatch.setattr(routes, "ConsentManager", FakeConsentManager)
+    monkeypatch.setattr(routes, "ReportManager", FakeReportManager)
+
+    res = client.patch("/portfolio/13/projects/ProjA", json={"custom_overview": "Updated","custom_achievements":["A1","A2"]})
+    assert res.status_code == 200
+    payload = res.json()
+    assert payload["portfolio"]["projects"][0]["portfolio_customizations"]["custom_overview"] == "Updated"
+
+def test_publish_and_unpublish_portfolio(client, monkeypatch):
+    class FakeConsentManager:
+        def has_user_consented(self): return True
+
+    report = Report(id=14, title="R", date_created=datetime(2025,1,1), sort_by="resume_score", projects=[], notes=None)
+
+    class FakeReportManager:
+        def get_report(self, id): return report if id == 14 else None
+        def update_report(self, updated): return True
+
+    monkeypatch.setattr(routes, "ConsentManager", FakeConsentManager)
+    monkeypatch.setattr(routes, "ReportManager", FakeReportManager)
+
+    pub = client.post("/portfolio/14/publish")
+    assert pub.status_code == 200
+    assert pub.json()["portfolio"]["portfolio_mode"] == "public"
+    assert pub.json()["portfolio"]["portfolio_published_at"] is not None
+
+    unpub = client.post("/portfolio/14/unpublish")
+    assert unpub.status_code == 200
+    assert unpub.json()["portfolio"]["portfolio_mode"] == "private"
+    assert unpub.json()["portfolio"]["portfolio_published_at"] is None
