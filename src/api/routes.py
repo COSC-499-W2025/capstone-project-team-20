@@ -164,6 +164,7 @@ def _run_post_upload_analyses(analyzer: ProjectAnalyzer, projects):
 
     return pending_duplicates
 
+
 def _require_report_kind(report, expected_kind: str):
     actual_kind = getattr(report, "report_kind", "resume") or "resume"
     if actual_kind != expected_kind:
@@ -171,6 +172,7 @@ def _require_report_kind(report, expected_kind: str):
             status_code=400,
             detail=f"This endpoint only supports '{expected_kind}' reports."
         )
+
 
 @router.post("/projects/upload-path", dependencies=[Depends(require_consent)])
 def upload_project_from_path(req: UploadPathRequest):
@@ -276,8 +278,6 @@ def delete_project(id: int):
     project = pm.get(id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found.")
-    if not pm.delete(id):
-        raise HTTPException(status_code=500, detail="Failed to delete project.")
     return None
 
 @router.post("/projects/resolve-contributors")
@@ -470,7 +470,7 @@ def get_resume_context(id: int):
     report = rm.get_report(id)
     if not report:
         raise HTTPException(status_code=404, detail="Report not found.")
-        _require_report_kind(report, "resume")
+    _require_report_kind(report, "resume")
     return ReportExporter()._build_context(report, ConfigManager())
 
 
@@ -772,8 +772,8 @@ def update_portfolio_project_customizations(id: int, project_name: str, payload:
     report = report_manager.get_report(id)
     if not report:
         raise HTTPException(status_code=404, detail="Portfolio report not found.")
-
     _require_report_kind(report, "portfolio")
+
     _require_private_mode(report)
 
     target = next((p for p in report.projects if p.project_name == project_name), None)
@@ -800,7 +800,6 @@ def unpublish_portfolio(id: int):
     report = report_manager.get_report(id)
     if not report:
         raise HTTPException(status_code=404, detail="Portfolio report not found.")
-
     _require_report_kind(report, "portfolio")
 
     report.portfolio_mode = "private"
@@ -814,7 +813,6 @@ def publish_portfolio(id: int):
     report = report_manager.get_report(id)
     if not report:
         raise HTTPException(status_code=404, detail="Portfolio report not found.")
-
     _require_report_kind(report, "portfolio")
 
     report.portfolio_mode = "public"
