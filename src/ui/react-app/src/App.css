@@ -300,35 +300,6 @@ body{
   border-radius:4px;
 }
 
-.badges-hero{
-  background:
-    linear-gradient(
-      135deg,
-      rgba(85,189,202,.18),
-      rgba(242,125,66,.16)
-    );
-
-  border:1px solid #3b7096;
-  border-radius:14px;
-
-  padding:14px;
-  margin:14px 0;
-}
-
-.badge-guide-grid{
-  display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
-  gap:10px;
-}
-
-.badge-guide-card{
-  background:rgba(1,18,43,.75);
-  border:1px solid #3d6d92;
-
-  border-radius:12px;
-  padding:10px;
-}
-
 .badge-guide-card h5{
   margin-bottom:6px;
 }
@@ -490,10 +461,6 @@ body{
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
 }
 
-.all-badges-toggle {
-  margin: 14px 0;
-}
-
 .badge-detail-modal p {
   color: #d8edf8;
   margin: 8px 0;
@@ -510,6 +477,14 @@ body{
   margin: 0;
   color: #d8edf8;
   font-size: 0.88rem;
+}
+
+.badge-heatmap .badge-heatmap-tile {
+  color: #f2fbff;
+}
+
+.badge-heatmap-header strong {
+  color: #f2fbff;
 }
 
 .badge-heatmap-tile.badge-heatmap-tile--cold {

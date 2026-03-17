@@ -147,7 +147,6 @@ function Badges() {
   const [progress, setProgress] = useState([]);
   const [wrapped, setWrapped] = useState([]);
   const [activeWrappedYear, setActiveWrappedYear] = useState(null);
-  const [showAllBadges, setShowAllBadges] = useState(false);
   const [activeHeatmapBadgeId, setActiveHeatmapBadgeId] = useState(null);
 
   async function loadBadgeData() {
@@ -290,7 +289,7 @@ function Badges() {
       {error && <pre style={{ color: "crimson" }}>{error}</pre>}
 
       <section className="badge-heatmap">
-        <h4>🗺️ Badge Completion Heatmap</h4>
+        <h4>🏆 All Badges</h4>
         <p>
           Click any badge tile to view details. Darker tiles indicate higher completion progress.
           {" "}
@@ -321,7 +320,7 @@ function Badges() {
         </div>
       </section>
 
-      <h4>🎯 Badge Progress Tracker (Started, Uncompleted)</h4>
+      <h4>🎯 Badge Progress Tracker</h4>
       {inProgress.length === 0 ? (
         <p>No started in-progress badges yet. Start building to unlock more badges.</p>
       ) : (
@@ -341,30 +340,6 @@ function Badges() {
           ))}
         </ul>
       )}
-
-      <div className="all-badges-toggle">
-        <button type="button" onClick={() => setShowAllBadges((prev) => !prev)}>
-          {showAllBadges ? "Hide All Badges" : "All Badges"}
-        </button>
-      </div>
-
-      {showAllBadges ? (
-        <section className="badges-hero">
-          <h4>🏆 All Possible Badges</h4>
-          <p>Every badge, what it means, and how to earn it.</p>
-          <div className="badge-guide-grid">
-            {allBadgeCatalog.map((badge) => (
-              <article className="badge-guide-card" key={badge.badgeId}>
-                <h5>{badge.label} {badge.unlocked ? "✅" : "🔒"}</h5>
-                <p>{badge.description}</p>
-                <p><strong>How to earn:</strong> {badge.howToEarn}</p>
-                <p className="badge-description">{badge.trackedProgress ? `Tracked progress: ${Math.round((badge.trackedProgress.progress ?? 0) * 100)}%` : "Tracked progress: calculated when unlocked in projects."}</p>
-              </article>
-            ))}
-          </div>
-        </section>
-      ) : null}
-
       
       <h4>🎉 Yearly Wrapped</h4>
       {wrapped.length === 0 ? (

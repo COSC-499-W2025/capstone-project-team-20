@@ -134,15 +134,8 @@ describe('App badges heatmap', () => {
     expect(screen.queryByRole('heading', { name: 'Polyglot' })).not.toBeInTheDocument()
   })
 
-  it('only shows started badges in progress list and gates full catalog behind All Badges button', async () => {
-    const user = userEvent.setup()
+  it('only shows started badges in progress list', async () => {
     const { container } = render(<App />)
-
-    await waitFor(() =>
-      expect(screen.getByRole('button', { name: /badges/i })).toBeInTheDocument()
-    )
-
-    await user.click(screen.getByRole('button', { name: /badges/i }))
 
     expect(await screen.findByRole('heading', { name: /badge progress tracker \(started, uncompleted\)/i })).toBeInTheDocument()
     const inProgressList = container.querySelector('.in-progress-list')
@@ -151,8 +144,5 @@ describe('App badges heatmap', () => {
     expect(inProgressList?.textContent).toContain('65%')
     expect(inProgressList?.textContent).not.toContain('Team Effort')
 
-    expect(screen.queryByRole('heading', { name: /all possible badges/i })).not.toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: /all badges/i }))
-    expect(await screen.findByRole('heading', { name: /all possible badges/i })).toBeInTheDocument()
   })
 })
