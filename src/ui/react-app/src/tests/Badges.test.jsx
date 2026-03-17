@@ -144,7 +144,8 @@ describe('App badges heatmap', () => {
 
     await user.click(screen.getByRole('button', { name: /badges/i }))
 
-    expect(await screen.findByRole('heading', { name: /badge progress tracker \(started, uncompleted\)/i })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: /badge completion heatmap/i })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: /badge progress tracker/i })).toBeInTheDocument()
     const inProgressList = container.querySelector('.in-progress-list')
     expect(inProgressList).toBeInTheDocument()
     expect(inProgressList?.textContent).toContain('Polyglot')
