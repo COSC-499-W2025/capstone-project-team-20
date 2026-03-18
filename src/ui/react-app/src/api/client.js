@@ -60,9 +60,14 @@ export function clearProjects() {
   return request("/projects/clear", { method: "POST" });
 }
 
-export function deleteProject(id) {
-  return request(`/projects/${id}`, { method: "DELETE" });
+export async function deleteProject(id) {
+  const res = await fetch(`${BASE_URL}/projects/${id}`, { method: "DELETE" });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || `HTTP ${res.status}`);
+  }
 }
+ 
 
 export function resolveContributors(project_id, resolutions) {
   return request("/projects/resolve-contributors", {
@@ -211,6 +216,21 @@ export function saveConfig({ name, email, phone, github, linkedin }) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ name, email, phone, github, linkedin }),
   });
+}
+
+export function uploadThumbnail(project_id, file) {
+  const form = new FormData();
+  form.append("file", file);
+  return request(`/projects/${project_id}/thumbnail`, {
+    method: "POST",
+    body: form,
+  });
+}
+ 
+export function thumbnailUrl(thumbnail_path) {
+  if (!thumbnail_path) return null;
+  const filename = thumbnail_path.split(/[\\/]/).pop();
+  return `${BASE_URL}/thumbnails/${filename}`;
 }
 
 export function configSet(key, value) {

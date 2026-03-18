@@ -736,6 +736,51 @@ def save_config(req: ConfigSaveRequest):
             cm.set(key, str(value).strip())
     return {"ok": True, "config": cm.get_all()}
 
+@router.post("/projects/{id}/thumbnail")
+def upload_thumbnail(id: int, file: UploadFile = File(...)):
+    """
+    Upload a thumbnail image for a project.
+    Saves to thumbnails/ directory and updates project.thumbnail.
+    """
+    import shutil as _shutil
+ 
+    VALID_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".heic", ".ico", ".svg"}
+ 
+    pm = ProjectManager()
+    project = pm.get(id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found.")
+ 
+    suffix = Path(file.filename).suffix.lower()
+    if suffix not in VALID_EXTENSIONS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid image format '{suffix}'. Supported: {', '.join(sorted(VALID_EXTENSIONS))}"
+        )
+ 
+    thumbnails_dir = Path("thumbnails")
+    thumbnails_dir.mkdir(exist_ok=True)
+ 
+    filename = f"project_{id}_thumb{suffix}"
+    dest = thumbnails_dir / filename
+ 
+    with dest.open("wb") as f:
+        _shutil.copyfileobj(file.file, f)
+ 
+    project.thumbnail = str(dest)
+    pm.set(project)
+ 
+    return {"ok": True, "thumbnail": str(dest)}
+ 
+ 
+@router.get("/thumbnails/{filename}")
+def serve_thumbnail(filename: str):
+    """Serve a project thumbnail image by filename."""
+    path = Path("thumbnails") / filename
+    if not path.exists() or not path.is_file():
+        raise HTTPException(status_code=404, detail="Thumbnail not found.")
+    return FileResponse(str(path))
+
 @router.post("/config/set")
 def config_set(req: ConfigSetRequest):
     """
