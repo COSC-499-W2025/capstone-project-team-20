@@ -6,6 +6,8 @@ from pathlib import Path
 
 import src.api.routes as routes
 from src.api.api_main import app
+from src.managers.ProjectManager import ProjectManager
+from src.models.Project import Project
 from src.models.Report import Report
 from src.models.ReportProject import ReportProject, PortfolioDetails
 
@@ -19,20 +21,20 @@ def client():
 # Fake Project
 class FakeProject:
     def __init__(
-        self, 
-        id, 
-        name, 
-        skills_used=None, 
-        categories=None, 
-        num_files=0, 
-        test_file_ratio=0.0, 
-        languages=None, 
-        language_share=None, 
-        author_count=1, 
-        collaboration_status="individual", 
-        size_kb=0, 
-        total_loc=0, 
-        date_created=None, 
+        self,
+        id,
+        name,
+        skills_used=None,
+        categories=None,
+        num_files=0,
+        test_file_ratio=0.0,
+        languages=None,
+        language_share=None,
+        author_count=1,
+        collaboration_status="individual",
+        size_kb=0,
+        total_loc=0,
+        date_created=None,
         last_modified=None,
         contributor_roles=None,
         bullets=None,
@@ -326,6 +328,7 @@ def test_get_portfolio_report_found(client, monkeypatch):
         sort_by="resume_score",
         projects=[project],
         notes=None,
+        report_kind="portfolio",
     )
 
     class FakeReportManager:
@@ -358,6 +361,7 @@ def test_export_portfolio_success(client, monkeypatch):
         sort_by="resume_score",
         projects=[],
         notes=None,
+        report_kind="portfolio",
     )
 
     class FakeReportManager:
@@ -397,6 +401,7 @@ def test_edit_portfolio_updates_report(client, monkeypatch):
         sort_by="resume_score",
         projects=[],
         notes=None,
+        report_kind="portfolio",
     )
 
     class FakeReportManager:
@@ -577,6 +582,7 @@ def test_save_config_required_fields_only(client, monkeypatch):
     res = client.post("/config", json=payload)
     assert res.status_code == 200
     assert stored == {"name": "Ada Lovelace", "email": "ada@test.com", "phone": "555-1234"}
+
 def test_delete_project_success(client, monkeypatch):
     class FakeProject:
         def __init__(self, id, name):
@@ -647,6 +653,46 @@ def test_delete_report_not_found(client, monkeypatch):
     assert res.status_code == 404
     assert "not found" in res.json()["detail"].lower()
 
+def test_get_portfolio_rejects_resume_report_kind(client, monkeypatch):
+    class FakeConsentManager:
+        def has_user_consented(self):
+            return True
+
+    class FakeReport:
+        report_kind = "resume"
+        projects = []
+
+    class FakeReportManager:
+        def get_report(self, id):
+            return FakeReport() if id == 1 else None
+
+    monkeypatch.setattr(routes, "ConsentManager", FakeConsentManager)
+    monkeypatch.setattr(routes, "ReportManager", FakeReportManager)
+
+    res = client.get("/portfolio/1")
+    assert res.status_code == 400
+    assert "only supports 'portfolio'" in res.json()["detail"]
+
+
+def test_get_resume_context_rejects_portfolio_report_kind(client, monkeypatch):
+    class FakeConsentManager:
+        def has_user_consented(self):
+            return True
+
+    class FakeReport:
+        report_kind = "portfolio"
+
+    class FakeReportManager:
+        def get_report(self, id):
+            return FakeReport() if id == 1 else None
+
+    monkeypatch.setattr(routes, "ConsentManager", FakeConsentManager)
+    monkeypatch.setattr(routes, "ReportManager", FakeReportManager)
+
+    res = client.get("/resume/context/1")
+    assert res.status_code == 400
+    assert "only supports 'resume'" in res.json()["detail"]
+
 def test_get_portfolio_requires_consent(client, monkeypatch):
     class FakeConsentManager:
         def has_user_consented(self):
@@ -701,6 +747,7 @@ def test_list_reports_success(client, monkeypatch):
             self.sort_by = "resume_score"
             self.notes = "notes"
             self.project_count = project_count
+            self.report_kind = "resume"
 
     class FakeReportManager:
         def list_reports(self):
@@ -736,6 +783,7 @@ def test_get_report_success(client, monkeypatch):
             self.sort_by = "resume_score"
             self.notes = "hello"
             self.project_count = 3
+            self.report_kind = "resume"
 
     class FakeReportManager:
         def get_report(self, id):
@@ -801,6 +849,7 @@ def test_create_report_success(client, monkeypatch):
             self.sort_by = "resume_score"
             self.notes = "notes"
             self.project_count = 2
+            self.report_kind = "resume"
 
     class FakeReportManager:
         def create_report(self, report):
@@ -851,3 +900,421 @@ def test_create_report_project_not_found(client, monkeypatch):
 
     assert res.status_code == 404
     assert "not found" in res.json()["detail"].lower()
+
+def test_upload_thumbnail_success(client, tmp_path, monkeypatch):
+    class FakeProjectManager:
+        def __init__(self):
+            self.p = Project(
+                id=1,
+                name="ThumbTest",
+                file_path="dummy.zip",
+                languages=[],
+                frameworks=[],
+                skills_used=[],
+            )
+
+        def get(self, id):
+            return self.p if id == 1 else None
+
+        def set(self, project):
+            self.p = project
+
+    monkeypatch.setattr(routes, "ProjectManager", FakeProjectManager)
+
+    monkeypatch.chdir(tmp_path)
+
+    file_bytes = b"fake image bytes"
+    response = client.post(
+        "/projects/1/thumbnail",
+        files={"file": ("thumb.png", io.BytesIO(file_bytes), "image/png")},
+    )
+
+    assert response.status_code == 200
+
+
+
+def test_upload_thumbnail_invalid_extension(client):
+    pm = ProjectManager()
+    p = Project(
+        name="BadExt",
+        file_path="dummy.zip",
+        languages=[],
+        frameworks=[],
+        skills_used=[],
+    )
+    pm.set(p)
+
+    response = client.post(
+        f"/projects/{p.id}/thumbnail",
+        files={"file": ("thumb.txt", io.BytesIO(b"nope"), "text/plain")},
+    )
+
+    assert response.status_code == 400
+    assert "Invalid image format" in response.json()["detail"]
+
+
+def test_upload_thumbnail_project_not_found(client):
+    response = client.post(
+        "/projects/999999/thumbnail",
+        files={"file": ("thumb.png", io.BytesIO(b"fake"), "image/png")},
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Project not found."
+
+
+def test_serve_thumbnail_success(client, tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+
+    filename = "test_thumb.png"
+    file_path = tmp_path / "thumbnails" / filename
+    file_path.parent.mkdir(exist_ok=True)
+    file_path.write_bytes(b"imagebytes")
+
+    response = client.get(f"/thumbnails/{filename}")
+
+    assert response.status_code == 200
+    assert response.content == b"imagebytes"
+
+
+def test_serve_thumbnail_not_found(client):
+    response = client.get("/thumbnails/does_not_exist.png")
+    assert response.status_code == 404
+    assert "not found" in response.json()["detail"].lower()
+
+# ── GET /resume/context/{id} ──────────────────────────────────────────────────
+
+def test_get_resume_context_success(client, monkeypatch):
+    class FakeConsentManager:
+        def has_user_consented(self):
+            return True
+
+    project = ReportProject(
+        project_name="MyApp",
+        resume_score=4.0,
+        bullets=["Built REST API", "Improved performance by 40%"],
+        languages=["Python", "JavaScript"],
+        frameworks=["FastAPI", "React"],
+        date_created=datetime(2024, 1, 1),
+        last_modified=datetime(2024, 6, 1),
+    )
+    report = Report(
+        id=1,
+        title="Dev Resume",
+        date_created=datetime(2025, 1, 1),
+        sort_by="resume_score",
+        projects=[project],
+    )
+
+    class FakeReportManager:
+        def get_report(self, id):
+            return report if id == 1 else None
+
+    class FakeConfigManager:
+        def get(self, key, default=None):
+            data = {
+                "name": "Dale Smith",
+                "email": "dale@example.com",
+                "phone": "250-555-0100",
+                "github": "dalesmith",
+                "linkedin": "dale-smith",
+                "education": [],
+                "experience": [],
+                "skills": {},
+            }
+            return data.get(key, default)
+
+    monkeypatch.setattr(routes, "ConsentManager", FakeConsentManager)
+    monkeypatch.setattr(routes, "ReportManager", FakeReportManager)
+    monkeypatch.setattr(routes, "ConfigManager", FakeConfigManager)
+
+    res = client.get("/resume/context/1")
+    assert res.status_code == 200
+
+    data = res.json()
+    assert data["name"] == "Dale Smith"
+    assert data["email"] == "dale@example.com"
+    assert len(data["projects"]) == 1
+    assert data["projects"][0]["name"] == "MyApp"
+    assert data["projects"][0]["bullets"] == ["Built REST API", "Improved performance by 40%"]
+    assert "Python" in data["projects"][0]["stack"]
+
+
+def test_get_resume_context_not_found(client, monkeypatch):
+    class FakeConsentManager:
+        def has_user_consented(self):
+            return True
+
+    class FakeReportManager:
+        def get_report(self, id):
+            return None
+
+    monkeypatch.setattr(routes, "ConsentManager", FakeConsentManager)
+    monkeypatch.setattr(routes, "ReportManager", FakeReportManager)
+
+    res = client.get("/resume/context/999")
+    assert res.status_code == 404
+    assert "not found" in res.json()["detail"].lower()
+
+
+def test_get_resume_context_requires_consent(client, monkeypatch):
+    class FakeConsentManager:
+        def has_user_consented(self):
+            return False
+
+    monkeypatch.setattr(routes, "ConsentManager", FakeConsentManager)
+
+    res = client.get("/resume/context/1")
+    assert res.status_code == 403
+    assert "consent" in res.json()["detail"].lower()
+
+
+# ── PATCH /reports/{id}/projects/{project_name} ───────────────────────────────
+
+def test_patch_report_project_updates_bullets(client, monkeypatch):
+    class FakeConsentManager:
+        def has_user_consented(self):
+            return True
+
+    project = ReportProject(
+        project_name="MyApp",
+        bullets=["Old bullet"],
+        languages=["Python"],
+        frameworks=[],
+    )
+    report = Report(
+        id=1,
+        title="Resume",
+        date_created=datetime(2025, 1, 1),
+        sort_by="resume_score",
+        projects=[project],
+    )
+
+    updated = {}
+
+    class FakeReportManager:
+        def get_report(self, id):
+            return report if id == 1 else None
+
+        def update_report(self, r):
+            updated["bullets"] = r.projects[0].bullets
+            return True
+
+    monkeypatch.setattr(routes, "ConsentManager", FakeConsentManager)
+    monkeypatch.setattr(routes, "ReportManager", FakeReportManager)
+
+    res = client.patch("/reports/1/projects/MyApp", json={"bullets": ["New bullet A", "New bullet B"]})
+    assert res.status_code == 200
+    assert res.json()["ok"] is True
+    assert updated["bullets"] == ["New bullet A", "New bullet B"]
+
+
+def test_update_portfolio_mode_success(client, monkeypatch):
+    class FakeConsentManager:
+        def has_user_consented(self): return True
+
+    report = Report(id=11, title="R", date_created=datetime(2025,1,1), sort_by="resume_score", projects=[], notes=None, report_kind="portfolio")
+
+    class FakeReportManager:
+        def get_report(self, id): return report if id == 11 else None
+        def update_report(self, updated): return True
+
+    monkeypatch.setattr(routes, "ConsentManager", FakeConsentManager)
+    monkeypatch.setattr(routes, "ReportManager", FakeReportManager)
+
+    res = client.patch("/portfolio/11/mode", json={"mode": "public"})
+    assert res.status_code == 200
+    assert res.json()["portfolio"]["portfolio_mode"] == "public"
+
+def test_update_portfolio_project_rejects_when_public(client, monkeypatch):
+    class FakeConsentManager:
+        def has_user_consented(self): return True
+
+    rp = ReportProject(project_name="ProjA", portfolio_details=PortfolioDetails())
+    report = Report(id=12, title="R", date_created=datetime(2025,1,1), sort_by="resume_score", projects=[rp], notes=None, report_kind="portfolio")
+    report.portfolio_mode = "public"
+
+    class FakeReportManager:
+        def get_report(self, id): return report if id == 12 else None
+        def update_report(self, updated): return True
+
+    monkeypatch.setattr(routes, "ConsentManager", FakeConsentManager)
+    monkeypatch.setattr(routes, "ReportManager", FakeReportManager)
+
+    res = client.patch("/portfolio/12/projects/ProjA", json={"custom_overview": "New text"})
+    assert res.status_code == 409
+
+
+def test_patch_report_project_updates_stack(client, monkeypatch):
+    class FakeConsentManager:
+        def has_user_consented(self):
+            return True
+
+    project = ReportProject(
+        project_name="MyApp",
+        bullets=[],
+        languages=["Python"],
+        frameworks=["Django"],
+    )
+    report = Report(
+        id=2,
+        title="Resume",
+        date_created=datetime(2025, 1, 1),
+        sort_by="resume_score",
+        projects=[project],
+    )
+
+    updated = {}
+
+    class FakeReportManager:
+        def get_report(self, id):
+            return report if id == 2 else None
+
+        def update_report(self, r):
+            updated["languages"] = r.projects[0].languages
+            updated["frameworks"] = r.projects[0].frameworks
+            return True
+
+    monkeypatch.setattr(routes, "ConsentManager", FakeConsentManager)
+    monkeypatch.setattr(routes, "ReportManager", FakeReportManager)
+
+    res = client.patch("/reports/2/projects/MyApp", json={
+        "stack_languages": ["Python", "TypeScript"],
+        "stack_frameworks": ["FastAPI"],
+    })
+    assert res.status_code == 200
+    assert updated["languages"] == ["Python", "TypeScript"]
+    assert updated["frameworks"] == ["FastAPI"]
+
+def test_update_portfolio_project_customizations_success(client, monkeypatch):
+    class FakeConsentManager:
+        def has_user_consented(self): return True
+
+    rp = ReportProject(project_name="ProjA", portfolio_details=PortfolioDetails(overview="Old"))
+    report = Report(id=13, title="R", date_created=datetime(2025,1,1), sort_by="resume_score", projects=[rp], notes=None, report_kind="portfolio")
+    report.portfolio_mode = "private"
+
+    class FakeReportManager:
+        def get_report(self, id): return report if id == 13 else None
+        def update_report(self, updated): return True
+
+    monkeypatch.setattr(routes, "ConsentManager", FakeConsentManager)
+    monkeypatch.setattr(routes, "ReportManager", FakeReportManager)
+
+    res = client.patch("/portfolio/13/projects/ProjA", json={"custom_overview": "Updated", "custom_achievements": ["A1", "A2"]})
+    assert res.status_code == 200
+    payload = res.json()
+    assert payload["portfolio"]["projects"][0]["portfolio_customizations"]["custom_overview"] == "Updated"
+
+
+def test_patch_report_project_not_found(client, monkeypatch):
+    class FakeConsentManager:
+        def has_user_consented(self):
+            return True
+
+    report = Report(
+        id=1,
+        title="Resume",
+        date_created=datetime(2025, 1, 1),
+        sort_by="resume_score",
+        projects=[],
+    )
+
+    class FakeReportManager:
+        def get_report(self, id):
+            return report if id == 1 else None
+
+    monkeypatch.setattr(routes, "ConsentManager", FakeConsentManager)
+    monkeypatch.setattr(routes, "ReportManager", FakeReportManager)
+
+    res = client.patch("/reports/1/projects/NonExistent", json={"bullets": ["x"]})
+    assert res.status_code == 404
+    assert "not found" in res.json()["detail"].lower()
+
+
+def test_publish_and_unpublish_portfolio(client, monkeypatch):
+    class FakeConsentManager:
+        def has_user_consented(self): return True
+
+    report = Report(id=14, title="R", date_created=datetime(2025,1,1), sort_by="resume_score", projects=[], notes=None, report_kind="portfolio")
+
+    class FakeReportManager:
+        def get_report(self, id): return report if id == 14 else None
+        def update_report(self, updated): return True
+
+    monkeypatch.setattr(routes, "ConsentManager", FakeConsentManager)
+    monkeypatch.setattr(routes, "ReportManager", FakeReportManager)
+
+    pub = client.post("/portfolio/14/publish")
+    assert pub.status_code == 200
+    assert pub.json()["portfolio"]["portfolio_mode"] == "public"
+    assert pub.json()["portfolio"]["portfolio_published_at"] is not None
+
+    unpub = client.post("/portfolio/14/unpublish")
+    assert unpub.status_code == 200
+    assert unpub.json()["portfolio"]["portfolio_mode"] == "private"
+    assert unpub.json()["portfolio"]["portfolio_published_at"] is None
+
+
+def test_patch_report_project_report_not_found(client, monkeypatch):
+    class FakeConsentManager:
+        def has_user_consented(self):
+            return True
+
+    class FakeReportManager:
+        def get_report(self, id):
+            return None
+
+    monkeypatch.setattr(routes, "ConsentManager", FakeConsentManager)
+    monkeypatch.setattr(routes, "ReportManager", FakeReportManager)
+
+    res = client.patch("/reports/99/projects/MyApp", json={"bullets": ["x"]})
+    assert res.status_code == 404
+
+
+# ── POST /config/set ──────────────────────────────────────────────────────────
+
+def test_config_set_stores_string_value(client, monkeypatch):
+    stored = {}
+
+    class FakeConfigManager:
+        def set(self, key, value):
+            stored[key] = value
+
+    monkeypatch.setattr(routes, "ConfigManager", FakeConfigManager)
+
+    res = client.post("/config/set", json={"key": "name", "value": "Ada Lovelace"})
+    assert res.status_code == 200
+    assert res.json()["ok"] is True
+    assert stored["name"] == "Ada Lovelace"
+
+
+def test_config_set_stores_list_value(client, monkeypatch):
+    """Education/experience are stored as lists — must round-trip correctly."""
+    stored = {}
+
+    class FakeConfigManager:
+        def set(self, key, value):
+            stored[key] = value
+
+    monkeypatch.setattr(routes, "ConfigManager", FakeConfigManager)
+
+    education = [{"school": "UBC Okanagan", "degree": "BSc Computer Science", "location": "Kelowna, BC", "dates": "2021 - 2025"}]
+    res = client.post("/config/set", json={"key": "education", "value": education})
+    assert res.status_code == 200
+    assert stored["education"] == education
+
+
+def test_config_set_stores_dict_value(client, monkeypatch):
+    stored = {}
+
+    class FakeConfigManager:
+        def set(self, key, value):
+            stored[key] = value
+
+    monkeypatch.setattr(routes, "ConfigManager", FakeConfigManager)
+
+    skills = {"Languages": ["Python", "JavaScript"], "Frameworks": ["FastAPI", "React"]}
+    res = client.post("/config/set", json={"key": "skills", "value": skills})
+    assert res.status_code == 200
+    assert stored["skills"] == skills

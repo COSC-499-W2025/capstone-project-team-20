@@ -60,9 +60,14 @@ export function clearProjects() {
   return request("/projects/clear", { method: "POST" });
 }
 
-export function deleteProject(id) {
-  return request(`/projects/${id}`, { method: "DELETE" });
+export async function deleteProject(id) {
+  const res = await fetch(`${BASE_URL}/projects/${id}`, { method: "DELETE" });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || `HTTP ${res.status}`);
+  }
 }
+ 
 
 export function resolveContributors(project_id, resolutions) {
   return request("/projects/resolve-contributors", {
@@ -125,11 +130,11 @@ export function setPrivacyConsent(consent) {
 
 // Reports
 
-export function createReport({ title = null, sort_by = "resume_score", notes = null, project_ids = [] }) {
+export function createReport({ title = null, sort_by = "resume_score", notes = null, report_kind = "resume", project_ids = [] }) {
   return request("/reports", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ title, sort_by, notes, project_ids }),
+    body: JSON.stringify({ title, sort_by, notes, report_kind, project_ids }),
   });
 }
 
@@ -139,6 +144,14 @@ export function listReports() {
 
 export function getReport(id) {
   return request(`/reports/${id}`);
+}
+
+export async function deleteReport(id) {
+  const res = await fetch(`${BASE_URL}/reports/${id}`, { method: "DELETE" });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || `HTTP ${res.status}`);
+  }
 }
 
 // Portfolio details generation (for a report)
@@ -169,6 +182,18 @@ export function downloadResumeUrl(export_id) {
   return `${BASE_URL}/resume/exports/${export_id}/download`;
 }
 
+export function getResumeContext(report_id) {
+  return request(`/resume/context/${report_id}`);
+}
+
+export function patchReportProject(report_id, project_name, patch) {
+  return request(`/reports/${report_id}/projects/${encodeURIComponent(project_name)}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(patch),
+  });
+}
+
 export function exportPortfolio({ report_id, output_name = "portfolio.pdf" }) {
   return request("/portfolio/export", {
     method: "POST",
@@ -192,6 +217,7 @@ export function saveConfig({ name, email, phone, github, linkedin }) {
     body: JSON.stringify({ name, email, phone, github, linkedin }),
   });
 }
+
 export function updatePortfolioMode(report_id, mode) {
   return request(`/portfolio/${report_id}/mode`, {
     method: "PATCH",
@@ -214,4 +240,26 @@ export function publishPortfolio(report_id) {
 
 export function unpublishPortfolio(report_id) {
   return request(`/portfolio/${report_id}/unpublish`, { method: "POST" });
+
+export function uploadThumbnail(project_id, file) {
+  const form = new FormData();
+  form.append("file", file);
+  return request(`/projects/${project_id}/thumbnail`, {
+    method: "POST",
+    body: form,
+  });
+}
+ 
+export function thumbnailUrl(thumbnail_path) {
+  if (!thumbnail_path) return null;
+  const filename = thumbnail_path.split(/[\\/]/).pop();
+  return `${BASE_URL}/thumbnails/${filename}`;
+}
+
+export function configSet(key, value) {
+  return request("/config/set", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ key, value }),
+  });
 }

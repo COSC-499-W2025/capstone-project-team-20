@@ -35,11 +35,14 @@ describe("PortfolioPage web portfolio",()=>{
   beforeEach(()=>{
     vi.clearAllMocks();
 
-    setPrivacyConsent.mockResolvedValue({consent:true});
-    listProjects.mockResolvedValue({projects:[{id:1,name:"Proj A"}]});
-    listReports.mockResolvedValue({reports:[{id:9,title:"My Report"}]});
-    getReport.mockResolvedValue({report:{id:9,title:"My Report"}});
-    generatePortfolioDetailsForReport.mockResolvedValue({ok:true,updated_project_names:["Proj A"]});
+    setPrivacyConsent.mockResolvedValue({ consent: true });
+    listProjects.mockResolvedValue({ projects: [{ id: 1, name: "Proj A" }] });
+    listReports.mockResolvedValue({ reports: [{ id: 9, title: "My Report", report_kind: "portfolio" }] });
+    getReport.mockResolvedValue({ report: { id: 9, title: "My Report" } });
+    generatePortfolioDetailsForReport.mockResolvedValue({
+      ok: true,
+      updated_project_names: ["Proj A"],
+    });
 
     getPortfolio.mockResolvedValue({
       portfolio:{

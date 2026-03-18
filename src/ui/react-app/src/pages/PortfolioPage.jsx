@@ -38,11 +38,14 @@ function PortfolioPage() {
       const [projectData,reportData]=await Promise.all([listProjects(),listReports()]);
       const allProjects=projectData.projects??[];
       setProjects(allProjects);
-      setSelectedProjectIds(allProjects.map((p)=>p.id));
-      setReports(reportData.reports??[]);
-      if(selectedReport?.id){
-        const refreshed=(reportData.reports??[]).find((r)=>r.id===selectedReport.id);
-        setSelectedReport(refreshed??selectedReport);
+
+      setSelectedProjectIds(allProjects.map((p) => p.id));
+      const filteredReports = (reportData.reports ?? []).filter((r) => (r.report_kind ?? "resume") === "portfolio");
+      setReports(filteredReports);
+
+      if (selectedReport?.id) {
+        const refreshed = filteredReports.find((r) => r.id === selectedReport.id);
+        setSelectedReport(refreshed ?? selectedReport);
       }
     }catch(e){
       setMessage(e.message??"Failed to load portfolio page data");
@@ -127,12 +130,19 @@ function PortfolioPage() {
     setMessage("");
     try{
       await setPrivacyConsent(true);
-      if(!selectedProjectIds.length){setMessage("Select at least one project first.");return;}
-      const created=await createReport({
-        title:reportTitle,
-        sort_by:"resume_score",
-        notes:reportNotes,
-        project_ids:selectedProjectIds,
+
+      if (!selectedProjectIds.length) {
+        setMessage("Select at least one project first.");
+        return;
+      }
+
+      const created = await createReport({
+        title: reportTitle,
+        sort_by: "resume_score",
+        notes: reportNotes,
+        report_kind: "portfolio",
+        project_ids: selectedProjectIds,
+
       });
       setSelectedReport(created.report??null);
       setMessage(`Created report "${created.report?.title??"Untitled"}"`);

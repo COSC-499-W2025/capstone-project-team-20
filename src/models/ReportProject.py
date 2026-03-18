@@ -64,6 +64,7 @@ class ReportProject:
     date_created: Optional[datetime] = None
     last_modified: Optional[datetime] = None
     collaboration_status: Literal["individual", "collaborative"] = "individual"
+    portfolio_customizations: Dict[str, object] = field(default_factory=dict)
 
     @classmethod
     def from_project(cls, project) -> "ReportProject":
@@ -93,6 +94,7 @@ class ReportProject:
                 if getattr(project, "collaboration_status", None) in ["individual", "collaborative"]
                 else "individual"
             ),
+            portfolio_customizations={},
         )
 
     def to_dict(self) -> dict:
@@ -109,6 +111,7 @@ class ReportProject:
             "date_created": self.date_created.isoformat() if self.date_created else None,
             "last_modified": self.last_modified.isoformat() if self.last_modified else None,
             "collaboration_status": self.collaboration_status,
+            "portfolio_customizations": self.portfolio_customizations,
         }
 
     @classmethod
@@ -118,7 +121,7 @@ class ReportProject:
         data.pop("id", None)
         data.pop("report_id", None)
 
-        for key in ["bullets", "languages", "language_share", "frameworks", "portfolio_details"]:
+        for key in ["bullets", "languages", "language_share", "frameworks", "portfolio_details", "portfolio_customizations"]:
             if key in data and isinstance(data[key], str):
                 try:
                     data[key] = json.loads(data[key])
@@ -140,6 +143,9 @@ class ReportProject:
             data["portfolio_details"] = PortfolioDetails.from_dict(data["portfolio_details"])
         else:
             data["portfolio_details"] = PortfolioDetails()
+
+        if "portfolio_customizations" not in data or not isinstance(data["portfolio_customizations"], dict):
+            data["portfolio_customizations"] = {}
 
         return cls(**data)
 

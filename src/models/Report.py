@@ -1,15 +1,14 @@
-from dataclasses import dataclass, field, asdict
-from typing import List, Optional, Dict
+from dataclasses import dataclass, field
+from typing import List, Optional, Dict, Literal
 from datetime import datetime
 from src.models.ReportProject import ReportProject
-from typing import Literal
 
 
 @dataclass
 class Report:
     """
     A report containing multiple project snapshots for export.
-    
+
     Reports are "live templates" - they store which projects to include
     and how to organize them, but pull current user info (e.g. email address) at export time.
     """
@@ -20,7 +19,10 @@ class Report:
     sort_by: Literal["resume_score", "date_created", "last_modified"] = "resume_score"
     projects: List[ReportProject] = field(default_factory=list)
     notes: Optional[str] = None # For the user, e.g. "Use this one for Software Engineering roles"
-    
+    report_kind: Literal["resume", "portfolio"] = "resume"
+    portfolio_mode: Literal["private", "public"] = "private"
+    portfolio_published_at: Optional[datetime] = None
+
     def __post_init__(self):
         """Sort projects and catch case where user left title empty after initialization"""
         if not self.title or not self.title.strip():
@@ -46,31 +48,31 @@ class Report:
                 reverse=True
             )
 
-    
+
     def add_project(self, project: "ReportProject"):
         """Add a project and re-sort"""
         self.projects.append(project)
         self._sort_projects()
-    
+
     # done by name because ReportProjects don't have id fields. project_name is a NOT NULL field in projects table
     def remove_project(self, project_name: str) -> bool:
         """Remove project by name. Returns True if removed."""
         original_count = len(self.projects)
         self.projects = [p for p in self.projects if p.project_name != project_name]
         return len(self.projects) < original_count
-    
+
     @property
     def project_count(self) -> int:
         """Number of projects in this report"""
         return len(self.projects)
-    
+
     @property
     def average_score(self) -> float:
         """Average resume score across all projects"""
         if not self.projects:
             return 0.0
         return sum(p.resume_score for p in self.projects) / self.project_count
-    
+
     @property
     def all_languages(self) -> List[str]:
         """Unique list of all languages used across projects"""
@@ -78,7 +80,7 @@ class Report:
         for project in self.projects:
             languages.update(project.languages)
         return sorted(languages)
-    
+
     @property
     def all_frameworks(self) -> List[str]:
         """Unique list of all frameworks used across projects"""
@@ -94,10 +96,13 @@ class Report:
             "date_created": self.date_created.isoformat(),
             "sort_by": self.sort_by,
             "notes": self.notes,
+            "report_kind": self.report_kind,
+            "portfolio_mode": self.portfolio_mode,
+            "portfolio_published_at": self.portfolio_published_at.isoformat() if self.portfolio_published_at else None,
         }
 
 # from_dict intentionally omitted, ReportManager will handle retrieval of Reports
-    
+
     def __str__(self) -> str:
         """String representation of report"""
 
@@ -112,7 +117,7 @@ class Report:
             projects_str = project_names[0]
         else:
             projects_str = "none"
-        
+
         return (
             f"Report: {self.title}\n"
             f"  Created: {self.date_created.strftime('%Y-%m-%d')}\n"

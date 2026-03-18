@@ -4,14 +4,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import Projects from '../pages/Projects'
 
 vi.mock('../api/client', () => ({
-  listProjects:           vi.fn(),
-  getProject:             vi.fn(),
-  getPrivacyConsent:      vi.fn(),
-  uploadProjectZip:       vi.fn(),
-  uploadProjectFromPath:  vi.fn(),
-  clearProjects:          vi.fn(),
-  deleteProject:          vi.fn(),
+  listProjects:             vi.fn(),
+  getProject:               vi.fn(),
+  getPrivacyConsent:        vi.fn(),
+  uploadProjectZip:         vi.fn(),
+  deleteProject:            vi.fn(),
   resolveContributorsBatch: vi.fn(),
+  uploadThumbnail:          vi.fn(),
+  thumbnailUrl:             vi.fn((path) => `http://localhost:8000/thumbnails/${path}`),
 }))
 
 import {
@@ -19,13 +19,11 @@ import {
   getProject,
   getPrivacyConsent,
   uploadProjectZip,
-  uploadProjectFromPath,
-  clearProjects,
   deleteProject,
   resolveContributorsBatch,
 } from '../api/client'
 
-// ── Shared fixtures ───────────────────────────────────────────────────────────
+// ── Fixtures ──────────────────────────────────────────────────────────────────
 
 const EMPTY_LIST = { projects: [], current_projects: [], previous_projects: [] }
 
@@ -35,12 +33,28 @@ const PROJECT_LIST = {
   previous_projects: [{ id: 2, name: 'old-app' }],
 }
 
-const PROJECT_DETAIL = { project: { id: 1, name: 'my-app', languages: ['Python'] } }
+const PROJECT_DETAIL = {
+  project: {
+    id: 1, name: 'my-app',
+    languages: ['Python'], language_share: { Python: 100 },
+    frameworks: ['FastAPI'], skills_used: [],
+    bullets: ['Built REST API'], summary: 'A cool project',
+    resume_score: 7.5, author_count: 1,
+    collaboration_status: 'individual',
+    has_dockerfile: false, has_database: false,
+    has_frontend: false, has_backend: true,
+    has_test_files: false, has_readme: true,
+    total_loc: 1200, num_files: 40, size_kb: 80,
+    date_created: '2024-01-01T00:00:00', last_modified: '2024-06-01T00:00:00',
+    thumbnail: null,
+  },
+}
 
 const PENDING_DUPLICATES = [
   {
     project_id:   1,
     project_name: 'my-app',
+    repo_path:    '/tmp/my-app',
     duplicate_groups: [
       {
         display_name:        'Dale S',
@@ -53,13 +67,11 @@ const PENDING_DUPLICATES = [
 
 beforeEach(() => {
   vi.clearAllMocks()
-  // Safe default for every test: empty list loads cleanly
   listProjects.mockResolvedValue(EMPTY_LIST)
   getProject.mockResolvedValue(PROJECT_DETAIL)
   getPrivacyConsent.mockResolvedValue(true)
-  deleteProject.mockResolvedValue({})
+  deleteProject.mockResolvedValue(undefined)
   resolveContributorsBatch.mockResolvedValue({})
-  clearProjects.mockResolvedValue({})
 })
 
 // ── Initial load ──────────────────────────────────────────────────────────────
@@ -70,21 +82,22 @@ describe('Initial load', () => {
     await waitFor(() => expect(listProjects).toHaveBeenCalledOnce())
   })
 
-  it('renders current and previous project lists', async () => {
+  it('renders current and previous project groups when projects exist', async () => {
     listProjects.mockResolvedValue(PROJECT_LIST)
     render(<Projects />)
     await waitFor(() => {
-      expect(screen.getByText(/my-app \(#1\)/i)).toBeInTheDocument()
-      expect(screen.getByText(/old-app \(#2\)/i)).toBeInTheDocument()
+      expect(screen.getByText('my-app')).toBeInTheDocument()
+      expect(screen.getByText('old-app')).toBeInTheDocument()
+      expect(screen.getByText(/current batch/i)).toBeInTheDocument()
+      expect(screen.getByText(/previous/i)).toBeInTheDocument()
     })
   })
 
-  it('shows empty state messages when there are no projects', async () => {
+  it('shows the upload zone when there are no projects', async () => {
     render(<Projects />)
-    await waitFor(() => {
-      expect(screen.getByText(/no projects in the current import batch yet/i)).toBeInTheDocument()
-      expect(screen.getByText(/no previous projects yet/i)).toBeInTheDocument()
-    })
+    await waitFor(() =>
+      expect(screen.getByText(/upload a zip of your project to get started/i)).toBeInTheDocument()
+    )
   })
 
   it('shows an error if listProjects fails', async () => {
@@ -96,51 +109,32 @@ describe('Initial load', () => {
   })
 })
 
-// ── Refresh / Clear ───────────────────────────────────────────────────────────
-
-describe('Refresh and Clear', () => {
-  it('re-fetches projects when Refresh is clicked', async () => {
-    const user = userEvent.setup()
-    render(<Projects />)
-    await waitFor(() => expect(listProjects).toHaveBeenCalledOnce())
-    await user.click(screen.getByRole('button', { name: /refresh projects/i }))
-    await waitFor(() => expect(listProjects).toHaveBeenCalledTimes(2))
-  })
-
-  it('calls clearProjects and reloads when Clear Database is clicked', async () => {
-    const user = userEvent.setup()
-    render(<Projects />)
-    await waitFor(() => expect(listProjects).toHaveBeenCalledOnce())
-    await user.click(screen.getByRole('button', { name: /clear database/i }))
-    await waitFor(() => {
-      expect(clearProjects).toHaveBeenCalledOnce()
-      expect(listProjects).toHaveBeenCalledTimes(2)
-    })
-  })
-
-  it('shows an error if clearProjects fails', async () => {
-    clearProjects.mockRejectedValue(new Error('Clear failed'))
-    const user = userEvent.setup()
-    render(<Projects />)
-    await waitFor(() => expect(listProjects).toHaveBeenCalledOnce())
-    await user.click(screen.getByRole('button', { name: /clear database/i }))
-    await waitFor(() =>
-      expect(screen.getByText(/clear failed/i)).toBeInTheDocument()
-    )
-  })
-})
-
 // ── Project selection ─────────────────────────────────────────────────────────
 
 describe('Project selection', () => {
-  it('shows project details when a project is clicked', async () => {
+  it('loads and displays project detail when a project is clicked', async () => {
     listProjects.mockResolvedValue(PROJECT_LIST)
     const user = userEvent.setup()
     render(<Projects />)
-    await waitFor(() => screen.getByText(/my-app \(#1\)/i))
-    await user.click(screen.getByText(/my-app \(#1\)/i))
+    await waitFor(() => screen.getByText('my-app'))
+    await user.click(screen.getAllByText('my-app')[0])
+    await waitFor(() => {
+      expect(getProject).toHaveBeenCalledWith(1)
+      expect(screen.getByText('A cool project')).toBeInTheDocument()
+      expect(screen.getByText('Built REST API')).toBeInTheDocument()
+    })
+  })
+
+  it('clicking the same project again deselects it', async () => {
+    listProjects.mockResolvedValue(PROJECT_LIST)
+    const user = userEvent.setup()
+    render(<Projects />)
+    await waitFor(() => screen.getByText('my-app'))
+    await user.click(screen.getAllByText('my-app')[0])
+    await waitFor(() => screen.getByText('A cool project'))
+    await user.click(screen.getAllByText('my-app')[0])
     await waitFor(() =>
-      expect(screen.getByText(/"name": "my-app"/i)).toBeInTheDocument()
+      expect(screen.queryByText('A cool project')).not.toBeInTheDocument()
     )
   })
 
@@ -149,64 +143,69 @@ describe('Project selection', () => {
     getProject.mockRejectedValue(new Error('Not found'))
     const user = userEvent.setup()
     render(<Projects />)
-    await waitFor(() => screen.getByText(/my-app \(#1\)/i))
-    await user.click(screen.getByText(/my-app \(#1\)/i))
+    await waitFor(() => screen.getByText('my-app'))
+    await user.click(screen.getAllByText('my-app')[0])
     await waitFor(() =>
       expect(screen.getByText(/not found/i)).toBeInTheDocument()
     )
   })
 })
 
-// ── Path upload ───────────────────────────────────────────────────────────────
+// ── ZIP upload ────────────────────────────────────────────────────────────────
 
-describe('Path upload', () => {
-  it('the load button is disabled when the path field is empty', async () => {
-    render(<Projects />)
-    await waitFor(() => expect(listProjects).toHaveBeenCalledOnce())
-    expect(screen.getByRole('button', { name: /load from path/i })).toBeDisabled()
-  })
-
-  it('blocks upload when consent is not given', async () => {
+describe('ZIP upload', () => {
+  it('blocks upload and shows error when consent is not given', async () => {
     getPrivacyConsent.mockResolvedValue(false)
     const user = userEvent.setup()
     render(<Projects />)
     await waitFor(() => expect(listProjects).toHaveBeenCalledOnce())
-    await user.type(screen.getByPlaceholderText(/testresources\/sample\.zip/i), 'some/path.zip')
-    await user.click(screen.getByRole('button', { name: /load from path/i }))
+
+    const file = new File(['content'], 'project.zip', { type: 'application/zip' })
+    const input = document.querySelector('input[type="file"][accept=".zip"]')
+    await user.upload(input, file)
+
     await waitFor(() =>
-      expect(screen.getByText(/you must grant consent/i)).toBeInTheDocument()
+      expect(screen.getByText(/grant consent in settings/i)).toBeInTheDocument()
     )
-    expect(uploadProjectFromPath).not.toHaveBeenCalled()
+    expect(uploadProjectZip).not.toHaveBeenCalled()
   })
 
-  it('shows the status message while uploading', async () => {
-    uploadProjectFromPath.mockImplementation(() => new Promise(() => {})) // never resolves
+  it('shows uploading status while upload is in progress', async () => {
+    uploadProjectZip.mockImplementation(() => new Promise(() => {}))
     const user = userEvent.setup()
     render(<Projects />)
     await waitFor(() => expect(listProjects).toHaveBeenCalledOnce())
-    await user.type(screen.getByPlaceholderText(/testresources\/sample\.zip/i), 'some/path.zip')
-    await user.click(screen.getByRole('button', { name: /load from path/i }))
+
+    const file = new File(['content'], 'project.zip', { type: 'application/zip' })
+    const input = document.querySelector('input[type="file"][accept=".zip"]')
+    await user.upload(input, file)
+
     expect(screen.getByText(/uploading and analyzing/i)).toBeInTheDocument()
   })
 
-  it('shows success status after a clean upload', async () => {
-    uploadProjectFromPath.mockResolvedValue({
+  it('loads projects into the list after a clean upload', async () => {
+    uploadProjectZip.mockResolvedValue({
       status: 'complete',
       projects: [{ id: 1, name: 'my-app' }],
       pending_duplicates: [],
     })
+    listProjects.mockResolvedValue(PROJECT_LIST)
     const user = userEvent.setup()
     render(<Projects />)
     await waitFor(() => expect(listProjects).toHaveBeenCalledOnce())
-    await user.type(screen.getByPlaceholderText(/testresources\/sample\.zip/i), 'some/path.zip')
-    await user.click(screen.getByRole('button', { name: /load from path/i }))
-    await waitFor(() =>
-      expect(screen.getByText(/done! loaded 1 project/i)).toBeInTheDocument()
-    )
+
+    const file = new File(['content'], 'project.zip', { type: 'application/zip' })
+    const input = document.querySelector('input[type="file"][accept=".zip"]')
+    await user.upload(input, file)
+
+    await waitFor(() => {
+      expect(uploadProjectZip).toHaveBeenCalledOnce()
+      expect(screen.getAllByText('my-app').length).toBeGreaterThan(0)
+    })
   })
 
   it('opens the merge modal when duplicates are detected', async () => {
-    uploadProjectFromPath.mockResolvedValue({
+    uploadProjectZip.mockResolvedValue({
       status: 'needs_resolution',
       projects: [{ id: 1, name: 'my-app' }],
       pending_duplicates: PENDING_DUPLICATES,
@@ -214,38 +213,67 @@ describe('Path upload', () => {
     const user = userEvent.setup()
     render(<Projects />)
     await waitFor(() => expect(listProjects).toHaveBeenCalledOnce())
-    await user.type(screen.getByPlaceholderText(/testresources\/sample\.zip/i), 'some/path.zip')
-    await user.click(screen.getByRole('button', { name: /load from path/i }))
+
+    const file = new File(['content'], 'project.zip', { type: 'application/zip' })
+    const input = document.querySelector('input[type="file"][accept=".zip"]')
+    await user.upload(input, file)
+
     await waitFor(() =>
       expect(screen.getByText(/resolve duplicate contributors/i)).toBeInTheDocument()
     )
   })
 
   it('shows an error if the upload fails', async () => {
-    uploadProjectFromPath.mockRejectedValue(new Error('Path upload failed'))
+    uploadProjectZip.mockRejectedValue(new Error('Upload failed'))
     const user = userEvent.setup()
     render(<Projects />)
     await waitFor(() => expect(listProjects).toHaveBeenCalledOnce())
-    await user.type(screen.getByPlaceholderText(/testresources\/sample\.zip/i), 'some/path.zip')
-    await user.click(screen.getByRole('button', { name: /load from path/i }))
+
+    const file = new File(['content'], 'project.zip', { type: 'application/zip' })
+    const input = document.querySelector('input[type="file"][accept=".zip"]')
+    await user.upload(input, file)
+
     await waitFor(() =>
-      expect(screen.getByText(/path upload failed/i)).toBeInTheDocument()
+      expect(screen.getByText(/upload failed/i)).toBeInTheDocument()
     )
   })
+})
 
-  it('clears the path input after a successful upload', async () => {
-    uploadProjectFromPath.mockResolvedValue({
-      status: 'complete',
-      projects: [{ id: 1, name: 'my-app' }],
-      pending_duplicates: [],
-    })
+// ── Delete project ────────────────────────────────────────────────────────────
+
+describe('Delete project', () => {
+  it('shows confirm modal when trash icon is clicked', async () => {
+    listProjects.mockResolvedValue(PROJECT_LIST)
     const user = userEvent.setup()
     render(<Projects />)
-    await waitFor(() => expect(listProjects).toHaveBeenCalledOnce())
-    const input = screen.getByPlaceholderText(/testresources\/sample\.zip/i)
-    await user.type(input, 'some/path.zip')
-    await user.click(screen.getByRole('button', { name: /load from path/i }))
-    await waitFor(() => expect(input.value).toBe(''))
+    await waitFor(() => screen.getByText('my-app'))
+    await user.click(screen.getAllByTitle('Delete project')[0])
+    expect(screen.getByText(/delete project\?/i)).toBeInTheDocument()
+    expect(screen.getByText(/permanently remove/i)).toBeInTheDocument()
+  })
+
+  it('dismisses modal without deleting on go back', async () => {
+    listProjects.mockResolvedValue(PROJECT_LIST)
+    const user = userEvent.setup()
+    render(<Projects />)
+    await waitFor(() => screen.getByText('my-app'))
+    await user.click(screen.getAllByTitle('Delete project')[0])
+    await user.click(screen.getByRole('button', { name: /go back/i }))
+    expect(deleteProject).not.toHaveBeenCalled()
+    expect(screen.queryByText(/delete project\?/i)).not.toBeInTheDocument()
+  })
+
+  it('calls deleteProject and removes project from list on confirm', async () => {
+    listProjects.mockResolvedValue(PROJECT_LIST)
+    const user = userEvent.setup()
+    render(<Projects />)
+    await waitFor(() => screen.getByText('my-app'))
+    await user.click(screen.getAllByTitle('Delete project')[0])
+    await user.click(screen.getByRole('button', { name: /yes, delete/i }))
+    await waitFor(() => {
+      expect(deleteProject).toHaveBeenCalledWith(1)
+      expect(screen.queryByText('my-app')).not.toBeInTheDocument()
+    })
   })
 })
 
@@ -253,7 +281,7 @@ describe('Path upload', () => {
 
 describe('Merge modal', () => {
   async function openMergeModal() {
-    uploadProjectFromPath.mockResolvedValue({
+    uploadProjectZip.mockResolvedValue({
       status: 'needs_resolution',
       projects: [{ id: 1, name: 'my-app' }],
       pending_duplicates: PENDING_DUPLICATES,
@@ -261,8 +289,9 @@ describe('Merge modal', () => {
     const user = userEvent.setup()
     render(<Projects />)
     await waitFor(() => expect(listProjects).toHaveBeenCalledOnce())
-    await user.type(screen.getByPlaceholderText(/testresources\/sample\.zip/i), 'some/path.zip')
-    await user.click(screen.getByRole('button', { name: /load from path/i }))
+    const file = new File(['content'], 'project.zip', { type: 'application/zip' })
+    const input = document.querySelector('input[type="file"][accept=".zip"]')
+    await user.upload(input, file)
     await waitFor(() => screen.getByText(/resolve duplicate contributors/i))
     return user
   }
@@ -292,20 +321,21 @@ describe('Merge modal', () => {
     )
   })
 
-  it('shows upload status after merges are applied', async () => {
+  it('closes the modal and reloads after merges are applied', async () => {
     const user = await openMergeModal()
     await user.click(screen.getByRole('button', { name: /apply merges/i }))
-    await waitFor(() =>
-      expect(screen.getByText(/contributor merges applied/i)).toBeInTheDocument()
-    )
+    await waitFor(() => {
+      expect(resolveContributorsBatch).toHaveBeenCalledOnce()
+      expect(screen.queryByText(/resolve duplicate contributors/i)).not.toBeInTheDocument()
+    })
   })
 })
 
-// ── Cancel analysis flow ──────────────────────────────────────────────────────
+// ── Cancel analysis ───────────────────────────────────────────────────────────
 
 describe('Cancel analysis', () => {
   async function openMergeModal() {
-    uploadProjectFromPath.mockResolvedValue({
+    uploadProjectZip.mockResolvedValue({
       status: 'needs_resolution',
       projects: [{ id: 1, name: 'my-app' }],
       pending_duplicates: PENDING_DUPLICATES,
@@ -313,20 +343,21 @@ describe('Cancel analysis', () => {
     const user = userEvent.setup()
     render(<Projects />)
     await waitFor(() => expect(listProjects).toHaveBeenCalledOnce())
-    await user.type(screen.getByPlaceholderText(/testresources\/sample\.zip/i), 'some/path.zip')
-    await user.click(screen.getByRole('button', { name: /load from path/i }))
+    const file = new File(['content'], 'project.zip', { type: 'application/zip' })
+    const input = document.querySelector('input[type="file"][accept=".zip"]')
+    await user.upload(input, file)
     await waitFor(() => screen.getByText(/resolve duplicate contributors/i))
     return user
   }
 
-  it('shows the confirmation screen when "Cancel Analysis" is clicked', async () => {
+  it('shows confirmation screen when Cancel Analysis is clicked', async () => {
     const user = await openMergeModal()
     await user.click(screen.getByRole('button', { name: /cancel analysis/i }))
     expect(screen.getByText(/cancel analysis\?/i)).toBeInTheDocument()
     expect(screen.getByText(/this cannot be undone/i)).toBeInTheDocument()
   })
 
-  it('returns to the merge screen when "Go back" is clicked', async () => {
+  it('returns to the merge screen when Go back is clicked', async () => {
     const user = await openMergeModal()
     await user.click(screen.getByRole('button', { name: /cancel analysis/i }))
     await user.click(screen.getByRole('button', { name: /go back/i }))
@@ -349,36 +380,5 @@ describe('Cancel analysis', () => {
     await waitFor(() =>
       expect(screen.queryByText(/cancel analysis\?/i)).not.toBeInTheDocument()
     )
-  })
-
-  it('shows an error if deleteProject fails but still closes the modal', async () => {
-    deleteProject.mockRejectedValue(new Error('Delete failed'))
-    const user = await openMergeModal()
-    await user.click(screen.getByRole('button', { name: /cancel analysis/i }))
-    await user.click(screen.getByRole('button', { name: /yes, cancel analysis/i }))
-    await waitFor(() => {
-      expect(screen.getByText(/delete failed/i)).toBeInTheDocument()
-      expect(screen.queryByText(/cancel analysis\?/i)).not.toBeInTheDocument()
-    })
-  })
-
-  it('shows the correct project count in the confirmation message', async () => {
-    // Single project → "project" (not "2 projects")
-    const user = await openMergeModal()
-    await user.click(screen.getByRole('button', { name: /cancel analysis/i }))
-    expect(screen.getByText(/this will delete the project that were just uploaded/i)).toBeInTheDocument()
-  })
-})
-
-// ── Quick load buttons ────────────────────────────────────────────────────────
-
-describe('Quick load buttons', () => {
-  it('populates the path input when a quick-load button is clicked', async () => {
-    const user = userEvent.setup()
-    render(<Projects />)
-    await waitFor(() => expect(listProjects).toHaveBeenCalledOnce())
-    await user.click(screen.getAllByRole('button', { name: /use/i })[0])
-    expect(screen.getByPlaceholderText(/testresources\/sample\.zip/i).value)
-      .toBe('testResources/testMultiFileAndRepos.zip')
   })
 })

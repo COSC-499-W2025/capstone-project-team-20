@@ -1,4 +1,4 @@
-from typing import List
+from typing import Any, List, Optional
 
 from fastapi import APIRouter, UploadFile, File, HTTPException, status, Depends
 from fastapi.responses import FileResponse
@@ -34,7 +34,8 @@ from src.api.schemas.resume import (
 )
 from src.api.schemas.portfolio import (
     PortfolioDetailsGenerateRequest, PortfolioDetailsGenerateResponse,
-    PortfolioExportRequest, PortfolioExportResponse
+    PortfolioExportRequest, PortfolioExportResponse,
+    PortfolioModeUpdateRequest, PortfolioProjectUpdateRequest, PortfolioPublishResponse
 )
 from src.api.schemas import (
     PortfolioResponse, PortfolioUpdateRequest, PortfolioReport, PortfolioProject, PortfolioDetailsResponse
@@ -47,12 +48,28 @@ router = APIRouter()
 def _build_portfolio_project(project) -> PortfolioProject:
     details = project.portfolio_details
     details_payload = details.to_dict() if hasattr(details, "to_dict") else {}
+    custom = dict(getattr(project, "portfolio_customizations", {}) or {})
+
+    custom_title = (custom.get("custom_title") or "").strip()
+    custom_overview = (custom.get("custom_overview") or "").strip()
+    custom_achievements = custom.get("custom_achievements")
+    if not isinstance(custom_achievements, list):
+        custom_achievements = None
+
+    if custom_title:
+        details_payload["project_name"] = custom_title
+    if custom_overview:
+        details_payload["overview"] = custom_overview
+    if custom_achievements is not None:
+        details_payload["achievements"] = [str(x).strip() for x in custom_achievements if str(x).strip()]
+
     return PortfolioProject(
         project_name=project.project_name,
         resume_score=project.resume_score,
         summary=getattr(project, "summary", "") or "",
         bullets=list(getattr(project, "bullets", []) or []),
         portfolio_details=PortfolioDetailsResponse(**details_payload),
+        portfolio_customizations=custom,
         languages=list(project.languages or []),
         language_share=dict(project.language_share or {}),
         frameworks=list(project.frameworks or []),
@@ -70,6 +87,8 @@ def _build_portfolio_report(report) -> PortfolioReport:
         date_created=report.date_created,
         sort_by=report.sort_by,
         notes=report.notes,
+        portfolio_mode=getattr(report, "portfolio_mode", "private") or "private",
+        portfolio_published_at=getattr(report, "portfolio_published_at", None),
         projects=projects,
     )
 
@@ -111,6 +130,17 @@ class ContributorMergeBatchRequest(BaseModel):
     projects: List[ContributorMergeApplyRequest]
 
 
+class ReportProjectPatchRequest(BaseModel):
+    project_name: Optional[str] = None
+    stack_languages: Optional[List[str]] = None
+    stack_frameworks: Optional[List[str]] = None
+    bullets: Optional[List[str]] = None
+
+class ConfigSetRequest(BaseModel):
+    key: str
+    value: Any
+
+
 def _run_post_upload_analyses(analyzer: ProjectAnalyzer, projects):
     changed = [p for p in projects if p.name in analyzer.changed_project_names]
     pending_duplicates = []
@@ -133,6 +163,15 @@ def _run_post_upload_analyses(analyzer: ProjectAnalyzer, projects):
             method(projects=clean)
 
     return pending_duplicates
+
+
+def _require_report_kind(report, expected_kind: str):
+    actual_kind = getattr(report, "report_kind", "resume") or "resume"
+    if actual_kind != expected_kind:
+        raise HTTPException(
+            status_code=400,
+            detail=f"This endpoint only supports '{expected_kind}' reports."
+        )
 
 
 @router.post("/projects/upload-path", dependencies=[Depends(require_consent)])
@@ -332,7 +371,7 @@ def create_report(req: ReportCreateRequest):
 
     pm = ProjectManager()
     rm = ReportManager()
-    report = Report(title=req.title or "", sort_by=req.sort_by, notes=req.notes, projects=[])
+    report = Report(title=req.title or "", sort_by=req.sort_by, notes=req.notes, report_kind=req.report_kind, projects=[])
 
     for pid in req.project_ids:
         p = pm.get(pid)
@@ -377,6 +416,7 @@ def create_report(req: ReportCreateRequest):
             date_created=saved.date_created,
             sort_by=saved.sort_by,
             notes=saved.notes,
+            report_kind=saved.report_kind,
             project_count=saved.project_count,
         )
     )
@@ -395,6 +435,7 @@ def list_reports():
                 date_created=r.date_created,
                 sort_by=r.sort_by,
                 notes=r.notes,
+                report_kind=r.report_kind,
                 project_count=r.project_count,
             )
             for r in reports
@@ -416,9 +457,54 @@ def get_report(id: int):
             date_created=r.date_created,
             sort_by=r.sort_by,
             notes=r.notes,
+            report_kind=r.report_kind,
             project_count=r.project_count,
         )
     )
+
+@router.get("/resume/context/{id}", dependencies=[Depends(require_consent)])
+def get_resume_context(id: int):
+    """
+    Return the resume template context for a report as JSON.
+    Used by the frontend live HTML preview.
+    """
+    rm = ReportManager()
+    report = rm.get_report(id)
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found.")
+    _require_report_kind(report, "resume")
+    return ReportExporter()._build_context(report, ConfigManager())
+
+
+@router.patch("/reports/{id}/projects/{project_name}", dependencies=[Depends(require_consent)])
+def patch_report_project(id: int, project_name: str, req: ReportProjectPatchRequest):
+    """
+    Update editable fields on a single ReportProject within a report.
+    Only non-None fields are applied.
+    """
+    from urllib.parse import unquote
+    project_name = unquote(project_name)
+
+    rm = ReportManager()
+    report = rm.get_report(id)
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found.")
+
+    target = next((p for p in report.projects if p.project_name == project_name), None)
+    if not target:
+        raise HTTPException(status_code=404, detail=f"Project '{project_name}' not found in report.")
+
+    if req.project_name is not None:
+        target.project_name = req.project_name
+    if req.stack_languages is not None:
+        target.languages = req.stack_languages
+    if req.stack_frameworks is not None:
+        target.frameworks = req.stack_frameworks
+    if req.bullets is not None:
+        target.bullets = req.bullets
+
+    rm.update_report(report)
+    return {"ok": True, "project_name": target.project_name}
 
 
 @router.delete("/reports/{id}", status_code=204, dependencies=[Depends(require_consent)])
@@ -443,6 +529,7 @@ def get_portfolio(id: int):
     report = report_manager.get_report(id)
     if not report:
         raise HTTPException(status_code=404, detail="Portfolio report not found.")
+    _require_report_kind(report, "portfolio")
     portfolio = _build_portfolio_report(report)
     return PortfolioResponse(ok=True, portfolio=portfolio, message="Portfolio retrieved.")
 
@@ -456,6 +543,7 @@ def export_portfolio(req: PortfolioExportRequest):
     report = rm.get_report(req.report_id)
     if not report:
         raise HTTPException(status_code=404, detail="Report not found.")
+    _require_report_kind(report, "portfolio")
     try:
         export_id, out_path = export_report_pdf(report, template="portfolio", output_name=req.output_name)
     except ValueError as e:
@@ -489,6 +577,7 @@ def edit_portfolio(id: int, payload: PortfolioUpdateRequest):
     report = report_manager.get_report(id)
     if not report:
         raise HTTPException(status_code=404, detail="Portfolio report not found.")
+    _require_report_kind(report, "portfolio")
     if payload.title:
         report.title = payload.title.strip()
     if payload.notes is not None:
@@ -512,6 +601,7 @@ def generate_report_portfolio_details(id: int, req: PortfolioDetailsGenerateRequ
     report = rm.get_report(id)
     if not report:
         raise HTTPException(status_code=404, detail="Report not found.")
+    _require_report_kind(report, "portfolio")
 
     pm = ProjectManager()
     updated = []
@@ -578,6 +668,7 @@ def export_resume(req: ResumeExportRequest):
     report = rm.get_report(req.report_id)
     if not report:
         raise HTTPException(status_code=404, detail="Report not found.")
+    _require_report_kind(report, "resume")
 
     try:
         export_id, out_path = export_report_pdf(report, template=req.template, output_name=req.output_name)
@@ -591,6 +682,23 @@ def export_resume(req: ResumeExportRequest):
         filename=out_path.name,
         download_url=f"/resume/exports/{export_id}/download"
     )
+
+@router.get("/resume/context/{id}", dependencies=[Depends(require_consent)])
+def get_resume_context(id: int):
+    """
+    Return the resume template context for a report as JSON.
+    Used by the frontend to render a live HTML preview.
+    """
+    rm = ReportManager()
+    report = rm.get_report(id)
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found.")
+    _require_report_kind(report, "resume")
+    context = ReportExporter()._build_context(report, ConfigManager())
+    # Convert date objects to strings so they're JSON-serialisable
+    for proj in context.get("projects", []):
+        pass  # dates are already formatted strings in _build_context
+    return context
 
 
 class ConfigSaveRequest(BaseModel):
@@ -627,3 +735,134 @@ def save_config(req: ConfigSaveRequest):
         if value is not None and str(value).strip():
             cm.set(key, str(value).strip())
     return {"ok": True, "config": cm.get_all()}
+
+@router.post("/projects/{id}/thumbnail")
+def upload_thumbnail(id: int, file: UploadFile = File(...)):
+    """
+    Upload a thumbnail image for a project.
+    Saves to thumbnails/ directory and updates project.thumbnail.
+    """
+    import shutil as _shutil
+ 
+    VALID_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".heic", ".ico", ".svg"}
+ 
+    pm = ProjectManager()
+    project = pm.get(id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found.")
+ 
+    suffix = Path(file.filename).suffix.lower()
+    if suffix not in VALID_EXTENSIONS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid image format '{suffix}'. Supported: {', '.join(sorted(VALID_EXTENSIONS))}"
+        )
+ 
+    thumbnails_dir = Path("thumbnails")
+    thumbnails_dir.mkdir(exist_ok=True)
+ 
+    filename = f"project_{id}_thumb{suffix}"
+    dest = thumbnails_dir / filename
+ 
+    with dest.open("wb") as f:
+        _shutil.copyfileobj(file.file, f)
+ 
+    project.thumbnail = str(dest)
+    pm.set(project)
+ 
+    return {"ok": True, "thumbnail": str(dest)}
+ 
+ 
+@router.get("/thumbnails/{filename}")
+def serve_thumbnail(filename: str):
+    """Serve a project thumbnail image by filename."""
+    path = Path("thumbnails") / filename
+    if not path.exists() or not path.is_file():
+        raise HTTPException(status_code=404, detail="Thumbnail not found.")
+    return FileResponse(str(path))
+
+@router.post("/config/set")
+def config_set(req: ConfigSetRequest):
+    """
+    Set a single config value by key. Accepts any JSON-serializable value,
+    so structured data like education/experience arrays round-trip correctly.
+    """
+    cm = ConfigManager()
+    cm.set(req.key, req.value)
+    return {"ok": True, "key": req.key}
+def _require_private_mode(report):
+    mode = getattr(report, "portfolio_mode", "private") or "private"
+    if mode != "private":
+        raise HTTPException(status_code=409, detail="Portfolio is in public mode and cannot be edited.")
+
+@router.patch("/portfolio/{id}/mode", response_model=PortfolioResponse, dependencies=[Depends(require_consent)])
+def update_portfolio_mode(id: int, payload: PortfolioModeUpdateRequest):
+    report_manager = ReportManager()
+    report = report_manager.get_report(id)
+    if not report:
+        raise HTTPException(status_code=404, detail="Portfolio report not found.")
+    _require_report_kind(report, "portfolio")
+
+    mode = (payload.mode or "").strip().lower()
+    if mode not in {"private", "public"}:
+        raise HTTPException(status_code=400, detail="mode must be 'private' or 'public'.")
+
+    report.portfolio_mode = mode
+    if mode == "private":
+        report.portfolio_published_at = None
+    report_manager.update_report(report)
+    return PortfolioResponse(ok=True, portfolio=_build_portfolio_report(report), message="Portfolio mode updated.")
+
+@router.patch("/portfolio/{id}/projects/{project_name}", response_model=PortfolioResponse, dependencies=[Depends(require_consent)])
+def update_portfolio_project_customizations(id: int, project_name: str, payload: PortfolioProjectUpdateRequest):
+    report_manager = ReportManager()
+    report = report_manager.get_report(id)
+    if not report:
+        raise HTTPException(status_code=404, detail="Portfolio report not found.")
+    _require_report_kind(report, "portfolio")
+
+    _require_private_mode(report)
+
+    target = next((p for p in report.projects if p.project_name == project_name), None)
+    if not target:
+        raise HTTPException(status_code=404, detail="Portfolio project not found.")
+
+    custom = dict(getattr(target, "portfolio_customizations", {}) or {})
+    if payload.custom_title is not None:
+        custom["custom_title"] = payload.custom_title.strip()
+    if payload.custom_overview is not None:
+        custom["custom_overview"] = payload.custom_overview.strip()
+    if payload.custom_achievements is not None:
+        custom["custom_achievements"] = [x.strip() for x in payload.custom_achievements if x and x.strip()]
+    if payload.is_hidden is not None:
+        custom["is_hidden"] = bool(payload.is_hidden)
+
+    target.portfolio_customizations = custom
+    report_manager.update_report(report)
+    return PortfolioResponse(ok=True, portfolio=_build_portfolio_report(report), message="Portfolio project updated.")
+
+@router.post("/portfolio/{id}/unpublish", response_model=PortfolioPublishResponse, dependencies=[Depends(require_consent)])
+def unpublish_portfolio(id: int):
+    report_manager = ReportManager()
+    report = report_manager.get_report(id)
+    if not report:
+        raise HTTPException(status_code=404, detail="Portfolio report not found.")
+    _require_report_kind(report, "portfolio")
+
+    report.portfolio_mode = "private"
+    report.portfolio_published_at = None
+    report_manager.update_report(report)
+    return PortfolioPublishResponse(ok=True, portfolio=_build_portfolio_report(report), message="Portfolio moved to private mode.")
+@router.post("/portfolio/{id}/publish", response_model=PortfolioPublishResponse, dependencies=[Depends(require_consent)])
+def publish_portfolio(id: int):
+    from datetime import datetime
+    report_manager = ReportManager()
+    report = report_manager.get_report(id)
+    if not report:
+        raise HTTPException(status_code=404, detail="Portfolio report not found.")
+    _require_report_kind(report, "portfolio")
+
+    report.portfolio_mode = "public"
+    report.portfolio_published_at = datetime.now()
+    report_manager.update_report(report)
+    return PortfolioPublishResponse(ok=True, portfolio=_build_portfolio_report(report), message="Portfolio published.")
