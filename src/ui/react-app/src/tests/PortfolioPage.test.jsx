@@ -30,7 +30,7 @@ describe("PortfolioPage web portfolio", () => {
 
     setPrivacyConsent.mockResolvedValue({ consent: true });
     listProjects.mockResolvedValue({ projects: [{ id: 1, name: "Proj A" }] });
-    listReports.mockResolvedValue({ reports: [{ id: 9, title: "My Report" }] });
+    listReports.mockResolvedValue({ reports: [{ id: 9, title: "My Report", report_kind: "portfolio" }] });
     getReport.mockResolvedValue({ report: { id: 9, title: "My Report" } });
     generatePortfolioDetailsForReport.mockResolvedValue({
       ok: true,

@@ -14,7 +14,7 @@ class ReportManager(StorageManager):
     def __init__(self, db_path: str = "reports.db") -> None:
         super().__init__(db_path)
         self.report_project_manager = ReportProjectManager()
-        self._ensure_portfolio_columns()
+        self._ensure_report_columns()
 
     def _retrieve_id(self, cursor: sqlite3.Cursor, row: Dict[str, Any]) -> None:
         """
@@ -33,6 +33,7 @@ class ReportManager(StorageManager):
             date_created TEXT NOT NULL,
             sort_by TEXT DEFAULT 'resume_score',
             notes TEXT,
+            report_kind TEXT DEFAULT 'resume',
             portfolio_mode TEXT DEFAULT 'private',
             portfolio_published_at TEXT
         )"""
@@ -47,7 +48,7 @@ class ReportManager(StorageManager):
 
     @property
     def columns(self) -> str:
-        return "id, title, date_created, sort_by, notes, portfolio_mode, portfolio_published_at"
+        return "id, title, date_created, sort_by, notes, report_kind, portfolio_mode, portfolio_published_at"
 
     def create_report(self, report: Report) -> int:
         """
@@ -93,6 +94,7 @@ class ReportManager(StorageManager):
             sort_by=report_dict["sort_by"],
             projects=projects,
             notes=report_dict.get("notes"),
+            report_kind=report_dict.get("report_kind", "resume") or "resume",
             portfolio_mode=report_dict.get("portfolio_mode", "private") or "private",
             portfolio_published_at=(
                 datetime.fromisoformat(report_dict["portfolio_published_at"])
@@ -213,6 +215,7 @@ class ReportManager(StorageManager):
                 sort_by=row_dict["sort_by"],
                 projects=projects,
                 notes=row_dict.get("notes"),
+                report_kind=row_dict.get("report_kind", "resume") or "resume",
                 portfolio_mode=row_dict.get("portfolio_mode", "private") or "private",
                 portfolio_published_at=(
                     datetime.fromisoformat(row_dict["portfolio_published_at"])
@@ -239,7 +242,8 @@ class ReportManager(StorageManager):
                     r.id,
                     r.title,
                     r.date_created,
-                    COUNT(rp.id) as project_count
+                    COUNT(rp.id) as project_count,
+                    COALESCE(r.report_kind, "resume") as report_kind
                 FROM reports r
                 LEFT JOIN report_projects rp ON r.id = rp.report_id
                 GROUP BY r.id
@@ -252,7 +256,8 @@ class ReportManager(StorageManager):
                     "id": row[0],
                     "title": row[1],
                     "date_created": row[2],
-                    "project_count": row[3]
+                    "project_count": row[3],
+                    "report_kind": row[4] or "resume"
                 })
 
         return summaries
@@ -283,11 +288,13 @@ class ReportManager(StorageManager):
         for report in self.list_reports():
             yield report
 
-    def _ensure_portfolio_columns(self) -> None:
+    def _ensure_report_columns(self) -> None:
         with self._get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("PRAGMA table_info(reports)")
             existing = {row[1] for row in cursor.fetchall()}
+            if "report_kind" not in existing:
+                cursor.execute("ALTER TABLE reports ADD COLUMN report_kind TEXT DEFAULT 'resume'")
             if "portfolio_mode" not in existing:
                 cursor.execute("ALTER TABLE reports ADD COLUMN portfolio_mode TEXT DEFAULT 'private'")
             if "portfolio_published_at" not in existing:

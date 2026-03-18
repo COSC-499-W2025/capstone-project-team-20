@@ -326,6 +326,7 @@ def test_get_portfolio_report_found(client, monkeypatch):
         sort_by="resume_score",
         projects=[project],
         notes=None,
+        report_kind="portfolio",
     )
 
     class FakeReportManager:
@@ -358,6 +359,7 @@ def test_export_portfolio_success(client, monkeypatch):
         sort_by="resume_score",
         projects=[],
         notes=None,
+        report_kind="portfolio",
     )
 
     class FakeReportManager:
@@ -397,6 +399,7 @@ def test_edit_portfolio_updates_report(client, monkeypatch):
         sort_by="resume_score",
         projects=[],
         notes=None,
+        report_kind="portfolio",
     )
 
     class FakeReportManager:
@@ -648,6 +651,46 @@ def test_delete_report_not_found(client, monkeypatch):
     assert res.status_code == 404
     assert "not found" in res.json()["detail"].lower()
 
+def test_get_portfolio_rejects_resume_report_kind(client, monkeypatch):
+    class FakeConsentManager:
+        def has_user_consented(self):
+            return True
+
+    class FakeReport:
+        report_kind = "resume"
+        projects = []
+
+    class FakeReportManager:
+        def get_report(self, id):
+            return FakeReport() if id == 1 else None
+
+    monkeypatch.setattr(routes, "ConsentManager", FakeConsentManager)
+    monkeypatch.setattr(routes, "ReportManager", FakeReportManager)
+
+    res = client.get("/portfolio/1")
+    assert res.status_code == 400
+    assert "only supports 'portfolio'" in res.json()["detail"]
+
+
+def test_get_resume_context_rejects_portfolio_report_kind(client, monkeypatch):
+    class FakeConsentManager:
+        def has_user_consented(self):
+            return True
+
+    class FakeReport:
+        report_kind = "portfolio"
+
+    class FakeReportManager:
+        def get_report(self, id):
+            return FakeReport() if id == 1 else None
+
+    monkeypatch.setattr(routes, "ConsentManager", FakeConsentManager)
+    monkeypatch.setattr(routes, "ReportManager", FakeReportManager)
+
+    res = client.get("/resume/context/1")
+    assert res.status_code == 400
+    assert "only supports 'resume'" in res.json()["detail"]
+
 def test_get_portfolio_requires_consent(client, monkeypatch):
     class FakeConsentManager:
         def has_user_consented(self):
@@ -702,6 +745,7 @@ def test_list_reports_success(client, monkeypatch):
             self.sort_by = "resume_score"
             self.notes = "notes"
             self.project_count = project_count
+            self.report_kind = "resume"
 
     class FakeReportManager:
         def list_reports(self):
@@ -737,6 +781,7 @@ def test_get_report_success(client, monkeypatch):
             self.sort_by = "resume_score"
             self.notes = "hello"
             self.project_count = 3
+            self.report_kind = "resume"
 
     class FakeReportManager:
         def get_report(self, id):
@@ -802,6 +847,7 @@ def test_create_report_success(client, monkeypatch):
             self.sort_by = "resume_score"
             self.notes = "notes"
             self.project_count = 2
+            self.report_kind = "resume"
 
     class FakeReportManager:
         def create_report(self, report):
@@ -985,7 +1031,7 @@ def test_update_portfolio_mode_success(client, monkeypatch):
     class FakeConsentManager:
         def has_user_consented(self): return True
 
-    report = Report(id=11, title="R", date_created=datetime(2025,1,1), sort_by="resume_score", projects=[], notes=None)
+    report = Report(id=11, title="R", date_created=datetime(2025,1,1), sort_by="resume_score", projects=[], notes=None, report_kind="portfolio")
 
     class FakeReportManager:
         def get_report(self, id): return report if id == 11 else None
@@ -1003,7 +1049,7 @@ def test_update_portfolio_project_rejects_when_public(client, monkeypatch):
         def has_user_consented(self): return True
 
     rp = ReportProject(project_name="ProjA", portfolio_details=PortfolioDetails())
-    report = Report(id=12, title="R", date_created=datetime(2025,1,1), sort_by="resume_score", projects=[rp], notes=None)
+    report = Report(id=12, title="R", date_created=datetime(2025,1,1), sort_by="resume_score", projects=[rp], notes=None, report_kind="portfolio")
     report.portfolio_mode = "public"
 
     class FakeReportManager:
@@ -1063,7 +1109,7 @@ def test_update_portfolio_project_customizations_success(client, monkeypatch):
         def has_user_consented(self): return True
 
     rp = ReportProject(project_name="ProjA", portfolio_details=PortfolioDetails(overview="Old"))
-    report = Report(id=13, title="R", date_created=datetime(2025,1,1), sort_by="resume_score", projects=[rp], notes=None)
+    report = Report(id=13, title="R", date_created=datetime(2025,1,1), sort_by="resume_score", projects=[rp], notes=None, report_kind="portfolio")
     report.portfolio_mode = "private"
 
     class FakeReportManager:
@@ -1108,7 +1154,7 @@ def test_publish_and_unpublish_portfolio(client, monkeypatch):
     class FakeConsentManager:
         def has_user_consented(self): return True
 
-    report = Report(id=14, title="R", date_created=datetime(2025,1,1), sort_by="resume_score", projects=[], notes=None)
+    report = Report(id=14, title="R", date_created=datetime(2025,1,1), sort_by="resume_score", projects=[], notes=None, report_kind="portfolio")
 
     class FakeReportManager:
         def get_report(self, id): return report if id == 14 else None

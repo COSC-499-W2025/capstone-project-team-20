@@ -34,10 +34,11 @@ function PortfolioPage() {
       const allProjects = projectData.projects ?? [];
       setProjects(allProjects);
       setSelectedProjectIds(allProjects.map((p) => p.id));
-      setReports(reportData.reports ?? []);
+      const filteredReports = (reportData.reports ?? []).filter((r) => (r.report_kind ?? "resume") === "portfolio");
+      setReports(filteredReports);
 
       if (selectedReport?.id) {
-        const refreshed = (reportData.reports ?? []).find((r) => r.id === selectedReport.id);
+        const refreshed = filteredReports.find((r) => r.id === selectedReport.id);
         setSelectedReport(refreshed ?? selectedReport);
       }
     } catch (e) {
@@ -68,6 +69,7 @@ function PortfolioPage() {
         title: reportTitle,
         sort_by: "resume_score",
         notes: reportNotes,
+        report_kind: "portfolio",
         project_ids: selectedProjectIds,
       });
 

@@ -48,7 +48,7 @@ describe("ResumePage", () => {
     vi.clearAllMocks();
 
     listProjects.mockResolvedValue({ projects: [{ id: 1, name: "Proj A" }] });
-    listReports.mockResolvedValue({ reports: [MOCK_REPORT] });
+    listReports.mockResolvedValue({ reports: [{ id: 9, title: "My Report", report_kind: "resume" }] });
     getReport.mockResolvedValue({ report: MOCK_REPORT });
     getResumeContext.mockResolvedValue(MOCK_CTX);
     exportResume.mockResolvedValue({ download_url: "/downloads/resume.pdf" });

@@ -4,10 +4,13 @@ from datetime import datetime
 
 SortBy = Literal["resume_score", "date_created", "last_modified"]
 
+ReportKind = Literal["resume", "portfolio"]
+
 class ReportCreateRequest(BaseModel):
     title: Optional[str] = None
     sort_by: SortBy = "resume_score"
     notes: Optional[str] = None
+    report_kind: ReportKind = "resume"
     project_ids: List[int] = Field(default_factory=list)
 
 class ReportSummary(BaseModel):
@@ -16,6 +19,7 @@ class ReportSummary(BaseModel):
     date_created: datetime
     sort_by: SortBy
     notes: Optional[str] = None
+    report_kind: ReportKind = "resume"
     project_count: int
 
 class ReportsListResponse(BaseModel):

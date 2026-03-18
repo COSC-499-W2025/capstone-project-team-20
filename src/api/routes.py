@@ -165,6 +165,15 @@ def _run_post_upload_analyses(analyzer: ProjectAnalyzer, projects):
     return pending_duplicates
 
 
+def _require_report_kind(report, expected_kind: str):
+    actual_kind = getattr(report, "report_kind", "resume") or "resume"
+    if actual_kind != expected_kind:
+        raise HTTPException(
+            status_code=400,
+            detail=f"This endpoint only supports '{expected_kind}' reports."
+        )
+
+
 @router.post("/projects/upload-path", dependencies=[Depends(require_consent)])
 def upload_project_from_path(req: UploadPathRequest):
     """
@@ -362,7 +371,7 @@ def create_report(req: ReportCreateRequest):
 
     pm = ProjectManager()
     rm = ReportManager()
-    report = Report(title=req.title or "", sort_by=req.sort_by, notes=req.notes, projects=[])
+    report = Report(title=req.title or "", sort_by=req.sort_by, notes=req.notes, report_kind=req.report_kind, projects=[])
 
     for pid in req.project_ids:
         p = pm.get(pid)
@@ -407,6 +416,7 @@ def create_report(req: ReportCreateRequest):
             date_created=saved.date_created,
             sort_by=saved.sort_by,
             notes=saved.notes,
+            report_kind=saved.report_kind,
             project_count=saved.project_count,
         )
     )
@@ -425,6 +435,7 @@ def list_reports():
                 date_created=r.date_created,
                 sort_by=r.sort_by,
                 notes=r.notes,
+                report_kind=r.report_kind,
                 project_count=r.project_count,
             )
             for r in reports
@@ -446,6 +457,7 @@ def get_report(id: int):
             date_created=r.date_created,
             sort_by=r.sort_by,
             notes=r.notes,
+            report_kind=r.report_kind,
             project_count=r.project_count,
         )
     )
@@ -460,6 +472,7 @@ def get_resume_context(id: int):
     report = rm.get_report(id)
     if not report:
         raise HTTPException(status_code=404, detail="Report not found.")
+    _require_report_kind(report, "resume")
     return ReportExporter()._build_context(report, ConfigManager())
 
 
@@ -516,6 +529,7 @@ def get_portfolio(id: int):
     report = report_manager.get_report(id)
     if not report:
         raise HTTPException(status_code=404, detail="Portfolio report not found.")
+    _require_report_kind(report, "portfolio")
     portfolio = _build_portfolio_report(report)
     return PortfolioResponse(ok=True, portfolio=portfolio, message="Portfolio retrieved.")
 
@@ -529,6 +543,7 @@ def export_portfolio(req: PortfolioExportRequest):
     report = rm.get_report(req.report_id)
     if not report:
         raise HTTPException(status_code=404, detail="Report not found.")
+    _require_report_kind(report, "portfolio")
     try:
         export_id, out_path = export_report_pdf(report, template="portfolio", output_name=req.output_name)
     except ValueError as e:
@@ -562,6 +577,7 @@ def edit_portfolio(id: int, payload: PortfolioUpdateRequest):
     report = report_manager.get_report(id)
     if not report:
         raise HTTPException(status_code=404, detail="Portfolio report not found.")
+    _require_report_kind(report, "portfolio")
     if payload.title:
         report.title = payload.title.strip()
     if payload.notes is not None:
@@ -585,6 +601,7 @@ def generate_report_portfolio_details(id: int, req: PortfolioDetailsGenerateRequ
     report = rm.get_report(id)
     if not report:
         raise HTTPException(status_code=404, detail="Report not found.")
+    _require_report_kind(report, "portfolio")
 
     pm = ProjectManager()
     updated = []
@@ -651,6 +668,7 @@ def export_resume(req: ResumeExportRequest):
     report = rm.get_report(req.report_id)
     if not report:
         raise HTTPException(status_code=404, detail="Report not found.")
+    _require_report_kind(report, "resume")
 
     try:
         export_id, out_path = export_report_pdf(report, template=req.template, output_name=req.output_name)
@@ -675,6 +693,7 @@ def get_resume_context(id: int):
     report = rm.get_report(id)
     if not report:
         raise HTTPException(status_code=404, detail="Report not found.")
+    _require_report_kind(report, "resume")
     context = ReportExporter()._build_context(report, ConfigManager())
     # Convert date objects to strings so they're JSON-serialisable
     for proj in context.get("projects", []):
@@ -737,6 +756,7 @@ def update_portfolio_mode(id: int, payload: PortfolioModeUpdateRequest):
     report = report_manager.get_report(id)
     if not report:
         raise HTTPException(status_code=404, detail="Portfolio report not found.")
+    _require_report_kind(report, "portfolio")
 
     mode = (payload.mode or "").strip().lower()
     if mode not in {"private", "public"}:
@@ -754,6 +774,7 @@ def update_portfolio_project_customizations(id: int, project_name: str, payload:
     report = report_manager.get_report(id)
     if not report:
         raise HTTPException(status_code=404, detail="Portfolio report not found.")
+    _require_report_kind(report, "portfolio")
 
     _require_private_mode(report)
 
@@ -781,6 +802,7 @@ def unpublish_portfolio(id: int):
     report = report_manager.get_report(id)
     if not report:
         raise HTTPException(status_code=404, detail="Portfolio report not found.")
+    _require_report_kind(report, "portfolio")
 
     report.portfolio_mode = "private"
     report.portfolio_published_at = None
@@ -793,6 +815,7 @@ def publish_portfolio(id: int):
     report = report_manager.get_report(id)
     if not report:
         raise HTTPException(status_code=404, detail="Portfolio report not found.")
+    _require_report_kind(report, "portfolio")
 
     report.portfolio_mode = "public"
     report.portfolio_published_at = datetime.now()

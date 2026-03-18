@@ -125,11 +125,11 @@ export function setPrivacyConsent(consent) {
 
 // Reports
 
-export function createReport({ title = null, sort_by = "resume_score", notes = null, project_ids = [] }) {
+export function createReport({ title = null, sort_by = "resume_score", notes = null, report_kind = "resume", project_ids = [] }) {
   return request("/reports", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ title, sort_by, notes, project_ids }),
+    body: JSON.stringify({ title, sort_by, notes, report_kind, project_ids }),
   });
 }
 
