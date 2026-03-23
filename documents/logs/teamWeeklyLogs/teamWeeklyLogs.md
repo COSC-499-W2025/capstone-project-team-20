@@ -709,5 +709,39 @@ Continuuing tasks include implementing CRUD operations into both resume and port
 ![Term 2 Week 10 BACK END Test Report](teamWeeklyLogsImages/w10BEtest.png)
 ![Term 2 Week 10 BACK END Test Report](teamWeeklyLogsImages/w10FEtest.png)
 
+### Term 2 Week 11 (March 16th - March 22nd)
 
+**Work Performed:**
+- Branden Kennedy (42474551): This week, I was focused mainly on peer testing. We received encouraging feedback on our workflow and the look of our app itself. It was easy to understand/learn quickly as a user. During the peer review, I also had the opportunity to be a tester at 3 stations. I am currently working on the selection of GitHub usernames, and will be focusing on finishing that and preparing for our presentation on wednesday. I also reviewed [PR 494](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/494), [PR 493](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/493), [PR 492](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/492), and [PR 490](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/490).
+
+- Necmi Kaan Sapoglu (17014796): This week I continued improving the badges frontend UX and also worked on expanding report functionality across the full stack. I enhanced the badges page by adding a completion heatmap, interactive badge detail modals, improved filtering logic, and reducing UI clutter with an “All Badges” toggle ([PR #493](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/493)). In addition, I introduced a `report_kind` property across the backend, database, API, and frontend to distinguish between resume and portfolio reports, including updates to schemas, queries, API routes, frontend integration, and tests ([PR #494](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/494)). I also reviewed [PR #490](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/490), [PR #485](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/485), and [PR #484](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/484). During peer reviews, I hosted 3 testing stations where users completed prepared tasks and submitted feedback through a Google form. I also reviewed Group #13’s presentation, though they encountered technical issues with their resume and portfolio generation features not functioning properly.
+
+- Lex Nash (84668540):
+
+- Dylan Alexander (16394025):This week, I implemented live resume display and editing. Resumes are now recreated for the user in HTML, and are editable in place before the export to PDF is finalized. All changes are persisted to the database, so the user can come back to it. Additionally, I implemented a display feature in the Projects page, so that all stored project info is now displayed to the user. Previously, only the JSON representation of a project was being displayed. I tidied up the display to make it feel more intentional. [PR #492](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/492)[PR #490](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/490) I also reviewed the following PRs.[PR #494](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/494), [PR #493](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/493), [PR #485](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/485), [PR #484](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/484). During peer review, I hosted the station twice, and got to test two other group's projects.
+
+- Sven Annist (42486720):This week, we were primarily centered around peer testing. From our stations, we received strong feedback on the frontend design and the live resume/portfolio editing workflow, and multiple testers specifically called out the badges plus the heatmap/chronology views as useful and easy to understand. A few improvement notes also came up during testing, including adding clearer “generation/export succeeded” feedback so users are not left guessing, tightening up how portfolio generation outputs are presented (one tester reported seeing a raw JSON-style response), and reviewing a privacy-consent edge case where revoking consent appeared to revert after a refresh. I also reviewed [PR #492](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/492), and my holdover PR from last week, [PR #485](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/485) has been merged.
+
+**Features included in the project plan for this milestone are:**
+ Everything up to and including Issue [COSC-499-W2025/capstone-project-team-20#491](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/491)
+
+**Continuing tasks from last week and plan for the next week:**
+ Continuing tasks include incorporating peer-testing feedback (improving portfolio/resume generation clarity, output presentation, and resolving any reported consent-state quirks). The plans for next week are preparing for our Milestone 3 presentation and the subsequent class ranking, while finishing any remaining polish items identified during testing.
+
+**Burnup chart:**
+![Term 2 Week 11 Burnup chart](teamWeeklyLogsImages/w11_burnup.png)
+
+
+**Table View of Completed Tasks on Project Board:**
+![Term 2 Week 11 completed](teamWeeklyLogsImages/w11_completed.png)
+
+
+**Table View of In-Progress Tasks on Project Board:**
+![Term 2 Week 11 In-progress Tasks](teamWeeklyLogsImages/w11_In_Progress.png)
+
+
+**Test Report:**
+![Term 2 Week 11 BACK END Test Report](teamWeeklyLogsImages/w11_tests_backend.png)
+![Term 2 Week 11 FRONT END Test Report](teamWeeklyLogsImages/w11_test_frontend.png)
+ 
 
