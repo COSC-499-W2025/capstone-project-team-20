@@ -709,5 +709,34 @@ Continuuing tasks include implementing CRUD operations into both resume and port
 ![Term 2 Week 10 BACK END Test Report](teamWeeklyLogsImages/w10BEtest.png)
 ![Term 2 Week 10 BACK END Test Report](teamWeeklyLogsImages/w10FEtest.png)
 
+### Term 2 Week 11 (March 16th - March 22nd)
 
+**Work Performed:**
+- Branden Kennedy (42474551):
+
+- Necmi Kaan Sapoglu (17014796): This week I continued improving the badges frontend UX and also worked on expanding report functionality across the full stack. I enhanced the badges page by adding a completion heatmap, interactive badge detail modals, improved filtering logic, and reducing UI clutter with an “All Badges” toggle ([PR #493](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/493)). In addition, I introduced a `report_kind` property across the backend, database, API, and frontend to distinguish between resume and portfolio reports, including updates to schemas, queries, API routes, frontend integration, and tests ([PR #494](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/494)). I also reviewed [PR #490](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/490), [PR #485](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/485), and [PR #484](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/484). During peer reviews, I hosted 3 testing stations where users completed prepared tasks and submitted feedback through a Google form. I also reviewed Group #13’s presentation, though they encountered technical issues with their resume and portfolio generation features not functioning properly.
+
+- Lex Nash (84668540):
+
+- Dylan Alexander (16394025):
+
+- Sven Annist (42486720):
+
+**Features included in the project plan for this milestone are:**
+ 
+
+**Continuing tasks from last week and plan for the next week:**
+ 
+
+**Burnup chart:**
+ 
+
+**Table View of Completed Tasks on Project Board:**
+ 
+
+**Table View of In-Progress Tasks on Project Board:**
+ 
+
+**Test Report:**
+ 
 
