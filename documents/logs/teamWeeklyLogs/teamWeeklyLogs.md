@@ -729,14 +729,19 @@ Continuuing tasks include implementing CRUD operations into both resume and port
  
 
 **Burnup chart:**
- 
+![Term 2 Week 10 Burnup chart](teamWeeklyLogsImages/w11_burnup.png)
+
 
 **Table View of Completed Tasks on Project Board:**
- 
+![Term 2 Week 10 completed](teamWeeklyLogsImages/w11_completed.png)
+
 
 **Table View of In-Progress Tasks on Project Board:**
- 
+![Term 2 Week 10 In-progress Tasks](teamWeeklyLogsImages/w11_In_Progress.png)
+
 
 **Test Report:**
+![Term 2 Week 10 BACK END Test Report](teamWeeklyLogsImages/w11_test_backend.png)
+![Term 2 Week 11 FRONT END Test Report](teamWeeklyLogsImages/w11_test_frontend.png)
  
 
