@@ -2,6 +2,7 @@
 
 ### **Table of Contents:**
 
+- [Term 2 Week 11: March 16th - March 22nd](#term-2-week-11-march-16th---march-22nd)
 - [Term 2 Week 10: March 9th - March 15th](#term-2-week-10-march-9th---march-15th)
 - [Term 2 Week 9: March 2nd - March 8th](#term-2-week-9-march-2nd---march-8th)
 - [Term 2 Week 8: February 23rd - March 1st](#term-2-week-8-february-23rd---march-1st)
@@ -652,6 +653,60 @@ This week, I spent an extensive amount of time hunting for inefficiencies in our
 **Plan/Goals for Upcoming Week:**
 
 The plan this week is to continue working on our frontend to get it tidied up in time for Peer Testing, and ultimately Milestone 3.
+
+**Any issues or Blockers That I Encountered This Week and How I Addressed/Plan to Address Them:**
+
+N/A
+
+
+
+
+### Term 2 Week 11: March 16th - March 22nd
+
+
+**Coding Tasks:**
+
+This week, I implemented live resume display and editing. Resumes are now recreated for the user in HTML, and are editable in place before the export to PDF is finalized. All changes are persisted to the database, so the user can come back to it. 
+
+Additionally, I implemented a display feature in the Projects page, so that all stored project info is now displayed to the user. Previously, only the JSON representation of a project was being displayed. I tidied up the display to make it feel more intentional.
+
+[Feature/project display](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/492)
+
+[Feature/live resume display and editing](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/490)
+
+
+
+**Testing or Debugging Tasks:**
+
+I wrote extensive frontend component tests for the following PRs.
+
+[Feature/project display](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/492)
+
+[Feature/live resume display and editing](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/490)
+
+
+**Reviewing or Collaboration Tasks:**
+
+I manually tested and reviewed the following PRs this week. 
+
+[Add report_kind to reports (resume|portfolio)](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/494)
+
+[Add badge heatmap UI and tests](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/493)
+
+[feat: Implemented private/public edit mode in frontend](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/485)
+
+[Feature/portfolio private public api](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/484)
+
+
+**Brief Description of Last Week Connecting This Week:**
+
+Last week, I spent an extensive amount of time hunting for inefficiencies in our analysis methods. I also added some interactive prompts in our frontend (prompting for consent, prompting to confirm cancellation of analysis), and designed and extended the "merge contributors" modal that Branden implemented.
+
+This week, I implemented live resume display and editing. Resumes are now recreated in HTML, and are editable in place before export to PDF. Additionally, I implemented a display feature in the Projects page, so that all stored project info is now displayed to the user.
+
+**Plan/Goals for Upcoming Week:**
+
+The plan for this week is to add the finishing touches to our project. I'll need to adjust the LaTeX template of our Resume to have an awards feature, and add a section in the frontend to add experience, education, and awards.
 
 **Any issues or Blockers That I Encountered This Week and How I Addressed/Plan to Address Them:**
 
