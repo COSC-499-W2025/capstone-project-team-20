@@ -720,28 +720,28 @@ Continuuing tasks include implementing CRUD operations into both resume and port
 
 - Dylan Alexander (16394025):
 
-- Sven Annist (42486720):
+- Sven Annist (42486720):This week, we were primarily centered around peer testing. From our stations, we received strong feedback on the frontend design and the live resume/portfolio editing workflow, and multiple testers specifically called out the badges plus the heatmap/chronology views as useful and easy to understand. A few improvement notes also came up during testing, including adding clearer “generation/export succeeded” feedback so users are not left guessing, tightening up how portfolio generation outputs are presented (one tester reported seeing a raw JSON-style response), and reviewing a privacy-consent edge case where revoking consent appeared to revert after a refresh. I also reviewed [PR #492](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/492), and my holdover PR from last week, [PR #485](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/485) has been merged.
 
 **Features included in the project plan for this milestone are:**
- 
+ Everything up to and including Issue [COSC-499-W2025/capstone-project-team-20#491](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/491)
 
 **Continuing tasks from last week and plan for the next week:**
- 
+ Continuing tasks include incorporating peer-testing feedback (improving portfolio/resume generation clarity, output presentation, and resolving any reported consent-state quirks). The plans for next week are preparing for our Milestone 3 presentation and the subsequent class ranking, while finishing any remaining polish items identified during testing.
 
 **Burnup chart:**
-![Term 2 Week 10 Burnup chart](teamWeeklyLogsImages/w11_burnup.png)
+![Term 2 Week 11 Burnup chart](teamWeeklyLogsImages/w11_burnup.png)
 
 
 **Table View of Completed Tasks on Project Board:**
-![Term 2 Week 10 completed](teamWeeklyLogsImages/w11_completed.png)
+![Term 2 Week 11 completed](teamWeeklyLogsImages/w11_completed.png)
 
 
 **Table View of In-Progress Tasks on Project Board:**
-![Term 2 Week 10 In-progress Tasks](teamWeeklyLogsImages/w11_In_Progress.png)
+![Term 2 Week 11 In-progress Tasks](teamWeeklyLogsImages/w11_In_Progress.png)
 
 
 **Test Report:**
-![Term 2 Week 10 BACK END Test Report](teamWeeklyLogsImages/w11_test_backend.png)
+![Term 2 Week 11 BACK END Test Report](teamWeeklyLogsImages/w11_tests_backend.png)
 ![Term 2 Week 11 FRONT END Test Report](teamWeeklyLogsImages/w11_test_frontend.png)
  
 
