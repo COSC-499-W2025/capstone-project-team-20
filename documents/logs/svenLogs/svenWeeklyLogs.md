@@ -472,3 +472,34 @@ My goal this week was to complete and stabilize portfolio private/public control
 
 ### Looking Ahead:
 As peer testing is close ahead I want to make some final touch ups on our portfolios with our styling changes to be prepared to showcase it to other students.
+
+# Term 2 Week 11
+
+### Tasks worked on:
+- **Peer Testing (Participant + Host)**: Participated in evaluations for two other teams’ systems and ran two peer testing stations for our application, observing usability, performance, and end-to-end flow.
+- **Feedback Collection + Synthesis**: Collected and reviewed questionnaire responses (8 total) and consolidated qualitative feedback into concrete follow-ups for triage (UX clarity, portfolio output formatting, and privacy-consent behavior).
+- **Comparative Notes / Benchmarking**: Recorded observations from other teams to calibrate expectations for performance and UX trade-offs (e.g., design completeness vs. content depth, and local-model privacy vs. generation latency).
+
+### Weekly Goals Recap:
+My focus this week was supporting peer testing and producing actionable feedback for final iteration work, rather than implementing new features.
+
+### PRs I reviewed this week:
+- **PR #492**: Feature/project display
+
+### PRs I opened this week:
+- **PR #485** (from last week): remained as a holdover but was merged this week.
+
+### Peer Testing Highlights (What we learned):
+- **What users liked most**: the frontend design polish, the live resume/portfolio editing experience, and the analysis visualizations (badges + heatmap + chronology).
+- **Issues/requests to follow up**:
+  - Provide clearer UI feedback during portfolio generation/export so users know something happened.
+  - Ensure portfolio generation does not expose raw JSON output in the UI (better formatting / presentation).
+  - Clarify “current batch” wording in the portfolio projects section.
+  - Investigate a privacy-consent caching/state issue (revoked consent appeared restored after a refresh and allowed export).
+  - Consider edge cases in ingestion (zip files containing multiple projects) and small UX feature requests (edit project dates in resume).
+
+### Problems Encountered:
+- Station logistics were briefly impacted by my laptop malfunctioning; however, the application itself behaved reliably and did not exhibit unexpected faults during peer testing.
+
+### Looking Ahead:
+Next week, I plan to help prioritize and address the peer-testing follow-ups (especially portfolio output presentation, generation/export feedback, and the privacy-consent caching behavior), while keeping changes scoped so fixes can be reviewed and merged safely before final deliverables.
