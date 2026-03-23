@@ -378,3 +378,29 @@ Next week I plan to continue improving the frontend experience and help prepare 
 
 **Any Issues or Blockers That I Encountered This Week and How I Addressed/Plan to Address Them:**  
 One challenge this week was balancing how much badge information should be visible on the page without overwhelming the user interface. I addressed this by moving badge details into clickable elements and using the heatmap visualization to communicate progress more effectively without requiring large amounts of text.
+
+### Term 2 Week 11: March 9th – March 15th 
+
+## Weekly Goals
+
+This week I focused on improving the badges frontend to make it more interactive and easier to understand, while also introducing a report typing system across the full stack. The goal was to reduce UI clutter, improve visualization of badge progress, and better organize reports.
+
+**Coding Tasks:**  
+I improved the badges UX [PR #493] (https://github.com/COSC-499-W2025/capstone-project-team-20/pull/493) by adding a completion heatmap with intensity tiers, clickable badge tiles that open a detail modal, and filtering to only show started badges. I also added an “All Badges” toggle to reduce clutter and updated styling and frontend tests.  
+Additionally, I introduced a `report_kind` property [PR #494] (https://github.com/COSC-499-W2025/capstone-project-team-20/pull/494) across the backend, database, API, and frontend to distinguish between resume and portfolio reports. This included schema updates, API changes, DB handling, frontend integration, and test updates.
+
+**Testing Tasks:**  
+I manually tested the badge heatmap, modal interactions, and filtering logic across different states. I also tested the full `report_kind` flow end-to-end to ensure correct creation, retrieval, and default behavior. I verified no regressions in existing features.
+
+**Reviewing or Collaboration Tasks:**  
+I reviewed [PR #490] (https://github.com/COSC-499-W2025/capstone-project-team-20/pull/490), [PR #485] (https://github.com/COSC-499-W2025/capstone-project-team-20/pull/485), and [PR #484] (https://github.com/COSC-499-W2025/capstone-project-team-20/pull/484), providing feedback on implementation and structure. I also participated in peer reviews by hosting 3 testing stations where users followed prepared tasks and completed a feedback form. I reviewed Group #13’s presentation; however, they encountered technical issues where their resume and portfolio generation features did not function.
+
+**Brief Description of Last Week Connecting This Week:**  
+Last week I focused on improving the badges layout and readability. This week builds on that by introducing better progress visualization, interactivity, and reducing clutter, while also expanding report functionality.
+
+**Plan/Goals for Upcoming Week:**  
+Next week I plan to continue refining the frontend experience and help prepare for milestone 3 by polishing UI consistency and ensuring all features are stable and clearly presented.
+
+**Any Issues or Blockers That I Encountered This Week and How I Addressed/Plan to Address Them:**  
+A key challenge was balancing information visibility and UI clarity in the badges page. I addressed this by using interactive elements (modals, toggles) and visual indicators (heatmap) to reduce clutter while maintaining usability.
+
