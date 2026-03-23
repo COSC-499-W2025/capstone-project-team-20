@@ -28,23 +28,28 @@ class PortfolioGenerator:
 
         days = self._compute_days()
         duration_str = self._format_duration(days)
-        langs = ", ".join(self.language_list) if self.language_list else "multiple languages"
+        langs = self._format_languages()
 
         team_count = self._resolve_team_count()
         contributor_roles = self._build_contributor_roles()
         role = self._select_project_role(team_count, contributor_roles)
 
-        if team_count > 1:
-            collaboration_line = f"Built collaboratively by a team of {team_count} contributors."
-        else:
-            collaboration_line = "Developed independently."
+        collaboration_line = (
+            f"Built collaboratively by a team of {team_count} developers, following shared Git-based workflows and iterative delivery."
+            if team_count > 1
+            else "Developed independently with end-to-end ownership across design, implementation, and maintenance."
+        )
+
+        success_line = self._build_success_line()
+        evidence_line = self._build_evidence_line(code_files, test_files, doc_files, team_count)
 
         overview = (
-            f"This project was implemented using {langs}. "
-            f"It includes {total_files} files with {code_files} source modules, "
-            f"{test_files} test files, and {doc_files} documentation files. "
-            f"{collaboration_line}"
-        )
+            f"This software project was built using a tech stack of {langs}"
+            f"{self._duration_fragment(duration_str)}. "
+            f"It follows a modular and maintainable architecture and contains over {total_files} files, "
+            f"including {code_files} source modules, {test_files} automated tests, and {doc_files} documentation files. "
+            f"{collaboration_line} {success_line} {evidence_line}"
+        ).strip()
 
         key_points = self._build_key_contributions(
             langs=langs,
@@ -76,23 +81,116 @@ class PortfolioGenerator:
     ) -> List[str]:
         points: List[str] = []
 
-        points.append(f"Implemented project functionality using {langs} across {code_files} source files.")
+        points.append(
+            f"Contributed to core features using {langs}, contributing to a codebase of {code_files}+ well-structured source files."
+        )
 
         if test_files > 0 and doc_files > 0:
-            points.append(f"Maintained {test_files} test files and {doc_files} documentation files.")
+            points.append(
+                f"Produced {doc_files}+ documentation files and implemented {test_files} automated tests, helping maintainability and onboarding."
+            )
         elif test_files > 0:
-            points.append(f"Maintained {test_files} test files to support quality checks.")
+            points.append(
+                f"Implemented {test_files} automated tests to improve reliability and reduce regression risk."
+            )
         elif doc_files > 0:
-            points.append(f"Maintained {doc_files} documentation files for maintainability.")
+            points.append(
+                f"Produced {doc_files}+ documentation files to strengthen maintainability and knowledge transfer."
+            )
         else:
-            points.append("Maintained project structure and code organization.")
+            points.append("Maintained project structure and implementation quality through modular organization.")
 
-        if team_count > 1:
-            points.append("Collaborated with team members through shared repository workflows.")
-        else:
-            points.append("Handled implementation and maintenance responsibilities independently.")
+        points.append(self._build_impact_bullet(team_count))
 
         return points[:3]
+
+    def _build_impact_bullet(self, team_count: int) -> str:
+        share = self._safe_float(getattr(self.project, "individual_contributions", {}).get("contribution_share_percent", 0.0))
+        commits = self._estimate_commits()
+        score = self._safe_float(getattr(self.project, "resume_score", 0.0))
+
+        if team_count > 1 and share > 0:
+            if score > 0:
+                return (
+                    f"Demonstrated measurable impact through {share:.1f}% contribution share, "
+                    f"{commits} commits delivered, and overall project evaluation score of {score:.1f}."
+                )
+            return (
+                f"Demonstrated measurable impact through {share:.1f}% contribution share "
+                f"and {commits} commits delivered."
+            )
+        if score > 0:
+            return (
+                f"Demonstrated measurable impact through overall project evaluation score of {score:.1f} "
+                f"and sustained ownership of implementation outcomes."
+            )
+        return "Demonstrated measurable impact through sustained ownership of implementation outcomes."
+
+    def _estimate_commits(self) -> int:
+        contribs = getattr(self.project, "author_contributions", []) or []
+        total = 0
+        for c in contribs:
+            try:
+                total += int(c.get("total_commits", 0) or 0)
+            except Exception:
+                continue
+        return total
+
+    def _build_success_line(self) -> str:
+        share = self._safe_float(getattr(self.project, "individual_contributions", {}).get("contribution_share_percent", 0.0))
+        commits = self._estimate_commits()
+        score = self._safe_float(getattr(self.project, "resume_score", 0.0))
+
+        if share > 0 and commits > 0 and score > 0:
+            return (
+                f"Evidence of success includes {share:.1f}% contribution share, "
+                f"{commits} commits delivered, and overall project evaluation score of {score:.1f}."
+            )
+        if commits > 0 and score > 0:
+            return f"Evidence of success includes {commits} commits delivered and overall project evaluation score of {score:.1f}."
+        if score > 0:
+            return f"Evidence of success includes an overall project evaluation score of {score:.1f}."
+        return "Evidence of success includes sustained implementation ownership and delivery consistency."
+
+    def _build_evidence_line(self, code_files: int, test_files: int, doc_files: int, team_count: int) -> str:
+        testing_ratio = 0.0 if code_files <= 0 else (test_files / max(code_files, 1)) * 100.0
+        doc_score = self._safe_float(getattr(self.project, "documentation_habits_score", 0.0))
+        collab_share = self._safe_float(getattr(self.project, "individual_contributions", {}).get("contribution_share_percent", 0.0))
+
+        parts = [f"Skill evidence: Testing: {testing_ratio:.0f}% test file ratio"]
+        if doc_files > 0 and doc_score > 0:
+            parts.append(f"Documentation: documentation score {doc_score:.1f}")
+        if team_count > 1 and collab_share > 0:
+            parts.append(f"Collaboration: {collab_share:.1f}% contribution share")
+
+        return "; ".join(parts) + "."
+
+    def _format_languages(self) -> str:
+        if self.language_share:
+            ordered = sorted(
+                self.language_share.items(),
+                key=lambda item: self._safe_float(item[1]),
+                reverse=True,
+            )
+            langs = [name for name, _ in ordered if name]
+            if langs:
+                return ", ".join(langs[:4])
+
+        if self.language_list:
+            return ", ".join(self.language_list[:4])
+
+        return "multiple languages"
+
+    def _duration_fragment(self, duration_str: str) -> str:
+        if duration_str == "N/A":
+            return ""
+        return f" over {duration_str}"
+
+    def _safe_float(self, v: Any) -> float:
+        try:
+            return float(v or 0.0)
+        except Exception:
+            return 0.0
 
     def _resolve_team_count(self) -> int:
         authors = list(getattr(self.project, "authors", []) or [])
@@ -104,7 +202,8 @@ class PortfolioGenerator:
             return explicit_author_count
 
         status = getattr(self.project, "collaboration_status", "individual")
-        return 2 if status == "collaborative" else 1
+        status_lower = f"{status}".lower()
+        return 2 if status_lower == "collaborative" else 1
 
     def _get_category_counts(self) -> tuple[int, int, int, int]:
         counts = self.categorized_files or {}

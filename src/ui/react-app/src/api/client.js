@@ -67,7 +67,7 @@ export async function deleteProject(id) {
     throw new Error(text || `HTTP ${res.status}`);
   }
 }
- 
+
 
 export function resolveContributors(project_id, resolutions) {
   return request("/projects/resolve-contributors", {
@@ -218,6 +218,30 @@ export function saveConfig({ name, email, phone, github, linkedin }) {
   });
 }
 
+export function updatePortfolioMode(report_id, mode) {
+  return request(`/portfolio/${report_id}/mode`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ mode }),
+  });
+}
+
+export function updatePortfolioProject(report_id, project_name, payload) {
+  return request(`/portfolio/${report_id}/projects/${encodeURIComponent(project_name)}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+}
+
+export function publishPortfolio(report_id) {
+  return request(`/portfolio/${report_id}/publish`, { method: "POST" });
+}
+
+export function unpublishPortfolio(report_id) {
+  return request(`/portfolio/${report_id}/unpublish`, { method: "POST" });
+}
+
 export function uploadThumbnail(project_id, file) {
   const form = new FormData();
   form.append("file", file);
@@ -226,7 +250,7 @@ export function uploadThumbnail(project_id, file) {
     body: form,
   });
 }
- 
+
 export function thumbnailUrl(thumbnail_path) {
   if (!thumbnail_path) return null;
   const filename = thumbnail_path.split(/[\\/]/).pop();
