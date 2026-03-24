@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import ResumePage from "../pages/ResumePage";
@@ -23,6 +23,7 @@ import {
   deleteReport,
   exportResume,
   getResumeContext,
+  configSet,
 } from "../api/client";
 
 const MOCK_REPORT = { id: 9, title: "My Report", notes: "SE roles" };
@@ -37,6 +38,7 @@ const MOCK_CTX = {
   linkedin_display: "",
   education: [],
   experience: [],
+  awards: [],
   projects: [
     { name: "Cool Project", stack: "Python", dates: "Jan 2024", bullets: ["Did a thing"] },
   ],
@@ -75,6 +77,104 @@ describe("ResumePage", () => {
     await waitFor(() => {
       expect(getResumeContext).toHaveBeenCalledWith(9);
       expect(screen.getByText("Dale Smith")).toBeInTheDocument();
+    });
+  });
+
+  it("renders empty education, experience, and awards sections", async () => {
+    const user = userEvent.setup();
+    render(<ResumePage />);
+
+    await waitFor(() => screen.getByText("My Report"));
+    await user.click(screen.getByRole("button", { name: /my report/i }));
+
+    await waitFor(() => screen.getByText("Dale Smith"));
+
+    expect(screen.getByText("Education")).toBeInTheDocument();
+    expect(screen.getByText("Experience")).toBeInTheDocument();
+    expect(screen.getByText("Honours & Awards")).toBeInTheDocument();
+
+    expect(screen.getAllByText(/no entries yet/i).length).toBeGreaterThan(0);
+  });
+
+  it("allows adding an education entry", async () => {
+    const user = userEvent.setup();
+    render(<ResumePage />);
+
+    await waitFor(() => screen.getByText("My Report"));
+    await user.click(screen.getByRole("button", { name: /my report/i }));
+    await waitFor(() => screen.getByText("Dale Smith"));
+
+    await user.click(screen.getByRole("button", { name: /\+ add education/i }));
+
+    // Grab inputs within Education section
+    const educationSection = screen.getByText("Education").closest("section");
+    const inputs = within(educationSection).getAllByRole("textbox");
+
+    await user.type(inputs[0], "UBC"); // first field = school
+
+    await user.click(screen.getByRole("button", { name: /save/i }));
+
+    await waitFor(() => {
+      expect(configSet).toHaveBeenCalledWith(
+        "education",
+        expect.arrayContaining([
+          expect.objectContaining({ school: "UBC" }),
+        ])
+      );
+    });
+  });
+
+  it("allows adding an experience entry", async () => {
+    const user = userEvent.setup();
+    render(<ResumePage />);
+
+    await waitFor(() => screen.getByText("My Report"));
+    await user.click(screen.getByRole("button", { name: /my report/i }));
+    await waitFor(() => screen.getByText("Dale Smith"));
+
+    await user.click(screen.getByRole("button", { name: /\+ add experience/i }));
+
+    const experienceSection = screen.getByText("Experience").closest("section");
+    const inputs = within(experienceSection).getAllByRole("textbox");
+
+    await user.type(inputs[0], "Software Intern"); // first field = title
+
+    await user.click(screen.getByRole("button", { name: /save/i }));
+
+    await waitFor(() => {
+      expect(configSet).toHaveBeenCalledWith(
+        "experience",
+        expect.arrayContaining([
+          expect.objectContaining({ title: "Software Intern" }),
+        ])
+      );
+    });
+  });
+
+  it("allows adding an award entry", async () => {
+    const user = userEvent.setup();
+    render(<ResumePage />);
+
+    await waitFor(() => screen.getByText("My Report"));
+    await user.click(screen.getByRole("button", { name: /my report/i }));
+    await waitFor(() => screen.getByText("Dale Smith"));
+
+    await user.click(screen.getByRole("button", { name: /\+ add award/i }));
+
+    const awardsSection = screen.getByText("Honours & Awards").closest("section");
+    const inputs = within(awardsSection).getAllByRole("textbox");
+
+    await user.type(inputs[0], "Dean's List"); // first field = title
+
+    await user.click(screen.getByRole("button", { name: /save/i }));
+
+    await waitFor(() => {
+      expect(configSet).toHaveBeenCalledWith(
+        "awards",
+        expect.arrayContaining([
+          expect.objectContaining({ title: "Dean's List" }),
+        ])
+      );
     });
   });
 

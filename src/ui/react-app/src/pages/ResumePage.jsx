@@ -221,6 +221,7 @@ function BulletEditor({ bullets, onSave }) {
 // ---------------------------------------------------------------------------
 // Education entry editor
 // Fields: school, location, degree, dates
+// Always rendered — shows empty hint + add button when no entries exist.
 // ---------------------------------------------------------------------------
 function EducationEditor({ education, onSave }) {
   const [editing, setEditing] = useState(false);
@@ -250,19 +251,26 @@ function EducationEditor({ education, onSave }) {
   if (!editing) {
     return (
       <>
-        {education.map((edu, i) => (
-          <div key={i} style={styles.subheading}>
-            <div style={styles.subheadingRow}>
-              <strong>{edu.school}</strong>
-              <span>{edu.location}</span>
+        {education.length === 0 ? (
+          <span style={styles.emptyHint}>No entries yet.</span>
+        ) : (
+          education.map((edu, i) => (
+            <div key={i} style={styles.subheading}>
+              <div style={styles.subheadingRow}>
+                <strong>{edu.school}</strong>
+                <span>{edu.location}</span>
+              </div>
+              <div style={styles.subheadingRow}>
+                <em style={styles.small}>{edu.degree}</em>
+                <em style={styles.small}>{edu.dates}</em>
+              </div>
             </div>
-            <div style={styles.subheadingRow}>
-              <em style={styles.small}>{edu.degree}</em>
-              <em style={styles.small}>{edu.dates}</em>
-            </div>
-          </div>
-        ))}
-        <Pencil onClick={() => setEditing(true)} />
+          ))
+        )}
+        <div style={{ display: "flex", gap: 6, alignItems: "center", marginTop: 4 }}>
+          <button onClick={() => { addEntry(); setEditing(true); }} style={smallBtn}>+ Add Education</button>
+          {education.length > 0 && <Pencil onClick={() => setEditing(true)} />}
+        </div>
       </>
     );
   }
@@ -298,6 +306,7 @@ function EducationEditor({ education, onSave }) {
 // ---------------------------------------------------------------------------
 // Experience entry editor
 // Fields: title, company, location, dates, bullets
+// Always rendered — shows empty hint + add button when no entries exist.
 // ---------------------------------------------------------------------------
 function ExperienceEditor({ experience, onSave }) {
   const [editing, setEditing] = useState(false);
@@ -345,22 +354,29 @@ function ExperienceEditor({ experience, onSave }) {
   if (!editing) {
     return (
       <>
-        {experience.map((job, i) => (
-          <div key={i} style={styles.subheading}>
-            <div style={styles.subheadingRow}>
-              <strong>{job.title}</strong>
-              <span>{job.dates}</span>
+        {experience.length === 0 ? (
+          <span style={styles.emptyHint}>No entries yet.</span>
+        ) : (
+          experience.map((job, i) => (
+            <div key={i} style={styles.subheading}>
+              <div style={styles.subheadingRow}>
+                <strong>{job.title}</strong>
+                <span>{job.dates}</span>
+              </div>
+              <div style={styles.subheadingRow}>
+                <em style={styles.small}>{job.company}</em>
+                <em style={styles.small}>{job.location}</em>
+              </div>
+              <ul style={styles.bulletList}>
+                {(job.bullets || []).map((b, j) => <li key={j} style={styles.bulletItem}>{b}</li>)}
+              </ul>
             </div>
-            <div style={styles.subheadingRow}>
-              <em style={styles.small}>{job.company}</em>
-              <em style={styles.small}>{job.location}</em>
-            </div>
-            <ul style={styles.bulletList}>
-              {(job.bullets || []).map((b, j) => <li key={j} style={styles.bulletItem}>{b}</li>)}
-            </ul>
-          </div>
-        ))}
-        <Pencil onClick={() => setEditing(true)} />
+          ))
+        )}
+        <div style={{ display: "flex", gap: 6, alignItems: "center", marginTop: 4 }}>
+          <button onClick={() => { addEntry(); setEditing(true); }} style={smallBtn}>+ Add Experience</button>
+          {experience.length > 0 && <Pencil onClick={() => setEditing(true)} />}
+        </div>
       </>
     );
   }
@@ -409,6 +425,104 @@ function ExperienceEditor({ experience, onSave }) {
 }
 
 // ---------------------------------------------------------------------------
+// Awards entry editor
+// Fields: title, issuer, dates
+// Always rendered — shows empty hint + add button when no entries exist.
+// ---------------------------------------------------------------------------
+function AwardsEditor({ awards, onSave }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(awards);
+
+  useEffect(() => { setDraft(awards); }, [awards]);
+
+  function updateField(i, field, val) {
+    setDraft((prev) => prev.map((e, idx) => idx === i ? { ...e, [field]: val } : e));
+  }
+
+  function addEntry() {
+    setDraft((prev) => [...prev, { title: "", issuer: "", dates: "" }]);
+  }
+
+  function removeEntry(i) {
+    setDraft((prev) => prev.filter((_, idx) => idx !== i));
+  }
+
+  function commit() {
+    setEditing(false);
+    onSave(draft.filter((e) => e.title || e.issuer));
+  }
+
+  function cancel() { setDraft(awards); setEditing(false); }
+
+  if (!editing) {
+    return (
+      <>
+        {awards.length === 0 ? (
+          <span style={styles.emptyHint}>No entries yet.</span>
+        ) : (
+          awards.map((award, i) => (
+            <div key={i} style={styles.subheading}>
+              <div style={styles.subheadingRow}>
+                <strong>{award.title}</strong>
+                <span style={styles.small}>{award.dates}</span>
+              </div>
+              <div style={styles.subheadingRow}>
+                <em style={styles.small}>{award.issuer}</em>
+              </div>
+            </div>
+          ))
+        )}
+        <div style={{ display: "flex", gap: 6, alignItems: "center", marginTop: 4 }}>
+          <button onClick={() => { addEntry(); setEditing(true); }} style={smallBtn}>+ Add Award</button>
+          {awards.length > 0 && <Pencil onClick={() => setEditing(true)} />}
+        </div>
+      </>
+    );
+  }
+
+  return (
+    <div>
+      {draft.map((award, i) => (
+        <div key={i} style={{ marginBottom: 10, paddingBottom: 8, borderBottom: "1px dashed #ddd" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 4 }}>
+            <div style={{ gridColumn: "1 / -1" }}>
+              <div style={{ fontSize: 9, color: "#888", marginBottom: 1 }}>Award Title</div>
+              <input
+                value={award.title || ""}
+                onChange={(e) => updateField(i, "title", e.target.value)}
+                style={{ ...inlineInput, borderBottom: "1px solid #aaa", width: "100%", fontSize: 10 }}
+              />
+            </div>
+            <div>
+              <div style={{ fontSize: 9, color: "#888", marginBottom: 1 }}>Issuer / Organization</div>
+              <input
+                value={award.issuer || ""}
+                onChange={(e) => updateField(i, "issuer", e.target.value)}
+                style={{ ...inlineInput, borderBottom: "1px solid #aaa", width: "100%", fontSize: 10 }}
+              />
+            </div>
+            <div>
+              <div style={{ fontSize: 9, color: "#888", marginBottom: 1 }}>Date</div>
+              <input
+                value={award.dates || ""}
+                onChange={(e) => updateField(i, "dates", e.target.value)}
+                style={{ ...inlineInput, borderBottom: "1px solid #aaa", width: "100%", fontSize: 10 }}
+              />
+            </div>
+          </div>
+          <button onClick={() => removeEntry(i)} style={{ ...smallBtn, color: "#c00" }}>Remove</button>
+        </div>
+      ))}
+      <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
+        <button onClick={addEntry} style={smallBtn}>+ Add Award</button>
+        <button onClick={commit} style={smallBtn}>Save</button>
+        <button onClick={cancel} style={smallBtn}>Cancel</button>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Resume preview with full inline editing
 // ---------------------------------------------------------------------------
 function ResumePreview({ ctx, reportId, reportNotes, onContextChange }) {
@@ -418,7 +532,7 @@ function ResumePreview({ ctx, reportId, reportNotes, onContextChange }) {
     name, phone, email,
     github_url, github_display,
     linkedin_url, linkedin_display,
-    education = [], experience = [], projects = [], skills = {},
+    education = [], experience = [], projects = [], skills = {}, awards = [],
   } = ctx;
 
   async function saveConfigField(field, value) {
@@ -473,29 +587,32 @@ function ResumePreview({ ctx, reportId, reportNotes, onContextChange }) {
         </div>
       </div>
 
-      {/* EDUCATION */}
-      {(education.length > 0) && (
-        <section>
-          <div style={styles.sectionTitle}>Education</div>
-          <hr style={styles.rule} />
-          <EducationEditor
-            education={education}
-            onSave={(updated) => saveConfigField("education", updated)}
+      {/* EDUCATION + HONOURS & AWARDS — always visible */}
+      <section>
+        <div style={styles.sectionTitle}>Education</div>
+        <hr style={styles.rule} />
+        <EducationEditor
+          education={education}
+          onSave={(updated) => saveConfigField("education", updated)}
+        />
+        <div style={{ marginTop: 8 }}>
+          <div style={{ fontSize: 10, fontWeight: "bold", marginBottom: 4 }}>Honours & Awards</div>
+          <AwardsEditor
+            awards={awards}
+            onSave={(updated) => saveConfigField("awards", updated)}
           />
-        </section>
-      )}
+        </div>
+      </section>
 
-      {/* EXPERIENCE */}
-      {(experience.length > 0) && (
-        <section>
-          <div style={styles.sectionTitle}>Experience</div>
-          <hr style={styles.rule} />
-          <ExperienceEditor
-            experience={experience}
-            onSave={(updated) => saveConfigField("experience", updated)}
-          />
-        </section>
-      )}
+      {/* EXPERIENCE — always visible */}
+      <section>
+        <div style={styles.sectionTitle}>Experience</div>
+        <hr style={styles.rule} />
+        <ExperienceEditor
+          experience={experience}
+          onSave={(updated) => saveConfigField("experience", updated)}
+        />
+      </section>
 
       {/* PROJECTS */}
       {projects.length > 0 && (
@@ -608,6 +725,7 @@ const styles = {
   small: { fontSize: 10 },
   bulletList: { margin: "2px 0 0 0", paddingLeft: 20 },
   bulletItem: { fontSize: 10, marginBottom: 1 },
+  emptyHint: { fontSize: 10, color: "#aaa", fontStyle: "italic" },
 };
 
 // ---------------------------------------------------------------------------
