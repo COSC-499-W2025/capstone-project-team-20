@@ -128,6 +128,7 @@ class ReportExporter:
 
         education = config_manager.get("education", []) or []
         experience = config_manager.get("experience", []) or []
+        awards = config_manager.get("awards", []) or []
 
         # Projects from report
         projects = []
@@ -183,6 +184,7 @@ class ReportExporter:
             "linkedin_display": linkedin_display,
             "education": education,
             "experience": experience,
+            "awards": awards,
             "projects": projects,
             "skills": skills
         }

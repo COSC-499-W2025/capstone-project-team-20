@@ -93,7 +93,7 @@
     {%- if github_url %} $|$ \href{ {{- github_url -}} }{\underline{ {{- github_display | escape_latex -}} }}{% endif %}
 \end{center}
 
-{% if education %}
+{% if education or awards %}
 %% ----------- EDUCATION -----------
 \section{Education}
   \resumeSubHeadingListStart
@@ -103,6 +103,17 @@
       { {{- edu.degree | escape_latex -}} }{ {{- edu.dates | escape_latex -}} }
 {% endfor %}
   \resumeSubHeadingListEnd
+{% if awards %}
+  \vspace{4pt}
+  \textbf{\small Honours \& Awards}
+  \resumeSubHeadingListStart
+{% for award in awards %}
+    \resumeSubheading
+      { {{- award.title | escape_latex -}} }{ {{- award.dates | escape_latex -}} }
+      { {{- award.issuer | escape_latex -}} }{}
+{% endfor %}
+  \resumeSubHeadingListEnd
+{% endif %}
 {% endif %}
 
 {% if experience %}
