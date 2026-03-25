@@ -106,6 +106,11 @@ export function listSkills() {
   return request("/skills");
 }
 
+export function listSkillsUsage() {
+  // GET /skills/usage -> { skills: [{name, project_count, projects: [...]}, ...] }
+  return request("/skills/usage");
+}
+
 export function getBadgeProgress() {
   return request("/badges/progress");
 }

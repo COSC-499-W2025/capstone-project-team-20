@@ -209,6 +209,26 @@ def test_skills_counts_and_sorts(client, monkeypatch):
         {"name": "C#", "project_count": 1},
     ]
 
+def test_skills_usage_returns_projects(client, monkeypatch):
+    class FakeProjectManager:
+        def get_all(self):
+            return [
+                FakeProject(1, "P1", skills_used=["Python", "SQL", "Python"]),
+                FakeProject(2, "P2", skills_used=["SQL", "C#"]),
+                FakeProject(3, "P3", skills_used=[None, "  Python  "]),
+            ]
+
+    monkeypatch.setattr(routes, "ProjectManager", FakeProjectManager)
+
+    res = client.get("/skills/usage")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["ok"] is True
+    assert data["skills"] == [
+        {"name": "Python", "project_count": 2, "projects": ["P1", "P3"]},
+        {"name": "SQL", "project_count": 2, "projects": ["P1", "P2"]},
+        {"name": "C#", "project_count": 1, "projects": ["P2"]},
+    ]
 
 # /projects/upload. test of POST /projects/upload returns 201
 def test_upload_project_success(client, monkeypatch):

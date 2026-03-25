@@ -18,7 +18,7 @@ from src.generators.PortfolioGenerator import PortfolioGenerator
 from src.ZipParser import parse_zip_to_project_folders
 from src.services.badge_wrapped_service import build_badge_progress, build_yearly_wrapped
 
-from src.api.schemas.skills import SkillsListResponse, SkillItem
+from src.api.schemas.skills import SkillsListResponse, SkillItem, SkillsUsageResponse, SkillUsageItem
 from src.api.schemas.projects import (
     UploadProjectResponse,
     ProjectsListResponse,
@@ -345,6 +345,32 @@ def get_skills_list():
     ]
     return SkillsListResponse(skills=skills)
 
+@router.get("/skills/usage", response_model=SkillsUsageResponse)
+def get_skills_usage():
+    """List skills with usage counts and the project names where each skill appears."""
+    pm = ProjectManager()
+    projects = list(pm.get_all())
+
+    usage_map = {}
+    for p in projects:
+        project_name = (getattr(p, "name", "") or "").strip()
+        for s in (p.skills_used or []):
+            skill = (s or "").strip()
+            if not skill:
+                continue
+            usage_map.setdefault(skill, set())
+            if project_name:
+                usage_map[skill].add(project_name)
+
+    skills = [
+        SkillUsageItem(
+            name=name,
+            project_count=len(project_names),
+            projects=sorted(project_names, key=lambda x: x.lower()),
+        )
+        for name, project_names in sorted(usage_map.items(), key=lambda x: (-len(x[1]), x[0].lower()))
+    ]
+    return SkillsUsageResponse(skills=skills)
 
 @router.get("/badges/progress", response_model=BadgeProgressResponse)
 def get_badge_progress():
