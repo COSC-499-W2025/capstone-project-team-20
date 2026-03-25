@@ -10,6 +10,7 @@ vi.mock("../api/client", () => ({
   getReport: vi.fn(),
   deleteReport: vi.fn(),
   exportResume: vi.fn(),
+  deleteResumeExport: vi.fn(),
   setPrivacyConsent: vi.fn(),
   getResumeContext: vi.fn(),
   patchReportProject: vi.fn(),
@@ -22,6 +23,7 @@ import {
   getReport,
   deleteReport,
   exportResume,
+  deleteResumeExport,
   getResumeContext,
   configSet,
 } from "../api/client";
@@ -53,7 +55,8 @@ describe("ResumePage", () => {
     listReports.mockResolvedValue({ reports: [{ id: 9, title: "My Report", report_kind: "resume" }] });
     getReport.mockResolvedValue({ report: MOCK_REPORT });
     getResumeContext.mockResolvedValue(MOCK_CTX);
-    exportResume.mockResolvedValue({ download_url: "/downloads/resume.pdf" });
+    exportResume.mockResolvedValue({ export_id: "abc123", download_url: "/downloads/resume.pdf", page_count: 1 });
+    deleteResumeExport.mockResolvedValue({ ok: true });
     deleteReport.mockResolvedValue(undefined);
 
     vi.stubGlobal("open", vi.fn());
@@ -235,6 +238,92 @@ describe("ResumePage", () => {
     await waitFor(() => {
       expect(deleteReport).toHaveBeenCalledWith(9);
       expect(screen.queryByText("My Report")).not.toBeInTheDocument();
+    });
+  });
+
+  // ── page-count modal ────────────────────────────────────────────────────────
+
+  it("downloads directly without modal when resume is one page", async () => {
+    const user = userEvent.setup();
+    render(<ResumePage />);
+
+    await waitFor(() => screen.getByText("My Report"));
+    await user.click(screen.getByRole("button", { name: /my report/i }));
+    await waitFor(() => screen.getByText("Dale Smith"));
+
+    await user.click(screen.getByRole("button", { name: /export pdf/i }));
+
+    await waitFor(() => {
+      expect(window.open).toHaveBeenCalledWith(
+        "http://localhost:8000/downloads/resume.pdf",
+        "_blank"
+      );
+      expect(screen.queryByText(/resume exceeds one page/i)).not.toBeInTheDocument();
+    });
+  });
+
+  it("shows page-count modal when resume exceeds one page", async () => {
+    exportResume.mockResolvedValue({ export_id: "multi123", download_url: "/downloads/big.pdf", page_count: 2 });
+
+    const user = userEvent.setup();
+    render(<ResumePage />);
+
+    await waitFor(() => screen.getByText("My Report"));
+    await user.click(screen.getByRole("button", { name: /my report/i }));
+    await waitFor(() => screen.getByText("Dale Smith"));
+
+    await user.click(screen.getByRole("button", { name: /export pdf/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/resume exceeds one page/i)).toBeInTheDocument();
+      expect(screen.getByText(/2 pages/i)).toBeInTheDocument();
+      expect(window.open).not.toHaveBeenCalled();
+    });
+  });
+
+  it("downloads when user confirms in the page-count modal", async () => {
+    exportResume.mockResolvedValue({ export_id: "multi123", download_url: "/downloads/big.pdf", page_count: 2 });
+
+    const user = userEvent.setup();
+    render(<ResumePage />);
+
+    await waitFor(() => screen.getByText("My Report"));
+    await user.click(screen.getByRole("button", { name: /my report/i }));
+    await waitFor(() => screen.getByText("Dale Smith"));
+
+    await user.click(screen.getByRole("button", { name: /export pdf/i }));
+    await waitFor(() => screen.getByText(/resume exceeds one page/i));
+
+    await user.click(screen.getByRole("button", { name: /download anyway/i }));
+
+    await waitFor(() => {
+      expect(window.open).toHaveBeenCalledWith(
+        "http://localhost:8000/downloads/big.pdf",
+        "_blank"
+      );
+      expect(screen.queryByText(/resume exceeds one page/i)).not.toBeInTheDocument();
+    });
+  });
+
+  it("calls deleteResumeExport and dismisses modal when user cancels", async () => {
+    exportResume.mockResolvedValue({ export_id: "multi123", download_url: "/downloads/big.pdf", page_count: 2 });
+
+    const user = userEvent.setup();
+    render(<ResumePage />);
+
+    await waitFor(() => screen.getByText("My Report"));
+    await user.click(screen.getByRole("button", { name: /my report/i }));
+    await waitFor(() => screen.getByText("Dale Smith"));
+
+    await user.click(screen.getByRole("button", { name: /export pdf/i }));
+    await waitFor(() => screen.getByText(/resume exceeds one page/i));
+
+    await user.click(screen.getByRole("button", { name: /cancel/i }));
+
+    await waitFor(() => {
+      expect(deleteResumeExport).toHaveBeenCalledWith("multi123");
+      expect(window.open).not.toHaveBeenCalled();
+      expect(screen.queryByText(/resume exceeds one page/i)).not.toBeInTheDocument();
     });
   });
 });
