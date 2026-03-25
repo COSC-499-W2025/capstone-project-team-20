@@ -559,7 +559,7 @@ body{
 .skill-heatmap-tile {
   border: 1px solid var(--border);
   border-radius: 12px;
-  background: rgba(13, 17, 23, 0.5);
+  background: transparent;
   padding: 10px 12px;
 }
 
@@ -568,13 +568,23 @@ body{
   box-shadow: inset 0 0 0 1px rgba(88, 166, 255, 0.35);
 }
 
-.skill-heatmap-trigger {
+.menu .skill-heatmap-trigger {
   width: 100%;
-  background: transparent;
-  border: 0;
-  padding: 0;
+  height: auto;
+  background: rgba(22, 27, 34, 0.92);
+  border: 1px solid rgba(48, 54, 61, 0.95);
+  border-radius: 10px;
+  padding: 8px 10px;
   text-align: left;
   cursor: pointer;
+  color: #d8edf8;
+}
+
+.menu .skill-heatmap-trigger:hover {
+  background: rgba(30, 36, 44, 0.95);
+  border-color: rgba(88, 166, 255, 0.35);
+  transform: none;
+  box-shadow: none;
 }
 
 .skill-heatmap-title-row {
@@ -593,6 +603,7 @@ body{
 .skill-heatmap-bar {
   width: 100%;
   height: 8px;
+  margin-top: 3px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.08);
   overflow: hidden;
@@ -618,6 +629,7 @@ body{
   margin: 0;
   padding-left: 18px;
 }
+
 
 /* ── Portfolio (from feature branch) ── */
 
