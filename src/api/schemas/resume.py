@@ -39,3 +39,4 @@ class ResumeExportResponse(BaseModel):
     export_id: str
     filename: str
     download_url: str
+    page_count: int
