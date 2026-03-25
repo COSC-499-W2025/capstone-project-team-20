@@ -278,7 +278,8 @@ function Badges() {
   const selectedAchievedBadge = selectedHeatmapBadge
     ? achievedBadges.find((badge) => badge.badge_id === selectedHeatmapBadge.badgeId) ?? null
     : null;
-  
+  const maxSkillProjects = Math.max(...skills.map((s) => Number(s.project_count) || 0), 1);
+
   return (
     <div className="badges-page">
       <h3>Badges</h3>
@@ -415,18 +416,30 @@ function Badges() {
         </div>
       ) : null}
 
-      <h4>🔥 Skill Heatmap</h4>
-      {skills.length === 0 ? (
-        <p>No skills found yet. Upload a project first.</p>
-      ) : (
-        <ul>
-          {skills.map((s) => (
-            <li key={s.name}>
-              {s.name} — used in {s.project_count} project{s.project_count === 1 ? "" : "s"}
-            </li>
-          ))}
-        </ul>
-      )}
+      <section className="skill-heatmap">
+        <h4>🔥 Skill Heatmap</h4>
+        {skills.length === 0 ? (
+          <p>No skills found yet. Upload a project first.</p>
+        ) : (
+          <div className="skill-heatmap-grid">
+            {skills.map((s) => {
+              const count = Number(s.project_count) || 0;
+              const fillPercent = Math.round((count / maxSkillProjects) * 100);
+              return (
+                <article key={s.name} className="skill-heatmap-tile">
+                  <div className="skill-heatmap-title-row">
+                    <strong>{s.name}</strong>
+                    <span>{count} project{count === 1 ? "" : "s"}</span>
+                  </div>
+                  <div className="skill-heatmap-bar" aria-hidden="true">
+                    <div className="skill-heatmap-bar-fill" style={{ width: `${fillPercent}%` }} />
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        )}
+      </section>
     </div>
   );
 }

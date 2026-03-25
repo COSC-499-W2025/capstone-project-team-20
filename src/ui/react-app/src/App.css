@@ -546,6 +546,50 @@ body{
   color: var(--accent);
 }
 
+.skill-heatmap {
+  margin-top: 18px;
+}
+
+.skill-heatmap-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.skill-heatmap-tile {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: rgba(13, 17, 23, 0.5);
+  padding: 10px 12px;
+}
+
+.skill-heatmap-title-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+  color: #d8edf8;
+}
+
+.skill-heatmap-title-row span {
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
+.skill-heatmap-bar {
+  width: 100%;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.skill-heatmap-bar-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #58a6ff, #79c0ff);
+}
+
 /* ── Portfolio (from feature branch) ── */
 
 .portfolio-panel {
