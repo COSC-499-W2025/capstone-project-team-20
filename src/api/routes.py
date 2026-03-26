@@ -144,14 +144,16 @@ class ConfigSetRequest(BaseModel):
 def _run_post_upload_analyses(analyzer: ProjectAnalyzer, projects):
     changed = [p for p in projects if p.name in analyzer.changed_project_names]
     pending_duplicates = []
+    pending_identity = []
 
     if not changed:
-        return pending_duplicates
+        return pending_duplicates, pending_identity
 
-    pending_duplicates = analyzer.analyze_git_and_contributions(projects=changed, interactive=False) or []
+    pending_duplicates, pending_identity = analyzer.analyze_git_and_contributions(projects=changed, interactive=False)
 
-    pending_ids = {p["project_id"] for p in pending_duplicates}
-    clean = [p for p in changed if p.id not in pending_ids]
+    # Only run downstream analyses on projects that are fully resolved
+    blocked_ids = {p["project_id"] for p in pending_duplicates} | {p["project_id"] for p in pending_identity}
+    clean = [p for p in changed if p.id not in blocked_ids]
 
     for method_name in ("analyze_metadata", "analyze_categories", "analyze_languages", "analyze_skills", "generate_insights_noninteractive"):
         method = getattr(analyzer, method_name, None)
@@ -162,7 +164,7 @@ def _run_post_upload_analyses(analyzer: ProjectAnalyzer, projects):
         else:
             method(projects=clean)
 
-    return pending_duplicates
+    return pending_duplicates, pending_identity
 
 
 def _require_report_kind(report, expected_kind: str):
@@ -191,13 +193,19 @@ def upload_project_from_path(req: UploadPathRequest):
 
     analyzer = ProjectAnalyzer(ConfigManager(), root_folders, zip_path)
     created_projects = analyzer.initialize_projects()
-    pending_duplicates = _run_post_upload_analyses(analyzer, created_projects)
-
+    pending_duplicates, pending_identity = _run_post_upload_analyses(analyzer, created_projects)
+    if pending_duplicates:
+        status = "needs_resolution"
+    elif pending_identity:
+        status = "needs_identity"
+    else:
+        status = "complete"
     return {
         "ok": True,
-        "status": "needs_resolution" if pending_duplicates else "complete",
+        "status": status,
         "projects": [{"id": p.id, "name": p.name} for p in created_projects],
         "pending_duplicates": pending_duplicates,
+        "pending_identity": pending_identity,
         }
 
 
@@ -209,15 +217,23 @@ def upload_project(zip_file: UploadFile = File(...)):
     if not root_folders:
         tmp_path.unlink(missing_ok=True)
         raise HTTPException(status_code=400, detail="Zip parsed no projects (invalid or empty zip.)")
-    analyzer = ProjectAnalyzer(ConfigManager(), root_folders, tmp_path)
+    cm = ConfigManager()
+    analyzer = ProjectAnalyzer(cm, root_folders, tmp_path)
     created_projects = analyzer.initialize_projects()
-    pending_duplicates = _run_post_upload_analyses(analyzer, created_projects)
+    pending_duplicates, pending_identity = _run_post_upload_analyses(analyzer, created_projects)
     tmp_path.unlink(missing_ok=True)
+    if pending_duplicates:
+        status = "needs_resolution"
+    elif pending_identity:
+        status = "needs_identity"
+    else:
+        status = "complete"
     return UploadProjectResponse(
         ok=True,
-        status="needs_resolution" if pending_duplicates else "complete",
+        status=status,
         projects=[ProjectSummary(id=p.id, name=p.name) for p in created_projects],
         pending_duplicates=pending_duplicates,
+        pending_identity=pending_identity,
         )
 
 
@@ -280,6 +296,9 @@ def delete_project(id: int):
         raise HTTPException(status_code=404, detail="Project not found.")
     if not pm.delete(id):
         raise HTTPException(status_code=500, detail="Failed to delete project.")
+    # Rebuild seen_authors from remaining projects so stale emails are removed
+    analyzer = ProjectAnalyzer(ConfigManager(), root_folders=[], zip_path=None)
+    analyzer.rebuild_seen_authors()
     return None
 
 @router.post("/projects/resolve-contributors")
@@ -326,7 +345,8 @@ def resolve_contributors_batch(req: ContributorMergeBatchRequest):
         )
         results.append({"project_id": item.project_id, **result})
 
-    return {"ok": True, "results": results}
+    all_pending_identity = [pi for r in results for pi in r.get("pending_identity", [])]
+    return {"ok": True, "results": results, "pending_identity": all_pending_identity}
 
 
 @router.get("/skills", response_model=SkillsListResponse)
@@ -727,13 +747,69 @@ def get_config():
     return {"ok": True, "config": cm.get_all()}
 
 
+class SetIdentityRequest(BaseModel):
+    emails: List[str]
+    project_ids: List[int]
+
+@router.post("/projects/set-identity")
+def set_identity(req: SetIdentityRequest):
+    """
+    Add email(s) to the user's confirmed identity list (usernames), then
+    rerun contribution analysis for the given project IDs.
+    """
+    cm = ConfigManager()
+    existing = set(cm.get("usernames") or [])
+    new_usernames = sorted(existing | set(req.emails))
+    cm.set("usernames", new_usernames)
+
+    pm = ProjectManager()
+    results = []
+    for project_id in req.project_ids:
+        project = pm.get(project_id)
+        if not project:
+            continue
+        analyzer = ProjectAnalyzer(cm, root_folders=[], zip_path=Path(project.file_path))
+        pending_duplicates, pending_identity = analyzer.analyze_git_and_contributions(
+            projects=[project], interactive=False
+        )
+        if not pending_duplicates and not pending_identity:
+            analyzer.analyze_metadata(projects=[project])
+            analyzer.analyze_categories(projects=[project])
+            analyzer.analyze_languages(projects=[project])
+            analyzer.analyze_skills(projects=[project], silent=True)
+            analyzer.generate_insights_noninteractive(projects=[project])
+        results.append({
+            "project_id": project_id,
+            "status": "complete" if not pending_duplicates and not pending_identity else "incomplete",
+        })
+
+    return {"ok": True, "usernames": new_usernames, "results": results}
+
+
+class UpdateUsernamesRequest(BaseModel):
+    emails: List[str]
+
+@router.put("/config/usernames")
+def update_usernames(req: UpdateUsernamesRequest):
+    """Replace the full usernames list (used from Settings page)."""
+    cm = ConfigManager()
+    cm.set("usernames", sorted(set(req.emails)))
+    return {"ok": True, "usernames": cm.get("usernames")}
+
+
 @router.post("/config")
 def save_config(req: ConfigSaveRequest):
     """Persist profile fields. Only non-empty values are written."""
     cm = ConfigManager()
+    identity_keys = {"github", "email"}
+    identity_changed = False
     for key, value in req.model_dump().items():
         if value is not None and str(value).strip():
+            if key in identity_keys and cm.get(key) != str(value).strip():
+                identity_changed = True
             cm.set(key, str(value).strip())
+    if identity_changed:
+        cm.delete("usernames")
     return {"ok": True, "config": cm.get_all()}
 
 @router.post("/projects/{id}/thumbnail")

@@ -312,6 +312,47 @@ class ProjectAnalyzer:
             print("\nOperation cancelled by user.")
             return None
 
+    def _update_seen_authors(self, author_map: Dict[str, str]) -> None:
+        """Merge new email→name pairs into the seen_authors config dict."""
+        existing: Dict[str, str] = self._config_manager.get("seen_authors") or {}
+        updated = {**author_map, **existing}  # existing names win on conflict
+        if updated != existing:
+            self._config_manager.set("seen_authors", updated)
+
+    def rebuild_seen_authors(self) -> None:
+        """Rescan all projects' git histories and rebuild seen_authors from scratch."""
+        all_authors: Dict[str, str] = {}
+        for project in self._get_projects():
+            repo_path = Path(project.file_path)
+            if (repo_path / ".git").exists():
+                with self.suppress_output():
+                    author_map = self.contribution_analyzer.get_name_map(
+                        str(repo_path), config_manager=self._config_manager
+                    )
+                all_authors.update(author_map)
+        self._config_manager.set("seen_authors", all_authors)
+
+    def _auto_detect_user_emails(self, author_map: Dict[str, str]) -> List[str]:
+        """
+        Identify which git author email(s) belong to the current user by checking:
+          1. GitHub noreply patterns: username@users.noreply.github.com
+                                  or 12345678+username@users.noreply.github.com
+          2. Exact match on the email address stored in config (from profile setup)
+        Returns a sorted list of matching canonical emails.
+        """
+        github_username = (self._config_manager.get("github") or "").lower().strip()
+        config_email = (self._config_manager.get("email") or "").lower().strip()
+
+        matched: set[str] = set()
+        for email in author_map.keys():
+            email_lower = email.lower()
+            if github_username and "noreply.github.com" in email_lower and github_username in email_lower:
+                matched.add(email)
+            if config_email and email_lower == config_email:
+                matched.add(email)
+
+        return sorted(matched)
+
     def _get_or_select_usernames(self, author_map: Dict[str, str]) -> Optional[List[str]]:
         usernames = self._config_manager.get("usernames")
         if usernames and isinstance(usernames, list):
@@ -396,7 +437,7 @@ class ProjectAnalyzer:
 
         return mapping.get(role_key, role_key.capitalize())
 
-    def analyze_git_and_contributions(self, projects: Optional[List[Project]] = None, interactive: bool = True) -> List[Dict[str, Any]]:
+    def analyze_git_and_contributions(self, projects: Optional[List[Project]] = None, interactive: bool = True) -> tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
         """
         Analyze contributions for each project:
         In frontend/API mode (interactive=False):
@@ -411,9 +452,10 @@ class ProjectAnalyzer:
         print("\n--- Git Repository & Contribution Analysis ---")
         target_projects = projects or self._get_projects()
         pending_duplicates: List[Dict[str, Any]] = []
-        
+        pending_identity: List[Dict[str, Any]] = []
+
         if not target_projects:
-            return pending_duplicates
+            return pending_duplicates, pending_identity
         
         for project in target_projects:
             repo_path = Path(project.file_path)
@@ -425,6 +467,8 @@ class ProjectAnalyzer:
             with self.suppress_output():
                 all_author_stats = self.contribution_analyzer.analyze(str(repo_path), config_manager=self._config_manager)
                 author_map = self.contribution_analyzer.get_name_map(str(repo_path), config_manager=self._config_manager)
+
+            self._update_seen_authors(author_map)
 
             duplicate_groups = self.contribution_analyzer.detect_duplicate_contributors(author_map)
             if duplicate_groups:
@@ -439,19 +483,45 @@ class ProjectAnalyzer:
                 if not interactive:
                     project.last_accessed = datetime.now()
                     self.project_manager.set(project)
-                    continue
+                    continue  # identity check happens after duplicates are resolved
             
             project.author_count = len(author_map)
             project.collaboration_status = "Collaborative" if project.author_count > 1 else "Individual"
 
+            contributor_identified = True
             if interactive:
                 selected_emails = self._get_or_select_usernames(author_map) or []
             else:
                 configured_usernames = self._config_manager.get("usernames")
                 if isinstance(configured_usernames, list) and configured_usernames:
-                    selected_emails = configured_usernames
+                    # Use only the subset that appears in this project
+                    matching = [e for e in configured_usernames if e in author_map]
+                    if matching:
+                        selected_emails = matching
+                    else:
+                        # Known identities don't appear in this project — ask
+                        contributor_identified = False
+                        selected_emails = list(author_map.keys())
                 else:
-                    selected_emails = list(author_map.keys())
+                    # No identity configured yet — try auto-detect first
+                    matched = self._auto_detect_user_emails(author_map)
+                    if matched:
+                        selected_emails = matched
+                        self._config_manager.set("usernames", matched)
+                        print(f"  - Auto-detected contributor(s) from config: {matched}")
+                    else:
+                        contributor_identified = False
+                        selected_emails = list(author_map.keys())
+                        print("  - Could not identify user in git history; identity selection required.")
+
+                if not contributor_identified:
+                    pending_identity.append({
+                        "project_id": project.id,
+                        "project_name": project.name,
+                        "candidates": [
+                            {"email": e, "name": n} for e, n in sorted(author_map.items(), key=lambda x: x[1].lower())
+                        ],
+                    })
 
             project.authors = sorted([author_map[e] for e in selected_emails if e in author_map])
             project.contributor_roles = {}
@@ -468,14 +538,16 @@ class ProjectAnalyzer:
                     for user, r in roles_obj.items()
                 }
 
-                selected_stats = self._aggregate_stats(all_author_stats, selected_emails)
-                total_stats = self._aggregate_stats(all_author_stats)
-
                 project.author_contributions = [
                     {"author": author, **stats.to_dict()}
                     for author, stats in all_author_stats.items()]
-                
-                project.individual_contributions = self.contribution_analyzer.calculate_share(selected_stats, total_stats)
+
+                if contributor_identified:
+                    selected_stats = self._aggregate_stats(all_author_stats, selected_emails)
+                    total_stats = self._aggregate_stats(all_author_stats)
+                    project.individual_contributions = self.contribution_analyzer.calculate_share(selected_stats, total_stats)
+                else:
+                    project.individual_contributions = {}
             else:
                 print("  - No detailed contribution stats available; using author list for collaboration status.")
             
@@ -493,8 +565,8 @@ class ProjectAnalyzer:
                     print(f"    - {user} → User Role: {pretty} ({confidence_pct}%)")
             print(f"  - Saved data for '{project.name}'.")
 
-        return pending_duplicates
-    
+        return pending_duplicates, pending_identity
+
     def apply_contributor_merge_resolutions(
         self,
         project_id: int,
@@ -536,20 +608,43 @@ class ProjectAnalyzer:
                 config_manager=self._config_manager,
             )
 
-        pending = self.analyze_git_and_contributions(projects=[project], interactive=False)
+        # Swap merged emails → canonical in usernames and seen_authors
+        for resolution in resolutions:
+            canonical = resolution.get("canonical", "")
+            merged = set(resolution.get("merge", []))
+            stale = merged - {canonical}
+            if not stale:
+                continue
 
-        if not pending:
+            usernames: List[str] = self._config_manager.get("usernames") or []
+            new_usernames = list(dict.fromkeys(
+                canonical if u in stale else u for u in usernames
+            ))
+            if new_usernames != usernames:
+                self._config_manager.set("usernames", new_usernames)
+
+            seen: Dict[str, str] = self._config_manager.get("seen_authors") or {}
+            for old_email in stale:
+                if old_email in seen:
+                    seen[canonical] = seen.pop(old_email)
+            self._config_manager.set("seen_authors", seen)
+
+        pending_duplicates, pending_identity = self.analyze_git_and_contributions(projects=[project], interactive=False)
+
+        if not pending_duplicates:
             self.analyze_metadata(projects=[project])
             self.analyze_categories(projects=[project])
             self.analyze_languages(projects=[project])
             self.analyze_skills(projects=[project], silent=True)
             self.generate_insights_noninteractive(projects=[project])
 
+        status = "needs_resolution" if pending_duplicates else ("needs_identity" if pending_identity else "complete")
         return {
             "project_id": project.id,
             "project_name": project.name,
-            "status": "needs_resolution" if pending else "complete",
-            "pending_duplicates": pending,
+            "status": status,
+            "pending_duplicates": pending_duplicates,
+            "pending_identity": pending_identity,
         }
 
     def analyze_metadata(self, projects: Optional[List[Project]] = None) -> None:

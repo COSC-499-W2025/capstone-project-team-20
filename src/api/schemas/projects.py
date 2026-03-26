@@ -19,11 +19,21 @@ class PendingDuplicateProjectResponse(BaseModel):
     repo_path: str
     duplicate_groups: List[DuplicateContributorGroupResponse]
 
+class IdentityCandidate(BaseModel):
+    email: str
+    name: str
+
+class PendingIdentityProject(BaseModel):
+    project_id: int
+    project_name: str
+    candidates: List[IdentityCandidate]
+
 class UploadProjectResponse(BaseModel):
     ok: bool = True
     status: str = "complete"
     projects: List[ProjectSummary]
     pending_duplicates: List[PendingDuplicateProjectResponse] = Field(default_factory=list)
+    pending_identity: List[PendingIdentityProject] = Field(default_factory=list)
 
 
 class ProjectsListResponse(BaseModel):

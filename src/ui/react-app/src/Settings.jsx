@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { getConfig, saveConfig, setPrivacyConsent, getPrivacyConsent, clearProjects } from "./api/client";
+import { getConfig, saveConfig, setPrivacyConsent, getPrivacyConsent, clearProjects, updateUsernames } from "./api/client";
 
 export default function Settings() {
   const [tab, setTab] = useState("profile");
@@ -15,6 +15,12 @@ export default function Settings() {
 
   const [clearState, setClearState] = useState("idle");
 
+  // Contributors tab
+  const [seenAuthors, setSeenAuthors] = useState({});   // {email: name}
+  const [checkedEmails, setCheckedEmails] = useState(new Set());
+  const [identitySaving, setIdentitySaving] = useState(false);
+  const [identityMsg, setIdentityMsg] = useState("");
+
   useEffect(() => {
     getConfig().then((cfg) => {
       if (!cfg) return;
@@ -25,10 +31,23 @@ export default function Settings() {
         github:   cfg.github   ? String(cfg.github)   : "",
         linkedin: cfg.linkedin ? String(cfg.linkedin) : "",
       });
+      const seen = cfg.seen_authors && typeof cfg.seen_authors === "object" ? cfg.seen_authors : {};
+      setSeenAuthors(seen);
+      const usernames = Array.isArray(cfg.usernames) ? cfg.usernames : [];
+      setCheckedEmails(new Set(usernames));
     }).catch(() => {});
 
     getPrivacyConsent().then(setConsent).catch(() => {});
   }, []);
+
+  async function handleSaveIdentity() {
+    setIdentitySaving(true); setIdentityMsg("");
+    try {
+      await updateUsernames([...checkedEmails]);
+      setIdentityMsg("Saved.");
+    } catch(e) { setIdentityMsg(e?.message ?? "Failed to save."); }
+    finally { setIdentitySaving(false); }
+  }
 
   function change(field) {
     return (e) => {
@@ -200,7 +219,7 @@ export default function Settings() {
 
         {/* Sidebar */}
         <div style={{ display: "flex", flexDirection: "column", width: 120, flexShrink: 0, gap: 10, marginTop: 30, background: "var(--surface)"}}>
-          {[["profile","Profile"],["privacy","Privacy"],["data","Data"]].map(([id, label]) => (
+          {[["profile","Profile"],["privacy","Privacy"],["contributors","Contributors"],["data","Data"]].map(([id, label]) => (
             <button
               key={id}
               onClick={() => setTab(id)}
@@ -286,6 +305,61 @@ export default function Settings() {
               <button className="s-btn" onClick={handleToggleConsent} disabled={consentSaving} style={{ minWidth: 140 }}>
                 {consentSaving ? "Updating…" : consent ? "Revoke consent" : "Grant consent"}
               </button>
+            </div>
+          )}
+
+          {/* ── Contributors ── */}
+          {tab === "contributors" && (
+            <div style={{ maxWidth: 500 }}>
+              <h3 style={{ marginTop: 0, marginBottom: 4 }}>Your Git Identities</h3>
+              <p style={{ marginTop: 0, opacity: 0.7, fontSize: "13px" }}>
+                Every contributor seen across your uploaded projects is listed below.
+                Check the ones that represent you — these are used to calculate your contribution share.
+              </p>
+              <hr style={{ marginBottom: 16 }} />
+
+              {Object.keys(seenAuthors).length === 0 ? (
+                <p style={{ fontSize: "13px", opacity: 0.5 }}>
+                  No contributors found yet. Upload a project to populate this list.
+                </p>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 20 }}>
+                  {Object.entries(seenAuthors)
+                    .sort((a, b) => a[1].localeCompare(b[1]))
+                    .map(([email, name]) => {
+                      const checked = checkedEmails.has(email);
+                      return (
+                        <label key={email} style={{
+                          display: "flex", alignItems: "center", gap: 12,
+                          padding: "10px 14px", borderRadius: 8, cursor: "pointer",
+                          border: `1px solid ${checked ? "rgba(88,166,255,.35)" : "rgba(255,255,255,.08)"}`,
+                          background: checked ? "rgba(88,166,255,.07)" : "transparent",
+                          transition: "all .15s",
+                        }}>
+                          <input type="checkbox" checked={checked}
+                            onChange={() => setCheckedEmails(prev => {
+                              const next = new Set(prev);
+                              next.has(email) ? next.delete(email) : next.add(email);
+                              return next;
+                            })}
+                            style={{ accentColor: "#58a6ff", width: 15, height: 15, flexShrink: 0 }}
+                          />
+                          <div>
+                            <div style={{ fontSize: 14, fontWeight: 500 }}>{name}</div>
+                            <div style={{ fontSize: 12, opacity: 0.45, fontFamily: "monospace" }}>{email}</div>
+                          </div>
+                        </label>
+                      );
+                    })}
+                </div>
+              )}
+
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <button className="s-btn" onClick={handleSaveIdentity} disabled={identitySaving || Object.keys(seenAuthors).length === 0} style={{ minWidth: 120 }}>
+                  {identitySaving ? "Saving…" : "Save changes"}
+                </button>
+                {identityMsg && <span style={{ fontSize: "13px", opacity: 0.8 }}>{identityMsg}</span>}
+              </div>
             </div>
           )}
 

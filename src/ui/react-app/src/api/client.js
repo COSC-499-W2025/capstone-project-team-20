@@ -264,3 +264,19 @@ export function configSet(key, value) {
     body: JSON.stringify({ key, value }),
   });
 }
+
+export function setIdentity(emails, projectIds) {
+  return request("/projects/set-identity", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ emails, project_ids: projectIds }),
+  });
+}
+
+export function updateUsernames(emails) {
+  return request("/config/usernames", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ emails }),
+  });
+}
