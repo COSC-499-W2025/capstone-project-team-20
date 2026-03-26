@@ -339,7 +339,15 @@ def test_resolve_selected_authors_matches_case_insensitively(analyzer):
 def test_analyze_git_and_contributions_non_interactive_uses_configured_usernames(analyzer, mock_config_manager):
     project = Project(name="repo1", file_path="/fake/repo1")
     analyzer.project_manager = MagicMock()
-    mock_config_manager.get.return_value = ["alice@example.com"]
+
+    def config_get_side_effect(key, default=None):
+        if key == "usernames":
+            return ["alice@example.com"]
+        if key == "seen_authors":
+            return {}
+        return default
+
+    mock_config_manager.get.side_effect = config_get_side_effect
 
     fake_stats = {
         "alice@example.com": ContributionStats(lines_added=10, lines_deleted=0, total_commits=1),
@@ -362,9 +370,10 @@ def test_analyze_git_and_contributions_non_interactive_uses_configured_usernames
              "analyze",
              return_value=fake_stats
          ):
-        pending = analyzer.analyze_git_and_contributions(projects=[project], interactive=False)
+        pending_dupes, pending_identity = analyzer.analyze_git_and_contributions(projects=[project], interactive=False)
 
-    assert pending == []
+    assert pending_dupes == []
+    assert pending_identity == []
     assert project.authors == ["Alice"]
     assert project.individual_contributions["contribution_share_percent"] == 50.0
 
@@ -589,3 +598,119 @@ def test_initialize_projects_refreshes_batch_for_unchanged_project(tmp_path, moc
     updated = analyzer.project_manager.get_by_name("project-d")
     assert updated.import_batch_id == analyzer.import_batch_id
     assert updated.last_accessed is not None
+
+
+# ── _update_seen_authors ───────────────────────────────────────────────────────
+
+def test_update_seen_authors_merges_new_authors(analyzer, mock_config_manager):
+    """New email→name pairs are merged in; existing names win on conflict."""
+    mock_config_manager.get.side_effect = lambda key, default=None: (
+        {"alice@example.com": "Alice Existing"} if key == "seen_authors" else default
+    )
+    analyzer._update_seen_authors({
+        "alice@example.com": "Alice New",   # conflict — existing name should win
+        "bob@example.com":   "Bob",
+    })
+    call_args = mock_config_manager.set.call_args
+    key, value = call_args[0]
+    assert key == "seen_authors"
+    assert value["alice@example.com"] == "Alice Existing"
+    assert value["bob@example.com"] == "Bob"
+
+
+def test_update_seen_authors_no_op_when_unchanged(analyzer, mock_config_manager):
+    """_update_seen_authors does NOT call set when nothing changed."""
+    existing = {"alice@example.com": "Alice"}
+    mock_config_manager.get.side_effect = lambda key, default=None: (
+        existing if key == "seen_authors" else default
+    )
+    analyzer._update_seen_authors({"alice@example.com": "Alice"})
+    mock_config_manager.set.assert_not_called()
+
+
+# ── rebuild_seen_authors ───────────────────────────────────────────────────────
+
+def test_rebuild_seen_authors_rescans_all_projects(analyzer, mock_config_manager):
+    """rebuild_seen_authors aggregates authors across all projects."""
+    project_a = Project(name="a", file_path="/fake/a")
+    project_b = Project(name="b", file_path="/fake/b")
+
+    with patch.object(analyzer, "_get_projects", return_value=[project_a, project_b]), \
+         patch("pathlib.Path.exists", return_value=True), \
+         patch.object(
+             analyzer.contribution_analyzer,
+             "get_name_map",
+             side_effect=[
+                 {"alice@example.com": "Alice"},
+                 {"bob@example.com": "Bob"},
+             ],
+         ):
+        analyzer.rebuild_seen_authors()
+
+    key, value = mock_config_manager.set.call_args[0]
+    assert key == "seen_authors"
+    assert value == {"alice@example.com": "Alice", "bob@example.com": "Bob"}
+
+
+# ── No usernames → contributor not identified ──────────────────────────────────
+
+def test_analyze_no_usernames_no_auto_detect_sets_empty_contributions(analyzer, mock_config_manager):
+    """When no usernames configured and auto-detect fails, individual_contributions is left empty."""
+    project = Project(name="repo1", file_path="/fake/repo1")
+    analyzer.project_manager = MagicMock()
+
+    def config_get(key, default=None):
+        if key == "seen_authors":
+            return {}
+        return default  # usernames → None, github/email → None
+
+    mock_config_manager.get.side_effect = config_get
+
+    fake_stats = {
+        "alice@example.com": ContributionStats(lines_added=10, lines_deleted=0, total_commits=1),
+    }
+
+    with patch("pathlib.Path.exists", return_value=True), \
+         patch.object(analyzer.contribution_analyzer, "get_name_map",
+                      return_value={"alice@example.com": "Alice"}), \
+         patch.object(analyzer.contribution_analyzer, "detect_duplicate_contributors",
+                      return_value=[]), \
+         patch.object(analyzer.contribution_analyzer, "analyze", return_value=fake_stats):
+        pending_dupes, pending_identity = analyzer.analyze_git_and_contributions(
+            projects=[project], interactive=False
+        )
+
+    assert pending_dupes == []
+    assert len(pending_identity) == 1
+    assert pending_identity[0]["project_id"] == project.id
+    # contributions should be empty (not falsely 100%)
+    assert project.individual_contributions == {}
+
+
+# ── _auto_detect_user_emails ───────────────────────────────────────────────────
+
+def test_auto_detect_matches_github_noreply_email(analyzer, mock_config_manager):
+    """Noreply GitHub email pattern is recognised as the user."""
+    mock_config_manager.get.side_effect = lambda key, default=None: (
+        "ada-lovelace" if key == "github" else (None if key == "email" else default)
+    )
+    author_map = {
+        "ada-lovelace@users.noreply.github.com": "Ada",
+        "other@example.com": "Other",
+    }
+    result = analyzer._auto_detect_user_emails(author_map)
+    assert "ada-lovelace@users.noreply.github.com" in result
+
+
+def test_auto_detect_matches_profile_email(analyzer, mock_config_manager):
+    """Exact profile email match is recognised even without a GitHub noreply address."""
+    mock_config_manager.get.side_effect = lambda key, default=None: (
+        None if key == "github" else ("ada@example.com" if key == "email" else default)
+    )
+    author_map = {
+        "ada@example.com": "Ada",
+        "other@example.com": "Other",
+    }
+    result = analyzer._auto_detect_user_emails(author_map)
+    assert "ada@example.com" in result
+    assert "other@example.com" not in result

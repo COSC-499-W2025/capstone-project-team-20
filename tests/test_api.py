@@ -226,7 +226,7 @@ def test_upload_project_success(client, monkeypatch):
             return [FakeProject(1, "Proj1"), FakeProject(2, "Proj2")]
         
         def analyze_git_and_contributions(self, projects, interactive=False):
-            return []
+            return ([], [])
 
     monkeypatch.setattr(routes, "ProjectAnalyzer", FakeAnalyzer)
 
@@ -259,6 +259,7 @@ def test_upload_project_triggers_analyses(client, monkeypatch):
 
         def analyze_git_and_contributions(self, projects=None, interactive=True):
             calls.append(("git", len(projects or []), interactive))
+            return ([], [])
 
         def analyze_metadata(self, projects=None):
             calls.append(("metadata", len(projects or [])))
@@ -527,6 +528,12 @@ def test_save_config_persists_all_fields(client, monkeypatch):
         def set(self, key, value):
             stored[key] = value
 
+        def get(self, key, default=None):
+            return stored.get(key, default)
+
+        def delete(self, key):
+            stored.pop(key, None)
+
         def get_all(self):
             return stored
 
@@ -572,6 +579,12 @@ def test_save_config_required_fields_only(client, monkeypatch):
     class FakeConfigManager:
         def set(self, key, value):
             stored[key] = value
+
+        def get(self, key, default=None):
+            return stored.get(key, default)
+
+        def delete(self, key):
+            stored.pop(key, None)
 
         def get_all(self):
             return stored
@@ -1318,3 +1331,196 @@ def test_config_set_stores_dict_value(client, monkeypatch):
     res = client.post("/config/set", json={"key": "skills", "value": skills})
     assert res.status_code == 200
     assert stored["skills"] == skills
+
+
+# ── POST /projects/set-identity ───────────────────────────────────────────────
+
+def test_set_identity_accumulates_emails_and_reruns_analysis(client, monkeypatch):
+    """set-identity merges new emails into existing usernames and reruns analysis."""
+    stored = {"usernames": ["existing@example.com"]}
+    analysis_calls = []
+
+    class FakeConfigManager:
+        def get(self, key, default=None):
+            return stored.get(key, default)
+        def set(self, key, value):
+            stored[key] = value
+
+    class FakeProjectManager:
+        def get(self, id):
+            return FakeProject(id, f"project-{id}")
+
+    class FakeAnalyzer:
+        def __init__(self, cm, root_folders, zip_path):
+            pass
+        def analyze_git_and_contributions(self, projects, interactive=False):
+            analysis_calls.append([p.id for p in projects])
+            return ([], [])
+        def analyze_metadata(self, projects):
+            pass
+        def analyze_categories(self, projects):
+            pass
+        def analyze_languages(self, projects):
+            pass
+        def analyze_skills(self, projects, silent=False):
+            pass
+        def generate_insights_noninteractive(self, projects):
+            pass
+
+    monkeypatch.setattr(routes, "ConfigManager", FakeConfigManager)
+    monkeypatch.setattr(routes, "ProjectManager", FakeProjectManager)
+    monkeypatch.setattr(routes, "ProjectAnalyzer", FakeAnalyzer)
+
+    res = client.post("/projects/set-identity", json={
+        "emails": ["new@example.com"],
+        "project_ids": [1],
+    })
+    assert res.status_code == 200
+    data = res.json()
+    assert data["ok"] is True
+    assert "existing@example.com" in data["usernames"]
+    assert "new@example.com" in data["usernames"]
+    assert analysis_calls == [[1]]
+
+
+def test_set_identity_skips_missing_projects(client, monkeypatch):
+    """set-identity silently skips project IDs that don't exist."""
+    stored = {}
+
+    class FakeConfigManager:
+        def get(self, key, default=None):
+            return stored.get(key, default)
+        def set(self, key, value):
+            stored[key] = value
+
+    class FakeProjectManager:
+        def get(self, id):
+            return None  # project not found
+
+    monkeypatch.setattr(routes, "ConfigManager", FakeConfigManager)
+    monkeypatch.setattr(routes, "ProjectManager", FakeProjectManager)
+
+    res = client.post("/projects/set-identity", json={
+        "emails": ["me@example.com"],
+        "project_ids": [999],
+    })
+    assert res.status_code == 200
+    assert res.json()["results"] == []
+
+
+# ── PUT /config/usernames ──────────────────────────────────────────────────────
+
+def test_update_usernames_replaces_list(client, monkeypatch):
+    """PUT /config/usernames replaces the full list and deduplicates."""
+    stored = {"usernames": ["old@example.com"]}
+
+    class FakeConfigManager:
+        def get(self, key, default=None):
+            return stored.get(key, default)
+        def set(self, key, value):
+            stored[key] = value
+
+    monkeypatch.setattr(routes, "ConfigManager", FakeConfigManager)
+
+    res = client.put("/config/usernames", json={"emails": ["a@example.com", "b@example.com", "a@example.com"]})
+    assert res.status_code == 200
+    data = res.json()
+    assert data["ok"] is True
+    assert sorted(data["usernames"]) == ["a@example.com", "b@example.com"]
+    assert "old@example.com" not in stored["usernames"]
+
+
+def test_update_usernames_empty_list(client, monkeypatch):
+    """PUT /config/usernames with empty list clears the usernames."""
+    stored = {"usernames": ["someone@example.com"]}
+
+    class FakeConfigManager:
+        def get(self, key, default=None):
+            return stored.get(key, default)
+        def set(self, key, value):
+            stored[key] = value
+
+    monkeypatch.setattr(routes, "ConfigManager", FakeConfigManager)
+
+    res = client.put("/config/usernames", json={"emails": []})
+    assert res.status_code == 200
+    assert res.json()["usernames"] == []
+
+
+# ── Upload returns pending_identity ───────────────────────────────────────────
+
+def test_upload_returns_pending_identity_when_no_match(client, monkeypatch):
+    """Upload response includes pending_identity and status=needs_identity when no contributor match."""
+    monkeypatch.setattr(routes, "parse_zip_to_project_folders", lambda _: ["root1"])
+
+    pending_id = [{
+        "project_id": 1,
+        "project_name": "my-app",
+        "candidates": [{"email": "dev@example.com", "name": "Dev User"}],
+    }]
+
+    class FakeAnalyzer:
+        def __init__(self, config, root_folders, tmp_path):
+            self.changed_project_names = ["my-app"]
+
+        def initialize_projects(self):
+            return [FakeProject(1, "my-app")]
+
+        def analyze_git_and_contributions(self, projects, interactive=False):
+            return ([], pending_id)
+
+    monkeypatch.setattr(routes, "ProjectAnalyzer", FakeAnalyzer)
+
+    files = {"zip_file": ("test.zip", io.BytesIO(b"fake zip bytes"), "application/zip")}
+    res = client.post("/projects/upload", files=files)
+
+    assert res.status_code == 201
+    data = res.json()
+    assert data["status"] == "needs_identity"
+    assert len(data["pending_identity"]) == 1
+    assert data["pending_identity"][0]["project_name"] == "my-app"
+    assert data["pending_duplicates"] == []
+
+
+# ── save_config clears usernames when identity fields change ──────────────────
+
+def test_save_config_clears_usernames_when_email_changes(client, monkeypatch):
+    """Changing the profile email clears cached usernames."""
+    stored = {"email": "old@example.com", "usernames": ["old@example.com"]}
+
+    class FakeConfigManager:
+        def get(self, key, default=None):
+            return stored.get(key, default)
+        def set(self, key, value):
+            stored[key] = value
+        def delete(self, key):
+            stored.pop(key, None)
+        def get_all(self):
+            return stored
+
+    monkeypatch.setattr(routes, "ConfigManager", FakeConfigManager)
+
+    res = client.post("/config", json={"name": "Ada", "email": "new@example.com", "phone": "555-1234"})
+    assert res.status_code == 200
+    assert "usernames" not in stored
+
+
+def test_save_config_does_not_clear_usernames_when_email_unchanged(client, monkeypatch):
+    """Saving config with the same email must NOT clear usernames."""
+    stored = {"email": "same@example.com", "usernames": ["same@example.com"]}
+
+    class FakeConfigManager:
+        def get(self, key, default=None):
+            return stored.get(key, default)
+        def set(self, key, value):
+            stored[key] = value
+        def delete(self, key):
+            stored.pop(key, None)
+        def get_all(self):
+            return stored
+
+    monkeypatch.setattr(routes, "ConfigManager", FakeConfigManager)
+
+    res = client.post("/config", json={"name": "Ada", "email": "same@example.com", "phone": "555-1234"})
+    assert res.status_code == 200
+    assert "usernames" in stored
