@@ -86,3 +86,44 @@ jobs:
       run: |
         cd src/ui/react-app
         npm run test:run
+
+  playwright:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install LaTeX
+      run: sudo apt-get install -y --no-install-recommends texlive-latex-extra texlive-fonts-recommended
+
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Set up Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Install Node dependencies
+      run: cd src/ui/react-app && npm install
+
+    - name: Install Playwright browsers
+      run: cd src/ui/react-app && npx playwright install --with-deps chromium
+
+    - name: Run Playwright tests
+      run: cd src/ui/react-app && npx playwright test
+
+    - name: Upload Playwright report
+      uses: actions/upload-artifact@v4
+      if: failure()
+      with:
+        name: playwright-report
+        path: src/ui/react-app/playwright-report/
