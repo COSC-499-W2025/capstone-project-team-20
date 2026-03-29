@@ -546,6 +546,21 @@ body{
   color: var(--accent);
 }
 
+.linkedin-share-panel {
+  margin-top: 14px;
+  display: grid;
+  gap: 8px;
+}
+
+.linkedin-share-panel small {
+  color: #cfeaf7;
+}
+
+.linkedin-share-feedback {
+  margin-top: 12px;
+  color: #9fe7b6;
+}
+
 /* ── Portfolio (from feature branch) ── */
 
 .portfolio-panel {

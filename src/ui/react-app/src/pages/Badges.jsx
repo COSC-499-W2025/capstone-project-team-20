@@ -149,6 +149,40 @@ function Badges() {
   const [activeWrappedYear, setActiveWrappedYear] = useState(null);
   const [activeHeatmapBadgeId, setActiveHeatmapBadgeId] = useState(null);
 
+  const [shareFeedback, setShareFeedback] = useState("");
+
+  const setTimedFeedback = (message) => {
+    setShareFeedback(message);
+    window.setTimeout(() => setShareFeedback(""), 3500);
+  };
+
+  const shareOnLinkedIn = ({ text, deepLink }) => {
+    const shareUrl = new URL("https://www.linkedin.com/sharing/share-offsite/");
+    const urlToShare = deepLink || window.location.href;
+    shareUrl.searchParams.set("url", urlToShare);
+    window.open(shareUrl.toString(), "_blank", "noopener,noreferrer");
+
+    if (navigator?.clipboard?.writeText) {
+      navigator.clipboard
+        .writeText(text)
+        .then(() => setTimedFeedback("LinkedIn share opened. Caption copied to clipboard."))
+        .catch(() => setTimedFeedback("LinkedIn share opened. Copy the caption below into your post."));
+    } else {
+      setTimedFeedback("LinkedIn share opened. Copy the caption below into your post.");
+    }
+  };
+
+  const buildBadgeShareText = (badge, achievedBadge) => {
+    const projectLabel = achievedBadge?.projects?.[0]?.project;
+    if (projectLabel) {
+      return `I just unlocked the ${badge.label} badge on my developer dashboard for ${projectLabel}. 🚀 #DeveloperJourney #Portfolio`;
+    }
+    return `I just unlocked the ${badge.label} badge on my developer dashboard. 🚀 #DeveloperJourney #Portfolio`;
+  };
+
+  const buildWrappedShareText = (yearBlock) =>
+    `My ${yearBlock.year} Developer Wrapped: ${yearBlock.projects_count} projects, ${yearBlock.total_loc} lines of code, ${yearBlock.total_files} files, and ${yearBlock.milestones?.length ?? 0} badge milestones. 📈 #YearInReview #SoftwareEngineering`;
+
   async function loadBadgeData() {
     setLoading(true);
     setError(null);
@@ -380,6 +414,23 @@ function Badges() {
             ) : (
               <p>No completion milestones yet for this badge.</p>
             )}
+
+            <div className="linkedin-share-panel">
+              <button
+                type="button"
+                onClick={() =>
+                  shareOnLinkedIn({
+                    text: buildBadgeShareText(selectedHeatmapBadge, selectedAchievedBadge),
+                    deepLink: `${window.location.origin}${window.location.pathname}#badge-${selectedHeatmapBadge.badgeId}`,
+                  })
+                }
+              >
+                Share Badge on LinkedIn
+              </button>
+              <small>
+                LinkedIn can auto-open the share composer for a link. We also copy a suggested caption so it can be pasted into the post.
+              </small>
+            </div>
           </div>
         </div>
       ) : null}
@@ -411,9 +462,27 @@ function Badges() {
             ) : (
               <p>No badge milestones recorded for this year.</p>
             )}
+            <div className="linkedin-share-panel">
+              <button
+                type="button"
+                onClick={() =>
+                  shareOnLinkedIn({
+                    text: buildWrappedShareText(selectedWrapped),
+                    deepLink: `${window.location.origin}${window.location.pathname}#wrapped-${selectedWrapped.year}`,
+                  })
+                }
+              >
+                Share Wrapped on LinkedIn
+              </button>
+              <small>
+                LinkedIn profile highlights still require manual add, but this opens a post share flow instantly.
+              </small>
+            </div>
           </div>
         </div>
       ) : null}
+
+      {shareFeedback ? <p className="linkedin-share-feedback">{shareFeedback}</p> : null}
 
       <h4>🔥 Skill Heatmap</h4>
       {skills.length === 0 ? (

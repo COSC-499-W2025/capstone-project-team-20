@@ -108,6 +108,40 @@ beforeEach(() => {
 })
 
 describe('App badges heatmap', () => {
+  it('opens LinkedIn share flow for badge and wrapped cards', async () => {
+    const user = userEvent.setup()
+    const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null)
+    const clipboardSpy = vi.fn().mockResolvedValue(undefined)
+    Object.assign(navigator, {
+      clipboard: {
+        writeText: clipboardSpy,
+      },
+    })
+
+    render(<App />)
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /badges/i })).toBeInTheDocument()
+    )
+    await user.click(screen.getByRole('button', { name: /badges/i }))
+
+    const gigButton = await screen.findByRole('button', {
+      name: /open gigantana badge details/i,
+    })
+    await user.click(gigButton)
+    await user.click(await screen.findByRole('button', { name: /share badge on linkedin/i }))
+
+    expect(openSpy).toHaveBeenCalled()
+    expect(clipboardSpy).toHaveBeenCalled()
+
+    await user.click(screen.getByRole('button', { name: '✕' }))
+    await user.click(await screen.findByRole('button', { name: /get 2025 stats/i }))
+    await user.click(await screen.findByRole('button', { name: /share wrapped on linkedin/i }))
+
+    expect(openSpy).toHaveBeenCalledTimes(2)
+    expect(clipboardSpy).toHaveBeenCalledTimes(2)
+    openSpy.mockRestore()
+  })
+
   it('shows heatmap first and opens badge detail modal on tile click', async () => {
     const user = userEvent.setup()
     render(<App />)
