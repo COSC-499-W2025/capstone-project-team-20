@@ -506,6 +506,13 @@ function Badges() {
         setTimedFeedback("Wrapped image downloaded. LinkedIn opened so you can attach it to your post.");
       }
     } catch {
+      if (navigator?.clipboard?.write && window.ClipboardItem) {
+        await navigator.clipboard.write([
+          new window.ClipboardItem({
+            "text/plain": new Blob([text], { type: "text/plain" }),
+          }),
+        ]);
+      }
       if (navigator?.clipboard?.writeText) {
         await navigator.clipboard.writeText(text);
       }
