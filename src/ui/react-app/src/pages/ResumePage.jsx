@@ -751,6 +751,7 @@ function ResumePage() {
   const [previewCtx, setPreviewCtx] = useState(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [multiPageExport, setMultiPageExport] = useState(null);
 
   function setStatus(nextMessage, nextType = "info") {
     setMessage(nextMessage);
@@ -844,8 +845,12 @@ function ResumePage() {
     setStatus("");
     try {
       const exp = await exportResume({ report_id: selectedReport.id, template: "jake", output_name: "resume.pdf" });
-      window.open(`http://localhost:8000${exp.download_url}`, "_blank");
-      setMessage("Resume exported.");
+      if (exp.page_count && exp.page_count > 1) {
+        setMultiPageExport(exp);
+      } else {
+        window.open(`http://localhost:8000${exp.download_url}`, "_blank");
+        setMessage("Resume exported.");
+      }
     } catch (e) {
       setStatus(e.message ?? "Failed to export resume", "error");
     } finally {

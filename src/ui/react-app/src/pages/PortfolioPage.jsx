@@ -504,7 +504,7 @@ function PortfolioPage() {
 
 
       <div className={`portfolio-status portfolio-status--${messageType}`} aria-live="polite" data-testid="portfolio-status-banner">
-        {message || "Ready."}
+        {message || "Select or create a report to preview your portfolio."}
       </div>
 
       <div style={{ display: "flex", gap: 24, marginTop: 16, alignItems: "flex-start" }}>
@@ -582,16 +582,6 @@ function PortfolioPage() {
 
         {/* RIGHT — portfolio content */}
         <div style={{ flex: 1 }}>
-          {selectedReport && (
-            <div className="portfolio-selected-report-card" data-testid="selected-report-card" style={{ marginBottom: 16 }}>
-              <p><strong>Title:</strong> {selectedReport.title ?? `Report #${selectedReport.id}`}</p>
-              <p><strong>ID:</strong> {selectedReport.id}</p>
-              <p><strong>Kind:</strong> {selectedReport.report_kind ?? "portfolio"}</p>
-              <p><strong>Sort:</strong> {selectedReport.sort_by ?? "resume_score"}</p>
-              <p><strong>Projects:</strong> {selectedReport.project_count ?? "Unknown"}</p>
-              {selectedReport.date_created ? <p><strong>Created:</strong> {new Date(selectedReport.date_created).toLocaleString()}</p> : null}
-            </div>
-          )}
 
           <div style={{ marginBottom: 12 }}>
             <button onClick={handleGenerateWebPortfolio} disabled={loading || !selectedReport?.id}>
