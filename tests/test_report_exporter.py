@@ -268,22 +268,25 @@ class TestReportExporter:
 
     # ==================== INTEGRATION TESTS ====================
 
+    @patch('src.exporters.ReportExporter.PdfReader')
     @patch('subprocess.run')
     @patch('pathlib.Path.exists')
     @patch('pathlib.Path.unlink')
     @patch('shutil.move')
-    def test_compile_to_pdf_success(self, mock_move, mock_unlink, mock_exists, mock_run, exporter, tmp_path):
+    def test_compile_to_pdf_success(self, mock_move, mock_unlink, mock_exists, mock_run, mock_pdf_reader, exporter, tmp_path):
         """Test successful PDF compilation"""
         tex_path = tmp_path / "resume.tex"
         output_path = tmp_path / "resume.pdf"
 
         mock_run.return_value = Mock(returncode=0, stdout="Success", stderr="")
         mock_exists.return_value = True
+        mock_pdf_reader.return_value.pages = ["page1"]
 
-        exporter._compile_to_pdf(tex_path, output_path)
+        result = exporter._compile_to_pdf(tex_path, output_path)
 
         assert mock_run.call_count == 2
         assert mock_unlink.call_count == 3
+        assert result == 1
 
     @patch('subprocess.run')
     def test_compile_to_pdf_pdflatex_not_found(self, mock_run, exporter, tmp_path):
@@ -295,15 +298,17 @@ class TestReportExporter:
 
         with pytest.raises(RuntimeError, match="pdflatex not found"):
             exporter._compile_to_pdf(tex_path, output_path)
+    @patch('src.exporters.ReportExporter.PdfReader')
     @patch('subprocess.run')
     @patch('shutil.move')
-    def test_compile_calls_pdflatex_twice(self, mock_move, mock_run, exporter, tmp_path):
+    def test_compile_calls_pdflatex_twice(self, mock_move, mock_run, mock_pdf_reader, exporter, tmp_path):
         """Test that pdflatex is called twice for proper formatting"""
         tex_path = tmp_path / "resume.tex"
         tex_path.write_text("\\documentclass{article}\\begin{document}test\\end{document}")
         output_path = tmp_path / "resume.pdf"
 
         (tmp_path / "resume.pdf").touch()
+        mock_pdf_reader.return_value.pages = ["page1"]
 
         mock_run.return_value = Mock(
             returncode=0,
@@ -316,15 +321,17 @@ class TestReportExporter:
         assert mock_run.call_count == 2
 
 
+    @patch('src.exporters.ReportExporter.PdfReader')
     @patch('subprocess.run')
     @patch('shutil.move')
-    def test_compile_uses_correct_output_directory(self, mock_move, mock_run, exporter, tmp_path):
+    def test_compile_uses_correct_output_directory(self, mock_move, mock_run, mock_pdf_reader, exporter, tmp_path):
         """Test that pdflatex outputs to the correct directory"""
         tex_path = tmp_path / "resume.tex"
         tex_path.write_text("\\documentclass{article}\\begin{document}test\\end{document}")
         output_path = tmp_path / "resume.pdf"
 
         (tmp_path / "resume.pdf").touch()
+        mock_pdf_reader.return_value.pages = ["page1"]
 
         mock_run.return_value = Mock(returncode=0, stdout="Success", stderr="")
 
@@ -335,8 +342,9 @@ class TestReportExporter:
         assert str(tmp_path) in call_args
 
 
+    @patch('src.exporters.ReportExporter.PdfReader')
     @patch('subprocess.run')
-    def test_compile_cleans_up_aux_files(self, mock_run, exporter, tmp_path):
+    def test_compile_cleans_up_aux_files(self, mock_run, mock_pdf_reader, exporter, tmp_path):
         """Test that auxiliary files are deleted after compilation"""
         tex_path = tmp_path / "resume.tex"
         tex_path.write_text("\\documentclass{article}\\begin{document}test\\end{document}")
@@ -346,6 +354,7 @@ class TestReportExporter:
         (tmp_path / "resume.log").touch()
         (tmp_path / "resume.out").touch()
         (tmp_path / "resume.pdf").touch()
+        mock_pdf_reader.return_value.pages = ["page1"]
 
         mock_run.return_value = Mock(returncode=0, stdout="Success", stderr="")
 
@@ -356,6 +365,39 @@ class TestReportExporter:
         assert not (tmp_path / "resume.out").exists()
         assert (tmp_path / "resume.pdf").exists()
 
+
+    @patch('src.exporters.ReportExporter.PdfReader')
+    @patch('subprocess.run')
+    def test_compile_to_pdf_returns_single_page_count(self, mock_run, mock_pdf_reader, exporter, tmp_path):
+        """Test that _compile_to_pdf returns 1 for a one-page PDF"""
+        tex_path = tmp_path / "resume.tex"
+        tex_path.write_text("test")
+        output_path = tmp_path / "resume.pdf"
+        output_path.touch()
+
+        mock_run.return_value = Mock(returncode=0, stdout="", stderr="")
+        mock_pdf_reader.return_value.pages = ["page1"]
+
+        result = exporter._compile_to_pdf(tex_path, output_path)
+
+        assert result == 1
+        mock_pdf_reader.assert_called_once_with(str(output_path.resolve()))
+
+    @patch('src.exporters.ReportExporter.PdfReader')
+    @patch('subprocess.run')
+    def test_compile_to_pdf_returns_multi_page_count(self, mock_run, mock_pdf_reader, exporter, tmp_path):
+        """Test that _compile_to_pdf returns the correct count for a multi-page PDF"""
+        tex_path = tmp_path / "resume.tex"
+        tex_path.write_text("test")
+        output_path = tmp_path / "resume.pdf"
+        output_path.touch()
+
+        mock_run.return_value = Mock(returncode=0, stdout="", stderr="")
+        mock_pdf_reader.return_value.pages = ["page1", "page2", "page3"]
+
+        result = exporter._compile_to_pdf(tex_path, output_path)
+
+        assert result == 3
 
     @patch('subprocess.run')
     def test_compile_raises_when_pdflatex_not_found(self, mock_run, exporter, tmp_path):

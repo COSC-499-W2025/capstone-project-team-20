@@ -99,6 +99,10 @@ class ProjectDetail(BaseModel):
     # Scoring
     resume_score: float = 0.0
 
+    # Project timeline
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
+
     # Timestamps
     date_created: Optional[datetime] = None
     last_modified: Optional[datetime] = None

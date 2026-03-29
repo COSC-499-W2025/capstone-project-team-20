@@ -124,11 +124,13 @@
     \resumeSubheading
       { {{- job.title | escape_latex -}} }{ {{- job.dates | escape_latex -}} }
       { {{- job.company | escape_latex -}} }{ {{- job.location | escape_latex -}} }
+{% if job.bullets %}
       \resumeItemListStart
 {% for bullet in job.bullets %}
         \resumeItem{ {{- bullet | escape_latex -}} }
 {% endfor %}
       \resumeItemListEnd
+{% endif %}
 {% endfor %}
   \resumeSubHeadingListEnd
 {% endif %}
@@ -140,11 +142,13 @@
 {% for proj in projects %}
       \resumeProjectHeading
           {\textbf{ {{- proj.name | escape_latex -}} } $|$ \emph{ {{- proj.stack | escape_latex -}} }}{ {{- proj.dates | escape_latex -}} }
+{% if proj.bullets %}
           \resumeItemListStart
 {% for bullet in proj.bullets %}
             \resumeItem{ {{- bullet | escape_latex -}} }
 {% endfor %}
           \resumeItemListEnd
+{% endif %}
 {% endfor %}
     \resumeSubHeadingListEnd
 {% endif %}
