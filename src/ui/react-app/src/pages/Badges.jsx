@@ -506,6 +506,9 @@ function Badges() {
         setTimedFeedback("Wrapped image downloaded. LinkedIn opened so you can attach it to your post.");
       }
     } catch {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+      }
       setTimedFeedback("Could not generate wrapped image. LinkedIn opened with the share link.");
     }
 
