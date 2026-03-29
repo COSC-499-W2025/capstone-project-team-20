@@ -165,7 +165,7 @@ function Badges() {
   const [activeHeatmapBadgeId, setActiveHeatmapBadgeId] = useState(null);
   const [activeSkill, setActiveSkill] = useState(null);
 
-  const [setShareFeedback] = useState("");
+  const [, setShareFeedback] = useState("");
 
   const setTimedFeedback = (message) => {
     setShareFeedback(message);
