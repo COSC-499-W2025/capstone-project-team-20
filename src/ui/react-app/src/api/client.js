@@ -106,6 +106,11 @@ export function listSkills() {
   return request("/skills");
 }
 
+export function listSkillsUsage() {
+  // GET /skills/usage -> { skills: [{name, project_count, projects: [...]}, ...] }
+  return request("/skills/usage");
+}
+
 export function getBadgeProgress() {
   return request("/badges/progress");
 }
@@ -180,6 +185,10 @@ export function exportResume({ report_id, template = "jake", output_name = "resu
 
 export function downloadResumeUrl(export_id) {
   return `${BASE_URL}/resume/exports/${export_id}/download`;
+}
+
+export function deleteResumeExport(export_id) {
+  return request(`/resume/exports/${export_id}`, { method: "DELETE" });
 }
 
 export function getResumeContext(report_id) {

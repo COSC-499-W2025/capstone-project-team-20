@@ -22,9 +22,14 @@ const LANG_COLORS = {
 };
 const lc = (l) => LANG_COLORS[l] ?? LANG_COLORS.default;
 const scoreColor = (s) => s >= 7 ? "#4ade80" : s >= 4 ? "#fbbf24" : "#6b7280";
-const fmt = (iso) => iso
-  ? new Date(iso).toLocaleDateString("en-CA", { year:"numeric", month:"short" })
-  : null;
+const fmt = (iso) => {
+  if (!iso) return null;
+  const [year, month] = iso.split("-");
+  const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  return `${months[Number(month) - 1]} ${year}`;
+};
+
+ 
 
 // ── Language bar ──────────────────────────────────────────────────────────────
 function LangBar({ share = {}, langs = [], height = 4 }) {
@@ -193,6 +198,7 @@ function Tile({ label, value }) {
 // ── Right panel: project detail ───────────────────────────────────────────────
 function ProjectDetail({ project, onDelete, onThumbnailUpload, loading }) {
   const thumbInputRef = useRef();
+  const thumbSrc = project?.thumbnail ? thumbnailUrl(project.thumbnail) : null;
 
   if (loading) {
     return (
@@ -214,6 +220,10 @@ function ProjectDetail({ project, onDelete, onThumbnailUpload, loading }) {
     );
   }
 
+  const dateRange = [fmt(project.date_created), fmt(project.last_modified)]
+  .filter(Boolean)
+  .join(" → ");
+
   const langEntries = Object.entries(project.language_share ?? {}).sort((a, b) => b[1] - a[1]);
   const stack = [...(project.frameworks ?? []), ...(project.skills_used ?? [])];
   const flags = [
@@ -224,8 +234,6 @@ function ProjectDetail({ project, onDelete, onThumbnailUpload, loading }) {
     project.has_test_files && "Tests",
     project.has_readme     && "README",
   ].filter(Boolean);
-  const dateRange = [fmt(project.date_created), fmt(project.last_modified)].filter(Boolean).join(" → ");
-  const thumbSrc = project.thumbnail ? thumbnailUrl(project.thumbnail) : null;
 
   return (
     <div style={{ height:"100%", overflowY:"auto", padding:"28px 32px" }}>

@@ -18,7 +18,7 @@ from src.generators.PortfolioGenerator import PortfolioGenerator
 from src.ZipParser import parse_zip_to_project_folders
 from src.services.badge_wrapped_service import build_badge_progress, build_yearly_wrapped
 
-from src.api.schemas.skills import SkillsListResponse, SkillItem
+from src.api.schemas.skills import SkillsListResponse, SkillItem, SkillsUsageResponse, SkillUsageItem
 from src.api.schemas.projects import (
     UploadProjectResponse,
     ProjectsListResponse,
@@ -350,6 +350,32 @@ def get_skills_list():
     ]
     return SkillsListResponse(skills=skills)
 
+@router.get("/skills/usage", response_model=SkillsUsageResponse)
+def get_skills_usage():
+    """List skills with usage counts and the project names where each skill appears."""
+    pm = ProjectManager()
+    projects = list(pm.get_all())
+
+    usage_map = {}
+    for p in projects:
+        project_name = (getattr(p, "name", "") or "").strip()
+        for s in (p.skills_used or []):
+            skill = (s or "").strip()
+            if not skill:
+                continue
+            usage_map.setdefault(skill, set())
+            if project_name:
+                usage_map[skill].add(project_name)
+
+    skills = [
+        SkillUsageItem(
+            name=name,
+            project_count=len(project_names),
+            projects=sorted(project_names, key=lambda x: x.lower()),
+        )
+        for name, project_names in sorted(usage_map.items(), key=lambda x: (-len(x[1]), x[0].lower()))
+    ]
+    return SkillsUsageResponse(skills=skills)
 
 @router.get("/badges/progress", response_model=BadgeProgressResponse)
 def get_badge_progress():
@@ -551,7 +577,7 @@ def export_portfolio(req: PortfolioExportRequest):
         raise HTTPException(status_code=404, detail="Report not found.")
     _require_report_kind(report, "portfolio")
     try:
-        export_id, out_path = export_report_pdf(report, template="portfolio", output_name=req.output_name)
+        export_id, out_path, _ = export_report_pdf(report, template="portfolio", output_name=req.output_name)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except RuntimeError as e:
@@ -645,7 +671,7 @@ def generate_report_portfolio_details(id: int, req: PortfolioDetailsGenerateRequ
     return PortfolioDetailsGenerateResponse(updated_project_names=updated)
 
 
-def export_report_pdf(report, template: str, output_name: str) -> tuple[str, Path]:
+def export_report_pdf(report, template: str, output_name: str) -> tuple[str, Path, int]:
     export_id = uuid4().hex
     out_dir = Path("resumes") if template != "portfolio" else Path("portfolios")
     out_dir.mkdir(exist_ok=True)
@@ -653,7 +679,7 @@ def export_report_pdf(report, template: str, output_name: str) -> tuple[str, Pat
     safe_name = output_name.replace("/", "_")
     out_path = out_dir / f"{export_id}-{safe_name}"
 
-    ReportExporter().export_to_pdf(
+    page_count = ReportExporter().export_to_pdf(
         report=report,
         config_manager=ConfigManager(),
         output_path=str(out_path),
@@ -662,7 +688,7 @@ def export_report_pdf(report, template: str, output_name: str) -> tuple[str, Pat
 
     if not out_path.exists():
         raise HTTPException(status_code=500, detail="Export failed: output file not created.")
-    return export_id, out_path
+    return export_id, out_path, page_count
 
 
 @router.post("/resume/export", response_model=ResumeExportResponse, dependencies=[Depends(require_consent)])
@@ -677,7 +703,7 @@ def export_resume(req: ResumeExportRequest):
     _require_report_kind(report, "resume")
 
     try:
-        export_id, out_path = export_report_pdf(report, template=req.template, output_name=req.output_name)
+        export_id, out_path, page_count = export_report_pdf(report, template=req.template, output_name=req.output_name)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except RuntimeError as e:
@@ -686,7 +712,8 @@ def export_resume(req: ResumeExportRequest):
     return ResumeExportResponse(
         export_id=export_id,
         filename=out_path.name,
-        download_url=f"/resume/exports/{export_id}/download"
+        download_url=f"/resume/exports/{export_id}/download",
+        page_count=page_count,
     )
 
 
@@ -724,6 +751,18 @@ def download_resume(export_id: str):
         raise HTTPException(status_code=404, detail="Export not found.")
     p = matches[0]
     return FileResponse(str(p), filename=p.name)
+
+
+@router.delete("/resume/exports/{export_id}", dependencies=[Depends(require_consent)])
+def delete_resume_export(export_id: str):
+    """Delete a previously exported resume PDF (e.g. when user cancels after page-count warning)."""
+    out_dir = Path("resumes")
+    matches = list(out_dir.glob(f"{export_id}-*.pdf"))
+    if not matches:
+        raise HTTPException(status_code=404, detail="Export not found.")
+    for f in matches:
+        f.unlink()
+    return {"ok": True}
 
 
 @router.get("/config")

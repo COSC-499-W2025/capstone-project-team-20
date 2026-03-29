@@ -7,6 +7,7 @@ import {
   getReport,
   deleteReport,
   exportResume,
+  deleteResumeExport,
   setPrivacyConsent,
   getResumeContext,
   patchReportProject,
@@ -69,6 +70,36 @@ function ConfirmModal({ title, message, confirmLabel = "Delete", onConfirm, onCa
           <div className="rs-modal-footer">
             <button className="rs-btn rs-btn--ghost" onClick={onCancel}>← Go back</button>
             <button className="rs-btn rs-btn--danger" onClick={onConfirm}>{confirmLabel}</button>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+
+// ---------------------------------------------------------------------------
+// Page-count warning modal
+// ---------------------------------------------------------------------------
+function PageCountModal({ pageCount, onConfirm, onCancel }) {
+  return (
+    <>
+      <style>{MODAL_CSS}</style>
+      <div className="rs-overlay">
+        <div className="rs-modal">
+          <div className="rs-bar" aria-hidden="true" />
+          <div className="rs-confirm-body">
+            <div className="rs-confirm-icon">📄</div>
+            <h2 className="rs-confirm-title">Resume exceeds one page</h2>
+            <p className="rs-confirm-sub">
+              Your resume compiled to <strong style={{ color: "#e6edf3" }}>{pageCount} pages</strong>.
+              Resumes are typically one page. Consider removing some projects or
+              shortening your bullet points before exporting.
+            </p>
+          </div>
+          <div className="rs-modal-footer">
+            <button className="rs-btn rs-btn--ghost" onClick={onCancel}>← Cancel</button>
+            <button className="rs-btn rs-btn--warning" onClick={onConfirm}>Download anyway</button>
           </div>
         </div>
       </div>
@@ -814,12 +845,28 @@ function ResumePage() {
     try {
       const exp = await exportResume({ report_id: selectedReport.id, template: "jake", output_name: "resume.pdf" });
       window.open(`http://localhost:8000${exp.download_url}`, "_blank");
-      setStatus("Resume exported.", "success");
+      setMessage("Resume exported.");
     } catch (e) {
       setStatus(e.message ?? "Failed to export resume", "error");
     } finally {
       setLoading(false);
     }
+  }
+
+  async function handleMultiPageConfirm() {
+    window.open(`http://localhost:8000${multiPageExport.download_url}`, "_blank");
+    setMultiPageExport(null);
+    setMessage("Resume exported.");
+  }
+
+  async function handleMultiPageCancel() {
+    try {
+      await deleteResumeExport(multiPageExport.export_id);
+    } catch (_) {
+      // best-effort cleanup
+    }
+    setMultiPageExport(null);
+    setMessage("Export cancelled.");
   }
 
   async function handleDeleteReport(id) {
@@ -963,6 +1010,14 @@ function ResumePage() {
           onCancel={() => setConfirmDeleteId(null)}
         />
       )}
+
+      {multiPageExport && (
+        <PageCountModal
+          pageCount={multiPageExport.page_count}
+          onConfirm={handleMultiPageConfirm}
+          onCancel={handleMultiPageCancel}
+        />
+      )}
     </>
   );
 }
@@ -1045,4 +1100,8 @@ const MODAL_CSS = `
   background: transparent; color: #f85149; border-color: #f85149;
 }
 .rs-btn--danger:hover { border-color: #ff7b72; color: #ff7b72; }
+.rs-btn--warning {
+  background: transparent; color: #e3b341; border-color: #e3b341;
+}
+.rs-btn--warning:hover { border-color: #f0c060; color: #f0c060; }
 `;
