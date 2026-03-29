@@ -182,6 +182,10 @@ export function downloadResumeUrl(export_id) {
   return `${BASE_URL}/resume/exports/${export_id}/download`;
 }
 
+export function deleteResumeExport(export_id) {
+  return request(`/resume/exports/${export_id}`, { method: "DELETE" });
+}
+
 export function getResumeContext(report_id) {
   return request(`/resume/context/${report_id}`);
 }

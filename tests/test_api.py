@@ -1524,3 +1524,145 @@ def test_save_config_does_not_clear_usernames_when_email_unchanged(client, monke
     res = client.post("/config", json={"name": "Ada", "email": "same@example.com", "phone": "555-1234"})
     assert res.status_code == 200
     assert "usernames" in stored
+# ── POST /resume/export (page_count) ─────────────────────────────────────────
+
+def test_export_resume_returns_page_count(client, monkeypatch):
+    """
+    HTTP: POST /resume/export
+    Verifies that page_count from the exporter is included in the response.
+    """
+    class FakeConsentManager:
+        def has_user_consented(self):
+            return True
+
+    report = Report(
+        id=5,
+        title="My Resume",
+        date_created=datetime(2025, 1, 1),
+        sort_by="resume_score",
+        projects=[],
+        notes=None,
+        report_kind="resume",
+    )
+
+    class FakeReportManager:
+        def get_report(self, id: int):
+            return report if id == 5 else None
+
+    class FakeReportExporter:
+        def export_to_pdf(self, report, config_manager, output_path: str, template: str):
+            Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+            Path(output_path).write_bytes(b"FAKE PDF DATA")
+            return 1  # one page
+
+    monkeypatch.setattr(routes, "ReportManager", FakeReportManager)
+    monkeypatch.setattr(routes, "ReportExporter", FakeReportExporter)
+    monkeypatch.setattr(routes, "ConsentManager", FakeConsentManager)
+
+    res = client.post("/resume/export", json={"report_id": 5, "template": "jake", "output_name": "resume.pdf"})
+    assert res.status_code == 200
+    data = res.json()
+    assert data["ok"] is True
+    assert data["page_count"] == 1
+    assert data["download_url"].startswith("/resume/exports/")
+
+
+def test_export_resume_returns_multi_page_count(client, monkeypatch):
+    """
+    HTTP: POST /resume/export
+    Verifies that a multi-page PDF is reflected correctly in page_count.
+    """
+    class FakeConsentManager:
+        def has_user_consented(self):
+            return True
+
+    report = Report(
+        id=6,
+        title="Big Resume",
+        date_created=datetime(2025, 1, 1),
+        sort_by="resume_score",
+        projects=[],
+        notes=None,
+        report_kind="resume",
+    )
+
+    class FakeReportManager:
+        def get_report(self, id: int):
+            return report if id == 6 else None
+
+    class FakeReportExporter:
+        def export_to_pdf(self, report, config_manager, output_path: str, template: str):
+            Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+            Path(output_path).write_bytes(b"FAKE PDF DATA")
+            return 2  # two pages
+
+    monkeypatch.setattr(routes, "ReportManager", FakeReportManager)
+    monkeypatch.setattr(routes, "ReportExporter", FakeReportExporter)
+    monkeypatch.setattr(routes, "ConsentManager", FakeConsentManager)
+
+    res = client.post("/resume/export", json={"report_id": 6, "template": "jake", "output_name": "resume.pdf"})
+    assert res.status_code == 200
+    assert res.json()["page_count"] == 2
+
+
+# ── DELETE /resume/exports/{export_id} ───────────────────────────────────────
+
+def test_delete_resume_export_success(client, monkeypatch, tmp_path):
+    """
+    HTTP: DELETE /resume/exports/{export_id}
+    Verifies that the PDF file is deleted and 200 OK is returned.
+    """
+    class FakeConsentManager:
+        def has_user_consented(self):
+            return True
+
+    monkeypatch.setattr(routes, "ConsentManager", FakeConsentManager)
+
+    # Create a fake PDF in the resumes/ directory matching the export_id pattern
+    resumes_dir = Path("resumes")
+    resumes_dir.mkdir(exist_ok=True)
+    export_id = "abc123testid"
+    fake_pdf = resumes_dir / f"{export_id}-resume.pdf"
+    fake_pdf.write_bytes(b"FAKE PDF")
+
+    try:
+        res = client.delete(f"/resume/exports/{export_id}")
+        assert res.status_code == 200
+        assert res.json()["ok"] is True
+        assert not fake_pdf.exists()
+    finally:
+        # Cleanup in case assertion fails
+        if fake_pdf.exists():
+            fake_pdf.unlink()
+
+
+def test_delete_resume_export_not_found(client, monkeypatch):
+    """
+    HTTP: DELETE /resume/exports/{export_id}
+    Verifies that 404 is returned when the export ID does not exist.
+    """
+    class FakeConsentManager:
+        def has_user_consented(self):
+            return True
+
+    monkeypatch.setattr(routes, "ConsentManager", FakeConsentManager)
+
+    res = client.delete("/resume/exports/nonexistent_export_id_xyz")
+    assert res.status_code == 404
+    assert "not found" in res.json()["detail"].lower()
+
+
+def test_delete_resume_export_requires_consent(client, monkeypatch):
+    """
+    HTTP: DELETE /resume/exports/{export_id}
+    Verifies that 403 is returned when consent has not been given.
+    """
+    class FakeConsentManager:
+        def has_user_consented(self):
+            return False
+
+    monkeypatch.setattr(routes, "ConsentManager", FakeConsentManager)
+
+    res = client.delete("/resume/exports/someexportid")
+    assert res.status_code == 403
+    assert "consent" in res.json()["detail"].lower()
