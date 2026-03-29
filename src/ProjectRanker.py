@@ -7,6 +7,8 @@ class ProjectRanker:
     Analyzes a Project object to calculate a 'resume score' indicating its
     value from a recruiter's perspective.
     """
+    DISPLAY_BENCHMARK_MAX = 75.0
+
     def __init__(self, project: Project):
         self.project = project
 
@@ -68,3 +70,24 @@ class ProjectRanker:
         print(f"ProjectRanker: Final calculated score = {score:.2f}")
 
         return score
+
+    def format_display_ratio(self, benchmark_max: float | None = None) -> str:
+        """
+        Returns the score as a ratio string for UI copy, e.g. "58.1/75".
+        """
+        cap = benchmark_max if benchmark_max is not None else self.DISPLAY_BENCHMARK_MAX
+        if cap <= 0:
+            cap = self.DISPLAY_BENCHMARK_MAX
+        raw = float(self.project.resume_score or 0.0)
+        return f"{raw:.1f}/{cap:.0f}"
+
+    def format_display_percent(self, benchmark_max: float | None = None) -> float:
+        """
+        Returns a bounded percentage (0-100) based on benchmark_max for UI copy.
+        """
+        cap = benchmark_max if benchmark_max is not None else self.DISPLAY_BENCHMARK_MAX
+        if cap <= 0:
+            cap = self.DISPLAY_BENCHMARK_MAX
+        raw = float(self.project.resume_score or 0.0)
+        pct = (raw / cap) * 100.0
+        return round(max(0.0, min(pct, 100.0)), 1)

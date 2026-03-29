@@ -442,16 +442,22 @@ class ProjectAnalyzer:
                     continue
             
             project.author_count = len(author_map)
-            project.collaboration_status = "Collaborative" if project.author_count > 1 else "Individual"
+            project.collaboration_status = "collaborative" if project.author_count > 1 else "individual"
 
             if interactive:
                 selected_emails = self._get_or_select_usernames(author_map) or []
             else:
                 configured_usernames = self._config_manager.get("usernames")
                 if isinstance(configured_usernames, list) and configured_usernames:
-                    selected_emails = configured_usernames
+                    selected_emails = [u for u in configured_usernames if u in author_map]
                 else:
-                    selected_emails = list(author_map.keys())
+                    # API default: use the strongest single contributor, not all users.
+                    if all_author_stats:
+                        selected_emails = [
+                            max(all_author_stats.items(), key=lambda item: item[1].total_commits)[0]
+                        ]
+                    else:
+                        selected_emails = list(author_map.keys())[:1]
 
             project.authors = sorted([author_map[e] for e in selected_emails if e in author_map])
             project.contributor_roles = {}
