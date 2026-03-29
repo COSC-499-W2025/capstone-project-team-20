@@ -183,6 +183,84 @@ function Badges() {
   const buildWrappedShareText = (yearBlock) =>
     `My ${yearBlock.year} Developer Wrapped: ${yearBlock.projects_count} projects, ${yearBlock.total_loc} lines of code, ${yearBlock.total_files} files, and ${yearBlock.milestones?.length ?? 0} badge milestones. 📈 #YearInReview #SoftwareEngineering`;
 
+  const buildWrappedShareImage = async (yearBlock) => {
+    const width = 1200;
+    const height = 627;
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("Canvas not supported");
+
+    const gradient = ctx.createLinearGradient(0, 0, width, height);
+    gradient.addColorStop(0, "#03132e");
+    gradient.addColorStop(1, "#0d1117");
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, width, height);
+
+    ctx.fillStyle = "#58a6ff";
+    ctx.font = "bold 54px 'DM Sans', 'Segoe UI', sans-serif";
+    ctx.fillText(`${yearBlock.year} Developer Wrapped`, 70, 110);
+
+    ctx.fillStyle = "#e6edf3";
+    ctx.font = "600 34px 'DM Sans', 'Segoe UI', sans-serif";
+    ctx.fillText(`${yearBlock.projects_count} projects`, 70, 200);
+    ctx.fillText(`${yearBlock.total_loc.toLocaleString()} LOC`, 70, 255);
+    ctx.fillText(`${yearBlock.total_files.toLocaleString()} files`, 70, 310);
+    ctx.fillText(`${((yearBlock.avg_test_file_ratio ?? 0) * 100).toFixed(1)}% avg test ratio`, 70, 365);
+    ctx.fillText(`${yearBlock.milestones?.length ?? 0} badge milestones`, 70, 420);
+
+    ctx.fillStyle = "#cfeaf7";
+    ctx.font = "500 26px 'DM Sans', 'Segoe UI', sans-serif";
+    ctx.fillText("Built with Capstone Portfolio Insights", 70, 560);
+
+    return new Promise((resolve, reject) => {
+      canvas.toBlob((blob) => {
+        if (blob) resolve(blob);
+        else reject(new Error("Could not export yearly wrapped image"));
+      }, "image/png");
+    });
+  };
+
+  const shareWrappedWithImage = async (yearBlock) => {
+    const text = buildWrappedShareText(yearBlock);
+    const deepLink = `${window.location.origin}${window.location.pathname}#wrapped-${yearBlock.year}`;
+    const shareUrl = new URL("https://www.linkedin.com/sharing/share-offsite/");
+    shareUrl.searchParams.set("url", deepLink);
+
+    try {
+      const imageBlob = await buildWrappedShareImage(yearBlock);
+      const imageFile = new File([imageBlob], `developer-wrapped-${yearBlock.year}.png`, { type: "image/png" });
+
+      if (navigator?.share && navigator?.canShare?.({ files: [imageFile] })) {
+        await navigator.share({ files: [imageFile], text, title: `${yearBlock.year} Developer Wrapped` });
+        setTimedFeedback("Opened native share with your wrapped image attached.");
+        return;
+      }
+
+      if (navigator?.clipboard?.write && window.ClipboardItem) {
+        await navigator.clipboard.write([
+          new window.ClipboardItem({
+            "image/png": imageBlob,
+          }),
+        ]);
+        setTimedFeedback("Wrapped image copied to clipboard. LinkedIn opened—just paste the image in your post.");
+      } else {
+        const objectUrl = URL.createObjectURL(imageBlob);
+        const downloadLink = document.createElement("a");
+        downloadLink.href = objectUrl;
+        downloadLink.download = `developer-wrapped-${yearBlock.year}.png`;
+        downloadLink.click();
+        URL.revokeObjectURL(objectUrl);
+        setTimedFeedback("Wrapped image downloaded. LinkedIn opened so you can attach it to your post.");
+      }
+    } catch {
+      setTimedFeedback("Could not generate wrapped image. LinkedIn opened with the share link.");
+    }
+
+    window.open(shareUrl.toString(), "_blank", "noopener,noreferrer");
+  };
+
   async function loadBadgeData() {
     setLoading(true);
     setError(null);
@@ -466,16 +544,13 @@ function Badges() {
               <button
                 type="button"
                 onClick={() =>
-                  shareOnLinkedIn({
-                    text: buildWrappedShareText(selectedWrapped),
-                    deepLink: `${window.location.origin}${window.location.pathname}#wrapped-${selectedWrapped.year}`,
-                  })
+                  shareWrappedWithImage(selectedWrapped)
                 }
               >
-                Share Wrapped on LinkedIn
+                Share Wrapped Image on LinkedIn
               </button>
               <small>
-                LinkedIn profile highlights still require manual add, but this opens a post share flow instantly.
+                We generate an image card for your yearly wrapped. On supported devices it attaches directly; otherwise we copy/download it and open LinkedIn.
               </small>
             </div>
           </div>

@@ -111,11 +111,26 @@ describe('App badges heatmap', () => {
   it('opens LinkedIn share flow for badge and wrapped cards', async () => {
     const user = userEvent.setup()
     const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null)
-    const clipboardSpy = vi.fn().mockResolvedValue(undefined)
-    Object.assign(navigator, {
-      clipboard: {
-        writeText: clipboardSpy,
+    const clipboardTextSpy = vi.fn().mockResolvedValue(undefined)
+    const clipboardImageSpy = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, 'clipboard', {
+      value: {
+        writeText: clipboardTextSpy,
+        write: clipboardImageSpy,
       },
+      configurable: true,
+    })
+    Object.defineProperty(window, 'ClipboardItem', {
+      value: class ClipboardItem {
+        constructor(data) {
+          this.data = data
+        }
+      },
+      configurable: true,
+    })
+    Object.defineProperty(navigator, 'canShare', {
+      value: vi.fn().mockReturnValue(false),
+      configurable: true,
     })
 
     render(<App />)
@@ -131,14 +146,15 @@ describe('App badges heatmap', () => {
     await user.click(await screen.findByRole('button', { name: /share badge on linkedin/i }))
 
     expect(openSpy).toHaveBeenCalled()
-    expect(clipboardSpy).toHaveBeenCalled()
+    expect(clipboardTextSpy).toHaveBeenCalled()
 
     await user.click(screen.getByRole('button', { name: '✕' }))
     await user.click(await screen.findByRole('button', { name: /get 2025 stats/i }))
-    await user.click(await screen.findByRole('button', { name: /share wrapped on linkedin/i }))
+    await user.click(await screen.findByRole('button', { name: /share wrapped image on linkedin/i }))
+    await waitFor(() => expect(clipboardImageSpy).toHaveBeenCalled())
 
     expect(openSpy).toHaveBeenCalledTimes(2)
-    expect(clipboardSpy).toHaveBeenCalledTimes(2)
+    expect(clipboardTextSpy).toHaveBeenCalledTimes(1)
     openSpy.mockRestore()
   })
 
