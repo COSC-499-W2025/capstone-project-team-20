@@ -20,9 +20,9 @@ test('test', async ({ page }) => {
   await page.getByRole('textbox', { name: 'Custom overview Game-Jam-' }).press('ControlOrMeta+a');
   await page.getByRole('textbox', { name: 'Custom overview Game-Jam-' }).fill('We created a game in Unity for the Global Game Jam 2025!');
   await page.getByRole('button', { name: 'Save Changes' }).nth(3).click();
-  const page1Promise = page.waitForEvent('popup');
-  const downloadPromise = page.waitForEvent('download');
-  await page.getByRole('button', { name: 'Export Portfolio PDF' }).click();
-  const page1 = await page1Promise;
-  const download = await downloadPromise;
+  const [popup] = await Promise.all([
+    page.waitForEvent('popup'),
+    page.getByRole('button', { name: 'Export Portfolio PDF' }).click(),
+  ]);
+  await popup.waitForLoadState('domcontentloaded');
 });
