@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { formLabel, formInput } from "../formStyles";
 import {
   listProjects,
   createReport,
@@ -672,31 +673,6 @@ function ResumePreview({ ctx, reportId, reportNotes, onContextChange }) {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Styles
-// ---------------------------------------------------------------------------
-const formLabel = {
-  display: "block",
-  fontSize: 11,
-  fontWeight: 600,
-  color: "#555",
-  marginBottom: 4,
-  textTransform: "uppercase",
-  letterSpacing: 0.4,
-};
-
-const formInput = {
-  width: "100%",
-  boxSizing: "border-box",
-  fontSize: 13,
-  padding: "6px 8px",
-  border: "1px solid #d0d0d0",
-  borderRadius: 5,
-  outline: "none",
-  background: "var(--bg, #fff)",
-  color: "var(--text, #000)",
-  fontFamily: "inherit",
-};
 
 const styles = {
   page: {
@@ -734,6 +710,7 @@ const styles = {
 function ResumePage() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
+  const [messageType, setMessageType] = useState("info");
   const [projects, setProjects] = useState([]);
   const [selectedProjectIds, setSelectedProjectIds] = useState([]);
   const [reports, setReports] = useState([]);
@@ -744,11 +721,16 @@ function ResumePage() {
   const [previewLoading, setPreviewLoading] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
 
+  function setStatus(nextMessage, nextType = "info") {
+    setMessage(nextMessage);
+    setMessageType(nextType);
+  }
+
   useEffect(() => { loadInitialData(); }, []);
 
   async function loadInitialData() {
     setLoading(true);
-    setMessage("");
+    setStatus("");
     try {
       const [projectData, reportData] = await Promise.all([listProjects(), listReports()]);
       const allProjects = projectData.projects ?? [];
@@ -762,7 +744,7 @@ function ResumePage() {
         setSelectedReport(refreshed ?? selectedReport);
       }
     } catch (e) {
-      setMessage(e.message ?? "Failed to load data");
+      setStatus(e.message ?? "Failed to load data", "error");
     } finally {
       setLoading(false);
     }
@@ -776,10 +758,10 @@ function ResumePage() {
 
   async function handleCreateReport() {
     setLoading(true);
-    setMessage("");
+    setStatus("");
     try {
       await setPrivacyConsent(true);
-      if (!selectedProjectIds.length) { setMessage("Select at least one project first."); return; }
+      if (!selectedProjectIds.length) { setStatus("Select at least one project first.", "error"); return; }
       const created = await createReport({
         title: reportTitle, sort_by: "resume_score",
         notes: reportNotes, report_kind: "resume",
@@ -787,11 +769,11 @@ function ResumePage() {
       });
       const report = created.report ?? null;
       setSelectedReport(report);
-      setMessage(`Created report "${report?.title ?? "Untitled"}"`);
+      setStatus(`Created report "${report?.title ?? "Untitled"}"`, "success");
       await loadInitialData();
       if (report?.id) await loadPreview(report.id);
     } catch (e) {
-      setMessage(e.message ?? "Failed to create report");
+      setStatus(e.message ?? "Failed to create report", "error");
     } finally {
       setLoading(false);
     }
@@ -799,14 +781,14 @@ function ResumePage() {
 
   async function handleSelectReport(id) {
     setLoading(true);
-    setMessage("");
+    setStatus("");
     try {
       const data = await getReport(id);
       const report = data.report ?? null;
       setSelectedReport(report);
       if (report?.id) await loadPreview(report.id);
     } catch (e) {
-      setMessage(e.message ?? "Failed to load report");
+      setStatus(e.message ?? "Failed to load report", "error");
     } finally {
       setLoading(false);
     }
@@ -819,22 +801,22 @@ function ResumePage() {
       const ctx = await getResumeContext(reportId);
       setPreviewCtx(ctx);
     } catch (e) {
-      setMessage(e.message ?? "Failed to load preview");
+      setStatus(e.message ?? "Failed to load preview", "error");
     } finally {
       setPreviewLoading(false);
     }
   }
 
   async function handleExportResume() {
-    if (!selectedReport?.id) { setMessage("Select or create a report first."); return; }
+    if (!selectedReport?.id) { setStatus("Select or create a report first.", "error"); return; }
     setLoading(true);
-    setMessage("");
+    setStatus("");
     try {
       const exp = await exportResume({ report_id: selectedReport.id, template: "jake", output_name: "resume.pdf" });
       window.open(`http://localhost:8000${exp.download_url}`, "_blank");
-      setMessage("Resume exported.");
+      setStatus("Resume exported.", "success");
     } catch (e) {
-      setMessage(e.message ?? "Failed to export resume");
+      setStatus(e.message ?? "Failed to export resume", "error");
     } finally {
       setLoading(false);
     }
@@ -846,7 +828,7 @@ function ResumePage() {
     } catch (e) {
       // 204 No Content comes back as empty string from request() — not a real error
       if (e.message && e.message !== "") {
-        setMessage(e.message);
+        setStatus(e.message, "error");
         return;
       }
     }
@@ -863,9 +845,10 @@ function ResumePage() {
     <>
       <h3>Resume</h3>
 
-      <button onClick={loadInitialData} disabled={loading}>
-        {loading ? "Loading..." : "Refresh"}
-      </button>
+
+      <div className={`portfolio-status portfolio-status--${messageType}`} aria-live="polite">
+        {message || "Select or create a report to preview your resume."}
+      </div>
 
       <div style={{ display: "flex", gap: 24, marginTop: 16, alignItems: "flex-start" }}>
 
@@ -951,7 +934,6 @@ function ResumePage() {
             </button>
           </div>
 
-          {message && <p style={{ marginTop: 10, fontSize: 13 }}>{message}</p>}
         </div>
 
         {/* RIGHT — live preview */}

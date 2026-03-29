@@ -282,9 +282,6 @@ function Badges() {
   return (
     <div className="badges-page">
       <h3>Badges</h3>
-      <button onClick={loadBadgeData} disabled={loading}>
-        {loading ? "Loading..." : "Refresh Badge Data"}
-      </button>
 
       {error && <pre style={{ color: "crimson" }}>{error}</pre>}
 

@@ -551,25 +551,6 @@ function Projects() {
 
           <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:8 }}>
             <h2 style={{ fontSize:18, fontWeight:700, margin:0, color:"#f1f5f9", letterSpacing:"-.3px" }}>Projects</h2>
-            <button
-              onClick={loadProjects} disabled={loading} title="Refresh"
-              style={{
-                background:"none", border:"1px solid rgba(255,255,255,.1)",
-                borderRadius:6, color:"rgba(255,255,255,.35)",
-                cursor:"pointer", padding:"6px 8px",
-                display:"flex", alignItems:"center",
-                height:"auto", transform:"none", boxShadow:"none",
-                transition:"border-color .15s, color .15s",
-              }}
-              onMouseOver={e => { e.currentTarget.style.borderColor="rgba(255,255,255,.3)"; e.currentTarget.style.color="rgba(255,255,255,.7)"; }}
-              onMouseOut={e => { e.currentTarget.style.borderColor="rgba(255,255,255,.1)"; e.currentTarget.style.color="rgba(255,255,255,.35)"; }}
-            >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
-                style={{ animation:loading ? "pj-spin 1s linear infinite" : "none" }}>
-                <polyline points="23 4 23 10 17 10"/>
-                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
-              </svg>
-            </button>
           </div>
 
           <UploadZone onFile={handleFile} uploading={uploading} uploadStatus={uploadStatus} error={error}
