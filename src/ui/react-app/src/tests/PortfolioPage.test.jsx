@@ -232,14 +232,14 @@ describe("PortfolioPage web portfolio",()=>{
     });
   });
 
-  it("renders badges panel in portfolio page",async()=>{
+  it("renders earned project badge chips in portfolio entries",async()=>{
     const user=userEvent.setup();
     await generatePortfolio(user);
 
     await waitFor(()=>{
-      expect(screen.getByTestId("portfolio-badges-panel")).toBeInTheDocument();
       expect(screen.getByText(/Team Effort/i)).toBeInTheDocument();
-      expect(screen.getByText(/Polyglot • 65%/i)).toBeInTheDocument();
     });
+
+    expect(screen.queryByText(/Polyglot • 65%/i)).not.toBeInTheDocument();
   });
 });
