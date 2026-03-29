@@ -1,6 +1,7 @@
 ## Team 20 Weekly Log
 
 ### Table of contents
+- [Term 2 Week 12(March 23rd - March 29th](#term-2-week-12-march-23rd---march-29th)
 - [Term 2 Week 10(March 9th - March 15th)](#term-2-week-10-march-9th---march-15th)
 - [Term 2 Week 9(March 2nd - March 8th)](#term-2-week-9-march-2nd---march-8th)
 - [Term 2 Week 8(February 23rd - March 1st)](#term-2-week-8-february-23rd---march-1st)
@@ -743,5 +744,43 @@ Continuuing tasks include implementing CRUD operations into both resume and port
 **Test Report:**
 ![Term 2 Week 11 BACK END Test Report](teamWeeklyLogsImages/w11_tests_backend.png)
 ![Term 2 Week 11 FRONT END Test Report](teamWeeklyLogsImages/w11_test_frontend.png)
+ 
+
+
+### Term 2 Week 12 (March 23rd - March 29th)
+
+**Work Performed:**
+
+- Branden Kennedy (42474551):
+
+- Necmi Kaan Sapoglu (17014796):
+
+- Lex Nash (84668540):
+
+- Dylan Alexander (16394025): This week, I made 3 PRs. The first adds an Awards section to the Resume Template, as well as frontend functionality to add Experience, Education and Awards to Resumes. [PR #502](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/502). The second adds detection of Resumes that have exceeded one page, and a confirmation modal asking the user if they'd like to continue, or go back to edit the Resume. This was quite an interesting task. LaTeX processes each character differently, so coming up with a solution to know for sure when a Resume has exceeded the first page was not obvious to me. In the end, our system generates the Resume, checks if it is over one page, and then prompts the user. If the user wants to go back to shorten the Resume, the Resume is silently deleted. [PR #508](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/508). The third adds the option to select your Git Contributor on a per project basis. Previously there wasn't a way to do this from the frontend, and so analysis was broken unless you used the CLI to select your Git Contributor. The system first tries to use the email given in ProfileSetup as your Git Contributor automatically. If that fails, a modal appears upon analysis, asking you to select your Contributor. This is per-project, for the case that the user may have used two different identities across two diffent projects. I also added a way to change this at any time in Settings. [PR #510](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/510)
+
+- Sven Annist (42486720):
+
+**Features included in the project plan for this milestone are:**
+
+Everything up to and including Issue
+
+**Continuing tasks from last week and plan for the next week:**
+
+
+**Burnup chart:**
+
+
+
+**Table View of Completed Tasks on Project Board:**
+
+
+
+**Table View of In-Progress Tasks on Project Board:**
+
+
+
+**Test Report:**
+
  
 
