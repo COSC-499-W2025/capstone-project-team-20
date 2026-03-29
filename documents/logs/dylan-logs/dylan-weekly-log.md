@@ -2,6 +2,7 @@
 
 ### **Table of Contents:**
 
+- [Term 2 Week 12: March 23rd - March 29th](#term-2-week-12-march-23rd---march-29th)
 - [Term 2 Week 11: March 16th - March 22nd](#term-2-week-11-march-16th---march-22nd)
 - [Term 2 Week 10: March 9th - March 15th](#term-2-week-10-march-9th---march-15th)
 - [Term 2 Week 9: March 2nd - March 8th](#term-2-week-9-march-2nd---march-8th)
@@ -713,16 +714,70 @@ The plan for this week is to add the finishing touches to our project. I'll need
 N/A
 
 
+### Term 2 Week 12: March 23rd - March 29th
+
+**Screenshot of Tasks Worked On:**
+
+![Term 2 Week 12 Log](images/dylan-week-12-term-2-ss.png)
+
+
+**Coding Tasks:**
+
+This week, I made 3 PRs. The first adds an Awards section to the Resume Template, as well as frontend functionality to add Experience, Education and Awards to Resumes. 
+
+The second adds detection of Resumes that have exceeded one page, and a confirmation modal asking the user if they'd like to continue, or go back to edit the Resume. This was quite an interesting task. LaTeX processes each character differently, so coming up with a solution to know for sure when a Resume has exceeded the first page was not obvious to me. In the end, our system generates the Resume, checks if it is over one page, and then prompts the user. If the user wants to go back to shorten the Resume, the Resume is silently deleted. 
+
+The third adds the option to select your Git Contributor on a per project basis. Previously there wasn't a way to do this from the frontend, and so analysis was broken unless you used the CLI to select your Git Contributor. The system first tries to use the email given in ProfileSetup as your Git Contributor automatically. If that fails, a modal appears upon analysis, asking you to select your Contributor. This is per-project, for the case that the user may have used two different identities across two diffent projects. I also added a way to change this at any time in Settings.
+
+[Add Experience, Education, Awards to Resumes](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/502)
+
+[Add Detection and Confirmation Modal for Resumes Exceeding One Page](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/508)
+
+[feat: Select or Update Git Contributors](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/510)
 
 
 
 
 
+**Testing or Debugging Tasks:**
+
+I wrote extensive frontend component tests for the following PRs.
+
+[Add Experience, Education, Awards to Resumes](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/502)
+
+[Add Detection and Confirmation Modal for Resumes Exceeding One Page](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/508)
+
+[feat: Select or Update Git Contributors](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/510)
 
 
 
 
+**Reviewing or Collaboration Tasks:**
 
+I manually tested and reviewed the following PRs this week. 
+
+[Fixed date bug in the frontend](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/512)
+
+[Feature/skill display](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/506)
+
+[Playwright tests](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/504)
+
+
+
+
+**Brief Description of Last Week Connecting This Week:**
+
+Last week, I implemented live resume display and editing. Resumes are now recreated in HTML, and are editable in place before export to PDF. Additionally, I implemented a display feature in the Projects page, so that all stored project info is now displayed to the user.
+
+This week, I added an Awards section to the Resume Template, as well as frontend functionality to add Experience, Education and Awards to Resumes. Additionally, I added detection of Resumes that have exceeded one page, and a confirmation modal asking the user if they'd like to continue. Finally, I added detection of Git Contributor using the user's email, and a prompt for the user to select their Git Contributor on a per project basis, in the case that the detection failed, as well as a Settings tab to change this at any time.
+
+**Plan/Goals for Upcoming Week:**
+
+The plan this week is to kick back, relax, maybe even touch some grass.
+
+**Any issues or Blockers That I Encountered This Week and How I Addressed/Plan to Address Them:**
+
+Our presentation this week was not as well-rehearsed as our group would've liked. This was because we were unable to use our pre-presentation meeting to rehearse, as Lex did not show up, and did not do their part for the slides. So we had to come up with the slides and their part of the script in a panic, minutes before the presentations. I am proud of the way our team addressed this and showed teamwork to resolve this. The rest of us remained calm and collected, delegated tasks efficiently, and got right to work despite the time crunch.
 
 
 
