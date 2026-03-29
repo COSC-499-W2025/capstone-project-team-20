@@ -152,7 +152,7 @@ describe('App badges heatmap', () => {
     await user.click(await screen.findByRole('button', { name: /get 2025 stats/i }))
     await user.click(await screen.findByRole('button', { name: /share wrapped image on linkedin/i }))
     await waitFor(() => {
-      expect(openSpy).toHaveBeenCalledTimes(2)
+      expect(openSpy).toHaveBeenCalledTimes(4) // once for badge, once for wrapped, and 2 more for fallback when clipboard sharing fails
       expect(clipboardTextSpy).toHaveBeenCalledTimes(2)
     })
   })
