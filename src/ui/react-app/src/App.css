@@ -561,6 +561,60 @@ body{
   color: #9fe7b6;
 }
 
+.wrapped-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+  margin: 12px 0;
+}
+
+.wrapped-stat-card {
+  border: 1px solid rgba(88, 166, 255, 0.35);
+  background: rgba(12, 23, 38, 0.72);
+  border-radius: 12px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.wrapped-stat-card span {
+  color: #9bc9ff;
+  font-size: 0.78rem;
+}
+
+.wrapped-stat-card strong {
+  color: #f2fbff;
+  font-size: 1.02rem;
+}
+
+.wrapped-highlights-list {
+  margin: 12px 0;
+  display: grid;
+  gap: 8px;
+}
+
+.wrapped-highlights-list li {
+  background: rgba(88, 166, 255, 0.08);
+  border: 1px solid rgba(121, 192, 255, 0.22);
+  border-radius: 10px;
+  padding: 9px 10px;
+}
+
+.wrapped-milestone-list {
+  list-style: none;
+  padding-left: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.wrapped-milestone-item {
+  background: rgba(159, 231, 182, 0.08);
+  border: 1px solid rgba(159, 231, 182, 0.25);
+  border-radius: 10px;
+  padding: 10px;
+}
+
 /* ── Portfolio (from feature branch) ── */
 
 .portfolio-panel {

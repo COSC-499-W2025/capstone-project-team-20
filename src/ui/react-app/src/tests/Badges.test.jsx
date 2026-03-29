@@ -143,7 +143,7 @@ describe('App badges heatmap', () => {
       name: /open gigantana badge details/i,
     })
     await user.click(gigButton)
-    await user.click(await screen.findByRole('button', { name: /share badge on linkedin/i }))
+    await user.click(await screen.findByRole('button', { name: /share badge card on linkedin/i }))
 
     expect(openSpy).toHaveBeenCalled()
     expect(clipboardTextSpy).toHaveBeenCalled()
