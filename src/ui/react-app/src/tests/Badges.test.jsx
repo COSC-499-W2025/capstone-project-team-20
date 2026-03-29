@@ -153,6 +153,12 @@ describe('App badges heatmap', () => {
     await user.click(await screen.findByRole('button', { name: /share wrapped image on linkedin/i }))
     await waitFor(() => expect(clipboardImageSpy).toHaveBeenCalled())
 
+    await waitFor(() => {
+    console.log('openSpy call count:', openSpy.mock.calls.length)
+    console.log('clipboardImageSpy call count:', clipboardImageSpy.mock.calls.length)
+    expect(clipboardImageSpy).toHaveBeenCalled()
+})
+
     expect(openSpy).toHaveBeenCalledTimes(2)
     expect(clipboardTextSpy).toHaveBeenCalledTimes(2)
     openSpy.mockRestore()
