@@ -165,7 +165,7 @@ function Badges() {
   const [activeHeatmapBadgeId, setActiveHeatmapBadgeId] = useState(null);
   const [activeSkill, setActiveSkill] = useState(null);
 
-  const [shareFeedback, setShareFeedback] = useState("");
+  const [setShareFeedback] = useState("");
 
   const setTimedFeedback = (message) => {
     setShareFeedback(message);
@@ -282,7 +282,7 @@ function Badges() {
 
     ctx.fillStyle = "#cfeaf7";
     ctx.font = "500 22px 'DM Sans', 'Segoe UI', sans-serif";
-    ctx.fillText("Shared from Capstone Portfolio Insights", 104, 550);
+
 
     return new Promise((resolve, reject) => {
       canvas.toBlob((blob) => {
