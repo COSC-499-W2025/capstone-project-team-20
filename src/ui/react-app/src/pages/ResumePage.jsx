@@ -857,6 +857,17 @@ function ResumePage() {
     }
   }
 
+  async function triggerDownload(url, fileName) {
+    const res = await fetch(url);
+    const blob = await res.blob();
+    const objectUrl = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = objectUrl;
+    a.download = fileName;
+    a.click();
+    URL.revokeObjectURL(objectUrl);
+  }
+
   async function handleExportResume() {
     if (!selectedReport?.id) { setMessage("Select or create a report first."); return; }
     setLoading(true);
@@ -866,7 +877,8 @@ function ResumePage() {
       if (exp.page_count > 1) {
         setMultiPageExport({ export_id: exp.export_id, download_url: exp.download_url, page_count: exp.page_count });
       } else {
-        window.open(`http://localhost:8000${exp.download_url}`, "_blank");
+        const fileName = `${selectedReport.title ?? `report-${selectedReport.id}`}.pdf`;
+        await triggerDownload(`http://localhost:8000${exp.download_url}`, fileName);
         setMessage("Resume exported.");
       }
     } catch (e) {
@@ -877,7 +889,8 @@ function ResumePage() {
   }
 
   async function handleMultiPageConfirm() {
-    window.open(`http://localhost:8000${multiPageExport.download_url}`, "_blank");
+    const fileName = `${selectedReport.title ?? `report-${selectedReport.id}`}.pdf`;
+    await triggerDownload(`http://localhost:8000${multiPageExport.download_url}`, fileName);
     setMultiPageExport(null);
     setMessage("Resume exported.");
   }
