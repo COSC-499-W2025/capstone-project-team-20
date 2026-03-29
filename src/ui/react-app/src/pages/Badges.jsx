@@ -172,30 +172,10 @@ function Badges() {
     window.setTimeout(() => setShareFeedback(""), 3500);
   };
 
-  const openLinkedInShareWindow = (shareUrl) => {
-    const popup = window.open("", "_blank", "noopener,noreferrer");
-    if (popup) {
-      popup.location.href = shareUrl.toString();
-      return;
-    }
-
-    window.open(shareUrl.toString(), "_blank", "noopener,noreferrer");
-  };
-
-  const shareOnLinkedIn = ({ text, deepLink }) => {
+  const openLinkedInShareWindow = (deepLink) => {
     const shareUrl = new URL("https://www.linkedin.com/sharing/share-offsite/");
-    const urlToShare = deepLink || window.location.href;
-    shareUrl.searchParams.set("url", urlToShare);
-    openLinkedInShareWindow(shareUrl);
-
-    if (navigator?.clipboard?.writeText) {
-      navigator.clipboard
-        .writeText(text)
-        .then(() => setTimedFeedback("LinkedIn share opened. Caption copied to clipboard."))
-        .catch(() => setTimedFeedback("LinkedIn share opened. Copy the caption below into your post."));
-    } else {
-      setTimedFeedback("LinkedIn share opened. Copy the caption below into your post.");
-    }
+    shareUrl.searchParams.set("url", deepLink || window.location.href);
+    window.open(shareUrl.toString(), "_blank", "noopener,noreferrer");
   };
 
   const buildBadgeShareImage = async (badge, achievedBadge) => {
@@ -294,9 +274,6 @@ function Badges() {
 
   const shareBadgeWithImage = async (badge, achievedBadge) => {
     const text = buildBadgeShareText(badge, achievedBadge);
-    const deepLink = `${window.location.origin}${window.location.pathname}#badge-${badge.badgeId}`;
-    const shareUrl = new URL("https://www.linkedin.com/sharing/share-offsite/");
-    shareUrl.searchParams.set("url", deepLink);
 
     try {
       const imageBlob = await buildBadgeShareImage(badge, achievedBadge);
@@ -304,7 +281,7 @@ function Badges() {
 
       if (navigator?.share && navigator?.canShare?.({ files: [imageFile] })) {
         await navigator.share({ files: [imageFile], text, title: `${badge.label} Badge` });
-        setTimedFeedback("Opened native share with your badge card attached.");
+        setTimedFeedback("Opened your device share sheet for posting to any app.");
         return;
       }
 
@@ -316,9 +293,9 @@ function Badges() {
         ]);
         if (navigator?.clipboard?.writeText) {
           await navigator.clipboard.writeText(text);
-          setTimedFeedback("Badge image + caption copied to clipboard. LinkedIn opened—paste both in your post.");
+          setTimedFeedback("Badge image + caption copied to clipboard. Open LinkedIn (or any platform) and paste.");
         } else {
-          setTimedFeedback("Badge image copied to clipboard. LinkedIn opened—paste and add your caption.");
+          setTimedFeedback("Badge image copied to clipboard. Open LinkedIn (or any platform), paste, then add your caption.");
         }
       } else {
         const objectUrl = URL.createObjectURL(imageBlob);
@@ -330,14 +307,14 @@ function Badges() {
         if (navigator?.clipboard?.writeText) {
           await navigator.clipboard.writeText(text);
         }
-        setTimedFeedback("Badge image downloaded. LinkedIn opened so you can attach it to your post.");
+        setTimedFeedback("Badge image downloaded and caption copied when possible. Upload it to LinkedIn (or any platform).");
       }
     } catch {
-      shareOnLinkedIn({ text, deepLink });
-      return;
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+      }
+      setTimedFeedback("Could not generate badge image. Caption copied when possible.");
     }
-
-    openLinkedInShareWindow(shareUrl);
   };
 
   const buildBadgeShareText = (badge, achievedBadge) => {
@@ -467,9 +444,6 @@ function Badges() {
 
   const shareWrappedWithImage = async (yearBlock) => {
     const text = buildWrappedShareText(yearBlock);
-    const deepLink = `${window.location.origin}${window.location.pathname}#wrapped-${yearBlock.year}`;
-    const shareUrl = new URL("https://www.linkedin.com/sharing/share-offsite/");
-    shareUrl.searchParams.set("url", deepLink);
 
     try {
       const imageBlob = await buildWrappedShareImage(yearBlock);
@@ -477,7 +451,7 @@ function Badges() {
 
       if (navigator?.share && navigator?.canShare?.({ files: [imageFile] })) {
         await navigator.share({ files: [imageFile], text, title: `${yearBlock.year} Developer Wrapped` });
-        setTimedFeedback("Opened native share with your wrapped image attached.");
+        setTimedFeedback("Opened your device share sheet for posting to any app.");
         return;
       }
 
@@ -489,9 +463,9 @@ function Badges() {
         ]);
         if (navigator?.clipboard?.writeText) {
           await navigator.clipboard.writeText(text);
-          setTimedFeedback("Wrapped image + caption copied to clipboard. LinkedIn opened—paste both into your post.");
+          setTimedFeedback("Wrapped image + caption copied to clipboard. Open LinkedIn (or any platform) and paste.");
         } else {
-          setTimedFeedback("Wrapped image copied to clipboard. LinkedIn opened—just paste the image in your post.");
+          setTimedFeedback("Wrapped image copied to clipboard. Open LinkedIn (or any platform), then paste.");
         }
       } else {
         const objectUrl = URL.createObjectURL(imageBlob);
@@ -503,7 +477,7 @@ function Badges() {
         if (navigator?.clipboard?.writeText) {
           await navigator.clipboard.writeText(text);
         }
-        setTimedFeedback("Wrapped image downloaded. LinkedIn opened so you can attach it to your post.");
+        setTimedFeedback("Wrapped image downloaded and caption copied when possible. Upload it to LinkedIn (or any platform).");
       }
     } catch {
       if (navigator?.clipboard?.write && window.ClipboardItem) {
@@ -516,10 +490,8 @@ function Badges() {
       if (navigator?.clipboard?.writeText) {
         await navigator.clipboard.writeText(text);
       }
-      setTimedFeedback("Could not generate wrapped image. LinkedIn opened with the share link.");
+      setTimedFeedback("Could not generate wrapped image. Caption copied when possible.");
     }
-
-    openLinkedInShareWindow(shareUrl);
   };
 
   async function loadBadgeData() {
@@ -762,10 +734,18 @@ function Badges() {
                   shareBadgeWithImage(selectedHeatmapBadge, selectedAchievedBadge)
                 }
               >
-                Share Badge Card on LinkedIn
+                 Share Badge Card Image (Any Platform)
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  openLinkedInShareWindow(`${window.location.origin}${window.location.pathname}#badge-${selectedHeatmapBadge.badgeId}`)
+                }
+              >
+                Open LinkedIn Composer
               </button>
               <small>
-                We generate a badge card image and open LinkedIn. On supported devices it can attach directly; otherwise we copy/download the image.
+                The share button only uses your device share sheet / clipboard / download. The LinkedIn button only opens LinkedIn; paste the copied image and caption manually.
               </small>
             </div>
           </div>
@@ -809,10 +789,18 @@ function Badges() {
                   shareWrappedWithImage(selectedWrapped)
                 }
               >
-                Share Wrapped Image on LinkedIn
+                Share Wrapped Image (Any Platform)
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  openLinkedInShareWindow(`${window.location.origin}${window.location.pathname}#wrapped-${selectedWrapped.year}`)
+                }
+              >
+                Open LinkedIn Composer
               </button>
               <small>
-                We generate an image card for your yearly wrapped. On supported devices it attaches directly; otherwise we copy/download it and open LinkedIn.
+                The share button only uses your device share sheet / clipboard / download. The LinkedIn button only opens LinkedIn; paste the copied image and caption manually.
               </small>
             </div>
           </div>
