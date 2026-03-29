@@ -2,6 +2,7 @@ from jinja2 import Environment, FileSystemLoader
 from pathlib import Path
 import subprocess
 import shutil
+from pypdf import PdfReader
 
 class ReportExporter:
     """Exports Report objects to PDF resumes using LaTeX templates"""
@@ -41,8 +42,9 @@ class ReportExporter:
         with open(tex_path, 'w', encoding='utf-8') as f:
             f.write(latex_content)
 
-        self._compile_to_pdf(tex_path, output_p)
+        page_count = self._compile_to_pdf(tex_path, output_p)
         print(f"✅ Resume exported to {output_p}")
+        return page_count
 
 
     def export_to_pdf(self, report, config_manager, output_path: str = "resume.pdf", template: str = "jake"):
@@ -75,9 +77,10 @@ class ReportExporter:
         with open(tex_path, 'w', encoding='utf-8') as f:
             f.write(latex_content)
 
-        self._compile_to_pdf(tex_path, output_p)
+        page_count = self._compile_to_pdf(tex_path, output_p)
 
         print(f"✅ Resume exported to {output_p}")
+        return page_count
 
     def _validate_projects_analyzed(self, report):
         """
@@ -232,8 +235,12 @@ class ReportExporter:
 
         return text
 
-    def _compile_to_pdf(self, tex_path, output_path):
-        """Run pdflatex to compile .tex to .pdf - keeps all files in resumes/ directory"""
+    def _compile_to_pdf(self, tex_path, output_path) -> int:
+        """Run pdflatex to compile .tex to .pdf - keeps all files in resumes/ directory.
+
+        Returns:
+            int: Number of pages in the compiled PDF.
+        """
         try:
             # Convert to absolute paths
             tex_path = tex_path.resolve()
@@ -263,6 +270,8 @@ class ReportExporter:
                 aux_file = tex_path.with_suffix(ext)
                 if aux_file.exists():
                     aux_file.unlink()
+
+            return len(PdfReader(str(output_path)).pages)
 
         except FileNotFoundError:
             raise RuntimeError(

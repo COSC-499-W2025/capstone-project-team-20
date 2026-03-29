@@ -572,8 +572,10 @@ class ProjectAnalyzer:
             if size_kb := project_meta.get("total_size_kb"):
                 project.size_kb = int(size_kb)
             if start_date := project_meta.get("start_date"):
+                project.start_date = start_date
                 project.date_created = datetime.strptime(start_date, "%Y-%m-%d")
             if end_date := project_meta.get("end_date"):
+                project.end_date = end_date
                 project.last_modified = datetime.strptime(end_date, "%Y-%m-%d")
 
             project.last_accessed = datetime.now()

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import {
-  listSkills,
+  listSkillsUsage,
   getBadgeProgress,
   getYearlyWrapped,
 } from "../api/client";
@@ -163,6 +163,7 @@ function Badges() {
   const [wrapped, setWrapped] = useState([]);
   const [activeWrappedYear, setActiveWrappedYear] = useState(null);
   const [activeHeatmapBadgeId, setActiveHeatmapBadgeId] = useState(null);
+  const [activeSkill, setActiveSkill] = useState(null);
 
   const [shareFeedback, setShareFeedback] = useState("");
 
@@ -516,7 +517,7 @@ function Badges() {
     setError(null);
     try {
       const [skillsData, progressData, wrappedData] = await Promise.all([
-        listSkills(),
+        listSkillsUsage(),
         getBadgeProgress(),
         getYearlyWrapped(),
       ]);
@@ -640,7 +641,8 @@ function Badges() {
   const selectedAchievedBadge = selectedHeatmapBadge
     ? achievedBadges.find((badge) => badge.badge_id === selectedHeatmapBadge.badgeId) ?? null
     : null;
-  
+  const maxSkillProjects = Math.max(...skills.map((s) => Number(s.project_count) || 0), 1);
+
   return (
     <div className="badges-page">
       <h3>Badges</h3>
@@ -807,20 +809,52 @@ function Badges() {
         </div>
       ) : null}
 
-      {shareFeedback ? <p className="linkedin-share-feedback">{shareFeedback}</p> : null}
-
-      <h4>🔥 Skill Heatmap</h4>
-      {skills.length === 0 ? (
-        <p>No skills found yet. Upload a project first.</p>
-      ) : (
-        <ul>
-          {skills.map((s) => (
-            <li key={s.name}>
-              {s.name} — used in {s.project_count} project{s.project_count === 1 ? "" : "s"}
-            </li>
-          ))}
-        </ul>
-      )}
+      <section className="skill-heatmap">
+        <h4>🔥 Skill Heatmap</h4>
+        {skills.length === 0 ? (
+          <p>No skills found yet. Upload a project first.</p>
+        ) : (
+          <div className="skill-heatmap-grid">
+            {skills.map((s) => {
+              const count = Number(s.project_count) || 0;
+              const fillPercent = Math.round((count / maxSkillProjects) * 100);
+              const skillDomId = `skill-projects-${s.name.replace(/[^a-zA-Z0-9_-]/g, "-")}`;
+              return (
+                <article
+                  key={s.name}
+                  className={`skill-heatmap-tile ${activeSkill === s.name ? "skill-heatmap-tile--active" : ""}`}
+                >
+                  <button
+                    type="button"
+                    className="skill-heatmap-trigger"
+                    onClick={() => setActiveSkill((prev) => (prev === s.name ? null : s.name))}
+                    aria-expanded={activeSkill === s.name}
+                    aria-controls={skillDomId}
+                  >
+                    <div className="skill-heatmap-title-row">
+                      <strong>{s.name}</strong>
+                      <span>{count} project{count === 1 ? "" : "s"}</span>
+                    </div>
+                  </button>
+                  <div className="skill-heatmap-bar" aria-hidden="true">
+                    <div className="skill-heatmap-bar-fill" style={{ width: `${fillPercent}%` }} />
+                  </div>
+                  {activeSkill === s.name && (
+                    <div className="skill-project-list" id={skillDomId}>
+                      <p><strong>Used in:</strong></p>
+                      <ul>
+                        {(s.projects ?? []).map((projectName) => (
+                          <li key={`${s.name}-${projectName}`}>{projectName}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </article>
+              );
+            })}
+          </div>
+        )}
+      </section>
     </div>
   );
 }

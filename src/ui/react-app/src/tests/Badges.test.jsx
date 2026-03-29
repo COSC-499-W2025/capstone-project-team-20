@@ -6,7 +6,7 @@ import App from '../App'
 vi.mock('../api/client', () => ({
   listProjects: vi.fn(),
   getProject: vi.fn(),
-  listSkills: vi.fn(),
+  listSkillsUsage: vi.fn(),
   getBadgeProgress: vi.fn(),
   getYearlyWrapped: vi.fn(),
   getConfig: vi.fn(),
@@ -23,7 +23,7 @@ vi.mock('../api/client', () => ({
 
 import {
   listProjects,
-  listSkills,
+  listSkillsUsage,
   getBadgeProgress,
   getYearlyWrapped,
   getConfig,
@@ -46,8 +46,8 @@ beforeEach(() => {
   })
 
   getPrivacyConsent.mockResolvedValue(true)
-  listSkills.mockResolvedValue({
-    skills: [{ name: 'React', project_count: 2 }],
+  listSkillsUsage.mockResolvedValue({
+    skills: [{ name: 'React', project_count: 2, projects: ['Alpha', 'Big Repo'] }],
   })
 
   getBadgeProgress.mockResolvedValue({
@@ -202,5 +202,23 @@ describe('App badges heatmap', () => {
     expect(inProgressList?.textContent).toContain('65%')
     expect(inProgressList?.textContent).not.toContain('Team Effort')
 
+  })
+  
+it('expands a skill tile to show projects where that skill is used', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /badges/i })).toBeInTheDocument()
+    )
+
+    await user.click(screen.getByRole('button', { name: /badges/i }))
+
+    const reactSkillButton = await screen.findByRole('button', { name: /react/i })
+    await user.click(reactSkillButton)
+
+    expect(await screen.findByText(/used in:/i)).toBeInTheDocument()
+    expect(screen.getByText('Alpha')).toBeInTheDocument()
+    expect(screen.getByText('Big Repo')).toBeInTheDocument()
   })
 })
