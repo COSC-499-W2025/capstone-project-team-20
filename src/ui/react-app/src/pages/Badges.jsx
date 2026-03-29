@@ -171,11 +171,21 @@ function Badges() {
     window.setTimeout(() => setShareFeedback(""), 3500);
   };
 
+  const openLinkedInShareWindow = (shareUrl) => {
+    const popup = window.open("", "_blank", "noopener,noreferrer");
+    if (popup) {
+      popup.location.href = shareUrl.toString();
+      return;
+    }
+
+    window.open(shareUrl.toString(), "_blank", "noopener,noreferrer");
+  };
+
   const shareOnLinkedIn = ({ text, deepLink }) => {
     const shareUrl = new URL("https://www.linkedin.com/sharing/share-offsite/");
     const urlToShare = deepLink || window.location.href;
     shareUrl.searchParams.set("url", urlToShare);
-    window.open(shareUrl.toString(), "_blank", "noopener,noreferrer");
+    openLinkedInShareWindow(shareUrl);
 
     if (navigator?.clipboard?.writeText) {
       navigator.clipboard
@@ -239,21 +249,21 @@ function Badges() {
     ctx.fillText(ALL_BADGE_DETAILS[badge.badgeId]?.description ?? "Unlocked through project analytics.", 104, 238);
 
     const completion = badge.unlocked ? 100 : badge.completionPercent ?? 0;
-    drawRoundedRect(ctx, 104, 276, 992, 86, 14);
+    drawRoundedRect(ctx, 104, 276, 992, 98, 14);
     ctx.fillStyle = "rgba(19, 36, 55, 0.7)";
     ctx.fill();
     ctx.strokeStyle = "rgba(88,166,255,0.25)";
     ctx.stroke();
-    drawRoundedRect(ctx, 120, 309, 960, 20, 12);
-    ctx.fillStyle = "rgba(41, 65, 93, 0.9)";
-    ctx.fill();
-    drawRoundedRect(ctx, 120, 309, Math.max(60, (960 * completion) / 100), 20, 12);
-    ctx.fillStyle = "rgba(88,166,255,0.95)";
-    ctx.fill();
     ctx.fillStyle = "#e6edf3";
     ctx.font = "600 26px 'DM Sans', 'Segoe UI', sans-serif";
-    ctx.fillText(`Progress: ${completion}%`, 120, 344);
-
+    ctx.fillText(`Progress: ${completion}%`, 120, 316);
+    drawRoundedRect(ctx, 120, 330, 960, 20, 12);
+    ctx.fillStyle = "rgba(41, 65, 93, 0.9)";
+    ctx.fill();
+    drawRoundedRect(ctx, 120, 330, Math.max(60, (960 * completion) / 100), 20, 12);
+    ctx.fillStyle = "rgba(88,166,255,0.95)";
+    ctx.fill();
+    
     const projectLines = (achievedBadge?.projects ?? []).slice(0, 3).map((entry) =>
       entry.achieved_on ? `• ${entry.project} (${entry.achieved_on})` : `• ${entry.project}`,
     );
@@ -326,7 +336,7 @@ function Badges() {
       return;
     }
 
-    window.open(shareUrl.toString(), "_blank", "noopener,noreferrer");
+    openLinkedInShareWindow(shareUrl);
   };
 
   const buildBadgeShareText = (badge, achievedBadge) => {
@@ -476,7 +486,12 @@ function Badges() {
             "image/png": imageBlob,
           }),
         ]);
-        setTimedFeedback("Wrapped image copied to clipboard. LinkedIn opened—just paste the image in your post.");
+        if (navigator?.clipboard?.writeText) {
+          await navigator.clipboard.writeText(text);
+          setTimedFeedback("Wrapped image + caption copied to clipboard. LinkedIn opened—paste both into your post.");
+        } else {
+          setTimedFeedback("Wrapped image copied to clipboard. LinkedIn opened—just paste the image in your post.");
+        }
       } else {
         const objectUrl = URL.createObjectURL(imageBlob);
         const downloadLink = document.createElement("a");
@@ -484,13 +499,16 @@ function Badges() {
         downloadLink.download = `developer-wrapped-${yearBlock.year}.png`;
         downloadLink.click();
         URL.revokeObjectURL(objectUrl);
+        if (navigator?.clipboard?.writeText) {
+          await navigator.clipboard.writeText(text);
+        }
         setTimedFeedback("Wrapped image downloaded. LinkedIn opened so you can attach it to your post.");
       }
     } catch {
       setTimedFeedback("Could not generate wrapped image. LinkedIn opened with the share link.");
     }
 
-    window.open(shareUrl.toString(), "_blank", "noopener,noreferrer");
+    openLinkedInShareWindow(shareUrl);
   };
 
   async function loadBadgeData() {

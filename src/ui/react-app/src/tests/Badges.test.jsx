@@ -154,7 +154,7 @@ describe('App badges heatmap', () => {
     await waitFor(() => expect(clipboardImageSpy).toHaveBeenCalled())
 
     expect(openSpy).toHaveBeenCalledTimes(2)
-    expect(clipboardTextSpy).toHaveBeenCalledTimes(1)
+    expect(clipboardTextSpy).toHaveBeenCalledTimes(2)
     openSpy.mockRestore()
   })
 
