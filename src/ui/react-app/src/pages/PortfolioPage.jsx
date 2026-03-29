@@ -11,11 +11,42 @@ import {
   publishPortfolio,
   unpublishPortfolio,
   updatePortfolioProject,
+  getBadgeProgress,
 } from "../api/client";
+
+const OP_STATE={
+  IDLE:"idle",
+  LOADING:"loading",
+  GENERATING:"generating",
+  EXPORTING:"exporting",
+  SAVING:"saving",
+  TOGGLING_MODE:"toggling_mode",
+};
+
+function formatBadgeLabel(badgeId=""){
+  return badgeId.split("_").map((chunk)=>chunk.charAt(0).toUpperCase()+chunk.slice(1)).join(" ");
+}
+
+function badgeEarnedForProject(badge,projectName){
+  const tracked=badge?.project?.name;
+  if(!tracked||!projectName)return false;
+  return `${tracked}`.trim().toLowerCase()===`${projectName}`.trim().toLowerCase()&&!!badge.earned;
+}
+
+function escapeHtml(value=""){
+  return String(value)
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#39;");
+}
 
 function PortfolioPage() {
   const [loading,setLoading]=useState(false);
+  const [opState,setOpState]=useState(OP_STATE.IDLE);
   const [message,setMessage]=useState("");
+  const [messageType,setMessageType]=useState("info");
   const [projects,setProjects]=useState([]);
   const [selectedProjectIds,setSelectedProjectIds]=useState([]);
   const [reports,setReports]=useState([]);
@@ -28,29 +59,45 @@ function PortfolioPage() {
   const [searchText,setSearchText]=useState("");
   const [languageFilter,setLanguageFilter]=useState("all");
   const [collabFilter,setCollabFilter]=useState("all");
+  const [badgeProgress,setBadgeProgress]=useState([]);
+  const [copyToastVisible,setCopyToastVisible]=useState(false);
 
   useEffect(()=>{loadInitialData();},[]);
 
+  function setStatus(nextMessage,nextType="info"){
+    setMessage(nextMessage);
+    setMessageType(nextType);
+  }
+
+  function showCopyToast(){
+    setCopyToastVisible(true);
+    window.clearTimeout(window.__portfolioCopyToastTimer);
+    window.__portfolioCopyToastTimer=window.setTimeout(()=>setCopyToastVisible(false),2200);
+  }
+
   async function loadInitialData(){
     setLoading(true);
-    setMessage("");
+    setOpState(OP_STATE.LOADING);
+    setStatus("");
     try{
-      const [projectData,reportData]=await Promise.all([listProjects(),listReports()]);
+      const [projectData,reportData,badgeData]=await Promise.all([listProjects(),listReports(),getBadgeProgress()]);
       const allProjects=projectData.projects??[];
       setProjects(allProjects);
+      setBadgeProgress(badgeData?.badges??[]);
+      setSelectedProjectIds(allProjects.map((p)=>p.id));
 
-      setSelectedProjectIds(allProjects.map((p) => p.id));
-      const filteredReports = (reportData.reports ?? []).filter((r) => (r.report_kind ?? "resume") === "portfolio");
+      const filteredReports=(reportData.reports??[]).filter((r)=>(r.report_kind??"resume")==="portfolio");
       setReports(filteredReports);
 
-      if (selectedReport?.id) {
-        const refreshed = filteredReports.find((r) => r.id === selectedReport.id);
-        setSelectedReport(refreshed ?? selectedReport);
+      if(selectedReport?.id){
+        const refreshed=filteredReports.find((r)=>r.id===selectedReport.id);
+        setSelectedReport(refreshed??selectedReport);
       }
     }catch(e){
-      setMessage(e.message??"Failed to load portfolio page data");
+      setStatus(e.message??"Failed to load portfolio page data","error");
     }finally{
       setLoading(false);
+      setOpState(OP_STATE.IDLE);
     }
   }
 
@@ -125,77 +172,155 @@ function PortfolioPage() {
     return (project?.bullets??[]).filter(Boolean);
   }
 
+  function buildPortfolioHtml(projectList){
+    const title=escapeHtml(portfolio?.title||"Portfolio");
+    const cards=projectList.map((project)=>{
+      const details=project?.portfolio_details??{};
+      const renderedTitle=escapeHtml(getRenderedTitle(project));
+      const renderedOverview=escapeHtml(getRenderedOverview(project));
+      const renderedAchievements=getRenderedAchievements(project).map((x)=>`<li>${escapeHtml(x)}</li>`).join("");
+      const contributorRoles=details?.contributor_roles??[];
+      const contributorsHtml=contributorRoles.length
+        ? `<h4>Contributors</h4><ul>${contributorRoles.map((c)=>`<li>${escapeHtml(c.name)}${c.role?` — ${escapeHtml(c.role)}`:""}</li>`).join("")}</ul>`
+        : "";
+      const roleLine=`${escapeHtml(details?.role||"Contributor")} • ${escapeHtml(details?.timeline||"Timeline unavailable")}`;
+
+      return `
+<section class="portfolio-card">
+  <h3>${renderedTitle}</h3>
+  <p class="meta">${roleLine}</p>
+  <p>${renderedOverview}</p>
+  ${renderedAchievements?`<h4>Key contributions</h4><ul>${renderedAchievements}</ul>`:""}
+  ${contributorsHtml}
+</section>`.trim();
+    }).join("\n");
+
+    return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>${title}</title>
+<style>
+  body{font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;max-width:920px;margin:32px auto;padding:0 16px;line-height:1.55;color:#111;}
+  h1{font-size:2rem;margin:0 0 20px;}
+  .portfolio-card{border:1px solid #ddd;border-radius:10px;padding:16px 18px;margin-bottom:14px;background:#fff;}
+  .meta{color:#555;font-size:.95rem;margin-top:-4px;}
+  h3{margin:0 0 8px;}
+  h4{margin:12px 0 6px;font-size:1rem;}
+  ul{margin:6px 0 0 20px;}
+</style>
+</head>
+<body>
+  <h1>${title}</h1>
+  ${cards}
+</body>
+</html>`;
+  }
+
+  async function handleCopyPortfolioHtml(){
+    if(!portfolio){
+      setStatus("Generate a portfolio first.","error");
+      return;
+    }
+    try{
+      const html=buildPortfolioHtml(visiblePortfolioProjects);
+      await navigator.clipboard.writeText(html);
+      showCopyToast();
+      setStatus("Portfolio HTML copied to clipboard.","success");
+    }catch(e){
+      setStatus("Clipboard copy failed. Your browser may block clipboard access.","error");
+    }
+  }
+
   async function handleCreateReport(){
     setLoading(true);
-    setMessage("");
+    setOpState(OP_STATE.LOADING);
+    setStatus("");
     try{
       await setPrivacyConsent(true);
-
-      if (!selectedProjectIds.length) {
-        setMessage("Select at least one project first.");
+      if(!selectedProjectIds.length){
+        setStatus("Select at least one project first.","error");
         return;
       }
 
-      const created = await createReport({
-        title: reportTitle,
-        sort_by: "resume_score",
-        notes: reportNotes,
-        report_kind: "portfolio",
-        project_ids: selectedProjectIds,
-
+      const created=await createReport({
+        title:reportTitle,
+        sort_by:"resume_score",
+        notes:reportNotes,
+        report_kind:"portfolio",
+        project_ids:selectedProjectIds,
       });
-      setSelectedReport(created.report??null);
-      setMessage(`Created report "${created.report?.title??"Untitled"}"`);
+
+      const createdReport=created.report??null;
+      setSelectedReport(createdReport);
+      setStatus(`Created report "${createdReport?.title??"Untitled"}"`,"success");
       await loadInitialData();
+
+      if(createdReport?.id){
+        await handleSelectReport(createdReport.id);
+        const response=await getPortfolio(createdReport.id);
+        const currentMode=(response?.portfolio?.portfolio_mode??"").toLowerCase();
+        if(currentMode!=="public"){
+          await publishPortfolio(createdReport.id);
+        }
+      }
     }catch(e){
-      setMessage(e.message??"Failed to create report");
+      setStatus(e.message??"Failed to create report","error");
     }finally{
       setLoading(false);
+      setOpState(OP_STATE.IDLE);
     }
   }
 
   async function handleSelectReport(id){
     setLoading(true);
-    setMessage("");
+    setOpState(OP_STATE.LOADING);
+    setStatus("");
     setPortfolio(null);
     setOpenProjects({});
     setProjectDrafts({});
     try{
       const data=await getReport(id);
       setSelectedReport(data.report??null);
+      setStatus("Report selected. Generate web portfolio to view sections.","info");
     }catch(e){
-      setMessage(e.message??"Failed to load report");
+      setStatus(e.message??"Failed to load report","error");
     }finally{
       setLoading(false);
+      setOpState(OP_STATE.IDLE);
     }
   }
 
   async function handleExportPortfolioPdf(){
-    if(!selectedReport?.id){setMessage("Select or create a report first.");return;}
+    if(!selectedReport?.id){setStatus("Select or create a report first.","error");return;}
     setLoading(true);
-    setMessage("");
+    setOpState(OP_STATE.EXPORTING);
+    setStatus("Exporting portfolio PDF...","info");
     try{
       const exp=await exportPortfolio({report_id:selectedReport.id,output_name:"portfolio.pdf"});
       window.open(`http://localhost:8000${exp.download_url}`,"_blank");
-      setMessage("Portfolio export started.");
+      setStatus("Portfolio PDF export started. Your download should open in a new tab.","success");
     }catch(e){
-      setMessage(e.message??"Failed to export portfolio");
+      setStatus(e.message??"Failed to export portfolio","error");
     }finally{
       setLoading(false);
+      setOpState(OP_STATE.IDLE);
     }
   }
 
   async function handleGenerateWebPortfolio(){
-    if(!selectedReport?.id){setMessage("Select or create a report first.");return;}
+    if(!selectedReport?.id){setStatus("Select or create a report first.","error");return;}
     setLoading(true);
-    setMessage("");
+    setOpState(OP_STATE.GENERATING);
+    setStatus("Generating web portfolio sections...","info");
     setPortfolio(null);
     setOpenProjects({});
     setProjectDrafts({});
     try{
       await setPrivacyConsent(true);
       const names=projects.filter((p)=>selectedProjectIds.includes(p.id)).map((p)=>p.name).filter(Boolean);
-      if(!names.length){setMessage("Select at least one project first.");return;}
+      if(!names.length){setStatus("Select at least one project first.","error");return;}
       await generatePortfolioDetailsForReport({report_id:selectedReport.id,project_names:names});
       const response=await getPortfolio(selectedReport.id);
       const nextPortfolio=response?.portfolio??null;
@@ -205,16 +330,17 @@ function PortfolioPage() {
       const initialOpen={};
       (nextPortfolio?.projects??[]).forEach((p,idx)=>{initialOpen[`${p?.project_name??"project"}-${idx}`]=idx===0;});
       setOpenProjects(initialOpen);
-      setMessage("Web portfolio generated.");
+      setStatus("Web portfolio generated successfully.","success");
     }catch(e){
-      setMessage(e.message??"Failed to generate web portfolio");
+      setStatus(e.message??"Failed to generate web portfolio","error");
     }finally{
       setLoading(false);
+      setOpState(OP_STATE.IDLE);
     }
   }
 
   async function handleSaveProjectCustomization(projectName){
-    if(!selectedReport?.id){setMessage("Select a report first.");return;}
+    if(!selectedReport?.id){setStatus("Select a report first.","error");return;}
     const draft=getDraft(projectName);
     const payload={
       custom_title:(draft.custom_title??"").trim(),
@@ -223,36 +349,38 @@ function PortfolioPage() {
       is_hidden:!!draft.is_hidden,
     };
     setLoading(true);
-    setMessage("");
+    setOpState(OP_STATE.SAVING);
+    setStatus("Saving project customizations...","info");
     try{
       const res=await updatePortfolioProject(selectedReport.id,projectName,payload);
       const nextPortfolio=res?.portfolio??null;
       setPortfolio(nextPortfolio);
       hydrateDrafts(nextPortfolio);
-      setMessage(`Saved customization for ${projectName}.`);
+      setStatus(`Saved customization for ${projectName}.`,"success");
     }catch(e){
-      setMessage(e.message??"Failed to save project customization");
+      setStatus(e.message??"Failed to save project customization","error");
     }finally{
       setLoading(false);
+      setOpState(OP_STATE.IDLE);
     }
   }
 
   async function handleToggleMode(){
-    if(!selectedReport?.id){setMessage("Select a report first.");return;}
+    if(!selectedReport?.id){setStatus("Select a report first.","error");return;}
     const current=(portfolio?.portfolio_mode??"public").toLowerCase();
     const goPrivate=current!=="private";
     setLoading(true);
-    setMessage("");
+    setOpState(OP_STATE.TOGGLING_MODE);
+    setStatus("Updating portfolio mode...","info");
     try{
-      const res=goPrivate
-        ? await unpublishPortfolio(selectedReport.id)
-        : await publishPortfolio(selectedReport.id);
+      const res=goPrivate?await unpublishPortfolio(selectedReport.id):await publishPortfolio(selectedReport.id);
       setPortfolio(res?.portfolio??portfolio);
-      setMessage(goPrivate?"Private mode enabled.":"Public mode enabled.");
+      setStatus(goPrivate?"Private mode enabled.":"Public mode enabled.","success");
     }catch(e){
-      setMessage(e.message??"Failed to change mode");
+      setStatus(e.message??"Failed to change mode","error");
     }finally{
       setLoading(false);
+      setOpState(OP_STATE.IDLE);
     }
   }
 
@@ -284,11 +412,17 @@ function PortfolioPage() {
       return matchesSearch&&matchesLanguage&&matchesCollab;
     });
 
+  const earnedBadgesByProject=(projectName)=>(badgeProgress??[]).filter((b)=>badgeEarnedForProject(b,projectName));
+
   return (
     <>
       <h3>Portfolio</h3>
 
       <button onClick={loadInitialData} disabled={loading}>{loading?"Loading...":"Refresh Portfolio Page"}</button>
+
+      <div className={`portfolio-status portfolio-status--${messageType}`} aria-live="polite" data-testid="portfolio-status-banner">
+        {message||"Ready."}
+      </div>
 
       <div style={{marginTop:16,padding:12,border:"1px solid #ddd",borderRadius:8}}>
         <h4>Create Portfolio Report</h4>
@@ -337,14 +471,28 @@ function PortfolioPage() {
         </div>
         <div style={{flex:1}}>
           <h4>Selected Report</h4>
-          {selectedReport?<pre>{JSON.stringify(selectedReport,null,2)}</pre>:<p>Select a report to view details.</p>}
+          {!selectedReport?<p>Select a report to view details.</p>:(
+            <div className="portfolio-selected-report-card" data-testid="selected-report-card">
+              <p><strong>Title:</strong> {selectedReport.title??`Report #${selectedReport.id}`}</p>
+              <p><strong>ID:</strong> {selectedReport.id}</p>
+              <p><strong>Kind:</strong> {selectedReport.report_kind??"portfolio"}</p>
+              <p><strong>Sort:</strong> {selectedReport.sort_by??"resume_score"}</p>
+              <p><strong>Projects:</strong> {selectedReport.project_count??"Unknown"}</p>
+              {selectedReport.date_created?<p><strong>Created:</strong> {new Date(selectedReport.date_created).toLocaleString()}</p>:null}
+            </div>
+          )}
         </div>
       </div>
 
       <div style={{marginTop:12}}>
-        <button onClick={handleExportPortfolioPdf} disabled={loading||!selectedReport?.id}>Export Portfolio PDF</button>
+        <button onClick={handleExportPortfolioPdf} disabled={loading||!selectedReport?.id}>
+          {opState===OP_STATE.EXPORTING?"Exporting PDF...":"Export Portfolio PDF"}
+        </button>
         <button onClick={handleGenerateWebPortfolio} disabled={loading||!selectedReport?.id} style={{marginLeft:8}}>
-          {loading?"Working...":"Generate Web Portfolio"}
+          {opState===OP_STATE.GENERATING?"Generating...":"Generate Web Portfolio"}
+        </button>
+        <button onClick={handleCopyPortfolioHtml} disabled={loading||!portfolio} style={{marginLeft:8}}>
+          Copy Portfolio HTML
         </button>
       </div>
 
@@ -397,11 +545,12 @@ function PortfolioPage() {
               const renderedOverview=getRenderedOverview(project);
               const renderedAchievements=getRenderedAchievements(project);
               const draft=getDraft(project.project_name);
+              const projectBadges=earnedBadgesByProject(project.project_name);
 
               return (
                 <article className="portfolio-card" key={key}>
                   <button onClick={()=>togglePortfolioProject(key)} style={{width:"100%",display:"flex",justifyContent:"space-between",background:"transparent",border:"none",color:"inherit",cursor:"pointer",padding:0}}>
-                    <span>
+                    <span style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
                       {isPrivateMode?(
                         <input
                           aria-label={`Custom title ${project?.project_name??""}`}
@@ -415,6 +564,12 @@ function PortfolioPage() {
                       ):(
                         <strong>{renderedTitle}</strong>
                       )}
+
+                      {projectBadges.map((b)=>(
+                        <span key={`proj-badge-title-${project.project_name}-${b.badge_id}`} className="portfolio-badge-chip portfolio-badge-chip--unlocked" onClick={(e)=>e.stopPropagation()}>
+                          🏅 {b.label??formatBadgeLabel(b.badge_id)}
+                        </span>
+                      ))}
                     </span>
                     <span>{isOpen?"▾ Collapse":"▸ Expand"}</span>
                   </button>
@@ -453,7 +608,7 @@ function PortfolioPage() {
                         renderedAchievements.length?(<><strong>Key contributions</strong><ul>{renderedAchievements.map((b,i)=><li key={`b-${i}`}>{b}</li>)}</ul></>):null
                       )}
 
-                      {contributorRoles.length?(<><strong>Contributors</strong><ul className="contrib-list">{contributorRoles.map((c,i)=><li key={`cr-${i}`}><span>{c.name}</span><span className="confidence-chip">{c.role}</span></li>)}</ul></>):null}
+                      {contributorRoles.length?(<><strong>Contributors</strong><ul className="contrib-list">{contributorRoles.map((c,i)=><li key={`cr-${i}`}><span>{c.name}</span>{c.role?<span className="confidence-chip">{c.role}</span>:null}</li>)}</ul></>):null}
 
                       {isPrivateMode?(
                         <div style={{marginTop:10}}>
@@ -468,7 +623,7 @@ function PortfolioPage() {
                           </label>
                           <div>
                             <button onClick={()=>handleSaveProjectCustomization(project.project_name)} disabled={loading} style={{marginTop:8}}>
-                              Save Changes
+                              {opState===OP_STATE.SAVING?"Saving...":"Save Changes"}
                             </button>
                           </div>
                         </div>
@@ -482,7 +637,32 @@ function PortfolioPage() {
         </section>
       ):null}
 
-      {message&&<p style={{marginTop:12}}>{message}</p>}
+      {copyToastVisible?(
+        <div
+          role="status"
+          aria-live="polite"
+          style={{
+            position:"fixed",
+            right:16,
+            bottom:16,
+            zIndex:9999,
+            background:"#1f8f43",
+            color:"#fff",
+            border:"1px solid #157535",
+            boxShadow:"0 8px 24px rgba(0,0,0,.24)",
+            borderRadius:10,
+            padding:"10px 14px",
+            display:"flex",
+            alignItems:"center",
+            gap:8,
+            fontWeight:600,
+          }}
+          data-testid="copy-html-toast"
+        >
+          <span aria-hidden="true">✅</span>
+          <span>Successfully copied!</span>
+        </div>
+      ):null}
     </>
   );
 }

@@ -7,7 +7,8 @@ from datetime import datetime
 class ProjectSummary(BaseModel):
     id: Optional[int] = None
     name: str
-
+    thumbnail: Optional[str] = None
+    
 class DuplicateContributorGroupResponse(BaseModel):
     display_name: str
     candidates: List[str]

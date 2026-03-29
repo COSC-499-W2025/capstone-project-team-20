@@ -17,6 +17,7 @@ vi.mock("../api/client",()=>({
   updatePortfolioProject:vi.fn(),
   publishPortfolio:vi.fn(),
   unpublishPortfolio:vi.fn(),
+  getBadgeProgress:vi.fn(),
 }));
 
 import {
@@ -29,6 +30,7 @@ import {
   updatePortfolioProject,
   publishPortfolio,
   unpublishPortfolio,
+  getBadgeProgress,
 } from "../api/client";
 
 describe("PortfolioPage web portfolio",()=>{
@@ -37,11 +39,14 @@ describe("PortfolioPage web portfolio",()=>{
 
     setPrivacyConsent.mockResolvedValue({ consent: true });
     listProjects.mockResolvedValue({ projects: [{ id: 1, name: "Proj A" }] });
-    listReports.mockResolvedValue({ reports: [{ id: 9, title: "My Report", report_kind: "portfolio" }] });
-    getReport.mockResolvedValue({ report: { id: 9, title: "My Report" } });
-    generatePortfolioDetailsForReport.mockResolvedValue({
-      ok: true,
-      updated_project_names: ["Proj A"],
+    listReports.mockResolvedValue({ reports: [{ id: 9, title: "My Report", report_kind: "portfolio", project_count: 1 }] });
+    getReport.mockResolvedValue({ report: { id: 9, title: "My Report", report_kind: "portfolio", project_count: 1, sort_by: "resume_score" } });
+    generatePortfolioDetailsForReport.mockResolvedValue({ ok: true, updated_project_names: ["Proj A"] });
+    getBadgeProgress.mockResolvedValue({
+      badges:[
+        {badge_id:"polyglot",label:"Polyglot",earned:false,progress:0.65,target:3,current:2,metric:"Languages used",project:{id:1,name:"Proj A"}},
+        {badge_id:"team_effort",label:"Team Effort",earned:true,progress:1,target:3,current:4,metric:"Contributors",project:{id:1,name:"Proj A"}},
+      ],
     });
 
     getPortfolio.mockResolvedValue({
@@ -96,23 +101,15 @@ describe("PortfolioPage web portfolio",()=>{
       portfolio:{
         title:"Portfolio Report",
         portfolio_mode:"public",
-        projects:[
-          {
-            project_name:"Proj A",
-            summary:"Short summary",
-            bullets:["Implemented API layer"],
-            collaboration_status:"collaborative",
-            languages:["Python"],
-            portfolio_customizations:{},
-            portfolio_details:{
-              role:"Team Contributor",
-              timeline:"2 months",
-              overview:"Overview",
-              achievements:["A1","A2"],
-              contributor_roles:[{name:"alice",role:"Backend"}],
-            },
-          },
-        ],
+        projects:[{
+          project_name:"Proj A",
+          summary:"Short summary",
+          bullets:["Implemented API layer"],
+          collaboration_status:"collaborative",
+          languages:["Python"],
+          portfolio_customizations:{},
+          portfolio_details:{ role:"Team Contributor", timeline:"2 months", overview:"Overview", achievements:["A1","A2"], contributor_roles:[{name:"alice",role:"Backend"}] },
+        }],
       },
     });
 
@@ -120,23 +117,15 @@ describe("PortfolioPage web portfolio",()=>{
       portfolio:{
         title:"Portfolio Report",
         portfolio_mode:"private",
-        projects:[
-          {
-            project_name:"Proj A",
-            summary:"Short summary",
-            bullets:["Implemented API layer"],
-            collaboration_status:"collaborative",
-            languages:["Python"],
-            portfolio_customizations:{},
-            portfolio_details:{
-              role:"Team Contributor",
-              timeline:"2 months",
-              overview:"Overview",
-              achievements:["A1","A2"],
-              contributor_roles:[{name:"alice",role:"Backend"}],
-            },
-          },
-        ],
+        projects:[{
+          project_name:"Proj A",
+          summary:"Short summary",
+          bullets:["Implemented API layer"],
+          collaboration_status:"collaborative",
+          languages:["Python"],
+          portfolio_customizations:{},
+          portfolio_details:{ role:"Team Contributor", timeline:"2 months", overview:"Overview", achievements:["A1","A2"], contributor_roles:[{name:"alice",role:"Backend"}] },
+        }],
       },
     });
   });
@@ -198,9 +187,7 @@ describe("PortfolioPage web portfolio",()=>{
       expect(updatePortfolioProject).toHaveBeenCalledWith(
         9,
         "Proj A",
-        expect.objectContaining({
-          custom_overview:"New custom overview",
-        })
+        expect.objectContaining({ custom_overview:"New custom overview" })
       );
     });
   });
@@ -217,6 +204,42 @@ describe("PortfolioPage web portfolio",()=>{
     await waitFor(()=>{
       expect(publishPortfolio).toHaveBeenCalledWith(9);
       expect(screen.getByTestId("portfolio-mode-badge")).toHaveTextContent("public");
+    });
+  });
+
+  it("shows selected report details card instead of raw JSON",async()=>{
+    const user=userEvent.setup();
+    render(<PortfolioPage />);
+    await waitFor(()=>screen.getByText("Saved Reports"));
+    await user.click(screen.getByRole("button",{name:/my report/i}));
+
+    await waitFor(()=>{
+      expect(screen.getByTestId("selected-report-card")).toBeInTheDocument();
+      expect(screen.getByText(/Title:/i)).toBeInTheDocument();
+      expect(screen.queryByText(/\{[\s\S]*"id"[\s\S]*\}/i)).not.toBeInTheDocument();
+    });
+  });
+
+  it("shows status banner updates during generation",async()=>{
+    const user=userEvent.setup();
+    render(<PortfolioPage />);
+    await waitFor(()=>screen.getByText("Saved Reports"));
+    await user.click(screen.getByRole("button",{name:/my report/i}));
+    await user.click(screen.getByRole("button",{name:/generate web portfolio/i}));
+
+    await waitFor(()=>{
+      expect(screen.getByTestId("portfolio-status-banner")).toHaveTextContent(/generated successfully/i);
+    });
+  });
+
+  it("renders badges panel in portfolio page",async()=>{
+    const user=userEvent.setup();
+    await generatePortfolio(user);
+
+    await waitFor(()=>{
+      expect(screen.getByTestId("portfolio-badges-panel")).toBeInTheDocument();
+      expect(screen.getByText(/Team Effort/i)).toBeInTheDocument();
+      expect(screen.getByText(/Polyglot • 65%/i)).toBeInTheDocument();
     });
   });
 });

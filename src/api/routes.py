@@ -241,8 +241,24 @@ def get_list_projects():
     """List all analyzed/uploaded projects."""
     pm = ProjectManager()
     grouped_projects = pm.get_project_groups()
-    current_projects = [ProjectSummary(id=p.id, name=p.name) for p in grouped_projects["current"]]
-    previous_projects = [ProjectSummary(id=p.id, name=p.name) for p in grouped_projects["previous"]]
+
+    current_projects = [
+        ProjectSummary(
+            id=p.id,
+            name=p.name,
+            thumbnail=getattr(p, "thumbnail", None),
+        )
+        for p in grouped_projects["current"]
+    ]
+    previous_projects = [
+        ProjectSummary(
+            id=p.id,
+            name=p.name,
+            thumbnail=getattr(p, "thumbnail", None),
+        )
+        for p in grouped_projects["previous"]
+    ]
+
     return ProjectsListResponse(
         projects=current_projects + previous_projects,
         current_projects=current_projects,

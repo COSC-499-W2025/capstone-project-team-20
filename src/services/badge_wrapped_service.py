@@ -39,6 +39,38 @@ BADGE_PROGRESS_RULES = {
     },
 }
 
+BADGE_LABEL_OVERRIDES = {
+    "gigantana": "Gigantana",
+    "slow_burn": "Slow Burn",
+    "flash_build": "Flash Build",
+    "fresh_breeze": "Fresh Breeze",
+    "marathoner": "Marathoner",
+    "tiny_but_mighty": "Tiny but Mighty",
+    "rapid_builder": "Rapid Builder",
+    "jack_of_all_trades": "Jack of All Trades",
+    "polyglot": "Polyglot",
+    "language_specialist": "Language Specialist",
+    "balanced_palette": "Balanced Palette",
+    "solo_runner": "Solo Runner",
+    "team_effort": "Team Effort",
+    "test_pilot": "Test Pilot",
+    "test_scout": "Test Scout",
+    "docs_guardian": "Docs Guardian",
+    "doc_enthusiast": "Doc Enthusiast",
+    "pixel_perfect": "Pixel Perfect",
+    "visual_storyteller": "Visual Storyteller",
+    "data_seedling": "Data Seedling",
+    "data_wrangler": "Data Wrangler",
+    "code_cruncher": "Code Cruncher",
+    "container_captain": "Container Captain",
+    "full_stack_explorer": "Full Stack Explorer",
+}
+
+def _label_for_badge_id(badge_id: str) -> str:
+    if badge_id in BADGE_LABEL_OVERRIDES:
+        return BADGE_LABEL_OVERRIDES[badge_id]
+    return " ".join(chunk.capitalize() for chunk in badge_id.split("_"))
+
 def _project_total_files(project) -> float:
     total = float(getattr(project, "num_files", 0) or 0)
     if total > 0:
@@ -165,6 +197,8 @@ def _project_badge_date(project) -> str | None:
 
 def build_badge_progress(projects) -> Dict[str, Any]:
     responses = []
+
+    # Existing "closest progress" tracked badges
     for badge_id, rule in BADGE_PROGRESS_RULES.items():
         closest_project = None
         closest_progress = -1.0
@@ -194,6 +228,28 @@ def build_badge_progress(projects) -> Dict[str, Any]:
             },
             "earned": closest_progress >= 1.0,
         })
+
+    # Full earned badge set by project (for portfolio/project badge display)
+    existing_ids = {b["badge_id"] for b in responses}
+    for p in projects:
+        earned = _project_badges(p)
+        for badge_id in earned:
+            if badge_id in existing_ids:
+                continue
+            responses.append({
+                "badge_id": badge_id,
+                "label": _label_for_badge_id(badge_id),
+                "metric": "project_badges",
+                "target": 1.0,
+                "current": 1.0,
+                "progress": 1.0,
+                "project": {
+                    "id": getattr(p, "id", None),
+                    "name": getattr(p, "name", "Unknown project"),
+                },
+                "earned": True,
+            })
+            existing_ids.add(badge_id)
 
     return {"ok": True, "badges": responses}
 

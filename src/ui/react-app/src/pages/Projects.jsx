@@ -579,7 +579,7 @@ function Projects() {
             <div>
               <div className="pj-group-label">
                 <span className="pj-dot pj-dot--green"/>
-                Current batch
+                Recent Uploads
                 <span className="pj-count">{currentProjects.length}</span>
               </div>
               {currentProjects.map(p => (
