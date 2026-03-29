@@ -20,12 +20,14 @@ test('portfolio create/edit/export', async ({ page, context }) => {
   await expandBtn.click();
   await expandBtn.click();
 
-  await page.getByRole('textbox', { name: /Custom title/ }).fill('Pogodo (COSC 310)');
-  await page.getByRole('textbox', { name: /Custom title/ }).press('Enter');
+  const titleBox = page.getByRole('textbox', { name: 'Custom title COSC310-Team-' });
+
+  await titleBox.fill('Pogodo (COSC 310)');
+  await titleBox.press('Enter');
 
   await page.getByRole('button', { name: 'Save Changes' }).nth(2).click();
 
-  const overviewBox = page.getByRole('textbox', { name: /Custom overview/ });
+  const overviewBox = page.getByRole('textbox', { name: 'Custom overview Game-Jam-' });
   await overviewBox.fill('We created a game in Unity for the Global Game Jam 2025!');
 
   await page.getByRole('button', { name: 'Save Changes' }).nth(3).click();
