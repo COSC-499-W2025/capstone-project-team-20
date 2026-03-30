@@ -1055,3 +1055,14 @@ body{
   border-color: rgba(63,185,80,.55);
   background: rgba(63,185,80,.15);
 }
+
+.scrollable-div {
+      border: 2px solid #333; 
+
+      height: 529px;          
+      overflow-y: auto;   
+      overflow-x: hidden;    
+      padding: 10px;          
+      box-sizing: border-box; 
+      border-radius: 10px;
+}
