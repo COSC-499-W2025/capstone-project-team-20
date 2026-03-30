@@ -1,6 +1,7 @@
 ## **Branden Weekly Logs**
 ### **Table of contents:**
 
+- [Term 2 Week 11/12](#term-2-week-11--12-march-16th---march-29th)
 - [Term 2 Week 10](#term-2-week-10-march-9th---march-15th)
 - [Term 2 Week 9](#term-2-week-9-march-2nd---march-8th)
 - [Term 2 Week 8](#term-2-week-8-february-23rd---march-1st)
@@ -432,3 +433,27 @@ To hopefully have the whole team implementing features so that we can really sta
 
 **Any issues or Blockers That I Encountered This Week and How I Addressed/Plan to Address Them:**
 Well, it is crunch time for our project to try and get everything done as soon as possible (And most of it done before peer testing 2 as bowen requested), but for the last couple weeks, its been hard to get everyone aside from myself and Dylan to grind it out. I feel we are behind from where I wouldve liked to be at this time. but, as I had previously said, at the time of writing this, it has only been Dylan and myself working on pushing the project along. 
+
+
+### **Term 2 Week 11 & 12: March 16th - March 29th**
+**Screenshot of Tasks Worked On:**
+
+![Term 2 Week 12](imagesForBrandenLogs/T2_W12_SS.png)
+
+**Coding Tasks:**
+I had two PRs, [PR 504](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/504) and [PR 512](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/512). [PR 504](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/504) implemented end-to-end testing using Playwright, creating automated tests that simulate real user interactions (such as onboarding, project uploads, and report generation) to ensure the full system works together correctly. This also involved learning Playwright and setting up the testing workflow within our project. [PR 512](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/512) included fixing a frontend bug where project dates were displaying incorrectly due to improper handling of date fields, ensuring that project timelines now render accurately in the UI.
+
+**Testing or Debugging Tasks:**
+I had created end-to-end system tests in my [Playwright testing PR](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/504). These tests replicate realistic user behavior such as filling forms, uploading files, navigating between pages, and interacting with UI components. I also debugged during my [frontend dates bug PR](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/512). This issue was not a lot of coding, but it took alot of time to find the root cause of the bug. For manual testing over this period, I tested [PR 494](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/494), [PR 493](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/493), [PR 492](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/492), [PR 490](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/490), [PR 502](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/502), [PR 506](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/506), [PR 510](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/510), [PR 514](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/514), [PR 522](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/522), and [PR 524](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/524).
+
+**Reviewing or Collaboration Tasks:**
+over the period, I reviewed [PR 494](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/494), [PR 493](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/493), [PR 492](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/492), [PR 490](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/490), [PR 502](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/502), [PR 506](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/506), [PR 510](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/510), [PR 514](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/514), [PR 522](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/522), and [PR 524](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/524). I also collaborated with my team for Peer Testing 2. This included designing a testing workflow and creating a questionnaire for our testers to fill out after they had tested the system. I also collaborated on our Milestone 3 presentation, including helping lex with their slides and script/speaker notes. 
+
+**Brief Description of Last Week Connecting This Week:**
+Our main goals were finishing the requirements for Milestone 3 and having a good amount of tasks set out for peer testing. We hit the goals that we were planning to hit!
+
+**Plan/Goals for Upcoming Week:**
+This week, it should mainly be about polishing any leftover things that we may have missed thus far in our system. I think were at a good spot overall, but will still be adding in and debugging to our system as the week goes. I have no specific plan right now, I believe I want to watch all my peers videos and do my voting first. I may take some inspiration from other projects and have some last minute implementations that would work well with our system from other teams.
+
+**Any issues or Blockers That I Encountered This Week and How I Addressed/Plan to Address Them:**
+We had some issues with our presentation on the morning of. But, we had it dealt with that morning and addressed accordingly. Either than that, I had no issues this week. 
