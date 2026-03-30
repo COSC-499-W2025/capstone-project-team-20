@@ -336,3 +336,17 @@ Reviewed:
 - https://github.com/COSC-499-W2025/capstone-project-team-20/pull/471
 
 Thanks.
+
+## Week 11-12
+
+![Week 11-12 Tasks](imagesForLexLogs/lexlogT2W11-12.png)
+
+Unfortunately didnt do much work for week 11 besides doing work for the presentation. I have many scrapped branches locally for UI updates that couldn't go through because others got to them faster or changed implementation. I just didn't plan ahead well enough.
+
+For week 12 i finalized the portfolio and resume pages to all fit on a single full screened page without having to scroll, making the user experience a lot better, this required a lot of reformatting and making elements scrollable as well as adding a sticky header for buttons to stick to while scrolling through generated resumes / portfolios. Aside from that i updated various elements to bring better cohesiveness across pages. I had to rewrite things a few times as new changes to these pages came in, but I got it done in the end and im really proud of how it looks. 
+all of this in [PR 524](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/524). I believe it contributes to the project goal because we really wanted a nice looking system with good useability with minimal necessary navigation and i believe the inconvenience of having to scroll to see the entire functionality of a menu is really a huge hinderance for the user experience.
+
+I really wish i could have done more these past two weeks, i had done so well (in my opinion) with doing more frequent, higher quality changes, but I ended up falling behind once again.
+
+reviewed some assigned PRs over the past two weeks, heres the one I could find, I believe there was more:
+- https://github.com/COSC-499-W2025/capstone-project-team-20/pull/510
