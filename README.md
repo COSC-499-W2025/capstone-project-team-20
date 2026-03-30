@@ -1,4 +1,3 @@
-```markdown
 # Team 20: Project Code Analyzer
 
 ## Project Description
