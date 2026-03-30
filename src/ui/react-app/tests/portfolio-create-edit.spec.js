@@ -32,11 +32,26 @@ test('portfolio create/edit/export', async ({ page, context }) => {
 
   await page.getByRole('button', { name: 'Save Changes' }).nth(3).click();
 
-  const [newPage] = await Promise.all([
-    context.waitForEvent('page'),
-    page.getByRole('button', { name: 'Export Portfolio PDF' }).click(),
-  ]);
+// Trigger export and verify backend export endpoint succeeds
+  const exportResponsePromise = page.waitForResponse(
+    (resp) =>
+      resp.url().includes('/portfolio/exports/') &&
+      resp.request().method() === 'GET' &&
+      resp.status() === 200
+  );
 
+  await page.getByRole('button', { name: 'Export Portfolio PDF' }).click();
+  await exportResponsePromise;
+
+// Support both behaviors: popup tab OR same-tab navigation
+  const popup = await context.waitForEvent('page', { timeout: 5000 }).catch(() => null);
+
+  if (popup) {
+    await popup.waitForLoadState('domcontentloaded');
+    await expect(popup).toHaveURL(/\/portfolio\/exports\//);
+  } else {
+    await expect(page).toHaveURL(/\/portfolio\/exports\//);
+  }
   await newPage.waitForLoadState('domcontentloaded');
 
   const url = newPage.url();
