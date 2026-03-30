@@ -596,6 +596,10 @@ function PortfolioPage() {
           <div style={{background:"#333", height:"1px"}}></div>
           </div>
 
+          {!loading && !selectedReport && (
+            <p style={{ color: "#888",margin:"auto",textAlign:"center", left:0,right:0 }}>Select or create a report to preview.</p>
+          )}
+
           {portfolio && (
             <section className="pf-panel">
               {/* Stats */}
