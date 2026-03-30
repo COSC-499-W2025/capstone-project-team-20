@@ -77,7 +77,6 @@ function ConfirmModal({ title, message, confirmLabel = "Delete", onConfirm, onCa
   );
 }
 
-
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -511,8 +510,8 @@ function PortfolioPage() {
 
         {/* LEFT — controls */}
         <div style={{ minWidth: 280, maxWidth: 320 }}>
-          <div style={{ padding: 12, border: "1px solid #ddd", borderRadius: 8, marginBottom: 16 }}>
-            <h4 style={{ marginTop: 0 }}>Create Portfolio Report</h4>
+          <div style={{ padding: 12, border: "1px solid #333", borderRadius: 8, marginBottom: 16 }}>
+            <h4 style={{ marginTop: 0 }}>Create Report</h4>
             <div style={{ marginBottom: 10 }}>
               <label style={formLabel}>Title</label>
               <input type="text" value={reportTitle} onChange={(e) => setReportTitle(e.target.value)} style={formInput} />
@@ -522,33 +521,36 @@ function PortfolioPage() {
               <textarea
                 value={reportNotes}
                 onChange={(e) => setReportNotes(e.target.value)}
-                rows={3}
+                rows={1}
                 placeholder="e.g. Use for software engineering roles"
                 style={{ ...formInput, resize: "vertical", lineHeight: 1.4 }}
               />
             </div>
             <h4>Projects</h4>
             {projects.length === 0 ? <p>No projects found. Upload a project first.</p> : (
-              <ul style={{ listStyle: "none", paddingLeft: 0 }}>
+              <div className="scrollable-div" style={{maxHeight: 90}}>
+              <ul style={{ listStyle: "none", paddingLeft: 0, marginBottom: 0, marginTop:0}}>
                 {projects.map((p) => (
-                  <li key={p.id} style={{ marginBottom: 6 }}>
-                    <label>
-                      <input type="checkbox" checked={selectedProjectIds.includes(p.id)} onChange={() => toggleProject(p.id)} style={{ marginRight: 8 }} />
+                  <li key={p.id} style={{ marginBottom: 1 }}>
+                    <label style={{fontSize:14}}>
+                      <input type="checkbox" checked={selectedProjectIds.includes(p.id)} onChange={() => toggleProject(p.id)} style={{ marginRight: 8}} />
                       {p.name}
                     </label>
                   </li>
                 ))}
               </ul>
+              </div>
             )}
-            <button onClick={handleCreateReport} disabled={loading}>{loading ? "Working..." : "Create Portfolio Report"}</button>
+            <button style={{marginTop: 10}} onClick={handleCreateReport} disabled={loading}>{loading ? "Working..." : "Create Report"}</button>
           </div>
 
           <div>
             <h4>Saved Reports</h4>
             {reports.length === 0 ? <p>No reports yet.</p> : (
+              <div className="scrollable-div" style={{maxHeight: 100, paddingBottom: 0, paddingTop:0}}>
               <ul style={{ paddingLeft: 0, listStyle: "none" }}>
                 {reports.map((r) => (
-                  <li key={r.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+                  <li key={r.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 0, marginTop:0}}>
                     <button
                       onClick={() => handleSelectReport(r.id)}
                       disabled={loading}
@@ -557,6 +559,7 @@ function PortfolioPage() {
                         color: selectedReport?.id === r.id ? "var(--accent, #0066cc)" : "var(--text)",
                         fontWeight: selectedReport?.id === r.id ? "bold" : "normal",
                         textAlign: "left", flex: 1,
+                        height:30
                       }}
                     >
                       {r.title ?? `Report #${r.id}`}
@@ -565,6 +568,7 @@ function PortfolioPage() {
                   </li>
                 ))}
               </ul>
+              </div>
             )}
             {selectedReport?.notes && (
               <p style={{ fontSize: 12, color: "#e6edf3", marginTop: 6, borderLeft: "2px solid #ddd", paddingLeft: 8 }}>
@@ -572,24 +576,24 @@ function PortfolioPage() {
               </p>
             )}
           </div>
-
-          <div style={{ marginTop: 16 }}>
-            <button onClick={handleExportPortfolioPdf} disabled={loading || !selectedReport?.id}>
-              {opState === OP_STATE.EXPORTING ? "Exporting PDF..." : "Export Portfolio PDF"}
-            </button>
-          </div>
         </div>
 
         {/* RIGHT — portfolio content */}
-        <div style={{ flex: 1 }}>
-
-          <div style={{ marginBottom: 12 }}>
-            <button onClick={handleGenerateWebPortfolio} disabled={loading || !selectedReport?.id}>
+        <div style={{ flex: 1 }} className="scrollable-div">
+            
+          <div style={{position:"sticky", top:-1,left:0,right:0, paddingLeft:10, paddingTop:10, width:"105%", paddingBottom:"1px", background:"#161b22",transform: "translate(-20px,-10px)"}}>
+          <div style={{ marginBottom: 12}}>
+            <button onClick={handleExportPortfolioPdf} disabled={loading || !selectedReport?.id} style={{ marginLeft: 10}}>
+              {opState === OP_STATE.EXPORTING ? "Exporting PDF..." : "Export Portfolio PDF"}
+            </button>
+            <button onClick={handleGenerateWebPortfolio} disabled={loading || !selectedReport?.id} style={{ marginLeft: 10}}>
               {opState === OP_STATE.GENERATING ? "Generating..." : "Generate Web Portfolio"}
             </button>
-            <button onClick={handleCopyPortfolioHtml} disabled={loading || !portfolio} style={{ marginLeft: 8 }}>
+            <button onClick={handleCopyPortfolioHtml} disabled={loading || !portfolio} style={{ marginLeft: 10 }}>
               Copy Portfolio HTML
             </button>
+          </div>
+          <div style={{background:"#333", height:"1px"}}></div>
           </div>
 
           {portfolio && (
