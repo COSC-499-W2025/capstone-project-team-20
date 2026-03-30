@@ -7,9 +7,6 @@ test('portfolio create/edit/export', async ({ page, context }) => {
 
   await page.getByRole('button', { name: 'Portfolio' }).click();
 
-  // Wait for the portfolio page to finish loading projects before proceeding
-  await page.locator('input[type="checkbox"]').first().waitFor({ state: 'visible', timeout: 30000 });
-
   const nameInput = page.locator('input[type="text"]');
   await nameInput.click();
   await nameInput.fill('Test portfolio playwright');
@@ -17,6 +14,8 @@ test('portfolio create/edit/export', async ({ page, context }) => {
   await page.getByRole('button', { name: 'Create Portfolio Report' }).click();
   await page.getByRole('button', { name: 'Generate Web Portfolio' }).click();
 
+  // Wait for generation to complete and at least 2 articles to be rendered
+  await page.getByRole('article').first().waitFor({ state: 'visible', timeout: 90000 });
   await page.getByRole('article').nth(1).click();
 
   const expandBtn = page.getByRole('button', { name: '▸ Expand' }).first();
