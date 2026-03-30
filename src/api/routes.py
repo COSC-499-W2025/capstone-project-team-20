@@ -18,7 +18,7 @@ from src.generators.PortfolioGenerator import PortfolioGenerator
 from src.ZipParser import parse_zip_to_project_folders
 from src.services.badge_wrapped_service import build_badge_progress, build_yearly_wrapped
 
-from src.api.schemas.skills import SkillsListResponse, SkillItem
+from src.api.schemas.skills import SkillsListResponse, SkillItem, SkillsUsageResponse, SkillUsageItem
 from src.api.schemas.projects import (
     UploadProjectResponse,
     ProjectsListResponse,
@@ -116,6 +116,7 @@ def require_consent():
 class UploadPathRequest(BaseModel):
     path: str
 
+
 class ContributorMergeResolutionRequest(BaseModel):
     canonical: str
     merge: List[str]
@@ -135,6 +136,7 @@ class ReportProjectPatchRequest(BaseModel):
     stack_languages: Optional[List[str]] = None
     stack_frameworks: Optional[List[str]] = None
     bullets: Optional[List[str]] = None
+
 
 class ConfigSetRequest(BaseModel):
     key: str
@@ -257,8 +259,10 @@ def get_list_projects():
     """List all analyzed/uploaded projects."""
     pm = ProjectManager()
     grouped_projects = pm.get_project_groups()
+
     current_projects = [ProjectSummary(id=p.id, name=p.name) for p in grouped_projects["current"]]
     previous_projects = [ProjectSummary(id=p.id, name=p.name) for p in grouped_projects["previous"]]
+
     return ProjectsListResponse(
         projects=current_projects + previous_projects,
         current_projects=current_projects,
@@ -300,6 +304,7 @@ def delete_project(id: int):
     analyzer = ProjectAnalyzer(ConfigManager(), root_folders=[], zip_path=None)
     analyzer.rebuild_seen_authors()
     return None
+
 
 @router.post("/projects/resolve-contributors")
 def resolve_contributors(req: ContributorMergeApplyRequest):
@@ -365,6 +370,32 @@ def get_skills_list():
     ]
     return SkillsListResponse(skills=skills)
 
+@router.get("/skills/usage", response_model=SkillsUsageResponse)
+def get_skills_usage():
+    """List skills with usage counts and the project names where each skill appears."""
+    pm = ProjectManager()
+    projects = list(pm.get_all())
+
+    usage_map = {}
+    for p in projects:
+        project_name = (getattr(p, "name", "") or "").strip()
+        for s in (p.skills_used or []):
+            skill = (s or "").strip()
+            if not skill:
+                continue
+            usage_map.setdefault(skill, set())
+            if project_name:
+                usage_map[skill].add(project_name)
+
+    skills = [
+        SkillUsageItem(
+            name=name,
+            project_count=len(project_names),
+            projects=sorted(project_names, key=lambda x: x.lower()),
+        )
+        for name, project_names in sorted(usage_map.items(), key=lambda x: (-len(x[1]), x[0].lower()))
+    ]
+    return SkillsUsageResponse(skills=skills)
 
 @router.get("/badges/progress", response_model=BadgeProgressResponse)
 def get_badge_progress():
@@ -481,6 +512,7 @@ def get_report(id: int):
             project_count=r.project_count,
         )
     )
+
 
 @router.get("/resume/context/{id}", dependencies=[Depends(require_consent)])
 def get_resume_context(id: int):
@@ -704,6 +736,7 @@ def export_resume(req: ResumeExportRequest):
         page_count=page_count,
     )
 
+
 @router.get("/resume/context/{id}", dependencies=[Depends(require_consent)])
 def get_resume_context(id: int):
     """
@@ -716,9 +749,8 @@ def get_resume_context(id: int):
         raise HTTPException(status_code=404, detail="Report not found.")
     _require_report_kind(report, "resume")
     context = ReportExporter()._build_context(report, ConfigManager())
-    # Convert date objects to strings so they're JSON-serialisable
     for proj in context.get("projects", []):
-        pass  # dates are already formatted strings in _build_context
+        pass
     return context
 
 
@@ -825,6 +857,7 @@ def save_config(req: ConfigSaveRequest):
         cm.delete("usernames")
     return {"ok": True, "config": cm.get_all()}
 
+
 @router.post("/projects/{id}/thumbnail")
 def upload_thumbnail(id: int, file: UploadFile = File(...)):
     """
@@ -832,36 +865,36 @@ def upload_thumbnail(id: int, file: UploadFile = File(...)):
     Saves to thumbnails/ directory and updates project.thumbnail.
     """
     import shutil as _shutil
- 
+
     VALID_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".heic", ".ico", ".svg"}
- 
+
     pm = ProjectManager()
     project = pm.get(id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found.")
- 
+
     suffix = Path(file.filename).suffix.lower()
     if suffix not in VALID_EXTENSIONS:
         raise HTTPException(
             status_code=400,
             detail=f"Invalid image format '{suffix}'. Supported: {', '.join(sorted(VALID_EXTENSIONS))}"
         )
- 
+
     thumbnails_dir = Path("thumbnails")
     thumbnails_dir.mkdir(exist_ok=True)
- 
+
     filename = f"project_{id}_thumb{suffix}"
     dest = thumbnails_dir / filename
- 
+
     with dest.open("wb") as f:
         _shutil.copyfileobj(file.file, f)
- 
+
     project.thumbnail = str(dest)
     pm.set(project)
- 
+
     return {"ok": True, "thumbnail": str(dest)}
- 
- 
+
+
 @router.get("/thumbnails/{filename}")
 def serve_thumbnail(filename: str):
     """Serve a project thumbnail image by filename."""
@@ -869,6 +902,7 @@ def serve_thumbnail(filename: str):
     if not path.exists() or not path.is_file():
         raise HTTPException(status_code=404, detail="Thumbnail not found.")
     return FileResponse(str(path))
+
 
 @router.post("/config/set")
 def config_set(req: ConfigSetRequest):
@@ -879,10 +913,13 @@ def config_set(req: ConfigSetRequest):
     cm = ConfigManager()
     cm.set(req.key, req.value)
     return {"ok": True, "key": req.key}
+
+
 def _require_private_mode(report):
     mode = getattr(report, "portfolio_mode", "private") or "private"
     if mode != "private":
         raise HTTPException(status_code=409, detail="Portfolio is in public mode and cannot be edited.")
+
 
 @router.patch("/portfolio/{id}/mode", response_model=PortfolioResponse, dependencies=[Depends(require_consent)])
 def update_portfolio_mode(id: int, payload: PortfolioModeUpdateRequest):
@@ -901,6 +938,7 @@ def update_portfolio_mode(id: int, payload: PortfolioModeUpdateRequest):
         report.portfolio_published_at = None
     report_manager.update_report(report)
     return PortfolioResponse(ok=True, portfolio=_build_portfolio_report(report), message="Portfolio mode updated.")
+
 
 @router.patch("/portfolio/{id}/projects/{project_name}", response_model=PortfolioResponse, dependencies=[Depends(require_consent)])
 def update_portfolio_project_customizations(id: int, project_name: str, payload: PortfolioProjectUpdateRequest):
@@ -930,6 +968,7 @@ def update_portfolio_project_customizations(id: int, project_name: str, payload:
     report_manager.update_report(report)
     return PortfolioResponse(ok=True, portfolio=_build_portfolio_report(report), message="Portfolio project updated.")
 
+
 @router.post("/portfolio/{id}/unpublish", response_model=PortfolioPublishResponse, dependencies=[Depends(require_consent)])
 def unpublish_portfolio(id: int):
     report_manager = ReportManager()
@@ -942,6 +981,8 @@ def unpublish_portfolio(id: int):
     report.portfolio_published_at = None
     report_manager.update_report(report)
     return PortfolioPublishResponse(ok=True, portfolio=_build_portfolio_report(report), message="Portfolio moved to private mode.")
+
+
 @router.post("/portfolio/{id}/publish", response_model=PortfolioPublishResponse, dependencies=[Depends(require_consent)])
 def publish_portfolio(id: int):
     from datetime import datetime

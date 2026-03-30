@@ -25,8 +25,6 @@ import {
   setIdentity,
 } from '../api/client'
 
-// ── Fixtures ──────────────────────────────────────────────────────────────────
-
 const EMPTY_LIST = { projects: [], current_projects: [], previous_projects: [] }
 
 const PROJECT_LIST = {
@@ -88,8 +86,6 @@ beforeEach(() => {
   setIdentity.mockResolvedValue({})
 })
 
-// ── Initial load ──────────────────────────────────────────────────────────────
-
 describe('Initial load', () => {
   it('calls listProjects on mount', async () => {
     render(<Projects />)
@@ -102,7 +98,7 @@ describe('Initial load', () => {
     await waitFor(() => {
       expect(screen.getByText('my-app')).toBeInTheDocument()
       expect(screen.getByText('old-app')).toBeInTheDocument()
-      expect(screen.getByText(/current batch/i)).toBeInTheDocument()
+      expect(screen.getByText(/recent uploads/i)).toBeInTheDocument()
       expect(screen.getByText(/previous/i)).toBeInTheDocument()
     })
   })
@@ -122,8 +118,6 @@ describe('Initial load', () => {
     )
   })
 })
-
-// ── Project selection ─────────────────────────────────────────────────────────
 
 describe('Project selection', () => {
   it('loads and displays project detail when a project is clicked', async () => {
@@ -164,8 +158,6 @@ describe('Project selection', () => {
     )
   })
 })
-
-// ── ZIP upload ────────────────────────────────────────────────────────────────
 
 describe('ZIP upload', () => {
   it('blocks upload and shows error when consent is not given', async () => {
@@ -253,8 +245,6 @@ describe('ZIP upload', () => {
   })
 })
 
-// ── Delete project ────────────────────────────────────────────────────────────
-
 describe('Delete project', () => {
   it('shows confirm modal when trash icon is clicked', async () => {
     listProjects.mockResolvedValue(PROJECT_LIST)
@@ -290,8 +280,6 @@ describe('Delete project', () => {
     })
   })
 })
-
-// ── Merge modal ───────────────────────────────────────────────────────────────
 
 describe('Merge modal', () => {
   async function openMergeModal() {
@@ -344,8 +332,6 @@ describe('Merge modal', () => {
     })
   })
 })
-
-// ── Cancel analysis ───────────────────────────────────────────────────────────
 
 describe('Cancel analysis', () => {
   async function openMergeModal() {

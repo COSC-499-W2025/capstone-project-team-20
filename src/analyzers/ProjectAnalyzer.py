@@ -486,7 +486,7 @@ class ProjectAnalyzer:
                     continue  # identity check happens after duplicates are resolved
             
             project.author_count = len(author_map)
-            project.collaboration_status = "Collaborative" if project.author_count > 1 else "Individual"
+            project.collaboration_status = "collaborative" if project.author_count > 1 else "individual"
 
             contributor_identified = True
             if interactive:
