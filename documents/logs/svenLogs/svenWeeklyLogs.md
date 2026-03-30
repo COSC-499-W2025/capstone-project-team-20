@@ -503,3 +503,35 @@ My focus this week was supporting peer testing and producing actionable feedback
 
 ### Looking Ahead:
 Next week, I plan to help prioritize and address the peer-testing follow-ups (especially portfolio output presentation, generation/export feedback, and the privacy-consent caching behavior), while keeping changes scoped so fixes can be reviewed and merged safely before final deliverables.
+
+# Term 2 Week 12
+
+![Sven's Tasks for T2W12](./imagesForSvenLogs/t2w12.png)
+
+### Tasks worked on:
+- **Documentation Overhaul**: Prepared and merged extensive updates to system diagrams, ensuring that component, workflow, and dataflow representations accurately reflect recent architectural changes and are accessible for both end-users and contributors.
+- **README Improvements**: Refactored and expanded the project’s README to incorporate updated diagrams and provide clearer onboarding information.
+- **PR Authoring and Finalization**: Opened and completed [PR #527](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/527), which focused on documentation improvements, and [PR #516](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/516) addressing portfolio file count handling.
+- **Peer Review**: Reviewed [PR #518](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/518) (PDF Download UX enhancement) and [PR #508](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/508) (Resume modal for multi-page detection).
+
+### Weekly Goals Recap:
+The primary objective was to complete and integrate new documentation diagrams, elevating clarity for both technical and non-technical stakeholders. Time was also devoted to resolving lingering portfolio finalization issues.
+
+### PRs I reviewed this week:
+- **PR #518**: Improve PDF Download UX  
+- **PR #508**: Add Detection and Confirmation Modal for Resumes Exceeding One Page  
+
+### PRs I opened this week:
+- **PR #527**: Updated Documentation Diagrams + README  
+- **PR #516**: Portfolio finalizations/bugfixes (primarily with file counts)
+
+### Focus Area and Outcomes:
+- **Main contribution this week**: The diagrams/documentation update consolidated various architectural and workflow visuals, removed outdated references, and tightened explanatory context for setup and contribution. This required careful review of recent system changes to ensure full alignment between code and docs.
+- **Peer Review Notes**: The PRs reviewed were cohesive and contributed important UX improvements, notably around export clarity and workflow validation.
+
+### Problems Encountered:
+- No blocking issues were encountered. Coordination between diagram updates and corresponding README references required some iterative review to ensure consistency.
+
+### Looking Ahead:
+Next week’s priority is to focus on cleaning up the project ahead of it being finalized with this milestone
+
