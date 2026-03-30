@@ -9,14 +9,16 @@ vi.mock('../api/client', () => ({
   setPrivacyConsent: vi.fn(),
   getPrivacyConsent: vi.fn(),
   clearProjects:     vi.fn(),
+  updateUsernames:   vi.fn(),
 }))
 
-import { getConfig, saveConfig, setPrivacyConsent, getPrivacyConsent, clearProjects } from '../api/client'
+import { getConfig, saveConfig, setPrivacyConsent, getPrivacyConsent, clearProjects, updateUsernames } from '../api/client'
 
 beforeEach(() => {
   vi.clearAllMocks()
   getConfig.mockResolvedValue({})
   getPrivacyConsent.mockResolvedValue(false)
+  updateUsernames.mockResolvedValue({})
 })
 
 // ── Rendering ─────────────────────────────────────────────────────────────────
@@ -294,5 +296,87 @@ describe('Consent persistence', () => {
     await user.click(screen.getByRole('button', { name: /privacy/i }))
 
     expect(screen.getByText(/consent granted/i)).toBeInTheDocument()
+  })
+})
+
+// ── Contributors tab ───────────────────────────────────────────────────────────
+
+describe('Contributors tab', () => {
+  async function goToContributors(configOverrides = {}) {
+    getConfig.mockResolvedValue({
+      seen_authors: { 'alice@example.com': 'Alice', 'bob@example.com': 'Bob' },
+      usernames: ['alice@example.com'],
+      ...configOverrides,
+    })
+    const user = userEvent.setup()
+    render(<Settings />)
+    await waitFor(() => screen.getByRole('button', { name: /contributors/i }))
+    await user.click(screen.getByRole('button', { name: /contributors/i }))
+    await waitFor(() => screen.getByText('Alice'))
+    return user
+  }
+
+  it('renders seen_authors as a list of contributors', async () => {
+    await goToContributors()
+    expect(screen.getByText('Alice')).toBeInTheDocument()
+    expect(screen.getByText('Bob')).toBeInTheDocument()
+    expect(screen.getByText('alice@example.com')).toBeInTheDocument()
+    expect(screen.getByText('bob@example.com')).toBeInTheDocument()
+  })
+
+  it('pre-checks contributors that are in usernames', async () => {
+    await goToContributors()
+    const checkboxes = screen.getAllByRole('checkbox')
+    const aliceCheckbox = checkboxes.find(cb =>
+      cb.closest('label')?.textContent?.includes('alice@example.com')
+    )
+    const bobCheckbox = checkboxes.find(cb =>
+      cb.closest('label')?.textContent?.includes('bob@example.com')
+    )
+    expect(aliceCheckbox).toBeChecked()
+    expect(bobCheckbox).not.toBeChecked()
+  })
+
+  it('shows an empty state when no contributors have been seen', async () => {
+    getConfig.mockResolvedValue({ seen_authors: {}, usernames: [] })
+    const user = userEvent.setup()
+    render(<Settings />)
+    await waitFor(() => screen.getByRole('button', { name: /contributors/i }))
+    await user.click(screen.getByRole('button', { name: /contributors/i }))
+    await waitFor(() =>
+      expect(screen.getByText(/no contributors found yet/i)).toBeInTheDocument()
+    )
+  })
+
+  it('calls updateUsernames with checked emails on save', async () => {
+    const user = await goToContributors()
+    // alice is already checked; click bob to add it
+    const checkboxes = screen.getAllByRole('checkbox')
+    const bobCheckbox = checkboxes.find(cb =>
+      cb.closest('label')?.textContent?.includes('bob@example.com')
+    )
+    await user.click(bobCheckbox)
+    await user.click(screen.getByRole('button', { name: /save changes/i }))
+    await waitFor(() =>
+      expect(updateUsernames).toHaveBeenCalledWith(
+        expect.arrayContaining(['alice@example.com', 'bob@example.com'])
+      )
+    )
+  })
+
+  it('shows "Saved." after a successful save', async () => {
+    const user = await goToContributors()
+    await user.click(screen.getByRole('button', { name: /save changes/i }))
+    await waitFor(() => expect(screen.getByText(/saved\./i)).toBeInTheDocument())
+  })
+
+  it('disables save button when no contributors have been seen', async () => {
+    getConfig.mockResolvedValue({ seen_authors: {}, usernames: [] })
+    const user = userEvent.setup()
+    render(<Settings />)
+    await waitFor(() => screen.getByRole('button', { name: /contributors/i }))
+    await user.click(screen.getByRole('button', { name: /contributors/i }))
+    await waitFor(() => screen.getByRole('button', { name: /save changes/i }))
+    expect(screen.getByRole('button', { name: /save changes/i })).toBeDisabled()
   })
 })
