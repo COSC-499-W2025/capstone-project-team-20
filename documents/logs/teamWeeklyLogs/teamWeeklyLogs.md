@@ -751,7 +751,7 @@ Continuuing tasks include implementing CRUD operations into both resume and port
 
 **Work Performed:**
 
-- Branden Kennedy (42474551):
+- Branden Kennedy (42474551): This week, I made 2 PRs. [PR 504](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/504) and [PR 512](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/512). [PR 504](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/504) implemented end-to-end testing using Playwright, creating automated tests that simulate real user interactions (such as onboarding, project uploads, and report generation) to ensure the full system works together correctly. This also involved learning Playwright and setting up the testing workflow within our project. [PR 512](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/512) included fixing a frontend bug where project dates were displaying incorrectly due to improper handling of date fields, ensuring that project timelines now render accurately in the UI. I also reviewed [PR 502](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/502), [PR 506](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/506), [PR 510](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/510), [PR 514](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/514), [PR 522](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/522), and [PR 524](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/524). We also created our Milestone 3 presentation and our video demo for Milestone 3 & Project voting!
 
 - Necmi Kaan Sapoglu (17014796):
 
