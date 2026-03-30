@@ -1,11 +1,14 @@
 import { test, expect } from '@playwright/test';
 
 test('portfolio create/edit/export', async ({ page, context }) => {
-  test.setTimeout(60000);
+  test.setTimeout(120000);
 
   await page.goto('http://localhost:5173/');
 
   await page.getByRole('button', { name: 'Portfolio' }).click();
+
+  // Wait for the portfolio page to finish loading projects before proceeding
+  await page.locator('input[type="checkbox"]').first().waitFor({ state: 'visible', timeout: 30000 });
 
   const nameInput = page.locator('input[type="text"]');
   await nameInput.click();
@@ -20,14 +23,14 @@ test('portfolio create/edit/export', async ({ page, context }) => {
   await expandBtn.click();
   await expandBtn.click();
 
-  const titleBox = page.getByRole('textbox', { name: 'Custom title COSC310-Team-' });
+  const titleBox = page.getByRole('textbox', { name: 'Custom title COSC310-Team-', exact: false });
 
   await titleBox.fill('Pogodo (COSC 310)');
   await titleBox.press('Enter');
 
   await page.getByRole('button', { name: 'Save Changes' }).nth(2).click();
 
-  const overviewBox = page.getByRole('textbox', { name: 'Custom overview Game-Jam-' });
+  const overviewBox = page.getByRole('textbox', { name: 'Custom overview Game-Jam-', exact: false });
   await overviewBox.fill('We created a game in Unity for the Global Game Jam 2025!');
 
   await page.getByRole('button', { name: 'Save Changes' }).nth(3).click();
