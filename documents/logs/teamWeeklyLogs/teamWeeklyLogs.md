@@ -763,21 +763,21 @@ Continuuing tasks include implementing CRUD operations into both resume and port
 
 **Features included in the project plan for this milestone are:**
 
-Everything up to and including Issue
+Everything up to and including Issue #523. 
 
 **Continuing tasks from last week and plan for the next week:**
-
+We do not have any continuuing tasks either than possibly designing/creating a logo that we could use to replace our name displayed as text.
 
 **Burnup chart:**
-
+![Term 2 Week 12 Burnup chart](teamWeeklyLogsImages/T2_W12_burnup.png)
 
 
 **Table View of Completed Tasks on Project Board:**
-
+![Term 2 Week 12 Completed Tasks](teamWeeklyLogsImages/T2_W12_Completed.png)
 
 
 **Table View of In-Progress Tasks on Project Board:**
-
+![Term 2 Week 12 In-Progress](teamWeeklyLogsImages/T2_W12_In_Progress.png)
 
 
 **Test Report:**
