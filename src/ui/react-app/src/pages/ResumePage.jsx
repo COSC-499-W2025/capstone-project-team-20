@@ -983,7 +983,7 @@ function ResumePage() {
         </div>
 
         {/* RIGHT — live preview */}
-        <div className="scrollable-div" style={{ flex: 1, overflowX: "auto" }}>
+        <div className="scrollable-div" style={{ flex: 1}}>
           <div style={{position:"sticky", top:-1,left:0,right:0, paddingLeft:10, paddingTop:10, width:"105%", paddingBottom:"1px", background:"#161b22",transform: "translate(-20px,-10px)"}}>
             <div style={{ marginBottom: 12 }}>
             <button onClick={handleExportResume} disabled={loading || !selectedReport?.id} style={{marginLeft:10}}>
