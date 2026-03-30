@@ -362,16 +362,22 @@ function PortfolioPage() {
   async function handleExportPortfolioPdf() {
     if (!selectedReport?.id) { setStatus("Select or create a report first.", "error"); return; }
     setLoading(true);
-    setOpState(OP_STATE.EXPORTING);
-    setStatus("Exporting portfolio PDF...", "info");
-    try {
-      const exp = await exportPortfolio({ report_id: selectedReport.id, output_name: "portfolio.pdf" });
-      const fileName = `${selectedReport.title ?? `report-${selectedReport.id}`}.pdf`;
-      await triggerDownload(`http://localhost:8000${exp.download_url}`, fileName);
-      setStatus("Portfolio exported.", "success");
-    } catch (e) {
-      setStatus(e.message ?? "Failed to export portfolio", "error");
-    } finally {
+    setMessage("");
+    try{
+      const exp=await exportPortfolio({report_id:selectedReport.id,output_name:"portfolio.pdf"});
+      const fileName=`${selectedReport.title??`report-${selectedReport.id}`}.pdf`;
+      const res=await fetch(`http://localhost:8000${exp.download_url}`);
+      const blob=await res.blob();
+      const objectUrl=URL.createObjectURL(blob);
+      const a=document.createElement("a");
+      a.href=objectUrl;
+      a.download=fileName;
+      a.click();
+      URL.revokeObjectURL(objectUrl);
+      setMessage("Portfolio export started.");
+    }catch(e){
+      setMessage(e.message??"Failed to export portfolio");
+    }finally{
       setLoading(false);
       setOpState(OP_STATE.IDLE);
     }

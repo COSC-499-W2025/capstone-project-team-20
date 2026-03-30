@@ -59,7 +59,14 @@ describe("ResumePage", () => {
     deleteResumeExport.mockResolvedValue({ ok: true });
     deleteReport.mockResolvedValue(undefined);
 
-    vi.stubGlobal("open", vi.fn());
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      blob: () => Promise.resolve(new Blob(["pdf"], { type: "application/pdf" })),
+    }));
+
+    vi.stubGlobal("URL", {
+      createObjectURL: vi.fn().mockReturnValue("blob:mock"),
+      revokeObjectURL: vi.fn(),
+    });
   });
 
   it("loads and displays saved reports on mount", async () => {
@@ -197,10 +204,8 @@ describe("ResumePage", () => {
         template: "jake",
         output_name: "resume.pdf",
       });
-      expect(window.open).toHaveBeenCalledWith(
-        "http://localhost:8000/downloads/resume.pdf",
-        "_blank"
-      );
+      expect(fetch).toHaveBeenCalledWith("http://localhost:8000/downloads/resume.pdf");
+      expect(URL.createObjectURL).toHaveBeenCalled();
     });
   });
 
@@ -254,10 +259,8 @@ describe("ResumePage", () => {
     await user.click(screen.getByRole("button", { name: /export pdf/i }));
 
     await waitFor(() => {
-      expect(window.open).toHaveBeenCalledWith(
-        "http://localhost:8000/downloads/resume.pdf",
-        "_blank"
-      );
+      expect(fetch).toHaveBeenCalledWith("http://localhost:8000/downloads/resume.pdf");
+      expect(URL.createObjectURL).toHaveBeenCalled();
       expect(screen.queryByText(/resume exceeds one page/i)).not.toBeInTheDocument();
     });
   });
@@ -277,7 +280,7 @@ describe("ResumePage", () => {
     await waitFor(() => {
       expect(screen.getByText(/resume exceeds one page/i)).toBeInTheDocument();
       expect(screen.getByText(/2 pages/i)).toBeInTheDocument();
-      expect(window.open).not.toHaveBeenCalled();
+      expect(fetch).not.toHaveBeenCalled();
     });
   });
 
@@ -297,10 +300,8 @@ describe("ResumePage", () => {
     await user.click(screen.getByRole("button", { name: /download anyway/i }));
 
     await waitFor(() => {
-      expect(window.open).toHaveBeenCalledWith(
-        "http://localhost:8000/downloads/big.pdf",
-        "_blank"
-      );
+      expect(fetch).toHaveBeenCalledWith("http://localhost:8000/downloads/big.pdf");
+      expect(URL.createObjectURL).toHaveBeenCalled();
       expect(screen.queryByText(/resume exceeds one page/i)).not.toBeInTheDocument();
     });
   });
@@ -322,7 +323,7 @@ describe("ResumePage", () => {
 
     await waitFor(() => {
       expect(deleteResumeExport).toHaveBeenCalledWith("multi123");
-      expect(window.open).not.toHaveBeenCalled();
+      expect(fetch).not.toHaveBeenCalled();
       expect(screen.queryByText(/resume exceeds one page/i)).not.toBeInTheDocument();
     });
   });
