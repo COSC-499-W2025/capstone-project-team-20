@@ -17,6 +17,21 @@ const formatBadgeRequirement = (metric, target) => {
   return `Reach at least ${target} ${label}.`;
 };
 
+const drawRoundedRect = (ctx, x, y, width, height, radius = 16) => {
+  const safeRadius = Math.min(radius, width / 2, height / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + safeRadius, y);
+  ctx.lineTo(x + width - safeRadius, y);
+  ctx.quadraticCurveTo(x + width, y, x + width, y + safeRadius);
+  ctx.lineTo(x + width, y + height - safeRadius);
+  ctx.quadraticCurveTo(x + width, y + height, x + width - safeRadius, y + height);
+  ctx.lineTo(x + safeRadius, y + height);
+  ctx.quadraticCurveTo(x, y + height, x, y + height - safeRadius);
+  ctx.lineTo(x, y + safeRadius);
+  ctx.quadraticCurveTo(x, y, x + safeRadius, y);
+  ctx.closePath();
+};
+
 const ALL_BADGE_DETAILS = {
   gigantana: {
     label: "Gigantana",
@@ -149,6 +164,335 @@ function Badges() {
   const [activeWrappedYear, setActiveWrappedYear] = useState(null);
   const [activeHeatmapBadgeId, setActiveHeatmapBadgeId] = useState(null);
   const [activeSkill, setActiveSkill] = useState(null);
+
+  const [, setShareFeedback] = useState("");
+
+  const setTimedFeedback = (message) => {
+    setShareFeedback(message);
+    window.setTimeout(() => setShareFeedback(""), 3500);
+  };
+
+  const openLinkedInShareWindow = (deepLink) => {
+    const shareUrl = new URL("https://www.linkedin.com/sharing/share-offsite/");
+    shareUrl.searchParams.set("url", deepLink || window.location.href);
+    window.open(shareUrl.toString(), "_blank", "noopener,noreferrer");
+  };
+
+  const buildBadgeShareImage = async (badge, achievedBadge) => {
+    const width = 1200;
+    const height = 627;
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("Canvas not supported");
+
+    const gradient = ctx.createLinearGradient(0, 0, width, height);
+    gradient.addColorStop(0, "#051b38");
+    gradient.addColorStop(1, "#0d1117");
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, width, height);
+
+    ctx.fillStyle = "rgba(88,166,255,0.2)";
+    ctx.beginPath();
+    ctx.arc(1010, 110, 62, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "rgba(159,231,182,0.25)";
+    ctx.beginPath();
+    ctx.arc(1080, 172, 30, 0, Math.PI * 2);
+    ctx.fill();
+
+    drawRoundedRect(ctx, 70, 62, 1060, 510, 24);
+    ctx.fillStyle = "rgba(9, 22, 39, 0.64)";
+    ctx.fill();
+    ctx.strokeStyle = "rgba(88,166,255,0.4)";
+    ctx.stroke();
+
+    ctx.fillStyle = "#9fe7b6";
+    ctx.font = "700 32px 'DM Sans', 'Segoe UI', sans-serif";
+    ctx.fillText("Badge Unlocked", 104, 124);
+
+    ctx.fillStyle = "#f2fbff";
+    ctx.font = "700 56px 'DM Sans', 'Segoe UI', sans-serif";
+    ctx.fillText(badge.label, 104, 190);
+
+    drawRoundedRect(ctx, 650, 146, 176, 58, 16);
+    ctx.fillStyle = badge.unlocked ? "rgba(63, 185, 80, 0.2)" : "rgba(247, 129, 102, 0.2)";
+    ctx.fill();
+    ctx.strokeStyle = badge.unlocked ? "rgba(63, 185, 80, 0.65)" : "rgba(247, 129, 102, 0.65)";
+    ctx.stroke();
+    ctx.fillStyle = badge.unlocked ? "#9fe7b6" : "#ffd7c8";
+    ctx.font = "700 30px 'DM Sans', 'Segoe UI', sans-serif";
+    ctx.fillText(badge.unlocked ? "Unlocked" : "In Progress", 670, 185);
+
+    ctx.fillStyle = "#d8edf8";
+    ctx.font = "500 26px 'DM Sans', 'Segoe UI', sans-serif";
+    ctx.fillText(ALL_BADGE_DETAILS[badge.badgeId]?.description ?? "Unlocked through project analytics.", 104, 238);
+
+    const completion = badge.unlocked ? 100 : badge.completionPercent ?? 0;
+    drawRoundedRect(ctx, 104, 276, 992, 98, 14);
+    ctx.fillStyle = "rgba(19, 36, 55, 0.7)";
+    ctx.fill();
+    ctx.strokeStyle = "rgba(88,166,255,0.25)";
+    ctx.stroke();
+    ctx.fillStyle = "#e6edf3";
+    ctx.font = "600 26px 'DM Sans', 'Segoe UI', sans-serif";
+    ctx.fillText(`Progress: ${completion}%`, 120, 316);
+    drawRoundedRect(ctx, 120, 330, 960, 20, 12);
+    ctx.fillStyle = "rgba(41, 65, 93, 0.9)";
+    ctx.fill();
+    drawRoundedRect(ctx, 120, 330, Math.max(60, (960 * completion) / 100), 20, 12);
+    ctx.fillStyle = "rgba(88,166,255,0.95)";
+    ctx.fill();
+    
+    const projectLines = (achievedBadge?.projects ?? []).slice(0, 3).map((entry) =>
+      entry.achieved_on ? `• ${entry.project} (${entry.achieved_on})` : `• ${entry.project}`,
+    );
+    const fallbackProject = badge.trackedProgress?.project?.name ? [`• ${badge.trackedProgress.project.name}`] : ["• Keep shipping to unlock this badge."];
+    const displayProjects = projectLines.length ? projectLines : fallbackProject;
+
+    ctx.fillStyle = "#9bc9ff";
+    ctx.font = "600 24px 'DM Sans', 'Segoe UI', sans-serif";
+    ctx.fillText("Projects tied to this badge", 104, 422);
+    ctx.fillStyle = "#e6edf3";
+    ctx.font = "500 22px 'DM Sans', 'Segoe UI', sans-serif";
+    displayProjects.forEach((line, idx) => {
+      ctx.fillText(line, 104, 462 + idx * 34);
+    });
+
+    ctx.fillStyle = "#cfeaf7";
+    ctx.font = "500 22px 'DM Sans', 'Segoe UI', sans-serif";
+
+
+    return new Promise((resolve, reject) => {
+      canvas.toBlob((blob) => {
+        if (blob) resolve(blob);
+        else reject(new Error("Could not export badge image"));
+      }, "image/png");
+    });
+  };
+
+  const shareBadgeWithImage = async (badge, achievedBadge) => {
+    const text = buildBadgeShareText(badge, achievedBadge);
+
+    try {
+      const imageBlob = await buildBadgeShareImage(badge, achievedBadge);
+      const imageFile = new File([imageBlob], `badge-${badge.badgeId}.png`, { type: "image/png" });
+
+      if (navigator?.share && navigator?.canShare?.({ files: [imageFile] })) {
+        await navigator.share({ files: [imageFile], text, title: `${badge.label} Badge` });
+        setTimedFeedback("Opened your device share sheet for posting to any app.");
+        return;
+      }
+
+      if (navigator?.clipboard?.write && window.ClipboardItem) {
+        await navigator.clipboard.write([
+          new window.ClipboardItem({
+            "image/png": imageBlob,
+          }),
+        ]);
+        if (navigator?.clipboard?.writeText) {
+          await navigator.clipboard.writeText(text);
+          setTimedFeedback("Badge image + caption copied to clipboard. Open LinkedIn (or any platform) and paste.");
+        } else {
+          setTimedFeedback("Badge image copied to clipboard. Open LinkedIn (or any platform), paste, then add your caption.");
+        }
+      } else {
+        const objectUrl = URL.createObjectURL(imageBlob);
+        const downloadLink = document.createElement("a");
+        downloadLink.href = objectUrl;
+        downloadLink.download = `badge-${badge.badgeId}.png`;
+        downloadLink.click();
+        URL.revokeObjectURL(objectUrl);
+        if (navigator?.clipboard?.writeText) {
+          await navigator.clipboard.writeText(text);
+        }
+        setTimedFeedback("Badge image downloaded and caption copied when possible. Upload it to LinkedIn (or any platform).");
+      }
+    } catch {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+      }
+      setTimedFeedback("Could not generate badge image. Caption copied when possible.");
+    }
+  };
+
+  const buildBadgeShareText = (badge, achievedBadge) => {
+    const projectLabel = achievedBadge?.projects?.[0]?.project;
+    if (projectLabel) {
+      return `I just unlocked the ${badge.label} badge on my developer dashboard for ${projectLabel}. 🚀 #DeveloperJourney #Portfolio`;
+    }
+    return `I just unlocked the ${badge.label} badge on my developer dashboard. 🚀 #DeveloperJourney #Portfolio`;
+  };
+
+  const buildWrappedShareText = (yearBlock) =>
+    `My ${yearBlock.year} Developer Wrapped: ${yearBlock.projects_count} projects, ${yearBlock.total_loc} lines of code, ${yearBlock.total_files} files, and ${yearBlock.milestones?.length ?? 0} badge milestones. 📈 #YearInReview #SoftwareEngineering`;
+
+  const buildWrappedShareImage = async (yearBlock) => {
+    const width = 1200;
+    const height = 627;
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("Canvas not supported");
+
+    const gradient = ctx.createLinearGradient(0, 0, width, height);
+    gradient.addColorStop(0, "#03132e");
+    gradient.addColorStop(1, "#0d1117");
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, width, height);
+
+    const glow = ctx.createRadialGradient(920, 70, 40, 920, 70, 420);
+    glow.addColorStop(0, "rgba(88,166,255,0.22)");
+    glow.addColorStop(1, "rgba(88,166,255,0)");
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, width, height);
+
+    ctx.fillStyle = "rgba(88,166,255,0.22)";
+    ctx.beginPath();
+    ctx.arc(1080, 112, 56, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = "rgba(247,129,102,0.22)";
+    ctx.beginPath();
+    ctx.arc(1020, 170, 24, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = "#58a6ff";
+    ctx.font = "600 27px 'DM Sans', 'Segoe UI', sans-serif";
+    ctx.fillText(yearBlock.vibe_title || "Your year in code", 70, 132);
+
+    const statCards = [
+      { label: "Projects shipped", value: `${yearBlock.projects_count}` },
+      { label: "Lines of code", value: `${yearBlock.total_loc.toLocaleString()}` },
+      { label: "Files touched", value: `${yearBlock.total_files.toLocaleString()}` },
+      { label: "Average test ratio", value: `${((yearBlock.avg_test_file_ratio ?? 0) * 100).toFixed(1)}%` },
+      { label: "Badge milestones", value: `${yearBlock.milestones?.length ?? 0}` },
+    ];
+
+    const cardWidth = 332;
+    const cardHeight = 88;
+    const cardGap = 16;
+    const startX = 70;
+    const startY = 172;
+
+    statCards.forEach((card, index) => {
+      const col = index % 3;
+      const row = Math.floor(index / 3);
+      const x = startX + (cardWidth + cardGap) * col;
+      const y = startY + (cardHeight + cardGap) * row;
+
+      drawRoundedRect(ctx, x, y, cardWidth, cardHeight, 16);
+      ctx.fillStyle = "rgba(13,17,23,0.68)";
+      ctx.fill();
+      ctx.strokeStyle = "rgba(88,166,255,0.35)";
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+
+      ctx.fillStyle = "#9bc9ff";
+      ctx.font = "500 19px 'DM Sans', 'Segoe UI', sans-serif";
+      ctx.fillText(card.label, x + 20, y + 33);
+      ctx.fillStyle = "#f2fbff";
+      ctx.font = "700 28px 'DM Sans', 'Segoe UI', sans-serif";
+      ctx.fillText(card.value, x + 20, y + 68);
+    });
+
+    const highlights = (yearBlock.highlights ?? []).slice(0, 2);
+    const milestonePreview = (yearBlock.milestones ?? []).slice(0, 2)
+      .map((m) => `🏅 ${(ALL_BADGE_DETAILS[m.badge_id]?.label ?? formatBadgeLabel(m.badge_id))} • ${m.project}`);
+
+    drawRoundedRect(ctx, 70, 380, 1060, 174, 18);
+    ctx.fillStyle = "rgba(7, 21, 40, 0.7)";
+    ctx.fill();
+    ctx.strokeStyle = "rgba(151, 201, 255, 0.26)";
+    ctx.stroke();
+    ctx.fillStyle = "#cfeaf7";
+    ctx.font = "600 24px 'DM Sans', 'Segoe UI', sans-serif";
+    ctx.fillText("Year Highlights", 92, 418);
+    ctx.font = "500 20px 'DM Sans', 'Segoe UI', sans-serif";
+    highlights.forEach((line, idx) => {
+      ctx.fillText(`• ${line}`, 92, 452 + idx * 30);
+    });
+
+    if (milestonePreview.length > 0) {
+      ctx.fillStyle = "#9fe7b6";
+      ctx.font = "600 21px 'DM Sans', 'Segoe UI', sans-serif";
+      ctx.fillText("Badge moments", 640, 418);
+      ctx.fillStyle = "#d7f8e3";
+      ctx.font = "500 18px 'DM Sans', 'Segoe UI', sans-serif";
+      milestonePreview.forEach((line, idx) => {
+        ctx.fillText(line, 640, 452 + idx * 30);
+      });
+    } else {
+      ctx.fillStyle = "#d8edf8";
+      ctx.font = "500 18px 'DM Sans', 'Segoe UI', sans-serif";
+      ctx.fillText("No badge milestones yet — next year is your glow-up arc ✨", 640, 452);
+    }
+
+    ctx.fillStyle = "#cfeaf7";
+    ctx.font = "500 24px 'DM Sans', 'Segoe UI', sans-serif";
+    ctx.fillText("Built with Capstone Portfolio Insights", 70, 595);
+
+    return new Promise((resolve, reject) => {
+      canvas.toBlob((blob) => {
+        if (blob) resolve(blob);
+        else reject(new Error("Could not export yearly wrapped image"));
+      }, "image/png");
+    });
+  };
+
+  const shareWrappedWithImage = async (yearBlock) => {
+    const text = buildWrappedShareText(yearBlock);
+
+    try {
+      const imageBlob = await buildWrappedShareImage(yearBlock);
+      const imageFile = new File([imageBlob], `developer-wrapped-${yearBlock.year}.png`, { type: "image/png" });
+
+      if (navigator?.share && navigator?.canShare?.({ files: [imageFile] })) {
+        await navigator.share({ files: [imageFile], text, title: `${yearBlock.year} Developer Wrapped` });
+        setTimedFeedback("Opened your device share sheet for posting to any app.");
+        return;
+      }
+
+      if (navigator?.clipboard?.write && window.ClipboardItem) {
+        await navigator.clipboard.write([
+          new window.ClipboardItem({
+            "image/png": imageBlob,
+          }),
+        ]);
+        if (navigator?.clipboard?.writeText) {
+          await navigator.clipboard.writeText(text);
+          setTimedFeedback("Wrapped image + caption copied to clipboard. Open LinkedIn (or any platform) and paste.");
+        } else {
+          setTimedFeedback("Wrapped image copied to clipboard. Open LinkedIn (or any platform), then paste.");
+        }
+      } else {
+        const objectUrl = URL.createObjectURL(imageBlob);
+        const downloadLink = document.createElement("a");
+        downloadLink.href = objectUrl;
+        downloadLink.download = `developer-wrapped-${yearBlock.year}.png`;
+        downloadLink.click();
+        URL.revokeObjectURL(objectUrl);
+        if (navigator?.clipboard?.writeText) {
+          await navigator.clipboard.writeText(text);
+        }
+        setTimedFeedback("Wrapped image downloaded and caption copied when possible. Upload it to LinkedIn (or any platform).");
+      }
+    } catch {
+      if (navigator?.clipboard?.write && window.ClipboardItem) {
+        await navigator.clipboard.write([
+          new window.ClipboardItem({
+            "text/plain": new Blob([text], { type: "text/plain" }),
+          }),
+        ]);
+      }
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+      }
+      setTimedFeedback("Could not generate wrapped image. Caption copied when possible.");
+    }
+  };
 
   async function loadBadgeData() {
     setLoading(true);
@@ -379,6 +723,28 @@ function Badges() {
             ) : (
               <p>No completion milestones yet for this badge.</p>
             )}
+
+            <div className="linkedin-share-panel">
+              <button
+                type="button"
+                onClick={() =>
+                  shareBadgeWithImage(selectedHeatmapBadge, selectedAchievedBadge)
+                }
+              >
+                 Share Badge Card Image (Any Platform)
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  openLinkedInShareWindow(`${window.location.origin}${window.location.pathname}#badge-${selectedHeatmapBadge.badgeId}`)
+                }
+              >
+                Open LinkedIn Composer
+              </button>
+              <small>
+                The share button only uses your device share sheet / clipboard / download. The LinkedIn button only opens LinkedIn; paste the copied image and caption manually.
+              </small>
+            </div>
           </div>
         </div>
       ) : null}
@@ -388,11 +754,14 @@ function Badges() {
           <div className="wrapped-modal" onClick={(event) => event.stopPropagation()}>
             <button className="wrapped-close" onClick={() => setActiveWrappedYear(null)}>✕</button>
             <h5>{selectedWrapped.year} — {selectedWrapped.vibe_title}</h5>
-            <p>
-              Projects: {selectedWrapped.projects_count} • LOC: {selectedWrapped.total_loc} • Files: {selectedWrapped.total_files} • Avg test ratio: {(selectedWrapped.avg_test_file_ratio * 100).toFixed(1)}%
-            </p>
+            <div className="wrapped-stat-grid">
+              <div className="wrapped-stat-card"><span>Projects</span><strong>{selectedWrapped.projects_count}</strong></div>
+              <div className="wrapped-stat-card"><span>LOC</span><strong>{selectedWrapped.total_loc.toLocaleString()}</strong></div>
+              <div className="wrapped-stat-card"><span>Files</span><strong>{selectedWrapped.total_files.toLocaleString()}</strong></div>
+              <div className="wrapped-stat-card"><span>Avg Test Ratio</span><strong>{(selectedWrapped.avg_test_file_ratio * 100).toFixed(1)}%</strong></div>
+            </div>
             {selectedWrapped.highlights?.length ? (
-              <ul>
+              <ul className="wrapped-highlights-list">
                 {selectedWrapped.highlights.map((line, idx) => (
                   <li key={`${selectedWrapped.year}-highlight-${idx}`}>{line}</li>
                 ))}
@@ -400,9 +769,9 @@ function Badges() {
             ) : null}
             <p><strong>Milestones:</strong></p>
             {selectedWrapped.milestones?.length ? (
-              <ul>
+              <ul className="wrapped-milestone-list">
                 {selectedWrapped.milestones.map((m, idx) => (
-                  <li key={`${selectedWrapped.year}-${m.badge_id}-${idx}`}>
+                  <li key={`${selectedWrapped.year}-${m.badge_id}-${idx}`} className="wrapped-milestone-item">
                     🏅 {(ALL_BADGE_DETAILS[m.badge_id]?.label ?? progressLookup[m.badge_id]?.label ?? formatBadgeLabel(m.badge_id))} earned in <strong>{m.project}</strong>{m.achieved_on ? ` on ${m.achieved_on}` : ""}
                   </li>
                 ))}
@@ -410,6 +779,27 @@ function Badges() {
             ) : (
               <p>No badge milestones recorded for this year.</p>
             )}
+            <div className="linkedin-share-panel">
+              <button
+                type="button"
+                onClick={() =>
+                  shareWrappedWithImage(selectedWrapped)
+                }
+              >
+                Share Wrapped Image (Any Platform)
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  openLinkedInShareWindow(`${window.location.origin}${window.location.pathname}#wrapped-${selectedWrapped.year}`)
+                }
+              >
+                Open LinkedIn Composer
+              </button>
+              <small>
+                The share button only uses your device share sheet / clipboard / download. The LinkedIn button only opens LinkedIn; paste the copied image and caption manually.
+              </small>
+            </div>
           </div>
         </div>
       ) : null}

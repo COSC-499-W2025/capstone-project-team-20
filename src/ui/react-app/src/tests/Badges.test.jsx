@@ -108,6 +108,59 @@ beforeEach(() => {
 })
 
 describe('App badges heatmap', () => {
+  it('separates generic sharing from opening LinkedIn composer', async () => {
+    const user = userEvent.setup()
+    const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null)
+    const clipboardTextSpy = vi.fn().mockResolvedValue(undefined)
+    const clipboardImageSpy = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, 'clipboard', {
+      value: {
+        writeText: clipboardTextSpy,
+        write: clipboardImageSpy,
+      },
+      configurable: true,
+    })
+    Object.defineProperty(window, 'ClipboardItem', {
+      value: class ClipboardItem {
+        constructor(data) {
+          this.data = data
+        }
+      },
+      configurable: true,
+    })
+    Object.defineProperty(navigator, 'canShare', {
+      value: vi.fn().mockReturnValue(false),
+      configurable: true,
+    })
+
+    render(<App />)
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /badges/i })).toBeInTheDocument()
+    )
+    await user.click(screen.getByRole('button', { name: /badges/i }))
+
+    const gigButton = await screen.findByRole('button', {
+      name: /open gigantana badge details/i,
+    })
+    await user.click(gigButton)
+    await user.click(await screen.findByRole('button', { name: /share badge card image \(any platform\)/i }))
+
+    expect(openSpy).not.toHaveBeenCalled()
+    expect(clipboardTextSpy).toHaveBeenCalled()
+    await user.click(await screen.findByRole('button', { name: /open linkedin composer/i }))
+    expect(openSpy).toHaveBeenCalledTimes(1)
+
+    await user.click(screen.getByRole('button', { name: '✕' }))
+    await user.click(await screen.findByRole('button', { name: /get 2025 stats/i }))
+    await user.click(await screen.findByRole('button', { name: /share wrapped image \(any platform\)/i }))
+    expect(clipboardTextSpy).toHaveBeenCalledTimes(2)
+    await user.click(await screen.findByRole('button', { name: /open linkedin composer/i }))
+    await waitFor(() => {
+      expect(openSpy).toHaveBeenCalledTimes(2)
+      expect(clipboardTextSpy).toHaveBeenCalledTimes(2)
+    })
+  })
+
   it('shows heatmap first and opens badge detail modal on tile click', async () => {
     const user = userEvent.setup()
     render(<App />)
