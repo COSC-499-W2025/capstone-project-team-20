@@ -1,6 +1,7 @@
 ## Team 20 Weekly Log
 
 ### Table of contents
+- [Term 2 Week 12(March 23rd - March 29th](#term-2-week-12-march-23rd---march-29th)
 - [Term 2 Week 10(March 9th - March 15th)](#term-2-week-10-march-9th---march-15th)
 - [Term 2 Week 9(March 2nd - March 8th)](#term-2-week-9-march-2nd---march-8th)
 - [Term 2 Week 8(February 23rd - March 1st)](#term-2-week-8-february-23rd---march-1st)
@@ -743,5 +744,45 @@ Continuuing tasks include implementing CRUD operations into both resume and port
 **Test Report:**
 ![Term 2 Week 11 BACK END Test Report](teamWeeklyLogsImages/w11_tests_backend.png)
 ![Term 2 Week 11 FRONT END Test Report](teamWeeklyLogsImages/w11_test_frontend.png)
+ 
+
+
+### Term 2 Week 12 (March 23rd - March 29th)
+
+**Work Performed:**
+
+- Branden Kennedy (42474551): This week, I made 2 PRs. [PR 504](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/504) and [PR 512](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/512). [PR 504](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/504) implemented end-to-end testing using Playwright, creating automated tests that simulate real user interactions (such as onboarding, project uploads, and report generation) to ensure the full system works together correctly. This also involved learning Playwright and setting up the testing workflow within our project. [PR 512](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/512) included fixing a frontend bug where project dates were displaying incorrectly due to improper handling of date fields, ensuring that project timelines now render accurately in the UI. I also reviewed [PR 502](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/502), [PR 506](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/506), [PR 510](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/510), [PR 514](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/514), [PR 522](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/522), and [PR 524](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/524). We also created our Milestone 3 presentation and our video demo for Milestone 3 & Project voting!
+
+- Necmi Kaan Sapoglu (17014796): This week I improved the badges and yearly wrapped systems following feedback from our Milestone 3 presentation by adding a sharing feature that generates exportable images for both. These changes were implemented in [PR #514](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/514). I also helped prepare and deliver the Milestone 3 presentation, where I presented the badges system, and edited the final demo video by combining all team recordings. Additionally, I reviewed multiple PRs including [PR #526](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/526), [PR #524](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/524), [PR #518](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/518), [PR #516](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/516), [PR #512](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/512), [PR #508](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/508), [PR #504](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/504), and [PR #502](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/502), providing feedback on implementation and structure.
+
+- Lex Nash (84668540): Finalized the Resume and Portfolio pages, making all elements fit on screen without scrolling to maximize useability, scrollable div element with sticky header to house buttons, hint text, UI changes for colour consistency in PR [524](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/524).
+
+- Dylan Alexander (16394025): This week, I made 3 PRs. The first adds an Awards section to the Resume Template, as well as frontend functionality to add Experience, Education and Awards to Resumes. [PR #502](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/502). The second adds detection of Resumes that have exceeded one page, and a confirmation modal asking the user if they'd like to continue, or go back to edit the Resume. This was quite an interesting task. LaTeX processes each character differently, so coming up with a solution to know for sure when a Resume has exceeded the first page was not obvious to me. In the end, our system generates the Resume, checks if it is over one page, and then prompts the user. If the user wants to go back to shorten the Resume, the Resume is silently deleted. [PR #508](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/508). The third adds the option to select your Git Contributor on a per project basis. Previously there wasn't a way to do this from the frontend, and so analysis was broken unless you used the CLI to select your Git Contributor. The system first tries to use the email given in ProfileSetup as your Git Contributor automatically. If that fails, a modal appears upon analysis, asking you to select your Contributor. This is per-project, for the case that the user may have used two different identities across two diffent projects. I also added a way to change this at any time in Settings. [PR #510](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/510)
+
+- Sven Annist (42486720): This week, I focused on documentation enhancements and UX polish based on previous peer testing feedback. Significant effort was devoted to updating and refining architectural and workflow diagrams, clarifying system components for end-users and future contributors. The merged PR #527 incorporated comprehensive documentation updates, including new and improved diagrams and an updated README. I also reviewed PR #518 (improving PDF download UX) and PR #508 (resumé page limit warnings). 
+
+**Features included in the project plan for this milestone are:**
+
+Everything up to and including Issue #523. 
+
+**Continuing tasks from last week and plan for the next week:**
+We do not have any continuuing tasks either than possibly designing/creating a logo that we could use to replace our name displayed as text.
+
+**Burnup chart:**
+![Term 2 Week 12 Burnup chart](teamWeeklyLogsImages/T2_W12_burnup.png)
+
+
+**Table View of Completed Tasks on Project Board:**
+![Term 2 Week 12 Completed Tasks](teamWeeklyLogsImages/T2_W12_Completed.png)
+
+
+**Table View of In-Progress Tasks on Project Board:**
+![Term 2 Week 12 In-Progress](teamWeeklyLogsImages/T2_W12_In_Progress.png)
+
+
+**Test Report:**
+
+![Term 2 Week 12 Test Report Backend](teamWeeklyLogsImages/T2_W12_Test_Report.png)
+![Term 2 Week 12 Test Report Frontend](teamWeeklyLogsImages/T2_W12_Frontend_Test.png)
  
 
