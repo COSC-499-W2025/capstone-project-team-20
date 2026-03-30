@@ -782,5 +782,7 @@ We do not have any continuuing tasks either than possibly designing/creating a l
 
 **Test Report:**
 
+![Term 2 Week 12 Test Report Backend](teamWeeklyLogsImages/T2_W12_Test_Report.png)
+![Term 2 Week 12 Test Report Frontend](teamWeeklyLogsImages/T2_W12_Frontend_Test.png)
  
 
