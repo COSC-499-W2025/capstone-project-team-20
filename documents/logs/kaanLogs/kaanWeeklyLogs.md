@@ -404,3 +404,27 @@ Next week I plan to continue refining the frontend experience and help prepare f
 **Any Issues or Blockers That I Encountered This Week and How I Addressed/Plan to Address Them:**  
 A key challenge was balancing information visibility and UI clarity in the badges page. I addressed this by using interactive elements (modals, toggles) and visual indicators (heatmap) to reduce clutter while maintaining usability.
 
+### Term 2 Week 12: March 16th – March 22nd 
+
+## Weekly Goals
+
+This week I focused on preparing for and delivering our Milestone 3 presentation, while also enhancing the badges system by introducing a sharing feature. The goal was to improve the overall presentation of our project and extend the badges functionality to be more engaging and shareable.
+
+**Coding Tasks:**  
+Following feedback from the Milestone 3 presentation, I implemented a sharing feature for badges and the yearly wrapped summary by generating shareable images. This allows users to export and share their achievements visually. These changes were completed in [PR #514](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/514).
+
+**Testing Tasks:**  
+I manually tested the badge and yearly wrapped image generation to ensure layouts were consistent, properly aligned, and visually clear across different data cases. I also verified that the generated images accurately reflected user progress and badge states.
+
+**Reviewing or Collaboration Tasks:**  
+I participated in preparing and delivering the Milestone 3 presentation, where I specifically presented the badges system. I also collaborated with teammates to create the Milestone 3 demo video, where I compiled and edited all team members’ recordings into a single cohesive presentation.  
+Additionally, I reviewed the following PRs and provided feedback on implementation and structure: [PR #526](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/526), [PR #524](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/524), [PR #518](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/518), [PR #516](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/516), [PR #512](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/512), [PR #508](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/508), [PR #504](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/504), and [PR #502](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/502).
+
+**Brief Description of Last Week Connecting This Week:**  
+Last week focused on improving badges interactivity and introducing report typing. This week builds on that by extending badges into a shareable format and refining how our system is presented to others.
+
+**Plan/Goals for Upcoming Week:**  
+Next week I plan to review other teams’ projects as part of the course evaluation process and gather ideas and feedback that could further improve our own system.
+
+**Any Issues or Blockers That I Encountered This Week and How I Addressed/Plan to Address Them:**  
+A key realization during the presentation was that the badges system lacked a sharing component. I addressed this by designing and implementing a shareable image generation feature, ensuring that achievements can be easily exported and shared in a clean and visually appealing format.
