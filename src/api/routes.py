@@ -1,7 +1,7 @@
 from typing import Any, List, Optional
 
 from fastapi import APIRouter, UploadFile, File, HTTPException, status, Depends
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from pathlib import Path
 from collections import Counter
 import tempfile, shutil
@@ -81,14 +81,17 @@ def _build_portfolio_project(project) -> PortfolioProject:
 
 def _build_portfolio_report(report) -> PortfolioReport:
     projects = [_build_portfolio_project(p) for p in (report.projects or [])]
+    mode = getattr(report, "portfolio_mode", "private") or "private"
+    public_url = f"http://localhost:8000/public/portfolio/{report.id}" if mode == "public" else None
     return PortfolioReport(
         id=report.id,
         title=report.title,
         date_created=report.date_created,
         sort_by=report.sort_by,
         notes=report.notes,
-        portfolio_mode=getattr(report, "portfolio_mode", "private") or "private",
+        portfolio_mode=mode,
         portfolio_published_at=getattr(report, "portfolio_published_at", None),
+        public_url=public_url,
         projects=projects,
     )
 
@@ -996,3 +999,37 @@ def publish_portfolio(id: int):
     report.portfolio_published_at = datetime.now()
     report_manager.update_report(report)
     return PortfolioPublishResponse(ok=True, portfolio=_build_portfolio_report(report), message="Portfolio published.")
+
+
+@router.get("/public/portfolio/{id}", response_class=HTMLResponse)
+def public_portfolio_page(id: int):
+    """Serve a publicly accessible HTML portfolio page. No auth required; only works when portfolio_mode is 'public'."""
+    import jinja2
+    from pathlib import Path as _Path
+
+    report_manager = ReportManager()
+    report = report_manager.get_report(id)
+    if not report or getattr(report, "portfolio_mode", "private") != "public":
+        raise HTTPException(status_code=404, detail="Portfolio not found or not public.")
+    _require_report_kind(report, "portfolio")
+
+    portfolio = _build_portfolio_report(report)
+
+    published_at = None
+    if portfolio.portfolio_published_at:
+        published_at = portfolio.portfolio_published_at.strftime("%B %d, %Y")
+
+    visible_projects = [
+        p for p in portfolio.projects
+        if not (p.portfolio_customizations or {}).get("is_hidden", False)
+    ]
+
+    templates_dir = _Path(__file__).parent / "templates"
+    env = jinja2.Environment(loader=jinja2.FileSystemLoader(str(templates_dir)), autoescape=True)
+    template = env.get_template("public_portfolio.html")
+    html = template.render(
+        title=portfolio.title or "Portfolio",
+        published_at=published_at,
+        projects=visible_projects,
+    )
+    return HTMLResponse(content=html)
