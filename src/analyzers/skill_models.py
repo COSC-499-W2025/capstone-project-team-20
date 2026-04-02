@@ -38,17 +38,21 @@ NON_LANGUAGE_TAXONOMY: Set[str] = {
     ".NET", "ASP.NET", "Spring", "Django", "Flask", "FastAPI", "Express",
     "Unity", "Unreal Engine", "Qt", "Electron",
 
+    # Frontend / UI
+    "Tailwind", "Bootstrap", "Redux",
+
     # Data & ML
     "NumPy", "Pandas", "scikit-learn", "PyTorch", "TensorFlow", "Matplotlib",
 
     # Tooling
-    "Docker", "Kubernetes", "Git", "Maven", "Gradle", "NPM", "Yarn", "PNPM", "Vite",
-    "Webpack", "Babel", "ESLint", "Prettier", "Jest", "Mocha", "PyTest", "JUnit",
-    "CMake", "Make", "Conan", "Poetry", "Pip", "Pipenv",
+    "Docker", "Kubernetes", "Git", "Maven", "Gradle", "Vite",
+    "Webpack", "Jest", "Mocha", "PyTest", "JUnit",
+    "CMake", "Conan", "Poetry",
 
     # Cloud/DB
     "AWS", "GCP", "Azure", "Firebase",
     "PostgreSQL", "MySQL", "SQLite", "MongoDB", "Redis",
+    "Hibernate",
 
     # Testing/Other
     "Playwright", "Cypress", "Selenium", "Vitest",
@@ -61,6 +65,7 @@ KNOWN_FRAMEWORKS: Set[str] = {
     "Django", "Flask", "FastAPI", "Spring", "ASP.NET",
     "Node.js", "Express",
     "Unity", "Unreal Engine",
+    "Tailwind", "Bootstrap", "Redux",
 }
 
 

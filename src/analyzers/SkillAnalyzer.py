@@ -38,7 +38,6 @@ BUILD_TOOL_SKILLS: Set[str] = {
     "Rollup",
     "Parcel",
     "CMake",
-    "Make",
 }
 
 FRONTEND_FRAMEWORKS: Set[str] = {
@@ -520,7 +519,12 @@ class SkillAnalyzer:
             except OSError:
                 continue
 
-            for pattern, skill in self._iter_pattern_pairs(DEP_TO_SKILL):
+            for item in DEP_TO_SKILL:
+                pattern, skill = item[0], item[1]
+                allowed_files = item[2] if len(item) > 2 else None
+                # Skip this pattern if it doesn't apply to the current file type
+                if allowed_files is not None and path.name not in allowed_files:
+                    continue
                 if hasattr(pattern, "search"):
                     match = pattern.search(text)
                 else:
