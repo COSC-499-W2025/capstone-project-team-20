@@ -193,6 +193,11 @@
       </div>
       {% endif %}
 
+      {% if thumbnail_urls[project.project_name] is defined %}
+      <img src="{{ thumbnail_urls[project.project_name] }}" alt="{{ project.project_name | e }} thumbnail"
+           style="width:100%;max-height:220px;object-fit:cover;border-radius:6px;margin-bottom:14px;" />
+      {% endif %}
+
       {% set overview = project.portfolio_customizations.get("custom_overview", "") or details.overview %}
       {% if overview %}
       <p class="overview">{{ overview | e }}</p>

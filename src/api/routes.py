@@ -1024,6 +1024,14 @@ def public_portfolio_page(id: int):
         if not (p.portfolio_customizations or {}).get("is_hidden", False)
     ]
 
+    project_manager = ProjectManager()
+    thumbnail_urls = {}
+    for p in visible_projects:
+        proj = project_manager.get_by_name(p.project_name)
+        if proj and getattr(proj, "thumbnail", None):
+            filename = Path(proj.thumbnail).name
+            thumbnail_urls[p.project_name] = f"http://localhost:8000/thumbnails/{filename}"
+
     templates_dir = _Path(__file__).parent / "templates"
     env = jinja2.Environment(loader=jinja2.FileSystemLoader(str(templates_dir)), autoescape=True)
     template = env.get_template("public_portfolio.html")
@@ -1031,5 +1039,6 @@ def public_portfolio_page(id: int):
         title=portfolio.title or "Portfolio",
         published_at=published_at,
         projects=visible_projects,
+        thumbnail_urls=thumbnail_urls,
     )
     return HTMLResponse(content=html)
