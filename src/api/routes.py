@@ -1032,6 +1032,14 @@ def public_portfolio_page(id: int):
             filename = Path(proj.thumbnail).name
             thumbnail_urls[p.project_name] = f"http://localhost:8000/thumbnails/{filename}"
 
+    all_badges = build_badge_progress(list(project_manager.get_all()))
+    badges_by_project: dict = {}
+    for badge in all_badges.get("badges", []):
+        if badge.get("earned"):
+            name = (badge.get("project") or {}).get("name", "")
+            if name:
+                badges_by_project.setdefault(name, []).append(badge)
+
     templates_dir = _Path(__file__).parent / "templates"
     env = jinja2.Environment(loader=jinja2.FileSystemLoader(str(templates_dir)), autoescape=True)
     template = env.get_template("public_portfolio.html")
@@ -1040,5 +1048,6 @@ def public_portfolio_page(id: int):
         published_at=published_at,
         projects=visible_projects,
         thumbnail_urls=thumbnail_urls,
+        badges_by_project=badges_by_project,
     )
     return HTMLResponse(content=html)
