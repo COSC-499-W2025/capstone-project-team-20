@@ -6,7 +6,9 @@ import re
 from typing import List, Optional, Set, Tuple
 
 # Dependency file groups — patterns are only matched against their relevant files
-JS_DEP_FILES: Set[str] = {"package.json", "package-lock.json", "pnpm-lock.yaml", "yarn.lock"}
+# Only package.json for framework detection — lock files list transitive deps and cause false positives
+JS_DEP_FILES: Set[str] = {"package.json"}
+JS_LOCK_FILES: Set[str] = {"package-lock.json", "pnpm-lock.yaml", "yarn.lock"}
 PYTHON_DEP_FILES: Set[str] = {"requirements.txt", "pyproject.toml", "Pipfile", "Pipfile.lock", "environment.yml", "poetry.lock"}
 JAVA_DEP_FILES: Set[str] = {"pom.xml", "build.gradle", "build.gradle.kts"}
 DOTNET_DEP_FILES: Set[str] = {"*.csproj", "packages.config", "nuget.config"}
