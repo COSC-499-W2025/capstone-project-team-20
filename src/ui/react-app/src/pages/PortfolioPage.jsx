@@ -598,6 +598,13 @@ function PortfolioPage() {
             <button onClick={handleCopyPortfolioHtml} disabled={loading || !portfolio} style={{ marginLeft: 10 }}>
               Copy Portfolio HTML
             </button>
+            <button
+              disabled={!portfolio?.public_url || isPrivateMode}
+              style={{ marginLeft: 10 }}
+              onClick={() => window.open(portfolio.public_url, "_blank", "noopener,noreferrer")}
+            >
+              Open Public Page ↗
+            </button>
           </div>
           <div style={{background:"#333", height:"1px"}}></div>
           </div>
@@ -635,26 +642,6 @@ function PortfolioPage() {
                 >
                   {isPrivateMode ? "🔒 Private" : "🔓 Public"}
                 </button>
-                {isPublicMode && portfolio?.public_url && (
-                  <a
-                    href={portfolio.public_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{
-                      fontSize: 12,
-                      color: "#58a6ff",
-                      textDecoration: "none",
-                      background: "#1f6feb22",
-                      border: "1px solid #1f6feb55",
-                      borderRadius: 6,
-                      padding: "3px 10px",
-                      whiteSpace: "nowrap",
-                    }}
-                    title="Open public portfolio page"
-                  >
-                    Open public page ↗
-                  </a>
-                )}
                 {isPublicMode && (
                   <>
                     <input
