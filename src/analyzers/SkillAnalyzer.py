@@ -701,9 +701,15 @@ class SkillAnalyzer:
         }
 
         # --- Documentation habits ---
+        # Composite: 30% has_readme, 40% readme keyword quality, 30% comment ratio
         comment_ratio = overall.get("comment_ratio", 0.0)
-        # e.g. 0.05 is minimal, 0.2+ is solid
-        doc_score = min(1.0, comment_ratio / 0.2)
+        has_readme, readme_keywords = self._analyze_readme()
+        readme_score = 0.30 if has_readme else 0.0
+        # 5 keywords = full quality score; capped at 0.40
+        readme_quality_score = min(0.40, (len(readme_keywords) / 5) * 0.40) if has_readme else 0.0
+        # 20%+ comment ratio = full comment score; capped at 0.30
+        comment_score = min(0.30, (comment_ratio / 0.2) * 0.30)
+        doc_score = readme_score + readme_quality_score + comment_score
         doc_level = self._level_from_score(doc_score)
 
         doc_dim = {
@@ -711,6 +717,8 @@ class SkillAnalyzer:
             "level": doc_level,
             "raw": {
                 "comment_ratio": comment_ratio,
+                "has_readme": has_readme,
+                "readme_keywords": readme_keywords,
             },
         }
 
