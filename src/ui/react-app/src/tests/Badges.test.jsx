@@ -108,7 +108,7 @@ beforeEach(() => {
 })
 
 describe('App badges heatmap', () => {
-  it('separates generic sharing from opening LinkedIn composer', async () => {
+  it('copies content before opening LinkedIn composer', async () => {
     const user = userEvent.setup()
     const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null)
     const clipboardTextSpy = vi.fn().mockResolvedValue(undefined)
@@ -146,18 +146,20 @@ describe('App badges heatmap', () => {
     await user.click(await screen.findByRole('button', { name: /share badge card image \(any platform\)/i }))
 
     expect(openSpy).not.toHaveBeenCalled()
-    expect(clipboardTextSpy).toHaveBeenCalled()
+    expect(clipboardImageSpy).toHaveBeenCalledTimes(1)
     await user.click(await screen.findByRole('button', { name: /open linkedin composer/i }))
     expect(openSpy).toHaveBeenCalledTimes(1)
+    expect(clipboardImageSpy).toHaveBeenCalledTimes(2)
 
     await user.click(screen.getByRole('button', { name: '✕' }))
     await user.click(await screen.findByRole('button', { name: /get 2025 stats/i }))
     await user.click(await screen.findByRole('button', { name: /share wrapped image \(any platform\)/i }))
-    expect(clipboardTextSpy).toHaveBeenCalledTimes(2)
+    expect(clipboardTextSpy).toHaveBeenCalledTimes(3)
     await user.click(await screen.findByRole('button', { name: /open linkedin composer/i }))
     await waitFor(() => {
       expect(openSpy).toHaveBeenCalledTimes(2)
-      expect(clipboardTextSpy).toHaveBeenCalledTimes(2)
+      expect(clipboardImageSpy).toHaveBeenCalledTimes(4)
+      expect(clipboardTextSpy).not.toHaveBeenCalled()
     })
   })
 
