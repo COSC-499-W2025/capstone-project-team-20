@@ -22,8 +22,8 @@ class Evidence:
 class SkillProfileItem:
     skill: str
     evidence: List[Evidence]
-    proficiency: List[Evidence]
-    confidence: List[Evidence]
+    proficiency: float
+    confidence: float
     # Extra resume-friendly fields
     primary_language: Optional[str] = None
     total_loc: int = 0
@@ -40,6 +40,12 @@ NON_LANGUAGE_TAXONOMY: Set[str] = {
 
     # Frontend / UI
     "Tailwind", "Bootstrap", "Redux",
+
+    # Mobile / Cross-platform
+    "Flutter",
+
+    # Ruby
+    "Rails", "RSpec",
 
     # Data & ML
     "NumPy", "Pandas", "scikit-learn", "PyTorch", "TensorFlow", "Matplotlib",
@@ -66,6 +72,7 @@ KNOWN_FRAMEWORKS: Set[str] = {
     "Node.js", "Express",
     "Unity", "Unreal Engine",
     "Tailwind", "Bootstrap", "Redux",
+    "Flutter", "Rails",
 }
 
 

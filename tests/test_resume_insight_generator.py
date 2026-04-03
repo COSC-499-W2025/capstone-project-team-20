@@ -162,12 +162,12 @@ def test_skill_evidence_map_provides_direct_skill_backing():
     }
     gen.project.total_loc = 1500
     gen.project.test_file_ratio = 0.25
-    gen.project.documentation_habits_score = 80.0
+    gen.project.documentation_habits_score = 0.8
 
     skill_evidence = gen._build_skill_evidence_map()
 
     assert skill_evidence["Testing"] == "25% test file ratio"
-    assert skill_evidence["Documentation"] == "documentation score 80.0/100"
+    assert skill_evidence["Documentation"] == "documentation score 80/100"
     assert skill_evidence["Collaboration"] == "42.0% contribution share"
     assert skill_evidence["Code Ownership"] == "1,500 LOC maintained"
 

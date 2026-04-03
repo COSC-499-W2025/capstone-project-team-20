@@ -9,11 +9,14 @@ from typing import List, Optional, Set, Tuple
 # Only package.json for framework detection — lock files list transitive deps and cause false positives
 JS_DEP_FILES: Set[str] = {"package.json"}
 JS_LOCK_FILES: Set[str] = {"package-lock.json", "pnpm-lock.yaml", "yarn.lock"}
-PYTHON_DEP_FILES: Set[str] = {"requirements.txt", "pyproject.toml", "Pipfile", "Pipfile.lock", "environment.yml", "poetry.lock"}
+PYTHON_DEP_FILES: Set[str] = {"requirements.txt", "pyproject.toml", "Pipfile", "Pipfile.lock", "environment.yml", "poetry.lock", "setup.py", "setup.cfg"}
 JAVA_DEP_FILES: Set[str] = {"pom.xml", "build.gradle", "build.gradle.kts"}
 DOTNET_DEP_FILES: Set[str] = {"*.csproj", "packages.config", "nuget.config"}
 GO_DEP_FILES: Set[str] = {"go.mod"}
 CPP_DEP_FILES: Set[str] = {"CMakeLists.txt", "conanfile.txt", "conanfile.py"}
+RUBY_DEP_FILES: Set[str] = {"Gemfile"}
+DART_DEP_FILES: Set[str] = {"pubspec.yaml"}
+RUST_DEP_FILES: Set[str] = {"Cargo.toml"}
 ALL_DEP_FILES: Optional[Set[str]] = None  # None = match any dependency file
 
 # Each entry: (pattern, skill, allowed_dep_files)
@@ -51,6 +54,11 @@ DEP_TO_SKILL: List[Tuple[re.Pattern, str, Optional[Set[str]]]] = [
     (re.compile(r"spring(-boot)?", re.I), "Spring", JAVA_DEP_FILES),
     (re.compile(r"\bjunit\b", re.I), "JUnit", JAVA_DEP_FILES),
     (re.compile(r"\bhibernate\b", re.I), "Hibernate", JAVA_DEP_FILES),
+    # Ruby
+    (re.compile(r"\brails\b", re.I), "Rails", RUBY_DEP_FILES),
+    (re.compile(r"\brspec\b", re.I), "RSpec", RUBY_DEP_FILES),
+    # Dart / Flutter
+    (re.compile(r"\bflutter\b", re.I), "Flutter", DART_DEP_FILES),
     # C++ / Tooling
     (re.compile(r"\bcmake\b", re.I), "CMake", CPP_DEP_FILES),
     (re.compile(r"\bconan\b", re.I), "Conan", CPP_DEP_FILES),
@@ -78,7 +86,8 @@ SNIPPET_PATTERNS: List[Tuple[re.Pattern, str, str]] = [
     # imports / includes
     (re.compile(r"^\s*import\s+.*\s+from\s+['\"]react['\"]", re.M), "React", "import_statement"),
     (re.compile(r"^\s*import\s+.*\s+from\s+['\"]next['\"]", re.M), "Next.js", "import_statement"),
-    (re.compile(r"^\s*from\s+django\s+import\s+", re.M), "Django", "import_statement"),
+    (re.compile(r"^\s*from\s+django(\.\w+)*\s+import\s+", re.M), "Django", "import_statement"),
+    (re.compile(r"^\s*import\s+django\b", re.M), "Django", "import_statement"),
     (re.compile(r"^\s*import\s+flask", re.M), "Flask", "import_statement"),
     (re.compile(r"^\s*from\s+fastapi\s+import\s+", re.M), "FastAPI", "import_statement"),
     (re.compile(r"#include\s*<gtest/gtest\.h>"), "C++", "import_statement"),
