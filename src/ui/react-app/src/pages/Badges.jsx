@@ -172,6 +172,22 @@ function Badges() {
     window.setTimeout(() => setShareFeedback(""), 3500);
   };
 
+  const openLinkedInShareWindow = (deepLink) => {
+    const shareUrl = new URL("https://www.linkedin.com/sharing/share-offsite/");
+    shareUrl.searchParams.set("url", deepLink || window.location.href);
+    window.open(shareUrl.toString(), "_blank", "noopener,noreferrer");
+  };
+
+  const copyBadgeThenOpenLinkedIn = async (badge, achievedBadge, deepLink) => {
+    await shareBadgeWithImage(badge, achievedBadge);
+    openLinkedInShareWindow(deepLink);
+  };
+
+  const copyWrappedThenOpenLinkedIn = async (yearBlock, deepLink) => {
+    await shareWrappedWithImage(yearBlock);
+    openLinkedInShareWindow(deepLink);
+  };
+
   const copyImageAndCaptionToClipboard = async (imageBlob, text) => {
     if (!(navigator?.clipboard?.write && window.ClipboardItem)) {
       return false;
@@ -285,15 +301,14 @@ function Badges() {
     });
   };
 
-  const shareBadgeWithImage = async (badge, achievedBadge, options = {}) => {
-    const { clipboardOnly = false } = options;
+  const shareBadgeWithImage = async (badge, achievedBadge) => {
     const text = buildBadgeShareText(badge, achievedBadge);
 
     try {
       const imageBlob = await buildBadgeShareImage(badge, achievedBadge);
       const imageFile = new File([imageBlob], `badge-${badge.badgeId}.png`, { type: "image/png" });
 
-      if (!clipboardOnly && navigator?.share && navigator?.canShare?.({ files: [imageFile] })) {
+      if (navigator?.share && navigator?.canShare?.({ files: [imageFile] })) {
         await navigator.share({ files: [imageFile], text, title: `${badge.label} Badge` });
         setTimedFeedback("Opened your device share sheet for posting to any app.");
         return;
@@ -446,8 +461,7 @@ function Badges() {
     });
   };
 
-  const shareWrappedWithImage = async (yearBlock, options = {}) => {
-    const { clipboardOnly = false } = options;
+  const shareWrappedWithImage = async (yearBlock) => {
     const text = buildWrappedShareText(yearBlock);
 
     try {
@@ -459,7 +473,7 @@ function Badges() {
         return;
       }
 
-      if (!clipboardOnly && navigator?.share && navigator?.canShare?.({ files: [imageFile] })) {
+      if (navigator?.share && navigator?.canShare?.({ files: [imageFile] })) {
         await navigator.share({ files: [imageFile], text, title: `${yearBlock.year} Developer Wrapped` });
         setTimedFeedback("Opened your device share sheet for posting to any app.");
         return;
@@ -739,17 +753,17 @@ function Badges() {
               <button
                 type="button"
                 onClick={() =>
-                  copyBadgeAndOpenLinkedIn(
+                  copyBadgeThenOpenLinkedIn(
                     selectedHeatmapBadge,
                     selectedAchievedBadge,
-                    { clipboardOnly: true },
+                    `${window.location.origin}${window.location.pathname}#badge-${selectedHeatmapBadge.badgeId}`,
                   )
                 }
               >
-                Copy Badge for LinkedIn
+                Open LinkedIn Composer
               </button>
               <small>
-                The LinkedIn copy button skips popups and directly copies to your clipboard (with download fallback).
+                The share button only uses your device share sheet / clipboard / download. The LinkedIn button copies first, then opens LinkedIn so you can paste immediately.
               </small>
             </div>
           </div>
@@ -798,16 +812,16 @@ function Badges() {
               <button
                 type="button"
                 onClick={() =>
-                  shareWrappedWithImage(
+                  copyWrappedThenOpenLinkedIn(
                     selectedWrapped,
-                    { clipboardOnly: true }
+                    `${window.location.origin}${window.location.pathname}#wrapped-${selectedWrapped.year}`,
                   )
                 }
               >
-                Copy Wrapped for LinkedIn
+                Open LinkedIn Composer
               </button>
               <small>
-                The LinkedIn copy button skips popups and directly copies to your clipboard (with download fallback).
+                The share button only uses your device share sheet / clipboard / download. The LinkedIn button copies first, then opens LinkedIn so you can paste immediately.
               </small>
             </div>
           </div>
