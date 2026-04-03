@@ -53,10 +53,12 @@ describe("PortfolioPage web portfolio", () => {
     });
 
     getPortfolio.mockResolvedValue({
-      portfolio: {
-        title: "Portfolio Report",
-        portfolio_mode: "public",
-        projects: [
+      portfolio:{
+        title:"Portfolio Report",
+        portfolio_mode:"public",
+        public_url:"http://localhost:8000/public/portfolio/my-report",
+        public_token:"my-report",
+        projects:[
           {
             project_name: "Proj A",
             summary: "Short summary",
@@ -202,5 +204,59 @@ describe("PortfolioPage web portfolio", () => {
     await waitFor(() => {
       expect(screen.getByText(/Commits/i)).toBeInTheDocument();
     });
+  });
+
+  it("Open Public Page button is disabled before a portfolio is generated",async()=>{
+    render(<PortfolioPage />);
+    await waitFor(()=>screen.getByText("Saved Reports"));
+
+    const btn = screen.getByRole("button", { name: /open public page/i });
+    expect(btn).toBeDisabled();
+  });
+
+  it("Open Public Page button is disabled when portfolio is private",async()=>{
+    const user=userEvent.setup();
+    await generatePortfolio(user);
+
+    // toggle to private — unpublishPortfolio returns portfolio_mode:"private", no public_url
+    unpublishPortfolio.mockResolvedValueOnce({
+      portfolio:{
+        title:"Portfolio Report",
+        portfolio_mode:"private",
+        public_url:null,
+        public_token:null,
+        projects:[{
+          project_name:"Proj A",
+          summary:"",
+          bullets:[],
+          collaboration_status:"individual",
+          languages:["Python"],
+          portfolio_customizations:{},
+          portfolio_details:{ role:"", timeline:"", overview:"", achievements:[], contributor_roles:[] },
+        }],
+      },
+    });
+
+    await user.click(screen.getByRole("button",{name:/toggle portfolio mode/i}));
+    await waitFor(()=>expect(screen.getByTestId("portfolio-mode-badge")).toHaveTextContent(/private/i));
+
+    expect(screen.getByRole("button",{name:/open public page/i})).toBeDisabled();
+  });
+
+  it("Open Public Page button is enabled and opens the correct URL when public",async()=>{
+    const openSpy = vi.spyOn(window, "open").mockImplementation(()=>{});
+    const user=userEvent.setup();
+    await generatePortfolio(user);
+
+    const btn = await screen.findByRole("button",{name:/open public page/i});
+    expect(btn).not.toBeDisabled();
+
+    await user.click(btn);
+    expect(openSpy).toHaveBeenCalledWith(
+      "http://localhost:8000/public/portfolio/my-report",
+      "_blank",
+      "noopener,noreferrer"
+    );
+    openSpy.mockRestore();
   });
 });

@@ -44,6 +44,8 @@ class PortfolioReport(BaseModel):
     projects: List[PortfolioProject] = Field(default_factory=list)
     portfolio_mode: str = "private"
     portfolio_published_at: Optional[datetime] = None
+    public_token: Optional[str] = None
+    public_url: Optional[str] = None
 
 
 class PortfolioGenerateRequest(BaseModel):
