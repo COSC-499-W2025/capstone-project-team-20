@@ -1218,7 +1218,9 @@ def public_portfolio_page(token: str):
             if name:
                 badges_by_project.setdefault(name, []).append(badge)
 
-    heatmap = _build_heatmap_data(visible_projects, project_manager, usernames=[])
+    cfg = ConfigManager()
+    heatmap_usernames = _normalize_username_candidates(cfg.get("usernames") or [])
+    heatmap = _build_heatmap_data(visible_projects, project_manager, usernames=heatmap_usernames)
 
     templates_dir = _Path(__file__).parent / "templates"
     env = jinja2.Environment(loader=jinja2.FileSystemLoader(str(templates_dir)), autoescape=True)
@@ -1230,5 +1232,6 @@ def public_portfolio_page(token: str):
         thumbnail_urls=thumbnail_urls,
         badges_by_project=badges_by_project,
         heatmap=heatmap,
+        heatmap_usernames=heatmap_usernames,
     )
     return HTMLResponse(content=html)

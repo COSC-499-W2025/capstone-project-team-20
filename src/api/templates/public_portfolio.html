@@ -347,7 +347,11 @@
     {% if heatmap and heatmap.days_series %}
     <div class="hm-panel">
       <h2>Activity Heatmap</h2>
-      <span class="hm-sub">All contributors · Full project history</span>
+      <span class="hm-sub">
+        {%- if heatmap_usernames -%}
+          Contributors: {{ heatmap_usernames | join(", ") }}
+        {%- endif -%}
+      </span>
       <div class="hm-stats">
         <div class="hm-stat"><strong>{{ heatmap.aggregate.total_commits }}</strong><span>Commits</span></div>
         <div class="hm-stat"><strong>{{ heatmap.aggregate.total_lines_changed }}</strong><span>Lines changed</span></div>
