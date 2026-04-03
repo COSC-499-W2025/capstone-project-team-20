@@ -1469,6 +1469,107 @@ def test_public_portfolio_page_hides_hidden_projects(client, monkeypatch):
     assert "Hidden" not in res.text
 
 
+def test_public_portfolio_page_renders_heatmap(client, monkeypatch):
+    """GET /public/portfolio/{token} includes heatmap HTML when activity data exists."""
+    from src.models.ReportProject import ReportProject, PortfolioDetails
+
+    rp = ReportProject(project_name="MyProject", portfolio_details=PortfolioDetails())
+    report = Report(id=30, title="Heatmap Port", date_created=datetime(2025, 1, 1),
+                    sort_by="resume_score", projects=[rp], notes=None, report_kind="portfolio")
+    report.portfolio_mode = "public"
+    report.public_token = "heatmap-test"
+
+    project = Project(name="MyProject", file_path="/fake/path")
+    project.author_daily_contributions = [
+        {"author": "dev@example.com", "daily_commits": {"2025-03-01": 2, "2025-03-02": 1}, "total_commits": 3}
+    ]
+    project.author_contributions = [
+        {"author": "dev@example.com", "lines_added": 100, "lines_deleted": 20}
+    ]
+
+    class FakeReportManager:
+        def list_reports(self): return [report]
+
+    class FakeProjectManager:
+        def get_by_name(self, name): return project if name == "MyProject" else None
+        def get_all(self): return iter([])
+
+    class FakeConfigManager:
+        def get(self, key): return ["dev@example.com"] if key == "usernames" else None
+
+    monkeypatch.setattr(routes, "ReportManager", FakeReportManager)
+    monkeypatch.setattr(routes, "ProjectManager", FakeProjectManager)
+    monkeypatch.setattr(routes, "ConfigManager", FakeConfigManager)
+    monkeypatch.setattr(routes, "build_badge_progress", lambda projects: {"badges": []})
+
+    res = client.get("/public/portfolio/heatmap-test")
+    assert res.status_code == 200
+    assert "Activity Heatmap" in res.text
+    assert "hm-grid" in res.text
+    assert "dev@example.com" in res.text
+
+
+def test_build_heatmap_data_aggregates_commits():
+    """_build_heatmap_data sums daily commits across projects and authors."""
+    from datetime import date, timedelta
+    from src.models.ReportProject import ReportProject, PortfolioDetails
+
+    test_date = (date.today() - timedelta(days=5)).isoformat()
+
+    rp1 = ReportProject(project_name="ProjectA", portfolio_details=PortfolioDetails())
+    rp2 = ReportProject(project_name="ProjectB", portfolio_details=PortfolioDetails())
+
+    proj_a = Project(name="ProjectA", file_path="/fake/a")
+    proj_a.author_daily_contributions = [
+        {"author": "alice@example.com", "daily_commits": {test_date: 3}, "total_commits": 3},
+    ]
+    proj_a.author_contributions = []
+
+    proj_b = Project(name="ProjectB", file_path="/fake/b")
+    proj_b.author_daily_contributions = [
+        {"author": "bob@example.com", "daily_commits": {test_date: 2}, "total_commits": 2},
+    ]
+    proj_b.author_contributions = []
+
+    class FakeProjectManager:
+        def get_by_name(self, name):
+            return proj_a if name == "ProjectA" else proj_b
+
+    result = routes._build_heatmap_data([rp1, rp2], FakeProjectManager(), usernames=[])
+
+    day = next((d for d in result["days_series"] if d["date"] == test_date), None)
+    assert day is not None
+    assert day["commits"] == 5  # 3 + 2 across both projects
+    assert result["aggregate"]["total_commits"] == 5
+    assert result["aggregate"]["active_days"] == 1
+
+
+def test_build_heatmap_data_filters_by_username():
+    """_build_heatmap_data only counts commits matching provided usernames."""
+    from datetime import date, timedelta
+    from src.models.ReportProject import ReportProject, PortfolioDetails
+
+    test_date = (date.today() - timedelta(days=5)).isoformat()
+
+    rp = ReportProject(project_name="ProjectA", portfolio_details=PortfolioDetails())
+    proj = Project(name="ProjectA", file_path="/fake/a")
+    proj.author_daily_contributions = [
+        {"author": "alice@example.com", "daily_commits": {test_date: 3}, "total_commits": 3},
+        {"author": "bob@example.com", "daily_commits": {test_date: 2}, "total_commits": 2},
+    ]
+    proj.author_contributions = []
+
+    class FakeProjectManager:
+        def get_by_name(self, name): return proj
+
+    result = routes._build_heatmap_data([rp], FakeProjectManager(), usernames=["alice"])
+
+    day = next((d for d in result["days_series"] if d["date"] == test_date), None)
+    assert day is not None
+    assert day["commits"] == 3  # only alice, bob excluded
+    assert result["aggregate"]["total_commits"] == 3
+
+
 def test_patch_report_project_report_not_found(client, monkeypatch):
     class FakeConsentManager:
         def has_user_consented(self):
