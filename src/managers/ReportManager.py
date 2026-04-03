@@ -48,7 +48,7 @@ class ReportManager(StorageManager):
 
     @property
     def columns(self) -> str:
-        return "id, title, date_created, sort_by, notes, report_kind, portfolio_mode, portfolio_published_at"
+        return "id, title, date_created, sort_by, notes, report_kind, portfolio_mode, portfolio_published_at, public_token"
 
     def create_report(self, report: Report) -> int:
         """
@@ -100,7 +100,8 @@ class ReportManager(StorageManager):
                 datetime.fromisoformat(report_dict["portfolio_published_at"])
                 if report_dict.get("portfolio_published_at")
                 else None
-            )
+            ),
+            public_token=report_dict.get("public_token"),
         )
 
     def set_title(self, id: int, title: str) -> bool:
@@ -221,7 +222,8 @@ class ReportManager(StorageManager):
                     datetime.fromisoformat(row_dict["portfolio_published_at"])
                     if row_dict.get("portfolio_published_at")
                     else None
-                )
+                ),
+                public_token=row_dict.get("public_token"),
             ))
 
         return reports
@@ -299,3 +301,5 @@ class ReportManager(StorageManager):
                 cursor.execute("ALTER TABLE reports ADD COLUMN portfolio_mode TEXT DEFAULT 'private'")
             if "portfolio_published_at" not in existing:
                 cursor.execute("ALTER TABLE reports ADD COLUMN portfolio_published_at TEXT")
+            if "public_token" not in existing:
+                cursor.execute("ALTER TABLE reports ADD COLUMN public_token TEXT")

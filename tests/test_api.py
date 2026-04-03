@@ -1274,6 +1274,7 @@ def test_publish_and_unpublish_portfolio(client, monkeypatch):
     class FakeReportManager:
         def get_report(self, id): return report if id == 14 else None
         def update_report(self, updated): return True
+        def list_reports(self): return []
 
     monkeypatch.setattr(routes, "ConsentManager", FakeConsentManager)
     monkeypatch.setattr(routes, "ReportManager", FakeReportManager)
@@ -1287,6 +1288,185 @@ def test_publish_and_unpublish_portfolio(client, monkeypatch):
     assert unpub.status_code == 200
     assert unpub.json()["portfolio"]["portfolio_mode"] == "private"
     assert unpub.json()["portfolio"]["portfolio_published_at"] is None
+
+
+# ---------------------------------------------------------------------------
+# Public portfolio page — slug token, HTML route
+# ---------------------------------------------------------------------------
+
+def test_publish_generates_slug_token(client, monkeypatch):
+    """Publish sets a slug derived from the report title, not a numeric ID."""
+    class FakeConsentManager:
+        def has_user_consented(self): return True
+
+    report = Report(id=20, title="My SWE Portfolio", date_created=datetime(2025,1,1),
+                    sort_by="resume_score", projects=[], notes=None, report_kind="portfolio")
+
+    class FakeReportManager:
+        def get_report(self, id): return report if id == 20 else None
+        def update_report(self, updated): return True
+        def list_reports(self): return []
+
+    monkeypatch.setattr(routes, "ConsentManager", FakeConsentManager)
+    monkeypatch.setattr(routes, "ReportManager", FakeReportManager)
+
+    res = client.post("/portfolio/20/publish")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["portfolio"]["public_token"] == "my-swe-portfolio"
+    assert data["portfolio"]["public_url"] == "http://localhost:8000/public/portfolio/my-swe-portfolio"
+
+
+def test_publish_token_stable_on_republish(client, monkeypatch):
+    """Re-publishing keeps the existing token instead of generating a new one."""
+    class FakeConsentManager:
+        def has_user_consented(self): return True
+
+    report = Report(id=21, title="Stable", date_created=datetime(2025,1,1),
+                    sort_by="resume_score", projects=[], notes=None, report_kind="portfolio")
+    report.public_token = "already-set"
+
+    class FakeReportManager:
+        def get_report(self, id): return report if id == 21 else None
+        def update_report(self, updated): return True
+        def list_reports(self): return []
+
+    monkeypatch.setattr(routes, "ConsentManager", FakeConsentManager)
+    monkeypatch.setattr(routes, "ReportManager", FakeReportManager)
+
+    res = client.post("/portfolio/21/publish")
+    assert res.status_code == 200
+    assert res.json()["portfolio"]["public_token"] == "already-set"
+
+
+def test_unpublish_clears_token(client, monkeypatch):
+    """Unpublishing clears public_token so the old URL stops working."""
+    class FakeConsentManager:
+        def has_user_consented(self): return True
+
+    report = Report(id=22, title="R", date_created=datetime(2025,1,1),
+                    sort_by="resume_score", projects=[], notes=None, report_kind="portfolio")
+    report.portfolio_mode = "public"
+    report.public_token = "my-report"
+
+    class FakeReportManager:
+        def get_report(self, id): return report if id == 22 else None
+        def update_report(self, updated): return True
+
+    monkeypatch.setattr(routes, "ConsentManager", FakeConsentManager)
+    monkeypatch.setattr(routes, "ReportManager", FakeReportManager)
+
+    res = client.post("/portfolio/22/unpublish")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["portfolio"]["public_token"] is None
+    assert data["portfolio"]["public_url"] is None
+
+
+def test_public_portfolio_page_returns_html(client, monkeypatch):
+    """GET /public/portfolio/{token} returns 200 HTML for a public portfolio."""
+    report = Report(id=23, title="Public Port", date_created=datetime(2025,1,1),
+                    sort_by="resume_score", projects=[], notes=None, report_kind="portfolio")
+    report.portfolio_mode = "public"
+    report.public_token = "public-port"
+
+    class FakeReportManager:
+        def list_reports(self): return [report]
+
+    class FakeProjectManager:
+        def get_by_name(self, name): return None
+        def get_all(self): return iter([])
+
+    monkeypatch.setattr(routes, "ReportManager", FakeReportManager)
+    monkeypatch.setattr(routes, "ProjectManager", FakeProjectManager)
+    monkeypatch.setattr(routes, "build_badge_progress", lambda projects: {"badges": []})
+
+    res = client.get("/public/portfolio/public-port")
+    assert res.status_code == 200
+    assert "text/html" in res.headers["content-type"]
+    assert "Public Port" in res.text
+    assert "Public" in res.text
+
+
+def test_public_portfolio_page_404_when_private(client, monkeypatch):
+    """GET /public/portfolio/{token} returns 404 if the portfolio is private."""
+    report = Report(id=24, title="Private", date_created=datetime(2025,1,1),
+                    sort_by="resume_score", projects=[], notes=None, report_kind="portfolio")
+    report.portfolio_mode = "private"
+    report.public_token = "private-token"
+
+    class FakeReportManager:
+        def list_reports(self): return [report]
+
+    monkeypatch.setattr(routes, "ReportManager", FakeReportManager)
+
+    res = client.get("/public/portfolio/private-token")
+    assert res.status_code == 404
+
+
+def test_public_portfolio_page_404_unknown_token(client, monkeypatch):
+    """GET /public/portfolio/{token} returns 404 for an unrecognised token."""
+    class FakeReportManager:
+        def list_reports(self): return []
+
+    monkeypatch.setattr(routes, "ReportManager", FakeReportManager)
+
+    res = client.get("/public/portfolio/does-not-exist")
+    assert res.status_code == 404
+
+
+def test_generate_portfolio_slug_basic():
+    """Slug is lowercased and special characters become hyphens."""
+    class FakeRM:
+        def list_reports(self): return []
+
+    slug = routes._generate_portfolio_slug("My SWE Portfolio!", FakeRM())
+    assert slug == "my-swe-portfolio"
+
+
+def test_generate_portfolio_slug_collision():
+    """When the base slug is taken, a 4-char suffix is appended."""
+    existing = Report(id=1, title="X", date_created=datetime(2025,1,1),
+                      sort_by="resume_score", projects=[], report_kind="portfolio")
+    existing.public_token = "my-portfolio"
+
+    class FakeRM:
+        def list_reports(self): return [existing]
+
+    slug = routes._generate_portfolio_slug("My Portfolio", FakeRM(), exclude_id=99)
+    assert slug.startswith("my-portfolio-")
+    assert len(slug) == len("my-portfolio-") + 4
+
+
+def test_public_portfolio_page_hides_hidden_projects(client, monkeypatch):
+    """Projects marked is_hidden are excluded from the public page."""
+    from src.models.ReportProject import ReportProject, PortfolioDetails
+
+    visible = ReportProject(project_name="Visible", portfolio_details=PortfolioDetails())
+    hidden = ReportProject(project_name="Hidden", portfolio_details=PortfolioDetails(),
+                           portfolio_customizations={"is_hidden": True})
+
+    report = Report(id=25, title="Port", date_created=datetime(2025,1,1),
+                    sort_by="resume_score", projects=[visible, hidden],
+                    notes=None, report_kind="portfolio")
+    report.portfolio_mode = "public"
+    report.public_token = "hide-test"
+
+    class FakeReportManager:
+        def list_reports(self): return [report]
+
+    class FakeProjectManager:
+        def get_by_name(self, name): return None
+        def get_all(self): return iter([])
+
+    monkeypatch.setattr(routes, "ReportManager", FakeReportManager)
+    monkeypatch.setattr(routes, "ProjectManager", FakeProjectManager)
+    monkeypatch.setattr(routes, "build_badge_progress", lambda projects: {"badges": []})
+
+    res = client.get("/public/portfolio/hide-test")
+    assert res.status_code == 200
+    assert "Visible" in res.text
+    assert "Hidden" not in res.text
 
 
 def test_patch_report_project_report_not_found(client, monkeypatch):

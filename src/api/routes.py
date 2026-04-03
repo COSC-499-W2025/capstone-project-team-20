@@ -1,7 +1,7 @@
 from typing import Any, List, Optional
 
 from fastapi import APIRouter, UploadFile, File, HTTPException, status, Depends
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from pathlib import Path
 from collections import Counter
 import tempfile, shutil
@@ -81,14 +81,19 @@ def _build_portfolio_project(project) -> PortfolioProject:
 
 def _build_portfolio_report(report) -> PortfolioReport:
     projects = [_build_portfolio_project(p) for p in (report.projects or [])]
+    mode = getattr(report, "portfolio_mode", "private") or "private"
+    token = getattr(report, "public_token", None)
+    public_url = f"http://localhost:8000/public/portfolio/{token}" if mode == "public" and token else None
     return PortfolioReport(
         id=report.id,
         title=report.title,
         date_created=report.date_created,
         sort_by=report.sort_by,
         notes=report.notes,
-        portfolio_mode=getattr(report, "portfolio_mode", "private") or "private",
+        portfolio_mode=mode,
         portfolio_published_at=getattr(report, "portfolio_published_at", None),
+        public_token=token,
+        public_url=public_url,
         projects=projects,
     )
 
@@ -979,8 +984,26 @@ def unpublish_portfolio(id: int):
 
     report.portfolio_mode = "private"
     report.portfolio_published_at = None
+    report.public_token = None
     report_manager.update_report(report)
     return PortfolioPublishResponse(ok=True, portfolio=_build_portfolio_report(report), message="Portfolio moved to private mode.")
+
+
+def _generate_portfolio_slug(title: str, report_manager: ReportManager, exclude_id: Optional[int] = None) -> str:
+    import re
+    base = re.sub(r"[^a-z0-9]+", "-", (title or "portfolio").lower()).strip("-") or "portfolio"
+    existing_tokens = {
+        getattr(r, "public_token", None)
+        for r in report_manager.list_reports()
+        if r.id != exclude_id
+    }
+    if base not in existing_tokens:
+        return base
+    for _ in range(10):
+        candidate = f"{base}-{uuid4().hex[:4]}"
+        if candidate not in existing_tokens:
+            return candidate
+    return f"{base}-{uuid4().hex[:8]}"
 
 
 @router.post("/portfolio/{id}/publish", response_model=PortfolioPublishResponse, dependencies=[Depends(require_consent)])
@@ -994,5 +1017,63 @@ def publish_portfolio(id: int):
 
     report.portfolio_mode = "public"
     report.portfolio_published_at = datetime.now()
+    if not report.public_token:
+        report.public_token = _generate_portfolio_slug(report.title, report_manager, exclude_id=report.id)
     report_manager.update_report(report)
     return PortfolioPublishResponse(ok=True, portfolio=_build_portfolio_report(report), message="Portfolio published.")
+
+
+@router.get("/public/portfolio/{token}", response_class=HTMLResponse)
+def public_portfolio_page(token: str):
+    """Serve a publicly accessible HTML portfolio page. No auth required; only works when portfolio_mode is 'public'."""
+    import jinja2
+    from pathlib import Path as _Path
+
+    report_manager = ReportManager()
+    all_reports = report_manager.list_reports()
+    report = next(
+        (r for r in all_reports if getattr(r, "public_token", None) == token and r.portfolio_mode == "public"),
+        None,
+    )
+    if not report:
+        raise HTTPException(status_code=404, detail="Portfolio not found or not public.")
+    _require_report_kind(report, "portfolio")
+
+    portfolio = _build_portfolio_report(report)
+
+    published_at = None
+    if portfolio.portfolio_published_at:
+        published_at = portfolio.portfolio_published_at.strftime("%B %d, %Y")
+
+    visible_projects = [
+        p for p in portfolio.projects
+        if not (p.portfolio_customizations or {}).get("is_hidden", False)
+    ]
+
+    project_manager = ProjectManager()
+    thumbnail_urls = {}
+    for p in visible_projects:
+        proj = project_manager.get_by_name(p.project_name)
+        if proj and getattr(proj, "thumbnail", None):
+            filename = Path(proj.thumbnail).name
+            thumbnail_urls[p.project_name] = f"http://localhost:8000/thumbnails/{filename}"
+
+    all_badges = build_badge_progress(list(project_manager.get_all()))
+    badges_by_project: dict = {}
+    for badge in all_badges.get("badges", []):
+        if badge.get("earned"):
+            name = (badge.get("project") or {}).get("name", "")
+            if name:
+                badges_by_project.setdefault(name, []).append(badge)
+
+    templates_dir = _Path(__file__).parent / "templates"
+    env = jinja2.Environment(loader=jinja2.FileSystemLoader(str(templates_dir)), autoescape=True)
+    template = env.get_template("public_portfolio.html")
+    html = template.render(
+        title=portfolio.title or "Portfolio",
+        published_at=published_at,
+        projects=visible_projects,
+        thumbnail_urls=thumbnail_urls,
+        badges_by_project=badges_by_project,
+    )
+    return HTMLResponse(content=html)

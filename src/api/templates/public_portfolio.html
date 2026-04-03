@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>{{ title | e }} — Portfolio</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+
+  body {
+    font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    background: #0d1117;
+    color: #e6edf3;
+    margin: 0;
+    padding: 0;
+    line-height: 1.6;
+  }
+
+  .page-wrap {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 48px 24px 80px;
+  }
+
+  .header {
+    margin-bottom: 40px;
+    border-bottom: 1px solid #21262d;
+    padding-bottom: 28px;
+  }
+
+  .header h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin: 0 0 8px;
+    letter-spacing: -0.02em;
+  }
+
+  .header .meta {
+    color: #8b949e;
+    font-size: 0.9rem;
+  }
+
+  .badge {
+    display: inline-block;
+    background: #1f6feb22;
+    color: #58a6ff;
+    border: 1px solid #1f6feb55;
+    border-radius: 20px;
+    padding: 2px 10px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    vertical-align: middle;
+    margin-left: 10px;
+  }
+
+  .card {
+    background: #161b22;
+    border: 1px solid #21262d;
+    border-radius: 10px;
+    padding: 22px 24px;
+    margin-bottom: 16px;
+    transition: border-color 0.15s;
+  }
+
+  .card:hover {
+    border-color: #30363d;
+  }
+
+  .card h2 {
+    font-size: 1.15rem;
+    font-weight: 600;
+    margin: 0 0 6px;
+    color: #e6edf3;
+  }
+
+  .card .role-line {
+    color: #8b949e;
+    font-size: 0.88rem;
+    margin: 0 0 14px;
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .card .role-line span {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .tech-pill {
+    display: inline-block;
+    background: #21262d;
+    color: #c9d1d9;
+    border-radius: 4px;
+    padding: 1px 7px;
+    font-size: 0.78rem;
+    margin-right: 4px;
+    margin-bottom: 10px;
+  }
+
+  .card .overview {
+    font-size: 0.93rem;
+    color: #c9d1d9;
+    margin: 0 0 14px;
+  }
+
+  .card h3 {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: #8b949e;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    margin: 14px 0 8px;
+  }
+
+  .card ul {
+    margin: 0 0 0 18px;
+    padding: 0;
+    color: #c9d1d9;
+    font-size: 0.92rem;
+  }
+
+  .card ul li {
+    margin-bottom: 5px;
+  }
+
+  .contributors {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 4px;
+  }
+
+  .contributor-chip {
+    background: #21262d;
+    border: 1px solid #30363d;
+    border-radius: 20px;
+    padding: 3px 10px;
+    font-size: 0.8rem;
+    color: #c9d1d9;
+  }
+
+  .contributor-chip .role-tag {
+    color: #8b949e;
+  }
+
+  .badge-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+
+  .badge-chip {
+    background: #2d2a1e;
+    border: 1px solid #6e5a1e;
+    color: #e3c84a;
+    border-radius: 20px;
+    padding: 2px 10px;
+    font-size: 0.78rem;
+    font-weight: 600;
+  }
+
+  .footer {
+    margin-top: 56px;
+    padding-top: 20px;
+    border-top: 1px solid #21262d;
+    color: #484f58;
+    font-size: 0.8rem;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+  <div class="page-wrap">
+
+    <div class="header">
+      <h1>{{ title | e }} <span class="badge">Public</span></h1>
+      {% if published_at %}
+      <p class="meta">Published {{ published_at }}</p>
+      {% endif %}
+    </div>
+
+    {% if not projects %}
+      <p style="color:#8b949e;">No projects in this portfolio.</p>
+    {% endif %}
+
+    {% for project in projects %}
+    {% set details = project.portfolio_details %}
+    <div class="card">
+      <h2>{{ project.project_name | e }}</h2>
+
+      {% if badges_by_project.get(project.project_name) %}
+      <div class="badge-chips">
+        {% for b in badges_by_project.get(project.project_name) %}
+        <span class="badge-chip">🏅 {{ b.label | e }}</span>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <div class="role-line">
+        {% if details.role %}
+        <span>{{ details.role | e }}</span>
+        {% endif %}
+        {% if details.timeline and details.timeline != "N/A" %}
+        <span>{{ details.timeline | e }}</span>
+        {% endif %}
+      </div>
+
+      {% if details.technologies %}
+      <div>
+        {% for tech in details.technologies.split(", ") %}
+        <span class="tech-pill">{{ tech | e }}</span>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      {% if thumbnail_urls[project.project_name] is defined %}
+      <img src="{{ thumbnail_urls[project.project_name] }}" alt="{{ project.project_name | e }} thumbnail"
+           style="width:100%;max-height:220px;object-fit:cover;border-radius:6px;margin-bottom:14px;" />
+      {% endif %}
+
+      {% set overview = project.portfolio_customizations.get("custom_overview", "") or details.overview %}
+      {% if overview %}
+      <p class="overview">{{ overview | e }}</p>
+      {% endif %}
+
+      {% set achievements = project.portfolio_customizations.get("custom_achievements", []) or details.achievements %}
+      {% if achievements %}
+      <h3>Key Contributions</h3>
+      <ul>
+        {% for achievement in achievements %}
+        <li>{{ achievement | e }}</li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+
+      {% if details.contributor_roles %}
+      <h3>Contributors</h3>
+      <div class="contributors">
+        {% for contributor in details.contributor_roles %}
+        <span class="contributor-chip">
+          {{ contributor.name | e }}{% if contributor.role %} <span class="role-tag">— {{ contributor.role | e }}</span>{% endif %}
+        </span>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+    {% endfor %}
+
+    <div class="footer">
+      Generated by 200 OK Hired
+    </div>
+
+  </div>
+</body>
+</html>
