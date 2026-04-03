@@ -713,29 +713,20 @@ def generate_report_portfolio_details(id: int, req: PortfolioDetailsGenerateRequ
     return PortfolioDetailsGenerateResponse(updated_project_names=updated)
 
 
-@router.post("/portfolio/activity-heatmap", response_model=PortfolioActivityHeatmapResponse, dependencies=[Depends(require_consent)])
-def get_portfolio_activity_heatmap(req: PortfolioActivityHeatmapRequest):
-    report_manager = ReportManager()
-    project_manager = ProjectManager()
-
-    report = report_manager.get_report(req.report_id)
-    if not report:
-        raise HTTPException(status_code=404, detail="Portfolio report not found.")
-    _require_report_kind(report, "portfolio")
-
-    selected_names = set((name or "").strip() for name in req.project_names if (name or "").strip())
-    report_projects = list(report.projects or [])
-    if selected_names:
-        report_projects = [rp for rp in report_projects if rp.project_name in selected_names]
-
-    normalized_usernames = _normalize_username_candidates(req.usernames)
-    if not normalized_usernames:
-        cfg = ConfigManager()
-        normalized_usernames = _normalize_username_candidates(cfg.get("usernames") or [])
-
+def _build_heatmap_data(
+    report_projects: list,
+    project_manager,
+    usernames: List[str],
+    days: Optional[int] = None,
+) -> dict:
+    """
+    Shared heatmap aggregation used by both the API endpoint and the public portfolio page.
+    Returns a dict with keys: days_series, aggregate, computed_days.
+    days_series is a list of dicts (date, commits, lines_changed, intensity).
+    """
     today = datetime.now(timezone.utc).date()
-    if req.days is not None:
-        window_start = today - timedelta(days=req.days - 1)
+    if days is not None:
+        window_start = today - timedelta(days=days - 1)
     else:
         project_dates = []
         for rp in report_projects:
@@ -764,7 +755,7 @@ def get_portfolio_activity_heatmap(req: PortfolioActivityHeatmapRequest):
 
         for item in adc:
             author_email = (item or {}).get("author", "")
-            if not _author_matches_usernames(author_email, normalized_usernames):
+            if not _author_matches_usernames(author_email, usernames):
                 continue
 
             daily = (item or {}).get("daily_commits", {}) or {}
@@ -787,7 +778,7 @@ def get_portfolio_activity_heatmap(req: PortfolioActivityHeatmapRequest):
 
                 if norm_author not in real_daily_authors:
                     continue
-                if not _author_matches_usernames(author_email, normalized_usernames):
+                if not _author_matches_usernames(author_email, usernames):
                     continue
 
                 total_lines = _safe_int((author_entry or {}).get("lines_added"), 0) + _safe_int((author_entry or {}).get("lines_deleted"), 0)
@@ -798,66 +789,86 @@ def get_portfolio_activity_heatmap(req: PortfolioActivityHeatmapRequest):
                     (x for x in adc if ((x or {}).get("author", "") or "").strip().lower() == norm_author),
                     None
                 )
-                active_days = sorted([
+                active_days_list = sorted([
                     d for d, c in ((author_daily or {}).get("daily_commits", {}) or {}).items()
                     if _safe_int(c, 0) > 0 and d in aggregate_map
                 ])
-                if not active_days:
+                if not active_days_list:
                     continue
 
-                base = total_lines // len(active_days)
-                rem = total_lines % len(active_days)
-                for i, day_str in enumerate(active_days):
+                base = total_lines // len(active_days_list)
+                rem = total_lines % len(active_days_list)
+                for i, day_str in enumerate(active_days_list):
                     aggregate_map[day_str]["lines_changed"] += base + (1 if i < rem else 0)
 
     def intensity_for(commits: int) -> int:
-        if commits <= 0:
-            return 0
-        if commits == 1:
-            return 1
-        if commits <= 3:
-            return 2
-        if commits <= 6:
-            return 3
+        if commits <= 0: return 0
+        if commits == 1: return 1
+        if commits <= 3: return 2
+        if commits <= 6: return 3
         return 4
 
     days_series = []
     total_commits = 0
     total_lines_changed = 0
-    active_days = 0
+    active_days_count = 0
 
     for day in day_buckets:
         key = day.isoformat()
         commits = _safe_int(aggregate_map[key]["commits"], 0)
         lines_changed = _safe_int(aggregate_map[key]["lines_changed"], 0)
-
         if commits > 0 or lines_changed > 0:
-            active_days += 1
-
+            active_days_count += 1
         total_commits += commits
         total_lines_changed += lines_changed
+        days_series.append({
+            "date": key,
+            "commits": commits,
+            "lines_changed": lines_changed,
+            "intensity": intensity_for(commits),
+        })
 
-        days_series.append(
-            PortfolioActivityDay(
-                date=key,
-                commits=commits,
-                lines_changed=lines_changed,
-                intensity=intensity_for(commits),
-            )
-        )
+    return {
+        "days_series": days_series,
+        "computed_days": computed_days,
+        "aggregate": {
+            "total_commits": total_commits,
+            "total_lines_changed": total_lines_changed,
+            "active_days": active_days_count,
+        },
+    }
+
+
+@router.post("/portfolio/activity-heatmap", response_model=PortfolioActivityHeatmapResponse, dependencies=[Depends(require_consent)])
+def get_portfolio_activity_heatmap(req: PortfolioActivityHeatmapRequest):
+    report_manager = ReportManager()
+    project_manager = ProjectManager()
+
+    report = report_manager.get_report(req.report_id)
+    if not report:
+        raise HTTPException(status_code=404, detail="Portfolio report not found.")
+    _require_report_kind(report, "portfolio")
+
+    selected_names = set((name or "").strip() for name in req.project_names if (name or "").strip())
+    report_projects = list(report.projects or [])
+    if selected_names:
+        report_projects = [rp for rp in report_projects if rp.project_name in selected_names]
+
+    normalized_usernames = _normalize_username_candidates(req.usernames)
+    if not normalized_usernames:
+        cfg = ConfigManager()
+        normalized_usernames = _normalize_username_candidates(cfg.get("usernames") or [])
+
+    heatmap = _build_heatmap_data(report_projects, project_manager, normalized_usernames, req.days)
 
     return PortfolioActivityHeatmapResponse(
         ok=True,
         report_id=req.report_id,
         usernames=normalized_usernames,
-        days=computed_days,
+        days=heatmap["computed_days"],
         generated_at=datetime.now(timezone.utc),
-        aggregate=PortfolioActivityAggregate(
-            total_commits=total_commits,
-            total_lines_changed=total_lines_changed,
-            active_days=active_days,
-        ),
-        days_series=days_series,
+        aggregate=PortfolioActivityAggregate(**heatmap["aggregate"]),
+        days_series=[PortfolioActivityDay(**d) for d in heatmap["days_series"]],
     )
 
 
@@ -1207,6 +1218,8 @@ def public_portfolio_page(token: str):
             if name:
                 badges_by_project.setdefault(name, []).append(badge)
 
+    heatmap = _build_heatmap_data(visible_projects, project_manager, usernames=[])
+
     templates_dir = _Path(__file__).parent / "templates"
     env = jinja2.Environment(loader=jinja2.FileSystemLoader(str(templates_dir)), autoescape=True)
     template = env.get_template("public_portfolio.html")
@@ -1216,5 +1229,6 @@ def public_portfolio_page(token: str):
         projects=visible_projects,
         thumbnail_urls=thumbnail_urls,
         badges_by_project=badges_by_project,
+        heatmap=heatmap,
     )
     return HTMLResponse(content=html)
