@@ -11,7 +11,7 @@ list_field = lambda: field(default_factory=list)
 @dataclass
 class Project:
     """
-    This class represents a project detected by our system. 
+    This class represents a project detected by our system.
     It is a pure data container representing a single analyzed project.
 
     Checklist for adding a variable to this class:
@@ -33,6 +33,7 @@ class Project:
         "build_tools",
         "readme_keywords",
         "author_contributions",
+        "author_daily_contributions",
         "bullets",
     ]
 
@@ -68,6 +69,7 @@ class Project:
 
     individual_contributions: Dict[str, Any] = field(default_factory=dict)
     author_contributions: List[Dict[str, Any]] = list_field()
+    author_daily_contributions: List[Dict[str, Any]] = list_field()
     contributor_roles: Dict[str, Any] = field(default_factory=dict)
     collaboration_status: Literal["individual", "collaborative"] = "individual"
 

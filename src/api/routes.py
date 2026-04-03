@@ -35,11 +35,14 @@ from src.api.schemas.resume import (
 from src.api.schemas.portfolio import (
     PortfolioDetailsGenerateRequest, PortfolioDetailsGenerateResponse,
     PortfolioExportRequest, PortfolioExportResponse,
-    PortfolioModeUpdateRequest, PortfolioProjectUpdateRequest, PortfolioPublishResponse
+    PortfolioModeUpdateRequest, PortfolioProjectUpdateRequest, PortfolioPublishResponse,
+    PortfolioActivityHeatmapRequest, PortfolioActivityHeatmapResponse, PortfolioActivityDay,
+    PortfolioActivityAggregate,
 )
 from src.api.schemas import (
     PortfolioResponse, PortfolioUpdateRequest, PortfolioReport, PortfolioProject, PortfolioDetailsResponse
 )
+from datetime import datetime, timedelta, timezone
 
 """For all our routes. Requirement 32, endpoints"""
 router = APIRouter()
@@ -77,6 +80,54 @@ def _build_portfolio_project(project) -> PortfolioProject:
         last_modified=project.last_modified,
         collaboration_status=project.collaboration_status,
     )
+
+
+def _normalize_username_candidates(raw_values: List[str]) -> List[str]:
+    normalized = []
+    seen = set()
+    for raw in raw_values or []:
+        value = (raw or "").strip().lower()
+        if not value:
+            continue
+        if value not in seen:
+            seen.add(value)
+            normalized.append(value)
+    return normalized
+
+
+def _extract_git_username(email: str) -> str:
+    local = (email or "").split("@", 1)[0].strip().lower()
+    if "+" in local:
+        suffix = local.split("+", 1)[1].strip()
+        if suffix:
+            return suffix
+    return local
+
+
+def _author_matches_usernames(author_email: str, usernames: List[str]) -> bool:
+    if not usernames:
+        return True
+
+    email = (author_email or "").strip().lower()
+    if not email:
+        return False
+
+    local = email.split("@", 1)[0]
+    extracted_user = _extract_git_username(email)
+    for candidate in usernames:
+        c = (candidate or "").strip().lower()
+        if not c:
+            continue
+        if c == email or c == local or c == extracted_user:
+            return True
+    return False
+
+
+def _safe_int(value, default: int = 0) -> int:
+    try:
+        return int(value)
+    except (ValueError, TypeError):
+        return default
 
 
 def _build_portfolio_report(report) -> PortfolioReport:
@@ -208,7 +259,7 @@ def upload_project_from_path(req: UploadPathRequest):
         "projects": [{"id": p.id, "name": p.name} for p in created_projects],
         "pending_duplicates": pending_duplicates,
         "pending_identity": pending_identity,
-        }
+    }
 
 
 @router.post("/projects/upload", response_model=UploadProjectResponse, status_code=status.HTTP_201_CREATED)
@@ -236,7 +287,7 @@ def upload_project(zip_file: UploadFile = File(...)):
         projects=[ProjectSummary(id=p.id, name=p.name) for p in created_projects],
         pending_duplicates=pending_duplicates,
         pending_identity=pending_identity,
-        )
+    )
 
 
 @router.get("/privacy-consent", response_model=ConsentResponse)
@@ -300,7 +351,6 @@ def delete_project(id: int):
         raise HTTPException(status_code=404, detail="Project not found.")
     if not pm.delete(id):
         raise HTTPException(status_code=500, detail="Failed to delete project.")
-    # Rebuild seen_authors from remaining projects so stale emails are removed
     analyzer = ProjectAnalyzer(ConfigManager(), root_folders=[], zip_path=None)
     analyzer.rebuild_seen_authors()
     return None
@@ -356,7 +406,6 @@ def resolve_contributors_batch(req: ContributorMergeBatchRequest):
 
 @router.get("/skills", response_model=SkillsListResponse)
 def get_skills_list():
-    """List unique skills detected across all projects, plus their project usage count."""
     pm = ProjectManager()
     projects = list(pm.get_all())
     counts = Counter()
@@ -370,9 +419,9 @@ def get_skills_list():
     ]
     return SkillsListResponse(skills=skills)
 
+
 @router.get("/skills/usage", response_model=SkillsUsageResponse)
 def get_skills_usage():
-    """List skills with usage counts and the project names where each skill appears."""
     pm = ProjectManager()
     projects = list(pm.get_all())
 
@@ -397,26 +446,21 @@ def get_skills_usage():
     ]
     return SkillsUsageResponse(skills=skills)
 
+
 @router.get("/badges/progress", response_model=BadgeProgressResponse)
 def get_badge_progress():
-    """Return badge progress analytics based on current projects."""
     pm = ProjectManager()
     return build_badge_progress(list(pm.get_all()))
 
 
 @router.get("/wrapped/yearly", response_model=YearlyWrappedResponse)
 def get_yearly_wrapped():
-    """Return 'yearly wrapped' analytics for projects."""
     pm = ProjectManager()
     return build_yearly_wrapped(list(pm.get_all()))
 
 
 @router.post("/reports", response_model=ReportDetailResponse, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_consent)])
 def create_report(req: ReportCreateRequest):
-    """
-    Create a saved Report (template) from a list of Project IDs.
-    Snapshots projects into ReportProjects in reports.db.
-    """
     from src.models.Report import Report
     from src.models.ReportProject import ReportProject, PortfolioDetails
 
@@ -475,7 +519,6 @@ def create_report(req: ReportCreateRequest):
 
 @router.get("/reports", response_model=ReportsListResponse, dependencies=[Depends(require_consent)])
 def list_reports():
-    """List all saved reports (templates) in the system."""
     rm = ReportManager()
     reports = rm.list_reports()
     return ReportsListResponse(
@@ -496,7 +539,6 @@ def list_reports():
 
 @router.get("/reports/{id}", response_model=ReportDetailResponse, dependencies=[Depends(require_consent)])
 def get_report(id: int):
-    """Get a report (by id) and its summary info."""
     rm = ReportManager()
     r = rm.get_report(id)
     if not r:
@@ -516,10 +558,6 @@ def get_report(id: int):
 
 @router.get("/resume/context/{id}", dependencies=[Depends(require_consent)])
 def get_resume_context(id: int):
-    """
-    Return the resume template context for a report as JSON.
-    Used by the frontend live HTML preview.
-    """
     rm = ReportManager()
     report = rm.get_report(id)
     if not report:
@@ -530,10 +568,6 @@ def get_resume_context(id: int):
 
 @router.patch("/reports/{id}/projects/{project_name}", dependencies=[Depends(require_consent)])
 def patch_report_project(id: int, project_name: str, req: ReportProjectPatchRequest):
-    """
-    Update editable fields on a single ReportProject within a report.
-    Only non-None fields are applied.
-    """
     from urllib.parse import unquote
     project_name = unquote(project_name)
 
@@ -561,10 +595,6 @@ def patch_report_project(id: int, project_name: str, req: ReportProjectPatchRequ
 
 @router.delete("/reports/{id}", status_code=204, dependencies=[Depends(require_consent)])
 def delete_report(id: int):
-    """
-    Delete a report and all associated report projects.
-    Returns 204 No Content on success.
-    """
     rm = ReportManager()
     report = rm.get_report(id)
     if not report:
@@ -576,7 +606,6 @@ def delete_report(id: int):
 
 @router.get("/portfolio/{id}", response_model=PortfolioResponse, dependencies=[Depends(require_consent)])
 def get_portfolio(id: int):
-    """Retrieve a generated portfolio report by id."""
     report_manager = ReportManager()
     report = report_manager.get_report(id)
     if not report:
@@ -588,9 +617,6 @@ def get_portfolio(id: int):
 
 @router.post("/portfolio/export", response_model=PortfolioExportResponse, dependencies=[Depends(require_consent)])
 def export_portfolio(req: PortfolioExportRequest):
-    """
-    Export a portfolio PDF file from a report and return download info.
-    """
     rm = ReportManager()
     report = rm.get_report(req.report_id)
     if not report:
@@ -611,7 +637,6 @@ def export_portfolio(req: PortfolioExportRequest):
 
 @router.get("/portfolio/exports/{export_id}/download", dependencies=[Depends(require_consent)])
 def download_portfolio(export_id: str):
-    """Download a previously exported portfolio file."""
     out_dir = Path("portfolios")
     matches = list(out_dir.glob(f"{export_id}-*.pdf"))
     if not matches:
@@ -622,9 +647,6 @@ def download_portfolio(export_id: str):
 
 @router.post("/portfolio/{id}/edit", response_model=PortfolioResponse, dependencies=[Depends(require_consent)])
 def edit_portfolio(id: int, payload: PortfolioUpdateRequest):
-    """
-    Edit an existing portfolio report's title and notes.
-    """
     report_manager = ReportManager()
     report = report_manager.get_report(id)
     if not report:
@@ -641,11 +663,6 @@ def edit_portfolio(id: int, payload: PortfolioUpdateRequest):
 
 @router.post("/reports/{id}/portfolio-details/generate", response_model=PortfolioDetailsGenerateResponse, dependencies=[Depends(require_consent)])
 def generate_report_portfolio_details(id: int, req: PortfolioDetailsGenerateRequest):
-    """
-    Generates PortfolioDetails for selected ReportProjects in a report
-    using the analyzed Project stored in projects.db (matched by name),
-    then persists changes back into reports.db.
-    """
     if req.report_id != id:
         raise HTTPException(status_code=400, detail="report_id mismatch.")
 
@@ -691,6 +708,154 @@ def generate_report_portfolio_details(id: int, req: PortfolioDetailsGenerateRequ
     return PortfolioDetailsGenerateResponse(updated_project_names=updated)
 
 
+@router.post("/portfolio/activity-heatmap", response_model=PortfolioActivityHeatmapResponse, dependencies=[Depends(require_consent)])
+def get_portfolio_activity_heatmap(req: PortfolioActivityHeatmapRequest):
+    report_manager = ReportManager()
+    project_manager = ProjectManager()
+
+    report = report_manager.get_report(req.report_id)
+    if not report:
+        raise HTTPException(status_code=404, detail="Portfolio report not found.")
+    _require_report_kind(report, "portfolio")
+
+    selected_names = set((name or "").strip() for name in req.project_names if (name or "").strip())
+    report_projects = list(report.projects or [])
+    if selected_names:
+        report_projects = [rp for rp in report_projects if rp.project_name in selected_names]
+
+    normalized_usernames = _normalize_username_candidates(req.usernames)
+    if not normalized_usernames:
+        cfg = ConfigManager()
+        normalized_usernames = _normalize_username_candidates(cfg.get("usernames") or [])
+
+    today = datetime.now(timezone.utc).date()
+    if req.days is not None:
+        window_start = today - timedelta(days=req.days - 1)
+    else:
+        project_dates = []
+        for rp in report_projects:
+            p = project_manager.get_by_name(rp.project_name)
+            if p and getattr(p, "date_created", None):
+                project_dates.append(p.date_created.date())
+        inferred_start = min(project_dates) if project_dates else (today - timedelta(days=364))
+        window_start = max(inferred_start, today - timedelta(days=1825))
+
+    computed_days = (today - window_start).days + 1
+    day_buckets = [window_start + timedelta(days=i) for i in range(computed_days)]
+    aggregate_map = {d.isoformat(): {"commits": 0, "lines_changed": 0} for d in day_buckets}
+
+    for rp in report_projects:
+        project = project_manager.get_by_name(rp.project_name)
+        if not project:
+            continue
+
+        adc = list(getattr(project, "author_daily_contributions", []) or [])
+        contributions = list(getattr(project, "author_contributions", []) or [])
+
+        if not adc:
+            continue
+
+        real_daily_authors = set()
+
+        for item in adc:
+            author_email = (item or {}).get("author", "")
+            if not _author_matches_usernames(author_email, normalized_usernames):
+                continue
+
+            daily = (item or {}).get("daily_commits", {}) or {}
+            wrote_any = False
+            for day_str, c in daily.items():
+                if day_str not in aggregate_map:
+                    continue
+                commit_count = _safe_int(c, 0)
+                if commit_count > 0:
+                    wrote_any = True
+                aggregate_map[day_str]["commits"] += commit_count
+
+            if wrote_any:
+                real_daily_authors.add((author_email or "").strip().lower())
+
+        if real_daily_authors and contributions:
+            for author_entry in contributions:
+                author_email = (author_entry or {}).get("author", "")
+                norm_author = (author_email or "").strip().lower()
+
+                if norm_author not in real_daily_authors:
+                    continue
+                if not _author_matches_usernames(author_email, normalized_usernames):
+                    continue
+
+                total_lines = _safe_int((author_entry or {}).get("lines_added"), 0) + _safe_int((author_entry or {}).get("lines_deleted"), 0)
+                if total_lines <= 0:
+                    continue
+
+                author_daily = next(
+                    (x for x in adc if ((x or {}).get("author", "") or "").strip().lower() == norm_author),
+                    None
+                )
+                active_days = sorted([
+                    d for d, c in ((author_daily or {}).get("daily_commits", {}) or {}).items()
+                    if _safe_int(c, 0) > 0 and d in aggregate_map
+                ])
+                if not active_days:
+                    continue
+
+                base = total_lines // len(active_days)
+                rem = total_lines % len(active_days)
+                for i, day_str in enumerate(active_days):
+                    aggregate_map[day_str]["lines_changed"] += base + (1 if i < rem else 0)
+
+    def intensity_for(commits: int) -> int:
+        if commits <= 0:
+            return 0
+        if commits == 1:
+            return 1
+        if commits <= 3:
+            return 2
+        if commits <= 6:
+            return 3
+        return 4
+
+    days_series = []
+    total_commits = 0
+    total_lines_changed = 0
+    active_days = 0
+
+    for day in day_buckets:
+        key = day.isoformat()
+        commits = _safe_int(aggregate_map[key]["commits"], 0)
+        lines_changed = _safe_int(aggregate_map[key]["lines_changed"], 0)
+
+        if commits > 0 or lines_changed > 0:
+            active_days += 1
+
+        total_commits += commits
+        total_lines_changed += lines_changed
+
+        days_series.append(
+            PortfolioActivityDay(
+                date=key,
+                commits=commits,
+                lines_changed=lines_changed,
+                intensity=intensity_for(commits),
+            )
+        )
+
+    return PortfolioActivityHeatmapResponse(
+        ok=True,
+        report_id=req.report_id,
+        usernames=normalized_usernames,
+        days=computed_days,
+        generated_at=datetime.now(timezone.utc),
+        aggregate=PortfolioActivityAggregate(
+            total_commits=total_commits,
+            total_lines_changed=total_lines_changed,
+            active_days=active_days,
+        ),
+        days_series=days_series,
+    )
+
+
 def export_report_pdf(report, template: str, output_name: str) -> tuple[str, Path, int]:
     export_id = uuid4().hex
     out_dir = Path("resumes") if template != "portfolio" else Path("portfolios")
@@ -713,9 +878,6 @@ def export_report_pdf(report, template: str, output_name: str) -> tuple[str, Pat
 
 @router.post("/resume/export", response_model=ResumeExportResponse, dependencies=[Depends(require_consent)])
 def export_resume(req: ResumeExportRequest):
-    """
-    Export a resume PDF file from a report and return download info.
-    """
     rm = ReportManager()
     report = rm.get_report(req.report_id)
     if not report:
@@ -739,10 +901,6 @@ def export_resume(req: ResumeExportRequest):
 
 @router.get("/resume/context/{id}", dependencies=[Depends(require_consent)])
 def get_resume_context(id: int):
-    """
-    Return the resume template context for a report as JSON.
-    Used by the frontend to render a live HTML preview.
-    """
     rm = ReportManager()
     report = rm.get_report(id)
     if not report:
@@ -764,7 +922,6 @@ class ConfigSaveRequest(BaseModel):
 
 @router.get("/resume/exports/{export_id}/download", dependencies=[Depends(require_consent)])
 def download_resume(export_id: str):
-    """Download a previously exported resume file."""
     out_dir = Path("resumes")
     matches = list(out_dir.glob(f"{export_id}-*.pdf"))
     if not matches:
@@ -775,7 +932,6 @@ def download_resume(export_id: str):
 
 @router.delete("/resume/exports/{export_id}", dependencies=[Depends(require_consent)])
 def delete_resume_export(export_id: str):
-    """Delete a previously exported resume PDF (e.g. when user cancels after page-count warning)."""
     out_dir = Path("resumes")
     matches = list(out_dir.glob(f"{export_id}-*.pdf"))
     if not matches:
@@ -787,7 +943,6 @@ def delete_resume_export(export_id: str):
 
 @router.get("/config")
 def get_config():
-    """Return all stored config values as a flat dict."""
     cm = ConfigManager()
     return {"ok": True, "config": cm.get_all()}
 
@@ -796,12 +951,9 @@ class SetIdentityRequest(BaseModel):
     emails: List[str]
     project_ids: List[int]
 
+
 @router.post("/projects/set-identity")
 def set_identity(req: SetIdentityRequest):
-    """
-    Add email(s) to the user's confirmed identity list (usernames), then
-    rerun contribution analysis for the given project IDs.
-    """
     cm = ConfigManager()
     existing = set(cm.get("usernames") or [])
     new_usernames = sorted(existing | set(req.emails))
@@ -834,9 +986,9 @@ def set_identity(req: SetIdentityRequest):
 class UpdateUsernamesRequest(BaseModel):
     emails: List[str]
 
+
 @router.put("/config/usernames")
 def update_usernames(req: UpdateUsernamesRequest):
-    """Replace the full usernames list (used from Settings page)."""
     cm = ConfigManager()
     cm.set("usernames", sorted(set(req.emails)))
     return {"ok": True, "usernames": cm.get("usernames")}
@@ -844,7 +996,6 @@ def update_usernames(req: UpdateUsernamesRequest):
 
 @router.post("/config")
 def save_config(req: ConfigSaveRequest):
-    """Persist profile fields. Only non-empty values are written."""
     cm = ConfigManager()
     identity_keys = {"github", "email"}
     identity_changed = False
@@ -860,10 +1011,6 @@ def save_config(req: ConfigSaveRequest):
 
 @router.post("/projects/{id}/thumbnail")
 def upload_thumbnail(id: int, file: UploadFile = File(...)):
-    """
-    Upload a thumbnail image for a project.
-    Saves to thumbnails/ directory and updates project.thumbnail.
-    """
     import shutil as _shutil
 
     VALID_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".heic", ".ico", ".svg"}
@@ -897,7 +1044,6 @@ def upload_thumbnail(id: int, file: UploadFile = File(...)):
 
 @router.get("/thumbnails/{filename}")
 def serve_thumbnail(filename: str):
-    """Serve a project thumbnail image by filename."""
     path = Path("thumbnails") / filename
     if not path.exists() or not path.is_file():
         raise HTTPException(status_code=404, detail="Thumbnail not found.")
@@ -906,10 +1052,6 @@ def serve_thumbnail(filename: str):
 
 @router.post("/config/set")
 def config_set(req: ConfigSetRequest):
-    """
-    Set a single config value by key. Accepts any JSON-serializable value,
-    so structured data like education/experience arrays round-trip correctly.
-    """
     cm = ConfigManager()
     cm.set(req.key, req.value)
     return {"ok": True, "key": req.key}
@@ -985,7 +1127,6 @@ def unpublish_portfolio(id: int):
 
 @router.post("/portfolio/{id}/publish", response_model=PortfolioPublishResponse, dependencies=[Depends(require_consent)])
 def publish_portfolio(id: int):
-    from datetime import datetime
     report_manager = ReportManager()
     report = report_manager.get_report(id)
     if not report:

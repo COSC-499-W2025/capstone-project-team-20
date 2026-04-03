@@ -19,7 +19,7 @@ class ProjectManager(StorageManager):
         self._ensure_import_batch_id_column()
         self._ensure_portfolio_details_column()
         self._ensure_project_type_column()
-
+        self._ensure_author_daily_contributions_column()
 
     def _ensure_import_batch_id_column(self) -> None:
         with self._get_connection() as conn:
@@ -44,6 +44,14 @@ class ProjectManager(StorageManager):
             existing = {row[1] for row in cursor.fetchall()}
             if "project_type" not in existing:
                 cursor.execute("ALTER TABLE projects ADD COLUMN project_type TEXT DEFAULT ''")
+
+    def _ensure_author_daily_contributions_column(self) -> None:
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("PRAGMA table_info(projects)")
+            existing = {row[1] for row in cursor.fetchall()}
+            if "author_daily_contributions" not in existing:
+                cursor.execute("ALTER TABLE projects ADD COLUMN author_daily_contributions TEXT")
 
     def _retrieve_id(self, cursor: sqlite3.Cursor, row: Dict[str, Any]) -> None:
         """
@@ -70,6 +78,7 @@ class ProjectManager(StorageManager):
         author_count INTEGER,
         authors TEXT,
         author_contributions TEXT,
+        author_daily_contributions TEXT,
         contributor_roles TEXT,
         languages TEXT,
         language_share TEXT,
@@ -132,7 +141,7 @@ class ProjectManager(StorageManager):
         """
         return (
             "id, name, import_batch_id, file_path, root_folder, num_files, size_kb, author_count, "
-            "authors, author_contributions, contributor_roles, languages, language_share, frameworks, skills_used, skills_selected, "
+            "authors, author_contributions, author_daily_contributions, contributor_roles, languages, language_share, frameworks, skills_used, skills_selected, "
             "dependencies_list, dependency_files_list, build_tools, "
             "individual_contributions, collaboration_status, categories, "
             "total_loc, comment_ratio, test_file_ratio, "
@@ -180,7 +189,6 @@ class ProjectManager(StorageManager):
 
             if proj.id is None:
                 proj.id = cursor.lastrowid
-
 
     def get(self, id: int) -> Optional[Project]:
         """Retrieve a Project from the database by its primary key."""
