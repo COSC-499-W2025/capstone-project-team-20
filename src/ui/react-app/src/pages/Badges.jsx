@@ -178,14 +178,27 @@ function Badges() {
     window.open(shareUrl.toString(), "_blank", "noopener,noreferrer");
   };
 
-  const copyBadgeThenOpenLinkedIn = async (badge, achievedBadge, deepLink) => {
-    await shareBadgeWithImage(badge, achievedBadge);
+  const copyThenOpenLinkedIn = async (copyTask, deepLink) => {
+    const copyResult = await Promise.race([
+      copyTask().then(() => true).catch(() => false),
+      new Promise((resolve) => {
+        window.setTimeout(() => resolve(false), 1200);
+      }),
+    ]);
+
     openLinkedInShareWindow(deepLink);
+    
+    if (!copyResult) {
+      setTimedFeedback("Opened LinkedIn. If copy didn't finish, use the Share button first, then paste.");
+    }
+  };
+
+  const copyBadgeThenOpenLinkedIn = async (badge, achievedBadge, deepLink) => {
+    await copyThenOpenLinkedIn(() => shareBadgeWithImage(badge, achievedBadge), deepLink);
   };
 
   const copyWrappedThenOpenLinkedIn = async (yearBlock, deepLink) => {
-    await shareWrappedWithImage(yearBlock);
-    openLinkedInShareWindow(deepLink);
+    await copyThenOpenLinkedIn(() => shareWrappedWithImage(yearBlock), deepLink);
   };
 
   const copyImageAndCaptionToClipboard = async (imageBlob, text) => {
