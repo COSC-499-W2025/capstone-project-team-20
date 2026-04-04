@@ -148,8 +148,10 @@ describe('App badges heatmap', () => {
     expect(openSpy).not.toHaveBeenCalled()
     expect(clipboardImageSpy).toHaveBeenCalledTimes(1)
     await user.click(await screen.findByRole('button', { name: /open linkedin composer/i }))
-    expect(openSpy).toHaveBeenCalledTimes(1)
-    expect(clipboardImageSpy).toHaveBeenCalledTimes(2)
+    await waitFor(() => {
+      expect(openSpy).toHaveBeenCalledTimes(1)
+      expect(clipboardImageSpy).toHaveBeenCalledTimes(2)
+    })
 
     await user.click(screen.getByRole('button', { name: '✕' }))
     await user.click(await screen.findByRole('button', { name: /get 2025 stats/i }))
