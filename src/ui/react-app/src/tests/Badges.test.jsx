@@ -144,17 +144,17 @@ describe('App badges heatmap', () => {
     })
     await user.click(gigButton)
     await user.click(await screen.findByRole('button', { name: /share badge card image \(any platform\)/i }))
-    await waitFor(() => expect(clipboardImageSpy).toHaveBeenCalledTimes(1))
 
     expect(openSpy).not.toHaveBeenCalled()
+    expect(clipboardImageSpy).toHaveBeenCalledTimes(1)
     await user.click(await screen.findByRole('button', { name: /open linkedin composer/i }))
-    await waitFor(() => expect(openSpy).toHaveBeenCalledTimes(1))
-    await waitFor(() => expect(clipboardImageSpy).toHaveBeenCalledTimes(2))
+    expect(openSpy).toHaveBeenCalledTimes(1)
+    expect(clipboardImageSpy).toHaveBeenCalledTimes(2)
 
     await user.click(screen.getByRole('button', { name: '✕' }))
     await user.click(await screen.findByRole('button', { name: /get 2025 stats/i }))
     await user.click(await screen.findByRole('button', { name: /share wrapped image \(any platform\)/i }))
-    await waitFor(() => expect(clipboardTextSpy).toHaveBeenCalledTimes(3))
+    expect(clipboardTextSpy).toHaveBeenCalledTimes(3)
     await user.click(await screen.findByRole('button', { name: /open linkedin composer/i }))
     await waitFor(() => {
       expect(openSpy).toHaveBeenCalledTimes(2)
