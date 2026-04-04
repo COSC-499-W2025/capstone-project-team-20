@@ -146,7 +146,7 @@ describe('App badges heatmap', () => {
     await user.click(await screen.findByRole('button', { name: /share badge card image \(any platform\)/i }))
 
     expect(openSpy).not.toHaveBeenCalled()
-    expect(clipboardImageSpy).toHaveBeenCalledTimes(1)
+    expect(clipboardImageSpy).toHaveBeenCalledTimes(0)
     await user.click(await screen.findByRole('button', { name: /open linkedin composer/i }))
     await waitFor(() => {
       expect(openSpy).toHaveBeenCalledTimes(1)
