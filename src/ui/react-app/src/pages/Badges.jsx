@@ -179,6 +179,10 @@ function Badges() {
   };
 
   const copyThenOpenLinkedIn = async (copyTask, deepLink) => {
+    // Open synchronously before any await so the user gesture context is preserved.
+    // Browsers/macOS block window.open called after an await.
+    openLinkedInShareWindow(deepLink);
+
     const copyResult = await Promise.race([
       copyTask().then(() => true).catch(() => false),
       new Promise((resolve) => {
@@ -186,8 +190,6 @@ function Badges() {
       }),
     ]);
 
-    openLinkedInShareWindow(deepLink);
-    
     if (!copyResult) {
       setTimedFeedback("Opened LinkedIn. If copy didn't finish, use the Share button first, then paste.");
     }
