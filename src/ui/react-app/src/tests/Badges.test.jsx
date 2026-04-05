@@ -113,6 +113,27 @@ describe('App badges heatmap', () => {
     const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null)
     const clipboardTextSpy = vi.fn().mockResolvedValue(undefined)
     const clipboardImageSpy = vi.fn().mockResolvedValue(undefined)
+
+    const drawingContext = {
+      beginPath: vi.fn(),
+      moveTo: vi.fn(),
+      lineTo: vi.fn(),
+      quadraticCurveTo: vi.fn(),
+      closePath: vi.fn(),
+      arc: vi.fn(),
+      fill: vi.fn(),
+      stroke: vi.fn(),
+      fillRect: vi.fn(),
+      fillText: vi.fn(),
+      createLinearGradient: vi.fn(() => ({ addColorStop: vi.fn() })),
+      createRadialGradient: vi.fn(() => ({ addColorStop: vi.fn() })),
+    }
+
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(drawingContext)
+    vi.spyOn(HTMLCanvasElement.prototype, 'toBlob').mockImplementation((callback) => {
+      callback(new Blob(['fake-image'], { type: 'image/png' }))
+    })
+    
     Object.defineProperty(navigator, 'clipboard', {
       value: {
         writeText: clipboardTextSpy,
