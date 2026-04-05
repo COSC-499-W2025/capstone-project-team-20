@@ -178,42 +178,27 @@ function Badges() {
     window.open(shareUrl.toString(), "_blank", "noopener,noreferrer");
   };
 
-  const wait = (ms) => new Promise((resolve) => window.setTimeout(resolve, ms));
-
   const copyThenOpenLinkedIn = async (copyTask, deepLink) => {
-    const copyTimeoutMs = 900;
-    const clipboardSettleDelayMs = 220;
-
     const copyResult = await Promise.race([
       copyTask().then(() => true).catch(() => false),
       new Promise((resolve) => {
-        window.setTimeout(() => resolve(false), copyTimeoutMs);
+        window.setTimeout(() => resolve(false), 1200);
       }),
     ]);
-
-    if (copyResult) {
-      await wait(clipboardSettleDelayMs);
-    }
 
     openLinkedInShareWindow(deepLink);
     
     if (!copyResult) {
-      setTimedFeedback("Opened LinkedIn. Copy may still be processing — if paste is blank, wait a second and paste again.");
+      setTimedFeedback("Opened LinkedIn. If copy didn't finish, use the Share button first, then paste.");
     }
   };
 
   const copyBadgeThenOpenLinkedIn = async (badge, achievedBadge, deepLink) => {
-    await copyThenOpenLinkedIn(
-      () => shareBadgeWithImage(badge, achievedBadge, { preferClipboard: true }),
-      deepLink,
-    );
+    await copyThenOpenLinkedIn(() => shareBadgeWithImage(badge, achievedBadge), deepLink);
   };
 
   const copyWrappedThenOpenLinkedIn = async (yearBlock, deepLink) => {
-    await copyThenOpenLinkedIn(
-      () => shareWrappedWithImage(yearBlock, { preferClipboard: true }),
-      deepLink,
-    );
+    await copyThenOpenLinkedIn(() => shareWrappedWithImage(yearBlock), deepLink);
   };
 
   const copyImageAndCaptionToClipboard = async (imageBlob, text) => {
@@ -329,15 +314,14 @@ function Badges() {
     });
   };
 
-  const shareBadgeWithImage = async (badge, achievedBadge, options = {}) => {
-    const { preferClipboard = false } = options;
+  const shareBadgeWithImage = async (badge, achievedBadge) => {
     const text = buildBadgeShareText(badge, achievedBadge);
 
     try {
       const imageBlob = await buildBadgeShareImage(badge, achievedBadge);
       const imageFile = new File([imageBlob], `badge-${badge.badgeId}.png`, { type: "image/png" });
 
-      if (!preferClipboard && navigator?.share && navigator?.canShare?.({ files: [imageFile] })) {
+      if (navigator?.share && navigator?.canShare?.({ files: [imageFile] })) {
         await navigator.share({ files: [imageFile], text, title: `${badge.label} Badge` });
         setTimedFeedback("Opened your device share sheet for posting to any app.");
         return;
@@ -490,8 +474,7 @@ function Badges() {
     });
   };
 
-  const shareWrappedWithImage = async (yearBlock, options = {}) => {
-    const { preferClipboard = false } = options;
+  const shareWrappedWithImage = async (yearBlock) => {
     const text = buildWrappedShareText(yearBlock);
 
     try {
@@ -503,7 +486,7 @@ function Badges() {
         return;
       }
 
-      if (!preferClipboard && navigator?.share && navigator?.canShare?.({ files: [imageFile] })) {
+      if (navigator?.share && navigator?.canShare?.({ files: [imageFile] })) {
         await navigator.share({ files: [imageFile], text, title: `${yearBlock.year} Developer Wrapped` });
         setTimedFeedback("Opened your device share sheet for posting to any app.");
         return;
