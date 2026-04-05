@@ -133,7 +133,7 @@ describe('App badges heatmap', () => {
     vi.spyOn(HTMLCanvasElement.prototype, 'toBlob').mockImplementation((callback) => {
       callback(new Blob(['fake-image'], { type: 'image/png' }))
     })
-    gi
+  
     Object.defineProperty(navigator, 'clipboard', {
       value: {
         writeText: clipboardTextSpy,

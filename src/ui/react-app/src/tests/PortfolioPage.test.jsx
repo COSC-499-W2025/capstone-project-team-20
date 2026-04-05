@@ -144,7 +144,7 @@ describe("PortfolioPage web portfolio",()=>{
   async function generatePortfolio(user){
     render(<PortfolioPage />);
     await waitFor(()=>screen.getByText("Saved Reports"));
-    await user.click(screen.getByRole("button",{name:/my report/i}));
+    await user.click(await screen.findByRole("button",{name:/my report/i}));
     await user.click(screen.getByRole("button",{name:/generate web portfolio/i}));
   }
 
