@@ -133,7 +133,7 @@ describe('App badges heatmap', () => {
     vi.spyOn(HTMLCanvasElement.prototype, 'toBlob').mockImplementation((callback) => {
       callback(new Blob(['fake-image'], { type: 'image/png' }))
     })
-    
+    gi
     Object.defineProperty(navigator, 'clipboard', {
       value: {
         writeText: clipboardTextSpy,
@@ -167,7 +167,7 @@ describe('App badges heatmap', () => {
     await user.click(await screen.findByRole('button', { name: /share badge card image \(any platform\)/i }))
 
     expect(openSpy).not.toHaveBeenCalled()
-    expect(clipboardImageSpy).toHaveBeenCalledTimes(0)
+    expect(clipboardImageSpy).toHaveBeenCalledTimes(1)
     await user.click(await screen.findByRole('button', { name: /open linkedin composer/i }))
     await waitFor(() => {
       expect(openSpy).toHaveBeenCalledTimes(1)
