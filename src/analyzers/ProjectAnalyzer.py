@@ -39,6 +39,8 @@ from src.managers.ReportManager import ReportManager
 from src.services.ReportEditor import ReportEditor
 from src.services.InsightEditor import InsightEditor
 from src.analyzers.role_inference_analyzer import RoleInferenceAnalyzer
+from collections import defaultdict
+import subprocess
 
 MIN_DISPLAY_CONFIDENCE = 0.5  # only show skills with at least this confidence
 
@@ -64,7 +66,7 @@ class ProjectAnalyzer:
 
         self.report_manager = ReportManager()
         self.report_exporter = ReportExporter()
-        
+
         self.role_inference_analyzer = RoleInferenceAnalyzer()
 
         if threading.current_thread() is threading.main_thread():
@@ -108,7 +110,7 @@ class ProjectAnalyzer:
         extractor = ProjectMetadataExtractor(root_folder)
         files = extractor.collect_all_files()
         return extractor.compute_time_and_size_summary(files)
-    
+
     def _has_project_changed(self, project: Project) -> bool:
         """Returns True if any file in the project has a new/unseen hash."""
         project_root = Path(project.file_path)
@@ -186,7 +188,51 @@ class ProjectAnalyzer:
             print("Invalid input. Please enter a number.")
             return None
 
-    # ------------------------------------------------------------------
+
+    def _parse_daily_commits_from_git(self, repo_path: Path) -> Dict[str, Dict[str, int]]:
+        """
+        Build per-author daily commit counts from git history.
+        Returns: {author_email: {YYYY-MM-DD: commit_count}}
+        """
+        cmd = ["git", "-C", str(repo_path), "log", "--pretty=%ae|%ad", "--date=short"]
+        try:
+            cp = subprocess.run(cmd, capture_output=True, text=True, check=False)
+        except Exception:
+            return {}
+
+        if cp.returncode != 0:
+            return {}
+
+        daily = defaultdict(lambda: defaultdict(int))
+        for raw in (cp.stdout or "").splitlines():
+            line = (raw or "").strip()
+            if not line or "|" not in line:
+                continue
+            email, day = line.split("|", 1)
+            email = email.strip()
+            day = day.strip()
+            if not email or not day:
+                continue
+            daily[email][day] += 1
+
+        return {author: dict(day_map) for author, day_map in daily.items()}
+
+    def _build_selected_author_daily_contributions(
+        self,
+        all_daily: Dict[str, Dict[str, int]],
+        selected_emails: List[str],
+    ) -> List[Dict[str, Any]]:
+        payload = []
+        for email in selected_emails:
+            day_map = all_daily.get(email, {})
+            payload.append({
+                "author": email,
+                "daily_commits": day_map,
+                "total_commits": int(sum(day_map.values())),
+            })
+        return payload
+
+    # ---------------------------------------------------------------
     # ZIP Loading and Project Initialization
     # ------------------------------------------------------------------
 
@@ -358,7 +404,7 @@ class ProjectAnalyzer:
         if usernames and isinstance(usernames, list):
             print(f"\nAnalyzing contributions for current users: {', '.join(usernames)}")
             return usernames
-        
+
         if author_map:
             print("\nNo usernames found in configuration. Let's set them up.")
             new_usernames = self._prompt_for_usernames(author_map)
@@ -366,7 +412,7 @@ class ProjectAnalyzer:
                 self._config_manager.set("usernames", new_usernames)
                 print(f"Usernames '{', '.join(new_usernames)}' have been saved.")
                 return new_usernames
-            
+
         print("No authors found or selected. Skipping contribution analysis.")
         return None
 
@@ -456,7 +502,7 @@ class ProjectAnalyzer:
 
         if not target_projects:
             return pending_duplicates, pending_identity
-        
+
         for project in target_projects:
             repo_path = Path(project.file_path)
             if not (repo_path / ".git").exists():
@@ -484,7 +530,7 @@ class ProjectAnalyzer:
                     project.last_accessed = datetime.now()
                     self.project_manager.set(project)
                     continue  # identity check happens after duplicates are resolved
-            
+
             project.author_count = len(author_map)
             project.collaboration_status = "collaborative" if project.author_count > 1 else "individual"
 
@@ -550,13 +596,16 @@ class ProjectAnalyzer:
                     project.individual_contributions = {}
             else:
                 print("  - No detailed contribution stats available; using author list for collaboration status.")
-            
+
+            all_daily = self._parse_daily_commits_from_git(repo_path)
+            project.author_daily_contributions = self._build_selected_author_daily_contributions(all_daily, selected_emails)
+
             project.last_accessed = datetime.now()
             self.project_manager.set(project)
-            
+
             print(f"  - Total Contributors: {project.author_count}")
             print(f"  - Collaboration Status: {project.collaboration_status}")
-            
+
             if project.contributor_roles:
                 print(" - Inferred Roles:")
                 for user, info in project.contributor_roles.items():
@@ -1084,9 +1133,9 @@ class ProjectAnalyzer:
                 ResumeInsightsGenerator.display_insights(
                     project.bullets, project.summary, project.portfolio_entry
                 )
-    
+
     def update_score_and_date(self) -> None:
-        
+
         items = self._get_projects()
         sorted_items = sorted(items, key=lambda project: project.resume_score, reverse=True)
 
@@ -1139,14 +1188,14 @@ class ProjectAnalyzer:
             prompt = GREEN+"Changes successful, don't forget to save!. Input Command:"+ENDC
         else:
             prompt = 'Please input command:'
-        
+
         while not valid:
             print(prompt)
             choice = input()
 
             if choice == 'x':
                 return -1
-            
+
             elif choice == 's':
                 for project in sorted_items:
                     try:
@@ -1189,7 +1238,7 @@ class ProjectAnalyzer:
                                     sorted_items[int(idx)].last_modified = newdate
 
                                     return sorted_items
-                                
+
                                 except ValueError:
                                     prompt = RED+"'"+words[2]+"' is not a valid date. Please try again:"+ENDC
                             else:
@@ -1425,7 +1474,7 @@ class ProjectAnalyzer:
             print(f"\nReport '{report.title}' has been deleted.")
         else:
             print(f"\nFailed to delete report {report_id}. It may have already been removed.")
-        
+
     def _select_single_project(self, sorted_projects: List[Project]) -> Optional[Project]:
         print("\nPlease enter the id of the project you'd like to select.\n")
         print("Enter 'q' to cancel.\n")
@@ -1525,7 +1574,7 @@ class ProjectAnalyzer:
             print(f"❌ Error loading report {report_id}")
             return None
         return report
-    
+
     def _validate_resume_insights(self, projects: List[Project]) -> bool:
         """Return True if all projects have resume insights; otherwise print errors and return False."""
         missing = []
@@ -2044,7 +2093,7 @@ class ProjectAnalyzer:
             self._config_manager.set("experience", experience_entries)
 
         print("Resume personal information saved.\n")
-    
+
     def compare_projects(self):
         '''Compares projects by sorting the list of all projects based on different variables stored in Project objects'''
         projects = self._get_projects()
@@ -2067,7 +2116,7 @@ class ProjectAnalyzer:
         [6]  # of skills
         [7]  # of dependencies
         [8]  # of lines of code
-    
+
     Ratios:
         [9]  Comments/lines of codex
         [10] Test file/code file
@@ -2079,13 +2128,13 @@ class ProjectAnalyzer:
         [14] Modularity Score
         [15] Language Depth Score
         [16] Resume Score
-    
+
     Chronology:
         [17] Date Created
         [18] Last Modified
 
         [x] Exit
-    
+
 Projects:
 ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄''')
 
@@ -2112,13 +2161,13 @@ Projects:
 
                 print("┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄")
                 print("Successfully sorted using method "+choice+". Your Selection:")
-            
+
             elif choice == 'flush': #return projects list for testing purposes
                 return projects
-            
+
             elif choice == 'x': #exit this menu
                 return -1
-            
+
             else:
                 # clear input and print error message before asking for new input
                 sys.stdout.write('\033[1A') # terminal cursor up one line
@@ -2276,7 +2325,7 @@ Projects:
                 for i,p in enumerate(sorted_items):
                     print(h+str(i+1) +b+ '[Name]: ' + f'{p.name[:width]:<{width}}' +b+ '[Testing Discipline Score]: ' + f'{str(p.testing_discipline_score)[:sorted_width]:<{sorted_width}}' +b)
 
-                return sorted_items          
+                return sorted_items
 
             case '13':
                 sorted_items = sorted(projects, key=lambda project: project.documentation_habits_score, reverse=True)
@@ -2312,7 +2361,7 @@ Projects:
                 for i,p in enumerate(sorted_items):
                     print(h+str(i+1) +b+ '[Name]: ' + f'{p.name[:width]:<{width}}' +b+ '[Language Depth Score]: ' + f'{str(p.language_depth_score)[:sorted_width]:<{sorted_width}}' +b)
 
-                return sorted_items  
+                return sorted_items
 
             case '16':
                 sorted_items = sorted(projects, key=lambda project: project.resume_score, reverse=True)
@@ -2322,7 +2371,7 @@ Projects:
                     sorted_width = max(sorted_width, len(f'{p.resume_score:.2f}'))
                 for i, p in enumerate(sorted_items):
                     print(h+str(i+1) +b+ '[Name]: ' + f'{p.name[:width]:<{width}}' +b+ '[Resume Score]: ' + f'{p.resume_score:.2f}' +b)
-                    
+
                 return sorted_items
 
             case '17':
@@ -2402,7 +2451,7 @@ Projects:
                                     print (RED+'✗ ['+str(i+1)+'] - ' + s +ENDC)
                                 else:
                                     print (RED+'✗ ['+str(i+1)+'] - ' + s +ENDC)
-                            
+
                             print(hr+'\n'+msg)
 
                             selection = input()
@@ -2410,7 +2459,7 @@ Projects:
 
                             if selection == 'x':
                                 return saved
-                            
+
                             elif selection == 's':
                                 try:
                                     self.project_manager.set(proj)
@@ -2418,7 +2467,7 @@ Projects:
                                     print('Error updating the database')
                                 saved = True
                                 msg = GREEN + 'Changes Saved Successfully. Your Selection:' + ENDC
-                            
+
                             elif selection == 'a':
                                 for s in proj.skills_used:
                                     proj.skills_selected.append(s)

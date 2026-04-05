@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { formLabel, formInput } from "../formStyles";
 import {
   listProjects,
@@ -14,7 +14,9 @@ import {
   unpublishPortfolio,
   updatePortfolioProject,
   getBadgeProgress,
+  getPortfolioActivityHeatmap,
 } from "../api/client";
+import PortfolioActivityHeatmap from "./PortfolioActivityHeatmap";
 
 const OP_STATE = {
   IDLE: "idle",
@@ -23,6 +25,7 @@ const OP_STATE = {
   EXPORTING: "exporting",
   SAVING: "saving",
   TOGGLING_MODE: "toggling_mode",
+  HEATMAP: "heatmap",
 };
 
 // ---------------------------------------------------------------------------
@@ -99,6 +102,61 @@ function escapeHtml(value = "") {
     .replaceAll("'", "&#39;");
 }
 
+function getConfiguredUsernames() {
+  try {
+    const raw = localStorage.getItem("usernames");
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.map((x) => `${x}`.trim()).filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
+function isoDateOrEmpty(v) {
+  if (!v) return "";
+  if (typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
+  const d = new Date(v);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toISOString().slice(0, 10);
+}
+
+function applyDateRangeToHeatmap(payload, fromIso, toIso) {
+  if (!payload?.days_series?.length) return payload ?? null;
+  if (!fromIso && !toIso) return payload;
+
+  const fromTs = fromIso ? new Date(`${fromIso}T00:00:00`).getTime() : null;
+  const toTs = toIso ? new Date(`${toIso}T23:59:59`).getTime() : null;
+
+  const series = payload.days_series.filter((d) => {
+    const ts = new Date(`${d.date}T00:00:00`).getTime();
+    if (Number.isNaN(ts)) return false;
+    if (fromTs !== null && ts < fromTs) return false;
+    if (toTs !== null && ts > toTs) return false;
+    return true;
+  });
+
+  const aggregate = series.reduce(
+    (acc, d) => {
+      const commits = Number(d.commits) || 0;
+      const lines = Number(d.lines_changed) || 0;
+      acc.total_commits += commits;
+      acc.total_lines_changed += lines;
+      if (commits > 0 || lines > 0) acc.active_days += 1;
+      return acc;
+    },
+    { total_commits: 0, total_lines_changed: 0, active_days: 0 },
+  );
+
+  return {
+    ...payload,
+    aggregate,
+    days: series.length,
+    days_series: series,
+  };
+}
+
 function PortfolioPage() {
   const [loading, setLoading] = useState(false);
   const [opState, setOpState] = useState(OP_STATE.IDLE);
@@ -119,6 +177,11 @@ function PortfolioPage() {
   const [badgeProgress, setBadgeProgress] = useState([]);
   const [copyToastVisible, setCopyToastVisible] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+
+  const [heatmapLoading, setHeatmapLoading] = useState(false);
+  const [heatmapRawData, setHeatmapRawData] = useState(null);
+  const [heatmapDateFrom, setHeatmapDateFrom] = useState("");
+  const [heatmapDateTo, setHeatmapDateTo] = useState("");
 
   useEffect(() => { loadInitialData(); }, []);
 
@@ -291,6 +354,91 @@ function PortfolioPage() {
     }
   }
 
+  const portfolioProjects = portfolio?.projects ?? [];
+  const portfolioMode = (portfolio?.portfolio_mode ?? "public").toLowerCase();
+  const isPrivateMode = portfolioMode === "private";
+  const isPublicMode = !isPrivateMode;
+
+  const visiblePortfolioProjects = useMemo(() => {
+    return portfolioProjects
+      .filter((p) => {
+        const d = getDraft(p.project_name);
+        if (isPublicMode && d.is_hidden) return false;
+        return true;
+      })
+      .filter((p) => {
+        if (!isPublicMode) return true;
+        const name = getRenderedTitle(p).toLowerCase();
+        const matchesSearch = !searchText.trim() || name.includes(searchText.trim().toLowerCase());
+        const matchesLanguage = languageFilter === "all" || (p?.languages ?? []).includes(languageFilter);
+        const matchesCollab = collabFilter === "all" || (p?.collaboration_status ?? "individual") === collabFilter;
+        return matchesSearch && matchesLanguage && matchesCollab;
+      });
+  }, [portfolioProjects, isPublicMode, searchText, languageFilter, collabFilter, projectDrafts]);
+
+  const heatmapData = useMemo(
+    () => applyDateRangeToHeatmap(heatmapRawData, heatmapDateFrom, heatmapDateTo),
+    [heatmapRawData, heatmapDateFrom, heatmapDateTo],
+  );
+
+  const heatmapBounds = useMemo(() => {
+    const series = heatmapRawData?.days_series ?? [];
+    if (!series.length) return { min: "", max: "" };
+    const min = isoDateOrEmpty(series[0]?.date);
+    const max = isoDateOrEmpty(series[series.length - 1]?.date);
+    return { min, max };
+  }, [heatmapRawData]);
+
+  async function loadActivityHeatmap() {
+    if (!selectedReport?.id || !portfolio) return;
+    setHeatmapLoading(true);
+    setOpState(OP_STATE.HEATMAP);
+    try {
+      const projectNames = visiblePortfolioProjects.map((p) => p.project_name).filter(Boolean);
+      const usernames = getConfiguredUsernames();
+
+      const payload = await getPortfolioActivityHeatmap({
+        report_id: selectedReport.id,
+        project_names: projectNames,
+        usernames,
+        days: null,
+      });
+
+      const nextRaw = payload ?? null;
+      setHeatmapRawData(nextRaw);
+
+      if (nextRaw?.days_series?.length) {
+        const min = isoDateOrEmpty(nextRaw.days_series[0]?.date);
+        const max = isoDateOrEmpty(nextRaw.days_series[nextRaw.days_series.length - 1]?.date);
+        setHeatmapDateFrom((prev) => prev || min);
+        setHeatmapDateTo((prev) => prev || max);
+      } else {
+        setHeatmapDateFrom("");
+        setHeatmapDateTo("");
+      }
+    } catch (e) {
+      setStatus(e.message ?? "Failed to load activity heatmap", "error");
+    } finally {
+      setHeatmapLoading(false);
+      setOpState(OP_STATE.IDLE);
+    }
+  }
+
+  function resetHeatmapRange() {
+    setHeatmapDateFrom(heatmapBounds.min || "");
+    setHeatmapDateTo(heatmapBounds.max || "");
+  }
+
+  useEffect(() => {
+    if (!portfolio || !selectedReport?.id) {
+      setHeatmapRawData(null);
+      setHeatmapDateFrom("");
+      setHeatmapDateTo("");
+      return;
+    }
+    loadActivityHeatmap();
+  }, [portfolio, selectedReport?.id, searchText, languageFilter, collabFilter, visiblePortfolioProjects.length]);
+
   async function handleCreateReport() {
     setLoading(true);
     setOpState(OP_STATE.LOADING);
@@ -335,6 +483,9 @@ function PortfolioPage() {
     setPortfolio(null);
     setOpenProjects({});
     setProjectDrafts({});
+    setHeatmapRawData(null);
+    setHeatmapDateFrom("");
+    setHeatmapDateTo("");
     try {
       const data = await getReport(id);
       setSelectedReport(data.report ?? null);
@@ -365,14 +516,7 @@ function PortfolioPage() {
     try{
       const exp=await exportPortfolio({report_id:selectedReport.id,output_name:"portfolio.pdf"});
       const fileName=`${selectedReport.title??`report-${selectedReport.id}`}.pdf`;
-      const res=await fetch(`http://localhost:8000${exp.download_url}`);
-      const blob=await res.blob();
-      const objectUrl=URL.createObjectURL(blob);
-      const a=document.createElement("a");
-      a.href=objectUrl;
-      a.download=fileName;
-      a.click();
-      URL.revokeObjectURL(objectUrl);
+      await triggerDownload(`http://localhost:8000${exp.download_url}`, fileName);
       setMessage("Portfolio export started.");
     }catch(e){
       setMessage(e.message??"Failed to export portfolio");
@@ -390,6 +534,9 @@ function PortfolioPage() {
     setPortfolio(null);
     setOpenProjects({});
     setProjectDrafts({});
+    setHeatmapRawData(null);
+    setHeatmapDateFrom("");
+    setHeatmapDateTo("");
     try {
       await setPrivacyConsent(true);
       const names = projects.filter((p) => selectedProjectIds.includes(p.id)).map((p) => p.name).filter(Boolean);
@@ -470,13 +617,11 @@ function PortfolioPage() {
     if (selectedReport?.id === id) {
       setSelectedReport(null);
       setPortfolio(null);
+      setHeatmapRawData(null);
+      setHeatmapDateFrom("");
+      setHeatmapDateTo("");
     }
   }
-
-  const portfolioProjects = portfolio?.projects ?? [];
-  const portfolioMode = (portfolio?.portfolio_mode ?? "public").toLowerCase();
-  const isPrivateMode = portfolioMode === "private";
-  const isPublicMode = !isPrivateMode;
 
   const resumeBulletCount = portfolioProjects.reduce((acc, p) => acc + (p?.bullets?.length ?? 0), 0);
   const teamProjectCount = portfolioProjects.filter((p) => {
@@ -486,27 +631,11 @@ function PortfolioPage() {
 
   const availableLanguages = Array.from(new Set(portfolioProjects.flatMap((p) => p?.languages ?? []))).sort((a, b) => a.localeCompare(b));
 
-  const visiblePortfolioProjects = portfolioProjects
-    .filter((p) => {
-      const d = getDraft(p.project_name);
-      if (isPublicMode && d.is_hidden) return false;
-      return true;
-    })
-    .filter((p) => {
-      if (!isPublicMode) return true;
-      const name = getRenderedTitle(p).toLowerCase();
-      const matchesSearch = !searchText.trim() || name.includes(searchText.trim().toLowerCase());
-      const matchesLanguage = languageFilter === "all" || (p?.languages ?? []).includes(languageFilter);
-      const matchesCollab = collabFilter === "all" || (p?.collaboration_status ?? "individual") === collabFilter;
-      return matchesSearch && matchesLanguage && matchesCollab;
-    });
-
   const earnedBadgesByProject = (projectName) => (badgeProgress ?? []).filter((b) => badgeEarnedForProject(b, projectName));
 
   return (
     <>
       <h3>Portfolio</h3>
-
 
       <div className={`portfolio-status portfolio-status--${messageType}`} aria-live="polite" data-testid="portfolio-status-banner">
         {message || "Select or create a report to preview your portfolio."}
@@ -586,7 +715,6 @@ function PortfolioPage() {
 
         {/* RIGHT — portfolio content */}
         <div style={{ flex: 1 }} className="scrollable-div">
-            
           <div style={{position:"sticky", top:-1,left:0,right:0, paddingLeft:10, paddingTop:10, width:"105%", paddingBottom:"1px", background:"#161b22",transform: "translate(-20px,-10px)"}}>
           <div style={{ marginBottom: 12}}>
             <button onClick={handleExportPortfolioPdf} disabled={loading || !selectedReport?.id} style={{ marginLeft: 10}}>
@@ -660,9 +788,39 @@ function PortfolioPage() {
                       <option value="individual">Individual</option>
                       <option value="collaborative">Collaborative</option>
                     </select>
+
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginLeft: "auto", flexWrap: "wrap" }}>
+                      <label style={{ fontSize: 12, color: "var(--muted)" }}>
+                        From{" "}
+                        <input
+                          type="date"
+                          value={heatmapDateFrom}
+                          min={heatmapBounds.min || undefined}
+                          max={heatmapDateTo || heatmapBounds.max || undefined}
+                          onChange={(e) => setHeatmapDateFrom(e.target.value)}
+                          style={{ ...formInput, height: 30, minWidth: 150 }}
+                        />
+                      </label>
+                      <label style={{ fontSize: 12, color: "var(--muted)" }}>
+                        To{" "}
+                        <input
+                          type="date"
+                          value={heatmapDateTo}
+                          min={heatmapDateFrom || heatmapBounds.min || undefined}
+                          max={heatmapBounds.max || undefined}
+                          onChange={(e) => setHeatmapDateTo(e.target.value)}
+                          style={{ ...formInput, height: 30, minWidth: 150 }}
+                        />
+                      </label>
+                      <button type="button" onClick={resetHeatmapRange} disabled={!heatmapRawData?.days_series?.length || loading}>
+                        Reset range
+                      </button>
+                    </div>
                   </>
                 )}
               </div>
+
+              <PortfolioActivityHeatmap data={heatmapData} loading={heatmapLoading || opState === OP_STATE.HEATMAP} />
 
               {/* Project cards */}
               <div className="pf-cards">
