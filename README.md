@@ -96,7 +96,7 @@ No environment variables are required for local development. The backend uses a 
 
 ---
 
-## Usage
+## CLI Usage (skip if using the React app)
 
 To start the application, run the `main` module from the root directory.
 
