@@ -55,6 +55,7 @@ function App() {
       <div className="screen">
         {/* Left Side Buttons */}
         <div className="sidebar">
+          <img src="/logo.svg" alt="200 OK Hired." className="sidebar-logo" />
           <div className="bar" aria-hidden="true" />
           {buttons.map(button => (
             <button

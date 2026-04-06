@@ -22,6 +22,7 @@ class Report:
     report_kind: Literal["resume", "portfolio"] = "resume"
     portfolio_mode: Literal["private", "public"] = "private"
     portfolio_published_at: Optional[datetime] = None
+    public_token: Optional[str] = None
 
     def __post_init__(self):
         """Sort projects and catch case where user left title empty after initialization"""
@@ -99,6 +100,7 @@ class Report:
             "report_kind": self.report_kind,
             "portfolio_mode": self.portfolio_mode,
             "portfolio_published_at": self.portfolio_published_at.isoformat() if self.portfolio_published_at else None,
+            "public_token": self.public_token,
         }
 
 # from_dict intentionally omitted, ReportManager will handle retrieval of Reports

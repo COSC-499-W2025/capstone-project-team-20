@@ -8,7 +8,7 @@ Key features include:
 - Securely uploading and analyzing local or Git repositories.
 - Analyzing file structures, dependencies, and project characteristics.
 - Evaluating code to identify demonstrated technical skills.
-- Evalating badges associated with contributions.
+- Evaluating badges associated with contributions.
 - Generating and displaying detailed analysis reports and skill summaries.
 - Storing analysis results for future reference.
 
@@ -27,42 +27,72 @@ This project is built with Python and utilizes the following packages:
 
 ---
 
-## Getting Started
+## Installation Guide for Future Development Team
 
-Follow these instructions to get a copy of the project up and running on your local machine.
+Follow these instructions to set up a local development environment.
 
 ### Prerequisites
+- Python 3.10 or higher
+- pip (Python package installer)
+- Node.js 18+ and npm (for the React frontend)
+- Git (for cloning the repository)
 
-You will need Python 3.10+ and pip installed on your machine.
+### Step 1: Clone the Repository
+```bash
+git clone https://github.com/COSC-499-W2025/capstone-project-team-20.git
+cd capstone-project-team-20
+```
 
-### Installation
+### Step 2: Set Up Python Virtual Environment
+Create and activate a virtual environment to isolate dependencies.
 
-1.  Clone the repository to your local machine:
-    ```sh
-    git clone https://github.com/COSC-499-W2025/capstone-project-team-20.git
-    ```
-2.  Navigate to the project directory:
-    ```sh
-    cd capstone-project-team-20
-    ```
-3.  Create and activate a virtual environment. This keeps your project dependencies isolated.
+**Windows:**
+```bash
+python -m venv .venv
+.venv\Scripts\activate
+```
 
-    **For Windows:**
-    ```sh
-    python -m venv .venv
-    .venv\Scripts\activate
-    ```
+**macOS/Linux:**
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+```
 
-    **For macOS/Linux:**
-    ```sh
-    python3 -m venv .venv
-    source .venv/bin/activate
-    ```
+### Step 3: Install Python Dependencies
+```bash
+pip install -r requirements.txt
+```
 
-4.  Install the required packages using pip:
-    ```sh
-    pip install -r requirements.txt
-    ```
+### Step 4: Run the Backend (FastAPI)
+Start the API server:
+```bash
+uvicorn src.api.api_main:app --reload
+```
+The server will be available at `http://127.0.0.1:8000`.  
+API documentation (Swagger UI) is at `http://127.0.0.1:8000/docs`.
+
+### Step 5: Run the React Frontend (Optional)
+In a separate terminal, navigate to the frontend directory and install dependencies:
+```bash
+cd src/ui/react-app
+npm install
+npm run dev
+```
+The frontend development server will run at `http://localhost:5173`.
+
+### Step 6: Run Tests (Optional)
+To verify your setup, run the backend tests:
+```bash
+pytest
+```
+For frontend tests:
+```bash
+cd src/ui/react-app
+npm test
+```
+
+### Environment Variables
+No environment variables are required for local development. The backend uses a local SQLite database (`projects.db` by default) and file storage under the `data/` directory.
 
 ---
 
@@ -186,11 +216,21 @@ http://localhost:5173
 | GET | /projects/{id} | Retrieve full details for a specific project | Implemented |
 | DELETE | /projects/{id} | Delete a specific project | Implemented |
 | POST | /projects/clear | Clear all stored projects (dev helper) | Implemented |
+| POST | /projects/{id}/thumbnail | Upload a thumbnail image for a project | Implemented |
+
+### Contributor Resolution
+
+| Method | Path | Description | Status |
+|--------|------|-------------|--------|
+| POST | /projects/resolve-contributors | Resolve duplicate contributors for a single project | Implemented |
+| POST | /projects/resolve-contributors-batch | Resolve contributors for multiple projects at once | Implemented |
+| POST | /projects/set-identity | Add email(s) to user’s identity and re‑analyze affected projects | Implemented |
 
 ### Privacy
 
 | Method | Path | Description | Status |
 |--------|------|-------------|--------|
+| GET | /privacy-consent | Retrieve the user’s current privacy consent status | Implemented |
 | POST | /privacy-consent | Save the user's privacy consent choice | Implemented |
 
 ### Skills & Analytics
@@ -198,6 +238,7 @@ http://localhost:5173
 | Method | Path | Description | Status |
 |--------|------|-------------|--------|
 | GET | /skills | Return detected skills with project counts | Implemented |
+| GET | /skills/usage | Return skills with project names where each appears | Implemented |
 | GET | /badges/progress | Return badge progress analytics | Implemented |
 | GET | /wrapped/yearly | Return yearly wrapped analytics | Implemented |
 
@@ -210,13 +251,7 @@ http://localhost:5173
 | GET | /reports/{id} | Retrieve report summary | Implemented |
 | DELETE | /reports/{id} | Delete a report | Implemented |
 | POST | /reports/{id}/portfolio-details/generate | Generate portfolio details for report projects | Implemented |
-
-### Resume
-
-| Method | Path | Description | Status |
-|--------|------|-------------|--------|
-| POST | /resume/export | Export resume PDF from a report | Implemented |
-| GET | /resume/exports/{export_id}/download | Download exported resume | Implemented |
+| PATCH | /reports/{id}/projects/{project_name} | Update editable fields on a single report project | Implemented |
 
 ### Portfolio
 
@@ -226,6 +261,25 @@ http://localhost:5173
 | POST | /portfolio/{id}/edit | Edit portfolio title and notes | Implemented |
 | POST | /portfolio/export | Export portfolio PDF from a report | Implemented |
 | GET | /portfolio/exports/{export_id}/download | Download exported portfolio | Implemented |
+| PATCH | /portfolio/{id}/mode | Change portfolio visibility (private/public) | Implemented |
+| PATCH | /portfolio/{id}/projects/{project_name} | Customise a project inside a portfolio (title, overview, achievements, hide) | Implemented |
+| POST | /portfolio/{id}/publish | Publish a portfolio (sets mode to public and timestamp) | Implemented |
+| POST | /portfolio/{id}/unpublish | Unpublish a portfolio (reverts to private) | Implemented |
+
+### Resume
+
+| Method | Path | Description | Status |
+|--------|------|-------------|--------|
+| POST | /resume/export | Export resume PDF from a report | Implemented |
+| GET | /resume/exports/{export_id}/download | Download exported resume | Implemented |
+| DELETE | /resume/exports/{export_id} | Delete an exported resume PDF | Implemented |
+| GET | /resume/context/{id} | Return resume template context as JSON (used for live preview) | Implemented |
+
+### Thumbnails
+
+| Method | Path | Description | Status |
+|--------|------|-------------|--------|
+| GET | /thumbnails/{filename} | Serve a project thumbnail image | Implemented |
 
 ### Config
 
@@ -233,8 +287,8 @@ http://localhost:5173
 |--------|------|-------------|--------|
 | GET | /config | Retrieve stored profile configuration | Implemented |
 | POST | /config | Save or update profile configuration | Implemented |
-
-Note: `/projects/upload-path` is for developer use only and must not be exposed in production.
+| POST | /config/set | Set a single config value (supports nested objects) | Implemented |
+| PUT | /config/usernames | Replace the full list of user email identities | Implemented |
 
 ---
 
@@ -275,40 +329,41 @@ curl "http://127.0.0.1:8000/skills"
 
 ---
 
-## Testing
+## Test Report
 
-We maintain a comprehensive automated test suite to ensure the stability and correctness of the Project Analyzer system across all major areas:
+We maintain a comprehensive test suite that runs automatically on every push and pull request via **GitHub Actions**. The suite covers:
 
-- **API endpoints are tested as if from the perspective of a real client (over HTTP)** using [FastAPI's TestClient](https://fastapi.tiangolo.com/advanced/testing/). This guarantees that response codes, payloads, and error handling reflect real-world use.
-- **Backend/core logic and managers** are covered with unit and integration tests, validating essential data flows, edge cases, and correct database persistence.
-- **CLI workflows** are verified where possible by mocking input/output and running through typical user scenarios.
-- **Front-end components** are tested with Jest and React Testing Library for both component behavior and simulated user flows.
-- **Database migrations and persistent storage logic** have end-to-end checks to ensure schema stability and upgrade safety.
+- **Backend unit & integration tests** – using `pytest` (over 40 test files).
+- **API endpoint tests** – verifying HTTP responses, schemas, and error handling.
+- **Frontend unit tests** – React components tested with Jest and React Testing Library.
+- **End‑to‑end tests** – Playwright tests for critical user workflows (upload, portfolio creation, etc.).
 
-**Testing Technologies:**
-- [pytest](https://docs.pytest.org/en/stable/): main test runner and assertion library for our Python code.
-- [FastAPI TestClient](https://fastapi.tiangolo.com/advanced/testing/): Used for making real HTTP requests to the in-memory FastAPI application. All API tests are executed via HTTP methods (`GET`, `POST`, `DELETE`, etc.) mirroring real usage.
-- [Jest](https://jestjs.io/) & [React Testing Library](https://testing-library.com/docs/react-testing-library/intro/) for frontend.
+**Run the tests locally:**
 
-### Running the Tests
+- Backend & API:
+  ```bash
+  pytest
+  ```
+- Frontend unit:
+  ```bash
+  cd src/ui/react-app
+  npm test
+  ```
+- Frontend E2E (requires backend running):
+  ```bash
+  cd src/ui/react-app
+  npx playwright test
+  ```
 
-**Backend & API:**
-```sh
-pytest
-```
-Runs all backend, database, and API endpoint tests.
+For the latest test results and coverage reports, see the **Actions** tab on our GitHub repository.
 
-**Frontend:**
-```sh
-cd src/ui/react-app
-npm test
-```
+---
 
-### Coverage
+## Known Bugs
 
-- All public API routes are covered by tests that use HTTP requests and check for correct status codes, payloads, and error handling.
-- Backend logic and managers are tested for business rule correctness, persistence, and failure scenarios.
-- Frontend tests verify rendering, user interactivity, and end-to-end flows where feasible.
+This section documents cases where implemented features do not behave as expected. The team tracks issues in GitHub.
+
+The team is actively addressing these issues. For a complete and up‑to‑date list, see the [GitHub Issues](https://github.com/COSC-499-W2025/capstone-project-team-20/issues) page.
 
 ---
 
@@ -371,28 +426,47 @@ This architecture was selected to:
 
 ---
 
-## Data Flow Diagram (Level 1, As-Built)
+## Data Flow Diagram (Level 0 – Context Diagram)
+
+![Level 0 DFD](media/DFD_level_0.png)
+
+The context diagram shows the system as a single process interacting with external entities:
+- **User**: provides consent, profile settings, and project requests; receives analysis summaries, skills/badges/wrapped data, reports, portfolios, resumes, and download links.
+- **Repository/ZIP Input Source**: supplies the input payload (ZIP file or Git URL) for analysis.
+
+This high-level view emphasizes the boundaries of the system and its main inputs and outputs.
+
+---
+
+## Data Flow Diagram (Level 1 – As-Built)
 
 ![Level 1 DFD](media/DFD_Level_1.png)
 
-The DFD describes the runtime data movement through the system:
+The Level 1 DFD decomposes the system into eight processes and four data stores, illustrating the runtime data movement:
 
-1. **Capture consent and intake request** from the user.
-2. **Ingest repository/ZIP input** and extract project files/paths.
-3. **Validate API request and map schema** before orchestration.
-4. **Orchestrate project analysis** using configured rules.
-5. **Compute skills, badges, timeline, and insights** from normalized project data.
-6. **Persist and retrieve analysis results** from managed data stores.
-7. **Present results to the user** as analysis summaries and generated outputs.
+**Processes:**
+1. **Capture Consent & Config** – Stores user consent and configuration.
+2. **Intake Repository/ZIP** – Ingests and extracts project files.
+3. **Validate API Request & Schema** – Ensures incoming data conforms to expected schemas.
+4. **Orchestrate Project Analysis** – Coordinates analysis workflow, referencing config rules.
+5. **Compute Skills/Badges/Wrapped** – Runs analysis engines to generate skill badges and yearly summaries.
+6. **Manage Projects/Reports** – Persists and retrieves project metadata and analysis results.
+7. **Export Resume/Portfolio** – Generates PDF outputs from reports.
+8. **Serve Results & Media** – Handles public/private visibility and serves thumbnails and exported files.
 
-### DFD Data Stores
+**Data Stores:**
+- **D1 Consent/Config Data** – Stores user consent choices and profile configuration.
+- **D2 Project Metadata/Analysis** – Holds project information, analysis results, and contributor identities.
+- **D3 Reports + Report Projects** – Stores saved reports and their associated projects.
+- **D4 Exported Files** – Contains generated resume, portfolio, and thumbnail files.
 
-- **Consent Records**
-- **Project Metadata**
-- **Analysis Results**
-- **Configuration Data**
+**Key Data Flows:**
+- Consent‑gated operations (e.g., analysis may be skipped if consent is missing).
+- Contributor resolution and identity updates (updating project contributor roles).
+- Portfolio publish/private mode updates (visibility toggles).
+- Thumbnail retrieval (for serving images in the frontend).
 
-These stores support reproducibility, retrieval of previous analyses, and stable processing behavior across runs.
+These flows and stores support reproducibility, retrieval of previous analyses, and stable processing behavior across runs.
 
 ---
 
@@ -412,44 +486,6 @@ These stores support reproducibility, retrieval of previous analyses, and stable
 
 ## Contributors
 
-<table>
-  <tr>
-    <td align="center">
-      <a href="https://github.com/mr-sban">
-        <img src="https://github.com/mr-sban.png?size=100" width="100px;" alt="mr-sban"/>
-        <br />
-        <sub><b>Sven Annist (mr-sban)</b></sub>
-      </a>
-    </td>
-    <td align="center">
-      <a href="https://github.com/kaanspgl">
-        <img src="https://github.com/kaanspgl.png?size=100" width="100px;" alt="kaanspgl"/>
-        <br />
-        <sub><b>Kaan Sapoglu (kaanspgl)</b></sub>
-      </a>
-    </td>
-    <td align="center">
-      <a href="https://github.com/branden6">
-        <img src="https://github.com/branden6.png?size=100" width="100px;" alt="branden6"/>
-        <br />
-        <sub><b>Branden Kennedy (branden6)</b></sub>
-      </a>
-    </td>
-    <td align="center">
-      <a href="https://github.com/dylanstephenalexander">
-        <img src="https://github.com/dylanstephenalexander.png?size=100" width="100px;" alt="dylanstephenalexander"/>
-        <br />
-        <sub><b>Dylan Alexander (dylanstephenalexander)</b></sub>
-      </a>
-    </td>
-    <td align="center">
-      <a href="https://github.com/mewlic">
-        <img src="https://github.com/mewlic.png?size=100" width="100px;" alt="mewlic"/>
-        <br />
-        <sub><b>Lex Nash (mewlic)</b></sub>
-      </a>
-    </td>
-  </tr>
-</table>
-
----
+| [<img src="https://github.com/mr-sban.png?size=100" width="100"><br><sub>Sven Annist (mr-sban)</sub>](https://github.com/mr-sban) | [<img src="https://github.com/kaanspgl.png?size=100" width="100"><br><sub>Kaan Sapoglu (kaanspgl)</sub>](https://github.com/kaanspgl) | [<img src="https://github.com/branden6.png?size=100" width="100"><br><sub>Branden Kennedy (branden6)</sub>](https://github.com/branden6) | [<img src="https://github.com/dylanstephenalexander.png?size=100" width="100"><br><sub>Dylan Alexander (dylanstephenalexander)</sub>](https://github.com/dylanstephenalexander) | [<img src="https://github.com/mewlic.png?size=100" width="100"><br><sub>Lex Nash (mewlic)</sub>](https://github.com/mewlic) |
+| --- | --- | --- | --- | --- |
+```

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 90 46" role="img" aria-label="200 OK Hired.">
+  <text x="45" y="18"
+        text-anchor="middle"
+        font-family="'Courier New', Courier, monospace"
+        font-size="15"
+        font-weight="700"
+        fill="#e6edf3">200 OK</text>
+  <text x="45" y="40"
+        text-anchor="middle"
+        font-family="'Courier New', Courier, monospace"
+        font-size="15"
+        font-weight="700"
+        fill="#e6edf3">Hired.</text>
+</svg>

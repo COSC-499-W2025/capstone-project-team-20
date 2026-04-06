@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { formLabel, formInput } from "../formStyles";
 import {
   listProjects,
   createReport,
@@ -703,31 +704,6 @@ function ResumePreview({ ctx, reportId, reportNotes, onContextChange }) {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Styles
-// ---------------------------------------------------------------------------
-const formLabel = {
-  display: "block",
-  fontSize: 11,
-  fontWeight: 600,
-  color: "#555",
-  marginBottom: 4,
-  textTransform: "uppercase",
-  letterSpacing: 0.4,
-};
-
-const formInput = {
-  width: "100%",
-  boxSizing: "border-box",
-  fontSize: 13,
-  padding: "6px 8px",
-  border: "1px solid #d0d0d0",
-  borderRadius: 5,
-  outline: "none",
-  background: "var(--bg, #fff)",
-  color: "var(--text, #000)",
-  fontFamily: "inherit",
-};
 
 const styles = {
   page: {
@@ -765,6 +741,7 @@ const styles = {
 function ResumePage() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
+  const [messageType, setMessageType] = useState("info");
   const [projects, setProjects] = useState([]);
   const [selectedProjectIds, setSelectedProjectIds] = useState([]);
   const [reports, setReports] = useState([]);
@@ -774,13 +751,18 @@ function ResumePage() {
   const [previewCtx, setPreviewCtx] = useState(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
-  const [multiPageExport, setMultiPageExport] = useState(null); // { export_id, download_url, page_count }
+  const [multiPageExport, setMultiPageExport] = useState(null);
+
+  function setStatus(nextMessage, nextType = "info") {
+    setMessage(nextMessage);
+    setMessageType(nextType);
+  }
 
   useEffect(() => { loadInitialData(); }, []);
 
   async function loadInitialData() {
     setLoading(true);
-    setMessage("");
+    setStatus("");
     try {
       const [projectData, reportData] = await Promise.all([listProjects(), listReports()]);
       const allProjects = projectData.projects ?? [];
@@ -794,7 +776,7 @@ function ResumePage() {
         setSelectedReport(refreshed ?? selectedReport);
       }
     } catch (e) {
-      setMessage(e.message ?? "Failed to load data");
+      setStatus(e.message ?? "Failed to load data", "error");
     } finally {
       setLoading(false);
     }
@@ -808,10 +790,10 @@ function ResumePage() {
 
   async function handleCreateReport() {
     setLoading(true);
-    setMessage("");
+    setStatus("");
     try {
       await setPrivacyConsent(true);
-      if (!selectedProjectIds.length) { setMessage("Select at least one project first."); return; }
+      if (!selectedProjectIds.length) { setStatus("Select at least one project first.", "error"); return; }
       const created = await createReport({
         title: reportTitle, sort_by: "resume_score",
         notes: reportNotes, report_kind: "resume",
@@ -819,11 +801,11 @@ function ResumePage() {
       });
       const report = created.report ?? null;
       setSelectedReport(report);
-      setMessage(`Created report "${report?.title ?? "Untitled"}"`);
+      setStatus(`Created report "${report?.title ?? "Untitled"}"`, "success");
       await loadInitialData();
       if (report?.id) await loadPreview(report.id);
     } catch (e) {
-      setMessage(e.message ?? "Failed to create report");
+      setStatus(e.message ?? "Failed to create report", "error");
     } finally {
       setLoading(false);
     }
@@ -831,14 +813,14 @@ function ResumePage() {
 
   async function handleSelectReport(id) {
     setLoading(true);
-    setMessage("");
+    setStatus("");
     try {
       const data = await getReport(id);
       const report = data.report ?? null;
       setSelectedReport(report);
       if (report?.id) await loadPreview(report.id);
     } catch (e) {
-      setMessage(e.message ?? "Failed to load report");
+      setStatus(e.message ?? "Failed to load report", "error");
     } finally {
       setLoading(false);
     }
@@ -851,33 +833,46 @@ function ResumePage() {
       const ctx = await getResumeContext(reportId);
       setPreviewCtx(ctx);
     } catch (e) {
-      setMessage(e.message ?? "Failed to load preview");
+      setStatus(e.message ?? "Failed to load preview", "error");
     } finally {
       setPreviewLoading(false);
     }
   }
 
+  async function triggerDownload(url, fileName) {
+    const res = await fetch(url);
+    const blob = await res.blob();
+    const objectUrl = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = objectUrl;
+    a.download = fileName;
+    a.click();
+    URL.revokeObjectURL(objectUrl);
+  }
+
   async function handleExportResume() {
-    if (!selectedReport?.id) { setMessage("Select or create a report first."); return; }
+    if (!selectedReport?.id) { setStatus("Select or create a report first.", "error"); return; }
     setLoading(true);
-    setMessage("");
+    setStatus("");
     try {
       const exp = await exportResume({ report_id: selectedReport.id, template: "jake", output_name: "resume.pdf" });
-      if (exp.page_count > 1) {
-        setMultiPageExport({ export_id: exp.export_id, download_url: exp.download_url, page_count: exp.page_count });
+      if (exp.page_count && exp.page_count > 1) {
+        setMultiPageExport(exp);
       } else {
-        window.open(`http://localhost:8000${exp.download_url}`, "_blank");
+        const fileName = `${selectedReport.title ?? `report-${selectedReport.id}`}.pdf`;
+        await triggerDownload(`http://localhost:8000${exp.download_url}`, fileName);
         setMessage("Resume exported.");
       }
     } catch (e) {
-      setMessage(e.message ?? "Failed to export resume");
+      setStatus(e.message ?? "Failed to export resume", "error");
     } finally {
       setLoading(false);
     }
   }
 
   async function handleMultiPageConfirm() {
-    window.open(`http://localhost:8000${multiPageExport.download_url}`, "_blank");
+    const fileName = `${selectedReport.title ?? `report-${selectedReport.id}`}.pdf`;
+    await triggerDownload(`http://localhost:8000${multiPageExport.download_url}`, fileName);
     setMultiPageExport(null);
     setMessage("Resume exported.");
   }
@@ -898,7 +893,7 @@ function ResumePage() {
     } catch (e) {
       // 204 No Content comes back as empty string from request() — not a real error
       if (e.message && e.message !== "") {
-        setMessage(e.message);
+        setStatus(e.message, "error");
         return;
       }
     }
@@ -915,15 +910,16 @@ function ResumePage() {
     <>
       <h3>Resume</h3>
 
-      <button onClick={loadInitialData} disabled={loading}>
-        {loading ? "Loading..." : "Refresh"}
-      </button>
+
+      <div className={`portfolio-status portfolio-status--${messageType}`} aria-live="polite">
+        {message || "Select or create a report to preview your resume."}
+      </div>
 
       <div style={{ display: "flex", gap: 24, marginTop: 16, alignItems: "flex-start" }}>
 
         {/* LEFT — controls */}
         <div style={{ minWidth: 280, maxWidth: 320 }}>
-          <div style={{ padding: 12, border: "1px solid #ddd", borderRadius: 8, marginBottom: 16 }}>
+          <div style={{ padding: 12, border: "1px solid #333", borderRadius: 8, marginBottom: 16 }}>
             <h4 style={{ marginTop: 0 }}>Create Report</h4>
             <div style={{ marginBottom: 10 }}>
               <label style={formLabel}>Title</label>
@@ -939,30 +935,27 @@ function ResumePage() {
               <textarea
                 value={reportNotes}
                 onChange={(e) => setReportNotes(e.target.value)}
-                rows={3}
+                rows={1}
                 placeholder="e.g. Use for software engineering roles"
                 style={{ ...formInput, resize: "vertical", lineHeight: 1.4 }}
               />
             </div>
             <h4>Projects</h4>
-            {projects.length === 0 ? <p>No projects found.</p> : (
-              <ul style={{ listStyle: "none", paddingLeft: 0 }}>
+            {projects.length === 0 ? <p>No projects found. Upload a project first.</p> : (
+              <div className="scrollable-div" style={{maxHeight: 90}}>
+              <ul style={{ listStyle: "none", paddingLeft: 0, marginBottom: 0, marginTop:0}}>
                 {projects.map((p) => (
-                  <li key={p.id} style={{ marginBottom: 6 }}>
-                    <label>
-                      <input
-                        type="checkbox"
-                        checked={selectedProjectIds.includes(p.id)}
-                        onChange={() => toggleProject(p.id)}
-                        style={{ marginRight: 8 }}
-                      />
+                  <li key={p.id} style={{ marginBottom: 1 }}>
+                    <label style={{fontSize:14}}>
+                      <input type="checkbox" checked={selectedProjectIds.includes(p.id)} onChange={() => toggleProject(p.id)} style={{ marginRight: 8}} />
                       {p.name}
                     </label>
                   </li>
                 ))}
               </ul>
+              </div>
             )}
-            <button onClick={handleCreateReport} disabled={loading}>
+            <button style={{marginTop: 10}} onClick={handleCreateReport} disabled={loading}>
               {loading ? "Working..." : "Create Report"}
             </button>
           </div>
@@ -970,9 +963,10 @@ function ResumePage() {
           <div>
             <h4>Saved Reports</h4>
             {reports.length === 0 ? <p>No reports yet.</p> : (
+              <div className="scrollable-div" style={{maxHeight: 100, paddingTop:0, paddingBottom: 0}}>
               <ul style={{ paddingLeft: 0, listStyle: "none" }}>
                 {reports.map((r) => (
-                  <li key={r.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+                  <li key={r.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 0, marginTop:0 }}>
                     <button
                       onClick={() => handleSelectReport(r.id)}
                       disabled={loading}
@@ -981,6 +975,7 @@ function ResumePage() {
                         color: selectedReport?.id === r.id ? "var(--accent, #0066cc)" : "var(--text)",
                         fontWeight: selectedReport?.id === r.id ? "bold" : "normal",
                         textAlign: "left", flex: 1,
+                        height:30
                       }}
                     >
                       {r.title ?? `Report #${r.id}`}
@@ -989,6 +984,7 @@ function ResumePage() {
                   </li>
                 ))}
               </ul>
+              </div>
             )}
             {selectedReport?.notes && (
               <p style={{ fontSize: 12, color: "#666", fontStyle: "italic", marginTop: 6, borderLeft: "2px solid #ddd", paddingLeft: 8 }}>
@@ -997,20 +993,21 @@ function ResumePage() {
             )}
           </div>
 
-          <div style={{ marginTop: 16 }}>
-            <button onClick={handleExportResume} disabled={loading || !selectedReport?.id}>
-              Export PDF
-            </button>
-          </div>
-
-          {message && <p style={{ marginTop: 10, fontSize: 13 }}>{message}</p>}
         </div>
 
         {/* RIGHT — live preview */}
-        <div style={{ flex: 1, overflowX: "auto" }}>
+        <div className="scrollable-div" style={{ flex: 1}}>
+          <div style={{position:"sticky", top:-1,left:0,right:0, paddingLeft:10, paddingTop:10, width:"105%", paddingBottom:"1px", background:"#161b22",transform: "translate(-20px,-10px)"}}>
+            <div style={{ marginBottom: 12 }}>
+            <button onClick={handleExportResume} disabled={loading || !selectedReport?.id} style={{marginLeft:10}}>
+              Export PDF
+            </button>
+          </div>
+          <div style={{background:"#333", height:"1px"}}></div>
+          </div>
           {previewLoading && <p>Loading preview...</p>}
           {!previewLoading && !previewCtx && (
-            <p style={{ color: "#888" }}>Select or create a report to preview.</p>
+            <p style={{ color: "#888",margin:"auto",textAlign:"center", left:0,right:0 }}>Select or create a report to preview.</p>
           )}
           {!previewLoading && previewCtx && (
             <ResumePreview

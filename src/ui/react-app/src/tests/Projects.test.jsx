@@ -10,6 +10,7 @@ vi.mock('../api/client', () => ({
   uploadProjectZip:         vi.fn(),
   deleteProject:            vi.fn(),
   resolveContributorsBatch: vi.fn(),
+  setIdentity:              vi.fn(),
   uploadThumbnail:          vi.fn(),
   thumbnailUrl:             vi.fn((path) => `http://localhost:8000/thumbnails/${path}`),
 }))
@@ -21,9 +22,8 @@ import {
   uploadProjectZip,
   deleteProject,
   resolveContributorsBatch,
+  setIdentity,
 } from '../api/client'
-
-// ── Fixtures ──────────────────────────────────────────────────────────────────
 
 const EMPTY_LIST = { projects: [], current_projects: [], previous_projects: [] }
 
@@ -65,6 +65,17 @@ const PENDING_DUPLICATES = [
   },
 ]
 
+const PENDING_IDENTITY = [
+  {
+    project_id:   1,
+    project_name: 'my-app',
+    candidates: [
+      { email: 'alice@example.com', name: 'Alice' },
+      { email: 'bob@example.com',   name: 'Bob'   },
+    ],
+  },
+]
+
 beforeEach(() => {
   vi.clearAllMocks()
   listProjects.mockResolvedValue(EMPTY_LIST)
@@ -72,9 +83,8 @@ beforeEach(() => {
   getPrivacyConsent.mockResolvedValue(true)
   deleteProject.mockResolvedValue(undefined)
   resolveContributorsBatch.mockResolvedValue({})
+  setIdentity.mockResolvedValue({})
 })
-
-// ── Initial load ──────────────────────────────────────────────────────────────
 
 describe('Initial load', () => {
   it('calls listProjects on mount', async () => {
@@ -88,7 +98,7 @@ describe('Initial load', () => {
     await waitFor(() => {
       expect(screen.getByText('my-app')).toBeInTheDocument()
       expect(screen.getByText('old-app')).toBeInTheDocument()
-      expect(screen.getByText(/current batch/i)).toBeInTheDocument()
+      expect(screen.getByText(/recent uploads/i)).toBeInTheDocument()
       expect(screen.getByText(/previous/i)).toBeInTheDocument()
     })
   })
@@ -108,8 +118,6 @@ describe('Initial load', () => {
     )
   })
 })
-
-// ── Project selection ─────────────────────────────────────────────────────────
 
 describe('Project selection', () => {
   it('loads and displays project detail when a project is clicked', async () => {
@@ -150,8 +158,6 @@ describe('Project selection', () => {
     )
   })
 })
-
-// ── ZIP upload ────────────────────────────────────────────────────────────────
 
 describe('ZIP upload', () => {
   it('blocks upload and shows error when consent is not given', async () => {
@@ -239,8 +245,6 @@ describe('ZIP upload', () => {
   })
 })
 
-// ── Delete project ────────────────────────────────────────────────────────────
-
 describe('Delete project', () => {
   it('shows confirm modal when trash icon is clicked', async () => {
     listProjects.mockResolvedValue(PROJECT_LIST)
@@ -276,8 +280,6 @@ describe('Delete project', () => {
     })
   })
 })
-
-// ── Merge modal ───────────────────────────────────────────────────────────────
 
 describe('Merge modal', () => {
   async function openMergeModal() {
@@ -331,8 +333,6 @@ describe('Merge modal', () => {
   })
 })
 
-// ── Cancel analysis ───────────────────────────────────────────────────────────
-
 describe('Cancel analysis', () => {
   async function openMergeModal() {
     uploadProjectZip.mockResolvedValue({
@@ -379,6 +379,87 @@ describe('Cancel analysis', () => {
     await user.click(screen.getByRole('button', { name: /yes, cancel analysis/i }))
     await waitFor(() =>
       expect(screen.queryByText(/cancel analysis\?/i)).not.toBeInTheDocument()
+    )
+  })
+})
+
+// ── Identity modal ─────────────────────────────────────────────────────────────
+
+describe('Identity modal', () => {
+  async function openIdentityModal() {
+    uploadProjectZip.mockResolvedValue({
+      status: 'needs_identity',
+      projects: [{ id: 1, name: 'my-app' }],
+      pending_duplicates: [],
+      pending_identity: PENDING_IDENTITY,
+    })
+    const user = userEvent.setup()
+    render(<Projects />)
+    await waitFor(() => expect(listProjects).toHaveBeenCalledOnce())
+    const file = new File(['content'], 'project.zip', { type: 'application/zip' })
+    const input = document.querySelector('input[type="file"][accept=".zip"]')
+    await user.upload(input, file)
+    await waitFor(() => screen.getByText(/which contributor are you\?/i))
+    return user
+  }
+
+  it('opens the identity modal when upload returns needs_identity', async () => {
+    await openIdentityModal()
+    expect(screen.getByText(/which contributor are you\?/i)).toBeInTheDocument()
+    expect(screen.getByText('Alice')).toBeInTheDocument()
+    expect(screen.getByText('Bob')).toBeInTheDocument()
+  })
+
+  it('Skip dismisses the modal without calling setIdentity', async () => {
+    const user = await openIdentityModal()
+    await user.click(screen.getByRole('button', { name: /skip/i }))
+    await waitFor(() =>
+      expect(screen.queryByText(/which contributor are you\?/i)).not.toBeInTheDocument()
+    )
+    expect(setIdentity).not.toHaveBeenCalled()
+  })
+
+  it('"This is me" calls setIdentity with the selected email and project id', async () => {
+    const user = await openIdentityModal()
+    // first candidate is pre-selected by default
+    await user.click(screen.getByRole('button', { name: /this is me/i }))
+    await waitFor(() =>
+      expect(setIdentity).toHaveBeenCalledWith(
+        ['alice@example.com'],
+        [1],
+      )
+    )
+  })
+
+  it('closes the modal after confirming identity', async () => {
+    const user = await openIdentityModal()
+    await user.click(screen.getByRole('button', { name: /this is me/i }))
+    await waitFor(() =>
+      expect(screen.queryByText(/which contributor are you\?/i)).not.toBeInTheDocument()
+    )
+  })
+
+  it('opens identity modal after merge resolution when pending_identity is returned', async () => {
+    uploadProjectZip.mockResolvedValue({
+      status: 'needs_resolution',
+      projects: [{ id: 1, name: 'my-app' }],
+      pending_duplicates: PENDING_DUPLICATES,
+      pending_identity: [],
+    })
+    resolveContributorsBatch.mockResolvedValue({
+      pending_identity: PENDING_IDENTITY,
+    })
+
+    const user = userEvent.setup()
+    render(<Projects />)
+    await waitFor(() => expect(listProjects).toHaveBeenCalledOnce())
+    const file = new File(['content'], 'project.zip', { type: 'application/zip' })
+    const input = document.querySelector('input[type="file"][accept=".zip"]')
+    await user.upload(input, file)
+    await waitFor(() => screen.getByText(/resolve duplicate contributors/i))
+    await user.click(screen.getByRole('button', { name: /apply merges/i }))
+    await waitFor(() =>
+      expect(screen.getByText(/which contributor are you\?/i)).toBeInTheDocument()
     )
   })
 })

@@ -1,7 +1,7 @@
 from typing import Any, List, Optional
 
 from fastapi import APIRouter, UploadFile, File, HTTPException, status, Depends
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from pathlib import Path
 from collections import Counter
 import tempfile, shutil
@@ -35,11 +35,14 @@ from src.api.schemas.resume import (
 from src.api.schemas.portfolio import (
     PortfolioDetailsGenerateRequest, PortfolioDetailsGenerateResponse,
     PortfolioExportRequest, PortfolioExportResponse,
-    PortfolioModeUpdateRequest, PortfolioProjectUpdateRequest, PortfolioPublishResponse
+    PortfolioModeUpdateRequest, PortfolioProjectUpdateRequest, PortfolioPublishResponse,
+    PortfolioActivityHeatmapRequest, PortfolioActivityHeatmapResponse, PortfolioActivityDay,
+    PortfolioActivityAggregate,
 )
 from src.api.schemas import (
     PortfolioResponse, PortfolioUpdateRequest, PortfolioReport, PortfolioProject, PortfolioDetailsResponse
 )
+from datetime import datetime, timedelta, timezone
 
 """For all our routes. Requirement 32, endpoints"""
 router = APIRouter()
@@ -79,16 +82,69 @@ def _build_portfolio_project(project) -> PortfolioProject:
     )
 
 
+def _normalize_username_candidates(raw_values: List[str]) -> List[str]:
+    normalized = []
+    seen = set()
+    for raw in raw_values or []:
+        value = (raw or "").strip().lower()
+        if not value:
+            continue
+        if value not in seen:
+            seen.add(value)
+            normalized.append(value)
+    return normalized
+
+
+def _extract_git_username(email: str) -> str:
+    local = (email or "").split("@", 1)[0].strip().lower()
+    if "+" in local:
+        suffix = local.split("+", 1)[1].strip()
+        if suffix:
+            return suffix
+    return local
+
+
+def _author_matches_usernames(author_email: str, usernames: List[str]) -> bool:
+    if not usernames:
+        return True
+
+    email = (author_email or "").strip().lower()
+    if not email:
+        return False
+
+    local = email.split("@", 1)[0]
+    extracted_user = _extract_git_username(email)
+    for candidate in usernames:
+        c = (candidate or "").strip().lower()
+        if not c:
+            continue
+        if c == email or c == local or c == extracted_user:
+            return True
+    return False
+
+
+def _safe_int(value, default: int = 0) -> int:
+    try:
+        return int(value)
+    except (ValueError, TypeError):
+        return default
+
+
 def _build_portfolio_report(report) -> PortfolioReport:
     projects = [_build_portfolio_project(p) for p in (report.projects or [])]
+    mode = getattr(report, "portfolio_mode", "private") or "private"
+    token = getattr(report, "public_token", None)
+    public_url = f"http://localhost:8000/public/portfolio/{token}" if mode == "public" and token else None
     return PortfolioReport(
         id=report.id,
         title=report.title,
         date_created=report.date_created,
         sort_by=report.sort_by,
         notes=report.notes,
-        portfolio_mode=getattr(report, "portfolio_mode", "private") or "private",
+        portfolio_mode=mode,
         portfolio_published_at=getattr(report, "portfolio_published_at", None),
+        public_token=token,
+        public_url=public_url,
         projects=projects,
     )
 
@@ -116,6 +172,7 @@ def require_consent():
 class UploadPathRequest(BaseModel):
     path: str
 
+
 class ContributorMergeResolutionRequest(BaseModel):
     canonical: str
     merge: List[str]
@@ -136,6 +193,7 @@ class ReportProjectPatchRequest(BaseModel):
     stack_frameworks: Optional[List[str]] = None
     bullets: Optional[List[str]] = None
 
+
 class ConfigSetRequest(BaseModel):
     key: str
     value: Any
@@ -144,14 +202,16 @@ class ConfigSetRequest(BaseModel):
 def _run_post_upload_analyses(analyzer: ProjectAnalyzer, projects):
     changed = [p for p in projects if p.name in analyzer.changed_project_names]
     pending_duplicates = []
+    pending_identity = []
 
     if not changed:
-        return pending_duplicates
+        return pending_duplicates, pending_identity
 
-    pending_duplicates = analyzer.analyze_git_and_contributions(projects=changed, interactive=False) or []
+    pending_duplicates, pending_identity = analyzer.analyze_git_and_contributions(projects=changed, interactive=False)
 
-    pending_ids = {p["project_id"] for p in pending_duplicates}
-    clean = [p for p in changed if p.id not in pending_ids]
+    # Only run downstream analyses on projects that are fully resolved
+    blocked_ids = {p["project_id"] for p in pending_duplicates} | {p["project_id"] for p in pending_identity}
+    clean = [p for p in changed if p.id not in blocked_ids]
 
     for method_name in ("analyze_metadata", "analyze_categories", "analyze_languages", "analyze_skills", "generate_insights_noninteractive"):
         method = getattr(analyzer, method_name, None)
@@ -162,7 +222,7 @@ def _run_post_upload_analyses(analyzer: ProjectAnalyzer, projects):
         else:
             method(projects=clean)
 
-    return pending_duplicates
+    return pending_duplicates, pending_identity
 
 
 def _require_report_kind(report, expected_kind: str):
@@ -191,14 +251,20 @@ def upload_project_from_path(req: UploadPathRequest):
 
     analyzer = ProjectAnalyzer(ConfigManager(), root_folders, zip_path)
     created_projects = analyzer.initialize_projects()
-    pending_duplicates = _run_post_upload_analyses(analyzer, created_projects)
-
+    pending_duplicates, pending_identity = _run_post_upload_analyses(analyzer, created_projects)
+    if pending_duplicates:
+        status = "needs_resolution"
+    elif pending_identity:
+        status = "needs_identity"
+    else:
+        status = "complete"
     return {
         "ok": True,
-        "status": "needs_resolution" if pending_duplicates else "complete",
+        "status": status,
         "projects": [{"id": p.id, "name": p.name} for p in created_projects],
         "pending_duplicates": pending_duplicates,
-        }
+        "pending_identity": pending_identity,
+    }
 
 
 @router.post("/projects/upload", response_model=UploadProjectResponse, status_code=status.HTTP_201_CREATED)
@@ -209,16 +275,24 @@ def upload_project(zip_file: UploadFile = File(...)):
     if not root_folders:
         tmp_path.unlink(missing_ok=True)
         raise HTTPException(status_code=400, detail="Zip parsed no projects (invalid or empty zip.)")
-    analyzer = ProjectAnalyzer(ConfigManager(), root_folders, tmp_path)
+    cm = ConfigManager()
+    analyzer = ProjectAnalyzer(cm, root_folders, tmp_path)
     created_projects = analyzer.initialize_projects()
-    pending_duplicates = _run_post_upload_analyses(analyzer, created_projects)
+    pending_duplicates, pending_identity = _run_post_upload_analyses(analyzer, created_projects)
     tmp_path.unlink(missing_ok=True)
+    if pending_duplicates:
+        status = "needs_resolution"
+    elif pending_identity:
+        status = "needs_identity"
+    else:
+        status = "complete"
     return UploadProjectResponse(
         ok=True,
-        status="needs_resolution" if pending_duplicates else "complete",
+        status=status,
         projects=[ProjectSummary(id=p.id, name=p.name) for p in created_projects],
         pending_duplicates=pending_duplicates,
-        )
+        pending_identity=pending_identity,
+    )
 
 
 @router.get("/privacy-consent", response_model=ConsentResponse)
@@ -241,8 +315,10 @@ def get_list_projects():
     """List all analyzed/uploaded projects."""
     pm = ProjectManager()
     grouped_projects = pm.get_project_groups()
+
     current_projects = [ProjectSummary(id=p.id, name=p.name) for p in grouped_projects["current"]]
     previous_projects = [ProjectSummary(id=p.id, name=p.name) for p in grouped_projects["previous"]]
+
     return ProjectsListResponse(
         projects=current_projects + previous_projects,
         current_projects=current_projects,
@@ -280,7 +356,10 @@ def delete_project(id: int):
         raise HTTPException(status_code=404, detail="Project not found.")
     if not pm.delete(id):
         raise HTTPException(status_code=500, detail="Failed to delete project.")
+    analyzer = ProjectAnalyzer(ConfigManager(), root_folders=[], zip_path=None)
+    analyzer.rebuild_seen_authors()
     return None
+
 
 @router.post("/projects/resolve-contributors")
 def resolve_contributors(req: ContributorMergeApplyRequest):
@@ -326,12 +405,12 @@ def resolve_contributors_batch(req: ContributorMergeBatchRequest):
         )
         results.append({"project_id": item.project_id, **result})
 
-    return {"ok": True, "results": results}
+    all_pending_identity = [pi for r in results for pi in r.get("pending_identity", [])]
+    return {"ok": True, "results": results, "pending_identity": all_pending_identity}
 
 
 @router.get("/skills", response_model=SkillsListResponse)
 def get_skills_list():
-    """List unique skills detected across all projects, plus their project usage count."""
     pm = ProjectManager()
     projects = list(pm.get_all())
     counts = Counter()
@@ -345,9 +424,9 @@ def get_skills_list():
     ]
     return SkillsListResponse(skills=skills)
 
+
 @router.get("/skills/usage", response_model=SkillsUsageResponse)
 def get_skills_usage():
-    """List skills with usage counts and the project names where each skill appears."""
     pm = ProjectManager()
     projects = list(pm.get_all())
 
@@ -372,26 +451,21 @@ def get_skills_usage():
     ]
     return SkillsUsageResponse(skills=skills)
 
+
 @router.get("/badges/progress", response_model=BadgeProgressResponse)
 def get_badge_progress():
-    """Return badge progress analytics based on current projects."""
     pm = ProjectManager()
     return build_badge_progress(list(pm.get_all()))
 
 
 @router.get("/wrapped/yearly", response_model=YearlyWrappedResponse)
 def get_yearly_wrapped():
-    """Return 'yearly wrapped' analytics for projects."""
     pm = ProjectManager()
     return build_yearly_wrapped(list(pm.get_all()))
 
 
 @router.post("/reports", response_model=ReportDetailResponse, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_consent)])
 def create_report(req: ReportCreateRequest):
-    """
-    Create a saved Report (template) from a list of Project IDs.
-    Snapshots projects into ReportProjects in reports.db.
-    """
     from src.models.Report import Report
     from src.models.ReportProject import ReportProject, PortfolioDetails
 
@@ -450,7 +524,6 @@ def create_report(req: ReportCreateRequest):
 
 @router.get("/reports", response_model=ReportsListResponse, dependencies=[Depends(require_consent)])
 def list_reports():
-    """List all saved reports (templates) in the system."""
     rm = ReportManager()
     reports = rm.list_reports()
     return ReportsListResponse(
@@ -471,7 +544,6 @@ def list_reports():
 
 @router.get("/reports/{id}", response_model=ReportDetailResponse, dependencies=[Depends(require_consent)])
 def get_report(id: int):
-    """Get a report (by id) and its summary info."""
     rm = ReportManager()
     r = rm.get_report(id)
     if not r:
@@ -488,12 +560,9 @@ def get_report(id: int):
         )
     )
 
+
 @router.get("/resume/context/{id}", dependencies=[Depends(require_consent)])
 def get_resume_context(id: int):
-    """
-    Return the resume template context for a report as JSON.
-    Used by the frontend live HTML preview.
-    """
     rm = ReportManager()
     report = rm.get_report(id)
     if not report:
@@ -504,10 +573,6 @@ def get_resume_context(id: int):
 
 @router.patch("/reports/{id}/projects/{project_name}", dependencies=[Depends(require_consent)])
 def patch_report_project(id: int, project_name: str, req: ReportProjectPatchRequest):
-    """
-    Update editable fields on a single ReportProject within a report.
-    Only non-None fields are applied.
-    """
     from urllib.parse import unquote
     project_name = unquote(project_name)
 
@@ -535,10 +600,6 @@ def patch_report_project(id: int, project_name: str, req: ReportProjectPatchRequ
 
 @router.delete("/reports/{id}", status_code=204, dependencies=[Depends(require_consent)])
 def delete_report(id: int):
-    """
-    Delete a report and all associated report projects.
-    Returns 204 No Content on success.
-    """
     rm = ReportManager()
     report = rm.get_report(id)
     if not report:
@@ -550,7 +611,6 @@ def delete_report(id: int):
 
 @router.get("/portfolio/{id}", response_model=PortfolioResponse, dependencies=[Depends(require_consent)])
 def get_portfolio(id: int):
-    """Retrieve a generated portfolio report by id."""
     report_manager = ReportManager()
     report = report_manager.get_report(id)
     if not report:
@@ -562,9 +622,6 @@ def get_portfolio(id: int):
 
 @router.post("/portfolio/export", response_model=PortfolioExportResponse, dependencies=[Depends(require_consent)])
 def export_portfolio(req: PortfolioExportRequest):
-    """
-    Export a portfolio PDF file from a report and return download info.
-    """
     rm = ReportManager()
     report = rm.get_report(req.report_id)
     if not report:
@@ -585,7 +642,6 @@ def export_portfolio(req: PortfolioExportRequest):
 
 @router.get("/portfolio/exports/{export_id}/download", dependencies=[Depends(require_consent)])
 def download_portfolio(export_id: str):
-    """Download a previously exported portfolio file."""
     out_dir = Path("portfolios")
     matches = list(out_dir.glob(f"{export_id}-*.pdf"))
     if not matches:
@@ -596,9 +652,6 @@ def download_portfolio(export_id: str):
 
 @router.post("/portfolio/{id}/edit", response_model=PortfolioResponse, dependencies=[Depends(require_consent)])
 def edit_portfolio(id: int, payload: PortfolioUpdateRequest):
-    """
-    Edit an existing portfolio report's title and notes.
-    """
     report_manager = ReportManager()
     report = report_manager.get_report(id)
     if not report:
@@ -615,11 +668,6 @@ def edit_portfolio(id: int, payload: PortfolioUpdateRequest):
 
 @router.post("/reports/{id}/portfolio-details/generate", response_model=PortfolioDetailsGenerateResponse, dependencies=[Depends(require_consent)])
 def generate_report_portfolio_details(id: int, req: PortfolioDetailsGenerateRequest):
-    """
-    Generates PortfolioDetails for selected ReportProjects in a report
-    using the analyzed Project stored in projects.db (matched by name),
-    then persists changes back into reports.db.
-    """
     if req.report_id != id:
         raise HTTPException(status_code=400, detail="report_id mismatch.")
 
@@ -665,6 +713,165 @@ def generate_report_portfolio_details(id: int, req: PortfolioDetailsGenerateRequ
     return PortfolioDetailsGenerateResponse(updated_project_names=updated)
 
 
+def _build_heatmap_data(
+    report_projects: list,
+    project_manager,
+    usernames: List[str],
+    days: Optional[int] = None,
+) -> dict:
+    """
+    Shared heatmap aggregation used by both the API endpoint and the public portfolio page.
+    Returns a dict with keys: days_series, aggregate, computed_days.
+    days_series is a list of dicts (date, commits, lines_changed, intensity).
+    """
+    today = datetime.now(timezone.utc).date()
+    if days is not None:
+        window_start = today - timedelta(days=days - 1)
+    else:
+        project_dates = []
+        for rp in report_projects:
+            p = project_manager.get_by_name(rp.project_name)
+            if p and getattr(p, "date_created", None):
+                project_dates.append(p.date_created.date())
+        inferred_start = min(project_dates) if project_dates else (today - timedelta(days=364))
+        window_start = max(inferred_start, today - timedelta(days=1825))
+
+    computed_days = (today - window_start).days + 1
+    day_buckets = [window_start + timedelta(days=i) for i in range(computed_days)]
+    aggregate_map = {d.isoformat(): {"commits": 0, "lines_changed": 0} for d in day_buckets}
+
+    for rp in report_projects:
+        project = project_manager.get_by_name(rp.project_name)
+        if not project:
+            continue
+
+        adc = list(getattr(project, "author_daily_contributions", []) or [])
+        contributions = list(getattr(project, "author_contributions", []) or [])
+
+        if not adc:
+            continue
+
+        real_daily_authors = set()
+
+        for item in adc:
+            author_email = (item or {}).get("author", "")
+            if not _author_matches_usernames(author_email, usernames):
+                continue
+
+            daily = (item or {}).get("daily_commits", {}) or {}
+            wrote_any = False
+            for day_str, c in daily.items():
+                if day_str not in aggregate_map:
+                    continue
+                commit_count = _safe_int(c, 0)
+                if commit_count > 0:
+                    wrote_any = True
+                aggregate_map[day_str]["commits"] += commit_count
+
+            if wrote_any:
+                real_daily_authors.add((author_email or "").strip().lower())
+
+        if real_daily_authors and contributions:
+            for author_entry in contributions:
+                author_email = (author_entry or {}).get("author", "")
+                norm_author = (author_email or "").strip().lower()
+
+                if norm_author not in real_daily_authors:
+                    continue
+                if not _author_matches_usernames(author_email, usernames):
+                    continue
+
+                total_lines = _safe_int((author_entry or {}).get("lines_added"), 0) + _safe_int((author_entry or {}).get("lines_deleted"), 0)
+                if total_lines <= 0:
+                    continue
+
+                author_daily = next(
+                    (x for x in adc if ((x or {}).get("author", "") or "").strip().lower() == norm_author),
+                    None
+                )
+                active_days_list = sorted([
+                    d for d, c in ((author_daily or {}).get("daily_commits", {}) or {}).items()
+                    if _safe_int(c, 0) > 0 and d in aggregate_map
+                ])
+                if not active_days_list:
+                    continue
+
+                base = total_lines // len(active_days_list)
+                rem = total_lines % len(active_days_list)
+                for i, day_str in enumerate(active_days_list):
+                    aggregate_map[day_str]["lines_changed"] += base + (1 if i < rem else 0)
+
+    def intensity_for(commits: int) -> int:
+        if commits <= 0: return 0
+        if commits == 1: return 1
+        if commits <= 3: return 2
+        if commits <= 6: return 3
+        return 4
+
+    days_series = []
+    total_commits = 0
+    total_lines_changed = 0
+    active_days_count = 0
+
+    for day in day_buckets:
+        key = day.isoformat()
+        commits = _safe_int(aggregate_map[key]["commits"], 0)
+        lines_changed = _safe_int(aggregate_map[key]["lines_changed"], 0)
+        if commits > 0 or lines_changed > 0:
+            active_days_count += 1
+        total_commits += commits
+        total_lines_changed += lines_changed
+        days_series.append({
+            "date": key,
+            "commits": commits,
+            "lines_changed": lines_changed,
+            "intensity": intensity_for(commits),
+        })
+
+    return {
+        "days_series": days_series,
+        "computed_days": computed_days,
+        "aggregate": {
+            "total_commits": total_commits,
+            "total_lines_changed": total_lines_changed,
+            "active_days": active_days_count,
+        },
+    }
+
+
+@router.post("/portfolio/activity-heatmap", response_model=PortfolioActivityHeatmapResponse, dependencies=[Depends(require_consent)])
+def get_portfolio_activity_heatmap(req: PortfolioActivityHeatmapRequest):
+    report_manager = ReportManager()
+    project_manager = ProjectManager()
+
+    report = report_manager.get_report(req.report_id)
+    if not report:
+        raise HTTPException(status_code=404, detail="Portfolio report not found.")
+    _require_report_kind(report, "portfolio")
+
+    selected_names = set((name or "").strip() for name in req.project_names if (name or "").strip())
+    report_projects = list(report.projects or [])
+    if selected_names:
+        report_projects = [rp for rp in report_projects if rp.project_name in selected_names]
+
+    normalized_usernames = _normalize_username_candidates(req.usernames)
+    if not normalized_usernames:
+        cfg = ConfigManager()
+        normalized_usernames = _normalize_username_candidates(cfg.get("usernames") or [])
+
+    heatmap = _build_heatmap_data(report_projects, project_manager, normalized_usernames, req.days)
+
+    return PortfolioActivityHeatmapResponse(
+        ok=True,
+        report_id=req.report_id,
+        usernames=normalized_usernames,
+        days=heatmap["computed_days"],
+        generated_at=datetime.now(timezone.utc),
+        aggregate=PortfolioActivityAggregate(**heatmap["aggregate"]),
+        days_series=[PortfolioActivityDay(**d) for d in heatmap["days_series"]],
+    )
+
+
 def export_report_pdf(report, template: str, output_name: str) -> tuple[str, Path, int]:
     export_id = uuid4().hex
     out_dir = Path("resumes") if template != "portfolio" else Path("portfolios")
@@ -687,9 +894,6 @@ def export_report_pdf(report, template: str, output_name: str) -> tuple[str, Pat
 
 @router.post("/resume/export", response_model=ResumeExportResponse, dependencies=[Depends(require_consent)])
 def export_resume(req: ResumeExportRequest):
-    """
-    Export a resume PDF file from a report and return download info.
-    """
     rm = ReportManager()
     report = rm.get_report(req.report_id)
     if not report:
@@ -710,21 +914,17 @@ def export_resume(req: ResumeExportRequest):
         page_count=page_count,
     )
 
+
 @router.get("/resume/context/{id}", dependencies=[Depends(require_consent)])
 def get_resume_context(id: int):
-    """
-    Return the resume template context for a report as JSON.
-    Used by the frontend to render a live HTML preview.
-    """
     rm = ReportManager()
     report = rm.get_report(id)
     if not report:
         raise HTTPException(status_code=404, detail="Report not found.")
     _require_report_kind(report, "resume")
     context = ReportExporter()._build_context(report, ConfigManager())
-    # Convert date objects to strings so they're JSON-serialisable
     for proj in context.get("projects", []):
-        pass  # dates are already formatted strings in _build_context
+        pass
     return context
 
 
@@ -738,7 +938,6 @@ class ConfigSaveRequest(BaseModel):
 
 @router.get("/resume/exports/{export_id}/download", dependencies=[Depends(require_consent)])
 def download_resume(export_id: str):
-    """Download a previously exported resume file."""
     out_dir = Path("resumes")
     matches = list(out_dir.glob(f"{export_id}-*.pdf"))
     if not matches:
@@ -749,7 +948,6 @@ def download_resume(export_id: str):
 
 @router.delete("/resume/exports/{export_id}", dependencies=[Depends(require_consent)])
 def delete_resume_export(export_id: str):
-    """Delete a previously exported resume PDF (e.g. when user cancels after page-count warning)."""
     out_dir = Path("resumes")
     matches = list(out_dir.glob(f"{export_id}-*.pdf"))
     if not matches:
@@ -761,78 +959,125 @@ def delete_resume_export(export_id: str):
 
 @router.get("/config")
 def get_config():
-    """Return all stored config values as a flat dict."""
     cm = ConfigManager()
     return {"ok": True, "config": cm.get_all()}
+
+
+class SetIdentityRequest(BaseModel):
+    emails: List[str]
+    project_ids: List[int]
+
+
+@router.post("/projects/set-identity")
+def set_identity(req: SetIdentityRequest):
+    cm = ConfigManager()
+    existing = set(cm.get("usernames") or [])
+    new_usernames = sorted(existing | set(req.emails))
+    cm.set("usernames", new_usernames)
+
+    pm = ProjectManager()
+    results = []
+    for project_id in req.project_ids:
+        project = pm.get(project_id)
+        if not project:
+            continue
+        analyzer = ProjectAnalyzer(cm, root_folders=[], zip_path=Path(project.file_path))
+        pending_duplicates, pending_identity = analyzer.analyze_git_and_contributions(
+            projects=[project], interactive=False
+        )
+        if not pending_duplicates and not pending_identity:
+            analyzer.analyze_metadata(projects=[project])
+            analyzer.analyze_categories(projects=[project])
+            analyzer.analyze_languages(projects=[project])
+            analyzer.analyze_skills(projects=[project], silent=True)
+            analyzer.generate_insights_noninteractive(projects=[project])
+        results.append({
+            "project_id": project_id,
+            "status": "complete" if not pending_duplicates and not pending_identity else "incomplete",
+        })
+
+    return {"ok": True, "usernames": new_usernames, "results": results}
+
+
+class UpdateUsernamesRequest(BaseModel):
+    emails: List[str]
+
+
+@router.put("/config/usernames")
+def update_usernames(req: UpdateUsernamesRequest):
+    cm = ConfigManager()
+    cm.set("usernames", sorted(set(req.emails)))
+    return {"ok": True, "usernames": cm.get("usernames")}
 
 
 @router.post("/config")
 def save_config(req: ConfigSaveRequest):
-    """Persist profile fields. Only non-empty values are written."""
     cm = ConfigManager()
+    identity_keys = {"github", "email"}
+    identity_changed = False
     for key, value in req.model_dump().items():
         if value is not None and str(value).strip():
+            if key in identity_keys and cm.get(key) != str(value).strip():
+                identity_changed = True
             cm.set(key, str(value).strip())
+    if identity_changed:
+        cm.delete("usernames")
     return {"ok": True, "config": cm.get_all()}
+
 
 @router.post("/projects/{id}/thumbnail")
 def upload_thumbnail(id: int, file: UploadFile = File(...)):
-    """
-    Upload a thumbnail image for a project.
-    Saves to thumbnails/ directory and updates project.thumbnail.
-    """
     import shutil as _shutil
- 
+
     VALID_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".heic", ".ico", ".svg"}
- 
+
     pm = ProjectManager()
     project = pm.get(id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found.")
- 
+
     suffix = Path(file.filename).suffix.lower()
     if suffix not in VALID_EXTENSIONS:
         raise HTTPException(
             status_code=400,
             detail=f"Invalid image format '{suffix}'. Supported: {', '.join(sorted(VALID_EXTENSIONS))}"
         )
- 
+
     thumbnails_dir = Path("thumbnails")
     thumbnails_dir.mkdir(exist_ok=True)
- 
+
     filename = f"project_{id}_thumb{suffix}"
     dest = thumbnails_dir / filename
- 
+
     with dest.open("wb") as f:
         _shutil.copyfileobj(file.file, f)
- 
+
     project.thumbnail = str(dest)
     pm.set(project)
- 
+
     return {"ok": True, "thumbnail": str(dest)}
- 
- 
+
+
 @router.get("/thumbnails/{filename}")
 def serve_thumbnail(filename: str):
-    """Serve a project thumbnail image by filename."""
     path = Path("thumbnails") / filename
     if not path.exists() or not path.is_file():
         raise HTTPException(status_code=404, detail="Thumbnail not found.")
     return FileResponse(str(path))
 
+
 @router.post("/config/set")
 def config_set(req: ConfigSetRequest):
-    """
-    Set a single config value by key. Accepts any JSON-serializable value,
-    so structured data like education/experience arrays round-trip correctly.
-    """
     cm = ConfigManager()
     cm.set(req.key, req.value)
     return {"ok": True, "key": req.key}
+
+
 def _require_private_mode(report):
     mode = getattr(report, "portfolio_mode", "private") or "private"
     if mode != "private":
         raise HTTPException(status_code=409, detail="Portfolio is in public mode and cannot be edited.")
+
 
 @router.patch("/portfolio/{id}/mode", response_model=PortfolioResponse, dependencies=[Depends(require_consent)])
 def update_portfolio_mode(id: int, payload: PortfolioModeUpdateRequest):
@@ -851,6 +1096,7 @@ def update_portfolio_mode(id: int, payload: PortfolioModeUpdateRequest):
         report.portfolio_published_at = None
     report_manager.update_report(report)
     return PortfolioResponse(ok=True, portfolio=_build_portfolio_report(report), message="Portfolio mode updated.")
+
 
 @router.patch("/portfolio/{id}/projects/{project_name}", response_model=PortfolioResponse, dependencies=[Depends(require_consent)])
 def update_portfolio_project_customizations(id: int, project_name: str, payload: PortfolioProjectUpdateRequest):
@@ -880,6 +1126,7 @@ def update_portfolio_project_customizations(id: int, project_name: str, payload:
     report_manager.update_report(report)
     return PortfolioResponse(ok=True, portfolio=_build_portfolio_report(report), message="Portfolio project updated.")
 
+
 @router.post("/portfolio/{id}/unpublish", response_model=PortfolioPublishResponse, dependencies=[Depends(require_consent)])
 def unpublish_portfolio(id: int):
     report_manager = ReportManager()
@@ -890,11 +1137,30 @@ def unpublish_portfolio(id: int):
 
     report.portfolio_mode = "private"
     report.portfolio_published_at = None
+    report.public_token = None
     report_manager.update_report(report)
     return PortfolioPublishResponse(ok=True, portfolio=_build_portfolio_report(report), message="Portfolio moved to private mode.")
+
+
+def _generate_portfolio_slug(title: str, report_manager: ReportManager, exclude_id: Optional[int] = None) -> str:
+    import re
+    base = re.sub(r"[^a-z0-9]+", "-", (title or "portfolio").lower()).strip("-") or "portfolio"
+    existing_tokens = {
+        getattr(r, "public_token", None)
+        for r in report_manager.list_reports()
+        if r.id != exclude_id
+    }
+    if base not in existing_tokens:
+        return base
+    for _ in range(10):
+        candidate = f"{base}-{uuid4().hex[:4]}"
+        if candidate not in existing_tokens:
+            return candidate
+    return f"{base}-{uuid4().hex[:8]}"
+
+
 @router.post("/portfolio/{id}/publish", response_model=PortfolioPublishResponse, dependencies=[Depends(require_consent)])
 def publish_portfolio(id: int):
-    from datetime import datetime
     report_manager = ReportManager()
     report = report_manager.get_report(id)
     if not report:
@@ -903,5 +1169,69 @@ def publish_portfolio(id: int):
 
     report.portfolio_mode = "public"
     report.portfolio_published_at = datetime.now()
+    if not report.public_token:
+        report.public_token = _generate_portfolio_slug(report.title, report_manager, exclude_id=report.id)
     report_manager.update_report(report)
     return PortfolioPublishResponse(ok=True, portfolio=_build_portfolio_report(report), message="Portfolio published.")
+
+
+@router.get("/public/portfolio/{token}", response_class=HTMLResponse)
+def public_portfolio_page(token: str):
+    """Serve a publicly accessible HTML portfolio page. No auth required; only works when portfolio_mode is 'public'."""
+    import jinja2
+    from pathlib import Path as _Path
+
+    report_manager = ReportManager()
+    all_reports = report_manager.list_reports()
+    report = next(
+        (r for r in all_reports if getattr(r, "public_token", None) == token and r.portfolio_mode == "public"),
+        None,
+    )
+    if not report:
+        raise HTTPException(status_code=404, detail="Portfolio not found or not public.")
+    _require_report_kind(report, "portfolio")
+
+    portfolio = _build_portfolio_report(report)
+
+    published_at = None
+    if portfolio.portfolio_published_at:
+        published_at = portfolio.portfolio_published_at.strftime("%B %d, %Y")
+
+    visible_projects = [
+        p for p in portfolio.projects
+        if not (p.portfolio_customizations or {}).get("is_hidden", False)
+    ]
+
+    project_manager = ProjectManager()
+    thumbnail_urls = {}
+    for p in visible_projects:
+        proj = project_manager.get_by_name(p.project_name)
+        if proj and getattr(proj, "thumbnail", None):
+            filename = Path(proj.thumbnail).name
+            thumbnail_urls[p.project_name] = f"http://localhost:8000/thumbnails/{filename}"
+
+    all_badges = build_badge_progress(list(project_manager.get_all()))
+    badges_by_project: dict = {}
+    for badge in all_badges.get("badges", []):
+        if badge.get("earned"):
+            name = (badge.get("project") or {}).get("name", "")
+            if name:
+                badges_by_project.setdefault(name, []).append(badge)
+
+    cfg = ConfigManager()
+    heatmap_usernames = _normalize_username_candidates(cfg.get("usernames") or [])
+    heatmap = _build_heatmap_data(visible_projects, project_manager, usernames=heatmap_usernames)
+
+    templates_dir = _Path(__file__).parent / "templates"
+    env = jinja2.Environment(loader=jinja2.FileSystemLoader(str(templates_dir)), autoescape=True)
+    template = env.get_template("public_portfolio.html")
+    html = template.render(
+        title=portfolio.title or "Portfolio",
+        published_at=published_at,
+        projects=visible_projects,
+        thumbnail_urls=thumbnail_urls,
+        badges_by_project=badges_by_project,
+        heatmap=heatmap,
+        heatmap_usernames=heatmap_usernames,
+    )
+    return HTMLResponse(content=html)

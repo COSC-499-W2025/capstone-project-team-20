@@ -35,7 +35,6 @@ class PortfolioProject(BaseModel):
     portfolio_customizations: Dict[str, object] = Field(default_factory=dict)
 
 
-
 class PortfolioReport(BaseModel):
     id: Optional[int] = None
     title: str = ""
@@ -45,6 +44,8 @@ class PortfolioReport(BaseModel):
     projects: List[PortfolioProject] = Field(default_factory=list)
     portfolio_mode: str = "private"
     portfolio_published_at: Optional[datetime] = None
+    public_token: Optional[str] = None
+    public_url: Optional[str] = None
 
 
 class PortfolioGenerateRequest(BaseModel):
@@ -91,6 +92,7 @@ class PortfolioExportResponse(BaseModel):
     filename: str
     download_url: str
 
+
 class PortfolioModeUpdateRequest(BaseModel):
     mode: str  # "private" or "public"
 
@@ -106,3 +108,38 @@ class PortfolioPublishResponse(BaseModel):
     ok: bool = True
     portfolio: Optional[PortfolioReport] = None
     message: str = ""
+
+class PortfolioActivityDay(BaseModel):
+    date: str
+    commits: int = 0
+    lines_changed: int = 0
+    intensity: int = 0
+
+
+class PortfolioActivityAggregate(BaseModel):
+    total_commits: int = 0
+    total_lines_changed: int = 0
+    active_days: int = 0
+
+
+class PortfolioActivityHeatmapRequest(BaseModel):
+    report_id: int
+    project_names: List[str] = Field(default_factory=list)
+    usernames: List[str] = Field(default_factory=list)
+    days: Optional[int] = Field(default=None, ge=7, le=3650)
+
+class PortfolioActivityHeatmapResponse(BaseModel):
+    ok: bool = True
+    report_id: int
+    usernames: List[str] = Field(default_factory=list)
+    days: int = 84
+    generated_at: datetime
+    aggregate: PortfolioActivityAggregate
+    days_series: List[PortfolioActivityDay] = Field(default_factory=list)
+
+class PortfolioProjectActivity(BaseModel):
+    project_name: str
+    total_commits: int = 0
+    total_lines_changed: int = 0
+    active_days: int = 0
+    days: List[PortfolioActivityDay] = Field(default_factory=list)

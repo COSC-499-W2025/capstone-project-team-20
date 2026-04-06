@@ -244,9 +244,9 @@ def test_upload_project_success(client, monkeypatch):
 
         def initialize_projects(self):
             return [FakeProject(1, "Proj1"), FakeProject(2, "Proj2")]
-        
+
         def analyze_git_and_contributions(self, projects, interactive=False):
-            return []
+            return ([], [])
 
     monkeypatch.setattr(routes, "ProjectAnalyzer", FakeAnalyzer)
 
@@ -279,6 +279,7 @@ def test_upload_project_triggers_analyses(client, monkeypatch):
 
         def analyze_git_and_contributions(self, projects=None, interactive=True):
             calls.append(("git", len(projects or []), interactive))
+            return ([], [])
 
         def analyze_metadata(self, projects=None):
             calls.append(("metadata", len(projects or [])))
@@ -547,6 +548,12 @@ def test_save_config_persists_all_fields(client, monkeypatch):
         def set(self, key, value):
             stored[key] = value
 
+        def get(self, key, default=None):
+            return stored.get(key, default)
+
+        def delete(self, key):
+            stored.pop(key, None)
+
         def get_all(self):
             return stored
 
@@ -592,6 +599,12 @@ def test_save_config_required_fields_only(client, monkeypatch):
     class FakeConfigManager:
         def set(self, key, value):
             stored[key] = value
+
+        def get(self, key, default=None):
+            return stored.get(key, default)
+
+        def delete(self, key):
+            stored.pop(key, None)
 
         def get_all(self):
             return stored
@@ -1261,6 +1274,7 @@ def test_publish_and_unpublish_portfolio(client, monkeypatch):
     class FakeReportManager:
         def get_report(self, id): return report if id == 14 else None
         def update_report(self, updated): return True
+        def list_reports(self): return []
 
     monkeypatch.setattr(routes, "ConsentManager", FakeConsentManager)
     monkeypatch.setattr(routes, "ReportManager", FakeReportManager)
@@ -1274,6 +1288,286 @@ def test_publish_and_unpublish_portfolio(client, monkeypatch):
     assert unpub.status_code == 200
     assert unpub.json()["portfolio"]["portfolio_mode"] == "private"
     assert unpub.json()["portfolio"]["portfolio_published_at"] is None
+
+
+# ---------------------------------------------------------------------------
+# Public portfolio page — slug token, HTML route
+# ---------------------------------------------------------------------------
+
+def test_publish_generates_slug_token(client, monkeypatch):
+    """Publish sets a slug derived from the report title, not a numeric ID."""
+    class FakeConsentManager:
+        def has_user_consented(self): return True
+
+    report = Report(id=20, title="My SWE Portfolio", date_created=datetime(2025,1,1),
+                    sort_by="resume_score", projects=[], notes=None, report_kind="portfolio")
+
+    class FakeReportManager:
+        def get_report(self, id): return report if id == 20 else None
+        def update_report(self, updated): return True
+        def list_reports(self): return []
+
+    monkeypatch.setattr(routes, "ConsentManager", FakeConsentManager)
+    monkeypatch.setattr(routes, "ReportManager", FakeReportManager)
+
+    res = client.post("/portfolio/20/publish")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["portfolio"]["public_token"] == "my-swe-portfolio"
+    assert data["portfolio"]["public_url"] == "http://localhost:8000/public/portfolio/my-swe-portfolio"
+
+
+def test_publish_token_stable_on_republish(client, monkeypatch):
+    """Re-publishing keeps the existing token instead of generating a new one."""
+    class FakeConsentManager:
+        def has_user_consented(self): return True
+
+    report = Report(id=21, title="Stable", date_created=datetime(2025,1,1),
+                    sort_by="resume_score", projects=[], notes=None, report_kind="portfolio")
+    report.public_token = "already-set"
+
+    class FakeReportManager:
+        def get_report(self, id): return report if id == 21 else None
+        def update_report(self, updated): return True
+        def list_reports(self): return []
+
+    monkeypatch.setattr(routes, "ConsentManager", FakeConsentManager)
+    monkeypatch.setattr(routes, "ReportManager", FakeReportManager)
+
+    res = client.post("/portfolio/21/publish")
+    assert res.status_code == 200
+    assert res.json()["portfolio"]["public_token"] == "already-set"
+
+
+def test_unpublish_clears_token(client, monkeypatch):
+    """Unpublishing clears public_token so the old URL stops working."""
+    class FakeConsentManager:
+        def has_user_consented(self): return True
+
+    report = Report(id=22, title="R", date_created=datetime(2025,1,1),
+                    sort_by="resume_score", projects=[], notes=None, report_kind="portfolio")
+    report.portfolio_mode = "public"
+    report.public_token = "my-report"
+
+    class FakeReportManager:
+        def get_report(self, id): return report if id == 22 else None
+        def update_report(self, updated): return True
+
+    monkeypatch.setattr(routes, "ConsentManager", FakeConsentManager)
+    monkeypatch.setattr(routes, "ReportManager", FakeReportManager)
+
+    res = client.post("/portfolio/22/unpublish")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["portfolio"]["public_token"] is None
+    assert data["portfolio"]["public_url"] is None
+
+
+def test_public_portfolio_page_returns_html(client, monkeypatch):
+    """GET /public/portfolio/{token} returns 200 HTML for a public portfolio."""
+    report = Report(id=23, title="Public Port", date_created=datetime(2025,1,1),
+                    sort_by="resume_score", projects=[], notes=None, report_kind="portfolio")
+    report.portfolio_mode = "public"
+    report.public_token = "public-port"
+
+    class FakeReportManager:
+        def list_reports(self): return [report]
+
+    class FakeProjectManager:
+        def get_by_name(self, name): return None
+        def get_all(self): return iter([])
+
+    monkeypatch.setattr(routes, "ReportManager", FakeReportManager)
+    monkeypatch.setattr(routes, "ProjectManager", FakeProjectManager)
+    monkeypatch.setattr(routes, "build_badge_progress", lambda projects: {"badges": []})
+
+    res = client.get("/public/portfolio/public-port")
+    assert res.status_code == 200
+    assert "text/html" in res.headers["content-type"]
+    assert "Public Port" in res.text
+    assert "Public" in res.text
+
+
+def test_public_portfolio_page_404_when_private(client, monkeypatch):
+    """GET /public/portfolio/{token} returns 404 if the portfolio is private."""
+    report = Report(id=24, title="Private", date_created=datetime(2025,1,1),
+                    sort_by="resume_score", projects=[], notes=None, report_kind="portfolio")
+    report.portfolio_mode = "private"
+    report.public_token = "private-token"
+
+    class FakeReportManager:
+        def list_reports(self): return [report]
+
+    monkeypatch.setattr(routes, "ReportManager", FakeReportManager)
+
+    res = client.get("/public/portfolio/private-token")
+    assert res.status_code == 404
+
+
+def test_public_portfolio_page_404_unknown_token(client, monkeypatch):
+    """GET /public/portfolio/{token} returns 404 for an unrecognised token."""
+    class FakeReportManager:
+        def list_reports(self): return []
+
+    monkeypatch.setattr(routes, "ReportManager", FakeReportManager)
+
+    res = client.get("/public/portfolio/does-not-exist")
+    assert res.status_code == 404
+
+
+def test_generate_portfolio_slug_basic():
+    """Slug is lowercased and special characters become hyphens."""
+    class FakeRM:
+        def list_reports(self): return []
+
+    slug = routes._generate_portfolio_slug("My SWE Portfolio!", FakeRM())
+    assert slug == "my-swe-portfolio"
+
+
+def test_generate_portfolio_slug_collision():
+    """When the base slug is taken, a 4-char suffix is appended."""
+    existing = Report(id=1, title="X", date_created=datetime(2025,1,1),
+                      sort_by="resume_score", projects=[], report_kind="portfolio")
+    existing.public_token = "my-portfolio"
+
+    class FakeRM:
+        def list_reports(self): return [existing]
+
+    slug = routes._generate_portfolio_slug("My Portfolio", FakeRM(), exclude_id=99)
+    assert slug.startswith("my-portfolio-")
+    assert len(slug) == len("my-portfolio-") + 4
+
+
+def test_public_portfolio_page_hides_hidden_projects(client, monkeypatch):
+    """Projects marked is_hidden are excluded from the public page."""
+    from src.models.ReportProject import ReportProject, PortfolioDetails
+
+    visible = ReportProject(project_name="Visible", portfolio_details=PortfolioDetails())
+    hidden = ReportProject(project_name="Hidden", portfolio_details=PortfolioDetails(),
+                           portfolio_customizations={"is_hidden": True})
+
+    report = Report(id=25, title="Port", date_created=datetime(2025,1,1),
+                    sort_by="resume_score", projects=[visible, hidden],
+                    notes=None, report_kind="portfolio")
+    report.portfolio_mode = "public"
+    report.public_token = "hide-test"
+
+    class FakeReportManager:
+        def list_reports(self): return [report]
+
+    class FakeProjectManager:
+        def get_by_name(self, name): return None
+        def get_all(self): return iter([])
+
+    monkeypatch.setattr(routes, "ReportManager", FakeReportManager)
+    monkeypatch.setattr(routes, "ProjectManager", FakeProjectManager)
+    monkeypatch.setattr(routes, "build_badge_progress", lambda projects: {"badges": []})
+
+    res = client.get("/public/portfolio/hide-test")
+    assert res.status_code == 200
+    assert "Visible" in res.text
+    assert "Hidden" not in res.text
+
+
+def test_public_portfolio_page_renders_heatmap(client, monkeypatch):
+    """GET /public/portfolio/{token} includes heatmap HTML when activity data exists."""
+    from src.models.ReportProject import ReportProject, PortfolioDetails
+
+    rp = ReportProject(project_name="MyProject", portfolio_details=PortfolioDetails())
+    report = Report(id=30, title="Heatmap Port", date_created=datetime(2025, 1, 1),
+                    sort_by="resume_score", projects=[rp], notes=None, report_kind="portfolio")
+    report.portfolio_mode = "public"
+    report.public_token = "heatmap-test"
+
+    project = Project(name="MyProject", file_path="/fake/path")
+    project.author_daily_contributions = [
+        {"author": "dev@example.com", "daily_commits": {"2025-03-01": 2, "2025-03-02": 1}, "total_commits": 3}
+    ]
+    project.author_contributions = [
+        {"author": "dev@example.com", "lines_added": 100, "lines_deleted": 20}
+    ]
+
+    class FakeReportManager:
+        def list_reports(self): return [report]
+
+    class FakeProjectManager:
+        def get_by_name(self, name): return project if name == "MyProject" else None
+        def get_all(self): return iter([])
+
+    class FakeConfigManager:
+        def get(self, key): return ["dev@example.com"] if key == "usernames" else None
+
+    monkeypatch.setattr(routes, "ReportManager", FakeReportManager)
+    monkeypatch.setattr(routes, "ProjectManager", FakeProjectManager)
+    monkeypatch.setattr(routes, "ConfigManager", FakeConfigManager)
+    monkeypatch.setattr(routes, "build_badge_progress", lambda projects: {"badges": []})
+
+    res = client.get("/public/portfolio/heatmap-test")
+    assert res.status_code == 200
+    assert "Activity Heatmap" in res.text
+    assert "hm-grid" in res.text
+    assert "dev@example.com" in res.text
+
+
+def test_build_heatmap_data_aggregates_commits():
+    """_build_heatmap_data sums daily commits across projects and authors."""
+    from datetime import date, timedelta
+    from src.models.ReportProject import ReportProject, PortfolioDetails
+
+    test_date = (date.today() - timedelta(days=5)).isoformat()
+
+    rp1 = ReportProject(project_name="ProjectA", portfolio_details=PortfolioDetails())
+    rp2 = ReportProject(project_name="ProjectB", portfolio_details=PortfolioDetails())
+
+    proj_a = Project(name="ProjectA", file_path="/fake/a")
+    proj_a.author_daily_contributions = [
+        {"author": "alice@example.com", "daily_commits": {test_date: 3}, "total_commits": 3},
+    ]
+    proj_a.author_contributions = []
+
+    proj_b = Project(name="ProjectB", file_path="/fake/b")
+    proj_b.author_daily_contributions = [
+        {"author": "bob@example.com", "daily_commits": {test_date: 2}, "total_commits": 2},
+    ]
+    proj_b.author_contributions = []
+
+    class FakeProjectManager:
+        def get_by_name(self, name):
+            return proj_a if name == "ProjectA" else proj_b
+
+    result = routes._build_heatmap_data([rp1, rp2], FakeProjectManager(), usernames=[])
+
+    day = next((d for d in result["days_series"] if d["date"] == test_date), None)
+    assert day is not None
+    assert day["commits"] == 5  # 3 + 2 across both projects
+    assert result["aggregate"]["total_commits"] == 5
+    assert result["aggregate"]["active_days"] == 1
+
+
+def test_build_heatmap_data_filters_by_username():
+    """_build_heatmap_data only counts commits matching provided usernames."""
+    from datetime import date, timedelta
+    from src.models.ReportProject import ReportProject, PortfolioDetails
+
+    test_date = (date.today() - timedelta(days=5)).isoformat()
+
+    rp = ReportProject(project_name="ProjectA", portfolio_details=PortfolioDetails())
+    proj = Project(name="ProjectA", file_path="/fake/a")
+    proj.author_daily_contributions = [
+        {"author": "alice@example.com", "daily_commits": {test_date: 3}, "total_commits": 3},
+        {"author": "bob@example.com", "daily_commits": {test_date: 2}, "total_commits": 2},
+    ]
+    proj.author_contributions = []
+
+    class FakeProjectManager:
+        def get_by_name(self, name): return proj
+
+    result = routes._build_heatmap_data([rp], FakeProjectManager(), usernames=["alice"])
+
+    day = next((d for d in result["days_series"] if d["date"] == test_date), None)
+    assert day is not None
+    assert day["commits"] == 3  # only alice, bob excluded
+    assert result["aggregate"]["total_commits"] == 3
 
 
 def test_patch_report_project_report_not_found(client, monkeypatch):
@@ -1340,6 +1634,197 @@ def test_config_set_stores_dict_value(client, monkeypatch):
     assert stored["skills"] == skills
 
 
+# ── POST /projects/set-identity ───────────────────────────────────────────────
+
+def test_set_identity_accumulates_emails_and_reruns_analysis(client, monkeypatch):
+    """set-identity merges new emails into existing usernames and reruns analysis."""
+    stored = {"usernames": ["existing@example.com"]}
+    analysis_calls = []
+
+    class FakeConfigManager:
+        def get(self, key, default=None):
+            return stored.get(key, default)
+        def set(self, key, value):
+            stored[key] = value
+
+    class FakeProjectManager:
+        def get(self, id):
+            return FakeProject(id, f"project-{id}")
+
+    class FakeAnalyzer:
+        def __init__(self, cm, root_folders, zip_path):
+            pass
+        def analyze_git_and_contributions(self, projects, interactive=False):
+            analysis_calls.append([p.id for p in projects])
+            return ([], [])
+        def analyze_metadata(self, projects):
+            pass
+        def analyze_categories(self, projects):
+            pass
+        def analyze_languages(self, projects):
+            pass
+        def analyze_skills(self, projects, silent=False):
+            pass
+        def generate_insights_noninteractive(self, projects):
+            pass
+
+    monkeypatch.setattr(routes, "ConfigManager", FakeConfigManager)
+    monkeypatch.setattr(routes, "ProjectManager", FakeProjectManager)
+    monkeypatch.setattr(routes, "ProjectAnalyzer", FakeAnalyzer)
+
+    res = client.post("/projects/set-identity", json={
+        "emails": ["new@example.com"],
+        "project_ids": [1],
+    })
+    assert res.status_code == 200
+    data = res.json()
+    assert data["ok"] is True
+    assert "existing@example.com" in data["usernames"]
+    assert "new@example.com" in data["usernames"]
+    assert analysis_calls == [[1]]
+
+
+def test_set_identity_skips_missing_projects(client, monkeypatch):
+    """set-identity silently skips project IDs that don't exist."""
+    stored = {}
+
+    class FakeConfigManager:
+        def get(self, key, default=None):
+            return stored.get(key, default)
+        def set(self, key, value):
+            stored[key] = value
+
+    class FakeProjectManager:
+        def get(self, id):
+            return None  # project not found
+
+    monkeypatch.setattr(routes, "ConfigManager", FakeConfigManager)
+    monkeypatch.setattr(routes, "ProjectManager", FakeProjectManager)
+
+    res = client.post("/projects/set-identity", json={
+        "emails": ["me@example.com"],
+        "project_ids": [999],
+    })
+    assert res.status_code == 200
+    assert res.json()["results"] == []
+
+
+# ── PUT /config/usernames ──────────────────────────────────────────────────────
+
+def test_update_usernames_replaces_list(client, monkeypatch):
+    """PUT /config/usernames replaces the full list and deduplicates."""
+    stored = {"usernames": ["old@example.com"]}
+
+    class FakeConfigManager:
+        def get(self, key, default=None):
+            return stored.get(key, default)
+        def set(self, key, value):
+            stored[key] = value
+
+    monkeypatch.setattr(routes, "ConfigManager", FakeConfigManager)
+
+    res = client.put("/config/usernames", json={"emails": ["a@example.com", "b@example.com", "a@example.com"]})
+    assert res.status_code == 200
+    data = res.json()
+    assert data["ok"] is True
+    assert sorted(data["usernames"]) == ["a@example.com", "b@example.com"]
+    assert "old@example.com" not in stored["usernames"]
+
+
+def test_update_usernames_empty_list(client, monkeypatch):
+    """PUT /config/usernames with empty list clears the usernames."""
+    stored = {"usernames": ["someone@example.com"]}
+
+    class FakeConfigManager:
+        def get(self, key, default=None):
+            return stored.get(key, default)
+        def set(self, key, value):
+            stored[key] = value
+
+    monkeypatch.setattr(routes, "ConfigManager", FakeConfigManager)
+
+    res = client.put("/config/usernames", json={"emails": []})
+    assert res.status_code == 200
+    assert res.json()["usernames"] == []
+
+
+# ── Upload returns pending_identity ───────────────────────────────────────────
+
+def test_upload_returns_pending_identity_when_no_match(client, monkeypatch):
+    """Upload response includes pending_identity and status=needs_identity when no contributor match."""
+    monkeypatch.setattr(routes, "parse_zip_to_project_folders", lambda _: ["root1"])
+
+    pending_id = [{
+        "project_id": 1,
+        "project_name": "my-app",
+        "candidates": [{"email": "dev@example.com", "name": "Dev User"}],
+    }]
+
+    class FakeAnalyzer:
+        def __init__(self, config, root_folders, tmp_path):
+            self.changed_project_names = ["my-app"]
+
+        def initialize_projects(self):
+            return [FakeProject(1, "my-app")]
+
+        def analyze_git_and_contributions(self, projects, interactive=False):
+            return ([], pending_id)
+
+    monkeypatch.setattr(routes, "ProjectAnalyzer", FakeAnalyzer)
+
+    files = {"zip_file": ("test.zip", io.BytesIO(b"fake zip bytes"), "application/zip")}
+    res = client.post("/projects/upload", files=files)
+
+    assert res.status_code == 201
+    data = res.json()
+    assert data["status"] == "needs_identity"
+    assert len(data["pending_identity"]) == 1
+    assert data["pending_identity"][0]["project_name"] == "my-app"
+    assert data["pending_duplicates"] == []
+
+
+# ── save_config clears usernames when identity fields change ──────────────────
+
+def test_save_config_clears_usernames_when_email_changes(client, monkeypatch):
+    """Changing the profile email clears cached usernames."""
+    stored = {"email": "old@example.com", "usernames": ["old@example.com"]}
+
+    class FakeConfigManager:
+        def get(self, key, default=None):
+            return stored.get(key, default)
+        def set(self, key, value):
+            stored[key] = value
+        def delete(self, key):
+            stored.pop(key, None)
+        def get_all(self):
+            return stored
+
+    monkeypatch.setattr(routes, "ConfigManager", FakeConfigManager)
+
+    res = client.post("/config", json={"name": "Ada", "email": "new@example.com", "phone": "555-1234"})
+    assert res.status_code == 200
+    assert "usernames" not in stored
+
+
+def test_save_config_does_not_clear_usernames_when_email_unchanged(client, monkeypatch):
+    """Saving config with the same email must NOT clear usernames."""
+    stored = {"email": "same@example.com", "usernames": ["same@example.com"]}
+
+    class FakeConfigManager:
+        def get(self, key, default=None):
+            return stored.get(key, default)
+        def set(self, key, value):
+            stored[key] = value
+        def delete(self, key):
+            stored.pop(key, None)
+        def get_all(self):
+            return stored
+
+    monkeypatch.setattr(routes, "ConfigManager", FakeConfigManager)
+
+    res = client.post("/config", json={"name": "Ada", "email": "same@example.com", "phone": "555-1234"})
+    assert res.status_code == 200
+    assert "usernames" in stored
 # ── POST /resume/export (page_count) ─────────────────────────────────────────
 
 def test_export_resume_returns_page_count(client, monkeypatch):
@@ -1480,5 +1965,223 @@ def test_delete_resume_export_requires_consent(client, monkeypatch):
     monkeypatch.setattr(routes, "ConsentManager", FakeConsentManager)
 
     res = client.delete("/resume/exports/someexportid")
+    assert res.status_code == 403
+    assert "consent" in res.json()["detail"].lower()
+
+def test_portfolio_activity_heatmap_returns_project_activity(client, monkeypatch):
+    class FakeConsentManager:
+        def has_user_consented(self):
+            return True
+
+    rp = ReportProject(project_name="ProjA", portfolio_details=PortfolioDetails())
+    report = Report(
+        id=21,
+        title="Portfolio Heatmap",
+        date_created=datetime(2025, 1, 1),
+        sort_by="resume_score",
+        projects=[rp],
+        notes=None,
+        report_kind="portfolio",
+    )
+
+    class FakeReportManager:
+        def get_report(self, id):
+            return report if id == 21 else None
+
+    class FakeProjectManager:
+        def get_by_name(self, name):
+            p = FakeProject(
+                id=1,
+                name=name,
+                file_path="fake/path.zip",
+                date_created=datetime(2025, 1, 1),
+            )
+            p.author_daily_contributions = [
+                {
+                    "author": "alice@example.com",
+                    "daily_commits": {
+                        "2025-01-05": 2,
+                        "2025-01-06": 1,
+                    },
+                    "total_commits": 3,
+                },
+                {
+                    "author": "bob@example.com",
+                    "daily_commits": {
+                        "2025-01-07": 1,
+                    },
+                    "total_commits": 1,
+                },
+            ]
+            p.author_contributions = [
+                {
+                    "author": "alice@example.com",
+                    "total_commits": 6,
+                    "lines_added": 120,
+                    "lines_deleted": 20,
+                    "files_touched": ["a.py", "b.py", "c.py"],
+                },
+                {
+                    "author": "bob@example.com",
+                    "total_commits": 3,
+                    "lines_added": 20,
+                    "lines_deleted": 5,
+                    "files_touched": ["x.py"],
+                },
+            ]
+            return p
+
+    class FakeConfigManager:
+        def get(self, key, default=None):
+            if key == "usernames":
+                return ["alice@example.com"]
+            return default
+
+    monkeypatch.setattr(routes, "ConsentManager", FakeConsentManager)
+    monkeypatch.setattr(routes, "ReportManager", FakeReportManager)
+    monkeypatch.setattr(routes, "ProjectManager", FakeProjectManager)
+    monkeypatch.setattr(routes, "ConfigManager", FakeConfigManager)
+
+    res = client.post("/portfolio/activity-heatmap", json={
+        "report_id": 21,
+        "project_names": ["ProjA"],
+        "usernames": ["alice@example.com"],
+        "days": 14,
+    })
+
+    assert res.status_code == 200
+    payload = res.json()
+    assert payload["ok"] is True
+    assert payload["report_id"] == 21
+    assert payload["days"] == 14
+    assert payload["usernames"] == ["alice@example.com"]
+    assert "aggregate" in payload
+    assert "days_series" in payload
+    assert len(payload["days_series"]) == 14
+    assert payload["aggregate"]["total_commits"] >= 0
+    assert payload["aggregate"]["total_lines_changed"] >= 0
+    assert payload["aggregate"]["active_days"] >= 0
+
+
+def test_portfolio_activity_heatmap_falls_back_to_config_usernames(client, monkeypatch):
+    class FakeConsentManager:
+        def has_user_consented(self):
+            return True
+
+    rp = ReportProject(project_name="ProjB", portfolio_details=PortfolioDetails())
+    report = Report(
+        id=22,
+        title="Portfolio Heatmap",
+        date_created=datetime(2025, 1, 1),
+        sort_by="resume_score",
+        projects=[rp],
+        notes=None,
+        report_kind="portfolio",
+    )
+
+    class FakeReportManager:
+        def get_report(self, id):
+            return report if id == 22 else None
+
+    class FakeProjectManager:
+        def get_by_name(self, name):
+            p = FakeProject(
+                id=2,
+                name=name,
+                file_path="fake/path.zip",
+                date_created=datetime(2025, 1, 1),
+            )
+            p.author_daily_contributions = [
+                {
+                    "author": "mr-sban@example.com",
+                    "daily_commits": {
+                        "2025-01-10": 2,
+                    },
+                    "total_commits": 2,
+                }
+            ]
+            p.author_contributions = [
+                {
+                    "author": "mr-sban@example.com",
+                    "total_commits": 5,
+                    "lines_added": 50,
+                    "lines_deleted": 10,
+                    "files_touched": ["api.py", "routes.py"],
+                }
+            ]
+            return p
+
+    class FakeConfigManager:
+        def get(self, key, default=None):
+            if key == "usernames":
+                return ["mr-sban@example.com"]
+            return default
+
+    monkeypatch.setattr(routes, "ConsentManager", FakeConsentManager)
+    monkeypatch.setattr(routes, "ReportManager", FakeReportManager)
+    monkeypatch.setattr(routes, "ProjectManager", FakeProjectManager)
+    monkeypatch.setattr(routes, "ConfigManager", FakeConfigManager)
+
+    res = client.post("/portfolio/activity-heatmap", json={
+        "report_id": 22,
+        "project_names": ["ProjB"],
+        "usernames": [],
+        "days": 21,
+    })
+
+    assert res.status_code == 200
+    payload = res.json()
+    assert payload["ok"] is True
+    assert payload["usernames"] == ["mr-sban@example.com"]
+    assert payload["aggregate"]["total_commits"] >= 0
+
+
+def test_portfolio_activity_heatmap_rejects_non_portfolio_report(client, monkeypatch):
+    class FakeConsentManager:
+        def has_user_consented(self):
+            return True
+
+    report = Report(
+        id=23,
+        title="Resume Report",
+        date_created=datetime(2025, 1, 1),
+        sort_by="resume_score",
+        projects=[],
+        notes=None,
+        report_kind="resume",
+    )
+
+    class FakeReportManager:
+        def get_report(self, id):
+            return report if id == 23 else None
+
+    monkeypatch.setattr(routes, "ConsentManager", FakeConsentManager)
+    monkeypatch.setattr(routes, "ReportManager", FakeReportManager)
+
+    res = client.post("/portfolio/activity-heatmap", json={
+        "report_id": 23,
+        "project_names": [],
+        "usernames": ["alice@example.com"],
+        "days": 30,
+    })
+
+    assert res.status_code == 400
+    assert "only supports 'portfolio'" in res.json()["detail"]
+
+
+def test_portfolio_activity_heatmap_requires_consent(client, monkeypatch):
+    class FakeConsentManager:
+        def has_user_consented(self):
+            return False
+
+    monkeypatch.setattr(routes, "ConsentManager", FakeConsentManager)
+
+    res = client.post("/portfolio/activity-heatmap", json={
+        "report_id": 1,
+        "project_names": [],
+        "usernames": [],
+        "days": 30,
+    })
+
     assert res.status_code == 403
     assert "consent" in res.json()["detail"].lower()

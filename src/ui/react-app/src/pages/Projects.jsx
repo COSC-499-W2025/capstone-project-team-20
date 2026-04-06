@@ -6,6 +6,7 @@ import {
   uploadProjectZip,
   deleteProject,
   resolveContributorsBatch,
+  setIdentity,
   uploadThumbnail,
   thumbnailUrl,
 } from "../api/client";
@@ -439,6 +440,8 @@ function Projects() {
   const [mergeSelections, setMergeSelections] = useState({});
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [pendingIdentity, setPendingIdentity] = useState([]);
+  const [identitySelections, setIdentitySelections] = useState({});
 
   async function loadProjects() {
     setLoading(true); setError(null);
@@ -474,6 +477,9 @@ function Projects() {
         setMergeSelections(buildMergeSelections(res.pending_duplicates));
         setShowMergeModal(true);
         setUploadStatus("Upload complete. Contributor merges need review.");
+      } else if (res?.status === "needs_identity" && res?.pending_identity?.length) {
+        openIdentityModal(res.pending_identity);
+        setUploadStatus("Upload complete. Please identify yourself.");
       } else {
         setUploadStatus(`Done! Loaded ${res?.projects?.length ?? 0} project(s).`);
         setTimeout(() => setUploadStatus(null), 4000);
@@ -509,18 +515,47 @@ function Projects() {
     return sel;
   }
 
+  function openIdentityModal(projects) {
+    // Default each project's selection to the first candidate
+    const defaults = {};
+    for (const p of projects ?? [])
+      if (p.candidates?.length) defaults[p.project_id] = p.candidates[0].email;
+    setPendingIdentity(projects);
+    setIdentitySelections(defaults);
+  }
+
   async function handleApplyMerges() {
     try {
       setUploading(true); setError(null);
-      await resolveContributorsBatch(pendingDuplicates, mergeSelections);
+      const res = await resolveContributorsBatch(pendingDuplicates, mergeSelections);
       await loadProjects();
       const fid = pendingDuplicates[0]?.project_id;
       if (fid) await handleSelect(fid);
       setPendingDuplicates([]); setMergeSelections({});
       setShowMergeModal(false); setConfirmCancel(false);
-      setUploadStatus("Contributor merges applied.");
-      setTimeout(() => setUploadStatus(null), 4000);
+      if (res?.pending_identity?.length) {
+        openIdentityModal(res.pending_identity);
+        setUploadStatus("Merges applied. Please identify yourself.");
+      } else {
+        setUploadStatus("Contributor merges applied.");
+        setTimeout(() => setUploadStatus(null), 4000);
+      }
     } catch(e) { setError(e.message ?? "Failed to apply merges"); }
+    finally    { setUploading(false); }
+  }
+
+  async function handleApplyIdentity() {
+    const emails = [...new Set(Object.values(identitySelections))];
+    const projectIds = pendingIdentity.map(p => p.project_id);
+    try {
+      setUploading(true); setError(null);
+      await setIdentity(emails, projectIds);
+      await loadProjects();
+      if (projectIds[0]) await handleSelect(projectIds[0]);
+      setPendingIdentity([]); setIdentitySelections({});
+      setUploadStatus("Identity saved. Analysis complete.");
+      setTimeout(() => setUploadStatus(null), 4000);
+    } catch(e) { setError(e.message ?? "Failed to save identity"); }
     finally    { setUploading(false); }
   }
 
@@ -542,6 +577,65 @@ function Projects() {
     <>
       <style>{CSS}</style>
 
+      {/* ── Identity modal ── */}
+      {pendingIdentity.length > 0 && (
+        <div className="pj-overlay">
+          <div className="pj-modal">
+            <div className="pj-bar" aria-hidden="true"/>
+            <div className="pj-modal-header">
+              <h2 className="pj-modal-title">Which contributor are you?</h2>
+              <p className="pj-modal-sub">
+                Select your identity in each project so contributions are attributed correctly.
+              </p>
+            </div>
+            <div className="pj-modal-body" style={{ overflowY:"auto", flex:1 }}>
+              {pendingIdentity.map(p => (
+                <div key={p.project_id} style={{ marginBottom:20 }}>
+                  <div style={{ fontSize:12, fontWeight:700, color:"rgba(255,255,255,.35)", textTransform:"uppercase", letterSpacing:".08em", marginBottom:8 }}>
+                    {p.project_name}
+                  </div>
+                  <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+                    {(p.candidates ?? []).map(c => {
+                      const key = p.project_id;
+                      const selected = identitySelections[key] === c.email;
+                      return (
+                        <label key={c.email} style={{
+                          display:"flex", alignItems:"center", gap:10,
+                          padding:"8px 12px", borderRadius:8, cursor:"pointer",
+                          border:`1px solid ${selected ? "rgba(88,166,255,.4)" : "rgba(255,255,255,.07)"}`,
+                          background: selected ? "rgba(88,166,255,.08)" : "transparent",
+                          transition:"all .15s",
+                        }}>
+                          <input type="radio" name={`identity-${key}`}
+                            checked={selected}
+                            onChange={() => setIdentitySelections(prev => ({ ...prev, [key]: c.email }))}
+                            style={{ accentColor:"#58a6ff", flexShrink:0 }}
+                          />
+                          <div>
+                            <div style={{ fontSize:14, color:"#e6edf3", fontWeight:500 }}>{c.name}</div>
+                            <div style={{ fontSize:12, color:"rgba(255,255,255,.35)", fontFamily:"monospace" }}>{c.email}</div>
+                          </div>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="pj-modal-footer">
+              <button className="pj-btn pj-btn--ghost" disabled={uploading}
+                onClick={() => { setPendingIdentity([]); setIdentitySelections({}); setUploadStatus(null); }}>
+                Skip
+              </button>
+              <button className="pj-btn pj-btn--primary" disabled={uploading} onClick={handleApplyIdentity}>
+                {uploading ? "Saving…" : "This is me →"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+
       <div style={{ display:"flex", gap:0, minHeight:"calc(100vh - 60px)", fontFamily:"'DM Sans','Segoe UI',system-ui,sans-serif" }}>
 
         {/* ── FULL PAGE UPLOAD (no projects yet) ── */}
@@ -559,25 +653,6 @@ function Projects() {
 
           <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:8 }}>
             <h2 style={{ fontSize:18, fontWeight:700, margin:0, color:"#f1f5f9", letterSpacing:"-.3px" }}>Projects</h2>
-            <button
-              onClick={loadProjects} disabled={loading} title="Refresh"
-              style={{
-                background:"none", border:"1px solid rgba(255,255,255,.1)",
-                borderRadius:6, color:"rgba(255,255,255,.35)",
-                cursor:"pointer", padding:"6px 8px",
-                display:"flex", alignItems:"center",
-                height:"auto", transform:"none", boxShadow:"none",
-                transition:"border-color .15s, color .15s",
-              }}
-              onMouseOver={e => { e.currentTarget.style.borderColor="rgba(255,255,255,.3)"; e.currentTarget.style.color="rgba(255,255,255,.7)"; }}
-              onMouseOut={e => { e.currentTarget.style.borderColor="rgba(255,255,255,.1)"; e.currentTarget.style.color="rgba(255,255,255,.35)"; }}
-            >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
-                style={{ animation:loading ? "pj-spin 1s linear infinite" : "none" }}>
-                <polyline points="23 4 23 10 17 10"/>
-                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
-              </svg>
-            </button>
           </div>
 
           <UploadZone onFile={handleFile} uploading={uploading} uploadStatus={uploadStatus} error={error}
@@ -587,7 +662,7 @@ function Projects() {
             <div>
               <div className="pj-group-label">
                 <span className="pj-dot pj-dot--green"/>
-                Current batch
+                Recent Uploads
                 <span className="pj-count">{currentProjects.length}</span>
               </div>
               {currentProjects.map(p => (

@@ -173,6 +173,15 @@ export function getPortfolio(report_id) {
   return request(`/portfolio/${report_id}`);
 }
 
+// Activity heatmap
+export function getPortfolioActivityHeatmap({ report_id, project_names = [], usernames = [], days = 84 }) {
+  return request("/portfolio/activity-heatmap", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ report_id, project_names, usernames, days }),
+  });
+}
+
 // Exports
 
 export function exportResume({ report_id, template = "jake", output_name = "resume.pdf" }) {
@@ -271,5 +280,21 @@ export function configSet(key, value) {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ key, value }),
+  });
+}
+
+export function setIdentity(emails, projectIds) {
+  return request("/projects/set-identity", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ emails, project_ids: projectIds }),
+  });
+}
+
+export function updateUsernames(emails) {
+  return request("/config/usernames", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ emails }),
   });
 }
