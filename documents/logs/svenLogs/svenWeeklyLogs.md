@@ -518,11 +518,11 @@ Next week, I plan to help prioritize and address the peer-testing follow-ups (es
 The primary objective was to complete and integrate new documentation diagrams, elevating clarity for both technical and non-technical stakeholders. Time was also devoted to resolving lingering portfolio finalization issues.
 
 ### PRs I reviewed this week:
-- **PR #518**: Improve PDF Download UX  
-- **PR #508**: Add Detection and Confirmation Modal for Resumes Exceeding One Page  
+- **PR #518**: Improve PDF Download UX
+- **PR #508**: Add Detection and Confirmation Modal for Resumes Exceeding One Page
 
 ### PRs I opened this week:
-- **PR #527**: Updated Documentation Diagrams + README  
+- **PR #527**: Updated Documentation Diagrams + README
 - **PR #516**: Portfolio finalizations/bugfixes (primarily with file counts)
 
 ### Focus Area and Outcomes:
@@ -535,3 +535,28 @@ The primary objective was to complete and integrate new documentation diagrams, 
 ### Looking Ahead:
 Next week’s priority is to focus on cleaning up the project ahead of it being finalized with this milestone
 
+# Term 2 Week 13
+
+### Tasks worked on:
+- Built and merged [PR #537](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/537), which adds a portfolio activity heatmap with full-history support and date-range filtering.
+- Reviewed [PR #539](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/539), [PR #535](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/535), and [PR #541](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/541).
+- Completed milestone duties by watching and voting on Milestone 3 demo videos for teams 1–15.
+
+### Weekly Goals Recap:
+My main goal this week was to finish and ship the heatmap/date-range work, then make sure my review and milestone demo responsibilities were completed.
+
+### PRs I reviewed this week:
+- **PR #539**: Feat/heatmap public portfolio
+- **PR #535**: Open Web Portfolio Into a New Page
+- **PR #541**: Update usage section to specify CLI usage
+
+### PRs I opened this week:
+- **PR #537**: Add portfolio activity heatmap with full-history + date range filtering
+
+### Focus Area and Outcomes:
+- **Main contribution this week**: The heatmap update gives users a clearer long-term view of portfolio activity and lets them filter by date range more easily.
+- **Peer Review Notes**: The PRs I reviewed were straightforward and useful, mainly improving usability and documentation.
+- **Milestone Work**: I finished reviewing and voting on Milestone 3 demo submissions for teams 1 through 15.
+
+### Looking Ahead:
+Next week I am preparing for the upcoming Quiz 4 and getting feedback from our last class this coming Wednesday.
