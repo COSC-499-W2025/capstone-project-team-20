@@ -795,7 +795,7 @@ We do not have any continuuing tasks either than possibly designing/creating a l
 
 - Lex Nash (84668540):
 
-- Dylan Alexander (16394025):
+- Dylan Alexander (16394025): This week, I created 3 PRs. The first had to do with exporting our web portfolio to a seperate page, enabling "Open Public Page" mode. [PR #535](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/535). The second fixed a key bug in the way our documentation scores were being displayed, and improved the logic of those scores, as well as refining skill detection. [PR #536](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/536). The third added our new heatmap that Sven made to the "Open Public Page" mode for the web portfolio. [PR #539](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/539).
 
 - Sven Annist (42486720): This week we focused on wrapping up key feature work and completing Milestone 3 demo evaluations. [PR #537](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/537) was merged, adding a portfolio activity heatmap with full-history support and date-range filtering, which improves how users view activity over time. We also continued peer review work on [PR #539](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/539), [PR #535](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/535), and [PR #541](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/541). In addition to repository work, milestone responsibilities were completed by reviewing and voting on demo videos from teams 1 to 15.
 
