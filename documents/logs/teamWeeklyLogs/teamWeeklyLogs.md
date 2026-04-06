@@ -785,4 +785,39 @@ We do not have any continuuing tasks either than possibly designing/creating a l
 ![Term 2 Week 12 Test Report Backend](teamWeeklyLogsImages/T2_W12_Test_Report.png)
 ![Term 2 Week 12 Test Report Frontend](teamWeeklyLogsImages/T2_W12_Frontend_Test.png)
  
+ ### Term 2 Week 13 (March 29th - April 5th)
 
+**Work Performed:**
+
+- Branden Kennedy (42474551): 
+
+- Necmi Kaan Sapoglu (17014796): 
+
+- Lex Nash (84668540):
+  
+- Dylan Alexander (16394025):
+  
+- Sven Annist (42486720): 
+
+**Features included in the project plan for this milestone are:**
+
+
+
+**Continuing tasks from last week and plan for the next week:**
+
+**Burnup chart:**
+![Term 2 Week 12 Burnup chart](teamWeeklyLogsImages/T2_W13_burnup.png)
+
+
+**Table View of Completed Tasks on Project Board:**
+![Term 2 Week 12 Completed Tasks](teamWeeklyLogsImages/T2_W13_Completed.png)
+
+
+**Table View of In-Progress Tasks on Project Board:**
+![Term 2 Week 12 In-Progress](teamWeeklyLogsImages/T2_W13_In_Progress.png)
+
+
+**Test Report:**
+
+![Term 2 Week 12 Test Report Backend](teamWeeklyLogsImages/T2_W13_Test_Report.png)
+![Term 2 Week 12 Test Report Frontend](teamWeeklyLogsImages/T2_W13_Frontend_Test.png)
