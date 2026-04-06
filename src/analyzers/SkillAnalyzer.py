@@ -7,7 +7,7 @@ import os
 
 from src.FileCategorizer import FileCategorizer
 
-from .skill_models import Evidence, SkillProfileItem, TAXONOMY, KNOWN_FRAMEWORKS
+from .skill_models import Evidence, SkillProfileItem, KNOWN_FRAMEWORKS
 from .skill_patterns import DEP_TO_SKILL, SNIPPET_PATTERNS, KNOWN_CONFIG_HINTS
 from .skill_proficiency import ProficiencyEstimator
 from .code_metrics_analyzer import CodeMetricsAnalyzer, CodeFileAnalysis
@@ -38,7 +38,6 @@ BUILD_TOOL_SKILLS: Set[str] = {
     "Rollup",
     "Parcel",
     "CMake",
-    "Make",
 }
 
 FRONTEND_FRAMEWORKS: Set[str] = {
@@ -90,21 +89,44 @@ README_KEYWORDS_WHITELIST: Set[str] = {
 }
 
 DEPENDENCY_FILES: Set[str] = {
+    # JavaScript / Node
     "package.json",
     "package-lock.json",
     "pnpm-lock.yaml",
     "yarn.lock",
+    # Python
     "requirements.txt",
     "pyproject.toml",
     "Pipfile",
     "Pipfile.lock",
     "environment.yml",
     "poetry.lock",
+    "setup.py",
+    "setup.cfg",
+    # Java
     "pom.xml",
     "build.gradle",
     "build.gradle.kts",
+    # Go
     "go.mod",
+    # Rust
+    "Cargo.toml",
+    # Ruby
+    "Gemfile",
+    # Dart / Flutter
+    "pubspec.yaml",
+    # C++
+    "CMakeLists.txt",
+    "conanfile.txt",
+    "conanfile.py",
+    # .NET (exact-name files; *.csproj matched via DEPENDENCY_EXTENSIONS)
+    "packages.config",
+    "nuget.config",
 }
+
+# File extensions (no dot) for dep files that can't use exact-name matching
+# e.g. MyProject.csproj — name varies per project but extension is fixed
+DEPENDENCY_EXTENSIONS: Set[str] = {"csproj"}
 
 
 class SkillAnalyzer:
@@ -476,21 +498,9 @@ class SkillAnalyzer:
 
         max_loc = max(loc_per_lang.values()) or 1
 
-        # TAXONOMY might be a dict or a set; handle both cases
-        is_tax_dict = isinstance(TAXONOMY, dict)
-
         for lang, loc in loc_per_lang.items():
             rel_weight = loc / max_loc
-
-            if is_tax_dict:
-                entry = TAXONOMY.get(lang) or TAXONOMY.get(lang.lower())
-                if isinstance(entry, dict):
-                    skill_name = entry.get("canonical_name") or entry.get("name") or lang
-                else:
-                    skill_name = str(entry) if entry is not None else lang
-            else:
-                # TAXONOMY is a set or something non-dict; just use the language name
-                skill_name = lang
+            skill_name = lang
 
             evidence.append(
                 Evidence(
@@ -512,7 +522,8 @@ class SkillAnalyzer:
             if not path.is_file():
                 continue
 
-            if path.name not in DEPENDENCY_FILES:
+            file_ext = path.suffix.lstrip(".").lower()
+            if path.name not in DEPENDENCY_FILES and file_ext not in DEPENDENCY_EXTENSIONS:
                 continue   # ignore random docs
 
             try:
@@ -520,7 +531,19 @@ class SkillAnalyzer:
             except OSError:
                 continue
 
-            for pattern, skill in self._iter_pattern_pairs(DEP_TO_SKILL):
+            for item in DEP_TO_SKILL:
+                pattern, skill = item[0], item[1]
+                allowed_files = item[2] if len(item) > 2 else None
+                # Skip this pattern if it doesn't apply to the current file type.
+                # allowed_files entries starting with "*." are extension patterns (e.g. "*.csproj").
+                if allowed_files is not None:
+                    name_match = path.name in allowed_files
+                    ext_match = any(
+                        f.startswith("*.") and file_ext == f[2:]
+                        for f in allowed_files
+                    )
+                    if not name_match and not ext_match:
+                        continue
                 if hasattr(pattern, "search"):
                     match = pattern.search(text)
                 else:
@@ -701,9 +724,15 @@ class SkillAnalyzer:
         }
 
         # --- Documentation habits ---
+        # Composite: 30% has_readme, 40% readme keyword quality, 30% comment ratio
         comment_ratio = overall.get("comment_ratio", 0.0)
-        # e.g. 0.05 is minimal, 0.2+ is solid
-        doc_score = min(1.0, comment_ratio / 0.2)
+        has_readme, readme_keywords = self._analyze_readme()
+        readme_score = 0.30 if has_readme else 0.0
+        # 5 keywords = full quality score; capped at 0.40
+        readme_quality_score = min(0.40, (len(readme_keywords) / 5) * 0.40) if has_readme else 0.0
+        # 20%+ comment ratio = full comment score; capped at 0.30
+        comment_score = min(0.30, (comment_ratio / 0.2) * 0.30)
+        doc_score = readme_score + readme_quality_score + comment_score
         doc_level = self._level_from_score(doc_score)
 
         doc_dim = {
@@ -711,6 +740,8 @@ class SkillAnalyzer:
             "level": doc_level,
             "raw": {
                 "comment_ratio": comment_ratio,
+                "has_readme": has_readme,
+                "readme_keywords": readme_keywords,
             },
         }
 

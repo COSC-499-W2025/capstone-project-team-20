@@ -226,7 +226,7 @@ function ProjectDetail({ project, onDelete, onThumbnailUpload, loading }) {
   .join(" → ");
 
   const langEntries = Object.entries(project.language_share ?? {}).sort((a, b) => b[1] - a[1]);
-  const stack = [...(project.frameworks ?? []), ...(project.skills_used ?? [])];
+  const stack = [...new Set([...(project.frameworks ?? []), ...(project.skills_used ?? [])])];
   const flags = [
     project.has_dockerfile && "Docker",
     project.has_database   && "Database",

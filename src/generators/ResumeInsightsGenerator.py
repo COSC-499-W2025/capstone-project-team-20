@@ -313,7 +313,7 @@ class ResumeInsightsGenerator:
 
         doc_score = getattr(self.project, "documentation_habits_score", 0)
         if doc_score > 0:
-            skill_evidence["Documentation"] = f"documentation score {doc_score:.1f}/100"
+            skill_evidence["Documentation"] = f"documentation score {doc_score * 100:.0f}/100"
 
         contributions = getattr(self.project, "individual_contributions", {}) or {}
         if isinstance(contributions, dict):

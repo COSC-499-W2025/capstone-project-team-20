@@ -40,6 +40,10 @@ ignored_dirs:
   - env
   - virtualenv
 
+  # R dependency management (equivalent of node_modules)
+  - renv
+  - packrat
+
   # IDE / project metadata
   - .idea
   - .vscode

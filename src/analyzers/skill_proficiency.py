@@ -90,6 +90,8 @@ class ProficiencyEstimator:
         framework_like = {
             "Django", "Flask", "FastAPI", "React", "Next.js", "Angular", "Vue", "Svelte",
             "Spring", ".NET", "ASP.NET", "Express", "Unity", "Unreal Engine",
+            "Tailwind", "Bootstrap", "Redux", "Hibernate",
+            "Rails", "Flutter",
         }
         if skill in framework_like:
             hits = 0
@@ -99,11 +101,12 @@ class ProficiencyEstimator:
             return [0.0, 0.45, 0.62, 0.75][min(3, hits)]
 
         # ---- Testing tools (PyTest/JUnit/Jest/etc.) ----
-        if skill in {"PyTest", "JUnit", "Jest", "Vitest", "Cypress", "Playwright"}:
-            py_tests = stats.get("python", {}).get("test_files", 0)
-            if py_tests >= 3:
+        if skill in {"PyTest", "JUnit", "Jest", "Vitest", "Cypress", "Playwright", "Mocha", "RSpec"}:
+            # Use overall test file count — language-agnostic
+            overall_test_files = stats.get("overall", {}).get("num_test_files", 0)
+            if overall_test_files >= 3:
                 return 0.72
-            if py_tests >= 1:
+            if overall_test_files >= 1:
                 return 0.55
             return 0.4 if any(e.source in ("dependency", "test_framework") for e in evidence) else 0.2
 

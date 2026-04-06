@@ -63,7 +63,7 @@ languages:
     extensions: [m, mat, sce]
 
   Objective-C:
-    extensions: [m, mm, h]
+    extensions: [mm]
 
   Perl:
     extensions: [pl, pm]
