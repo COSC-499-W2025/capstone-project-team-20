@@ -428,3 +428,28 @@ Next week I plan to review other teams’ projects as part of the course evaluat
 
 **Any Issues or Blockers That I Encountered This Week and How I Addressed/Plan to Address Them:**  
 A key realization during the presentation was that the badges system lacked a sharing component. I addressed this by designing and implementing a shareable image generation feature, ensuring that achievements can be easily exported and shared in a clean and visually appealing format.
+
+### Term 2 Week 14: March 30th – April 5th
+
+**Weekly Goals**  
+This week I focused on finalizing LinkedIn sharing UX for badges and wrapped summaries, stabilizing milestone features, and completing course evaluation responsibilities. The goal was to ensure LinkedIn-specific actions feel intentional while preserving existing sharing behavior.
+
+**Coding Tasks:**  
+I refined the LinkedIn-specific share actions so that clicking Copy Badge for LinkedIn and Copy Wrapped for LinkedIn opens LinkedIn immediately before executing the existing clipboard/image logic. I ensured that generic sharing actions remain unchanged and do not trigger LinkedIn. I also simplified the handler structure based on review feedback to improve readability and maintainability.
+
+**Testing Tasks:**  
+I performed manual validation to confirm:
+- LinkedIn-specific copy actions (badge and wrapped) open LinkedIn and preserve clipboard/image behavior  
+- Generic “Share (Any Platform)” actions maintain their original behavior  
+- Clipboard/image fallback continues to function correctly within LinkedIn flows  
+
+I also updated test expectations to align with the finalized popup and clipboard interaction patterns.
+
+**Reviewing or Collaboration Tasks:**  
+I reviewed 1 additional PR and provided feedback on implementation quality and consistency with existing frontend behavior. I also watched other groups’ Milestone 3 videos and completed peer evaluations, sharing insights with the team to improve our own presentation and UX.
+
+**Brief Description of Last Week Connecting This Week:**  
+Last week I implemented shareable image generation and initial LinkedIn sharing behavior. This week built on that work by refining the LinkedIn posting flow, addressing feedback, and polishing the overall UX.
+
+**Any Issues or Blockers That I Encountered This Week and How I Addressed/Plan to Address Them:**  
+A key challenge was balancing browser popup behavior with async clipboard operations. I resolved this by ensuring LinkedIn opens directly from the user click event before executing copy logic, improving both reliability and alignment with user expectations. There were also constraints from code review expectations, which I addressed by simplifying the implementation and validating behavior through testing.
