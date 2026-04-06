@@ -791,7 +791,7 @@ We do not have any continuuing tasks either than possibly designing/creating a l
 
 - Branden Kennedy (42474551):
 
-- Necmi Kaan Sapoglu (17014796):
+- Necmi Kaan Sapoglu (17014796): Finalized LinkedIn sharing UX for badges and wrapped summaries, ensuring LinkedIn-specific actions open LinkedIn before executing copy/image logic while preserving existing sharing behavior. Refined implementation for clarity and maintainability, performed manual validation of popup and clipboard flows, updated test expectations, reviewed 1 PR, and completed Milestone 3 demo evaluations.
 
 - Lex Nash (84668540):
 
