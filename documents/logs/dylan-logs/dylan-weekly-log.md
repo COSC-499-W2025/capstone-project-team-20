@@ -736,9 +736,6 @@ The third adds the option to select your Git Contributor on a per project basis.
 [feat: Select or Update Git Contributors](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/510)
 
 
-
-
-
 **Testing or Debugging Tasks:**
 
 I wrote extensive frontend component tests for the following PRs.
@@ -750,8 +747,6 @@ I wrote extensive frontend component tests for the following PRs.
 [feat: Select or Update Git Contributors](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/510)
 
 
-
-
 **Reviewing or Collaboration Tasks:**
 
 I manually tested and reviewed the following PRs this week. 
@@ -761,8 +756,6 @@ I manually tested and reviewed the following PRs this week.
 [Feature/skill display](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/506)
 
 [Playwright tests](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/504)
-
-
 
 
 **Brief Description of Last Week Connecting This Week:**
@@ -779,6 +772,58 @@ The plan this week is to kick back, relax, maybe even touch some grass.
 
 Our presentation this week was not as well-rehearsed as our group would've liked. This was because we were unable to use our pre-presentation meeting to rehearse, as Lex did not show up, and did not do their part for the slides. So we had to come up with the slides and their part of the script in a panic, minutes before the presentations. I am proud of the way our team addressed this and showed teamwork to resolve this. The rest of us remained calm and collected, delegated tasks efficiently, and got right to work despite the time crunch.
 
+
+### Term 2 Week 13: March 30th - April 5th
+
+
+**Coding Tasks:**
+
+This week, I made 3 PRs. The first enables "Open Public Page" mode in web portfolios. The user can now export their portfolios to a new page, once made public. Setting the web portfolio to private will immediately retract the portfolio. This feature also implemented Slug-based URLs, which is my favourite small detail. Publishing generates a readable slug from the report title to use used for the portfolio's URL. (e.g. my-swe-portfolio). The slug is stable. Re-publishing won't change it. Appends a short suffix (e.g. ef2f) if there's a collision.
+
+The second made some fixes to the way documentation score was being displayed, and changed the way we calculate documentation score for a more comprehensive analysis. It now takes into account README presence, and README quality, along with comment ratio. It also made some fixes and improvements to skill detection. Certain frameworks that were commonly being falsely detected (e.g. Unity) were dialed in to be more accurate and reduce false positives. Certain frameworks like Vite and ESLint that do not really represent resume-worthy skills have been removed, and missing frameworks like Tailwind and Flutter have been added.
+
+The third PR added the new activity heatmap that Sven made into the "Open Public Page" mode for web portfolios. 
+
+
+[Open Web Portfolio Into a New Page](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/535)
+
+[Fixes made to Skill Detection, Documentation Score](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/536)
+
+[Feat/heatmap public portfolio](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/539)
+
+
+**Testing or Debugging Tasks:**
+
+I wrote extensive frontend component tests for the following PRs.
+
+[Open Web Portfolio Into a New Page](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/535)
+
+[Fixes made to Skill Detection, Documentation Score](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/536)
+
+[Feat/heatmap public portfolio](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/539)
+
+
+**Reviewing or Collaboration Tasks:**
+
+I manually tested and reviewed the following PRs this week. 
+
+[Add portfolio activity heatmap with full-history + date range filtering](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/537)
+
+[Feature/badge share](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/540)
+
+**Brief Description of Last Week Connecting This Week:**
+
+Last week, I added an Awards section to the Resume Template, as well as frontend functionality to add Experience, Education and Awards to Resumes. Additionally, I added detection of Resumes that have exceeded one page, and a confirmation modal asking the user if they'd like to continue. Finally, I added detection of Git Contributor using the user's email, and a prompt for the user to select their Git Contributor on a per project basis, in the case that the detection failed, as well as a Settings tab to change this at any time.
+
+This week, I created 3 PRs. The first had to do with exporting our web portfolio to a seperate page, enabling "Open Public Page" mode. The second fixed a key bug in the way our documentation scores were being displayed, and improved the logic of those scores, as well as refining skill detection. The third added our new heatmap that Sven made to the "Open Public Page" mode for the web portfolio.
+
+**Plan/Goals for Upcoming Week:**
+
+The plan this week is to count my lucky stars.
+
+**Any issues or Blockers That I Encountered This Week and How I Addressed/Plan to Address Them:**
+
+N/A
 
 
 
