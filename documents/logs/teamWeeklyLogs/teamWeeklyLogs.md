@@ -617,7 +617,7 @@ Our frontend is now setup! We will work away at improving that before that befor
 - Dylan Alexander (16394025): This week, I made a PR implementing a new profile-setup page for the frontend. The feature checks if the user has stored necessary fields for report generation (name, phone, email). If they have, the page is bypassed. If they have not, this page allows them to enter the required information. Additionally, there were requested changes for my consolidate git contributors PR, so I spent quite a bit of time fixing that up as well. Other than that, I did my assigned code review and my part for the Milestone 2 presentation, and will be filming my part for the Milestone 2 Video Demo this evening.
 
 - Sven Annist (42486720): This week, I integrated portfolio role data into the portfolio generation flow, ensuring roles from YAML are surfaced in portfolio outputs. I implemented and updated API endpoints for portfolio retrieval, PDF generation, and metadata updates, expanding schemas and tests to support the new responses. I also cleaned up API endpoints and updated system documentation/architecture, including system diagrams. Additionally, I contributed to and recorded the system architecture and introduction section for our Milestone 2 video demo. I opened a PR for the portfolio API and role-aware output updates ([#403](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/403)), and reviewed [#385](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/385), [#391](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/391), [#411](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/411), and [#422](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/422).
-  
+
 **Features included in the project plan for this milestone are:**
 Everything up to and including [Issue 421](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/421)
 
@@ -652,12 +652,12 @@ We have no continuuing tasks! Now, we should be able to polish/refactor the back
 - Dylan Alexander (16394025): This week, I made a PR implementing a new settings page for the frontend. This page has three submenus. 1. Profile, for users to change their name/email/phone/github/linkedin (all information displayed on resume/portfolios). 2. Privacy (gives users the option to grant/revoke consent) 3. Data (gives users the option to delete all stored project data). Additionally, I made a PR installing Vitest and React Testing Library, and another adding tests for my profile-setup page from last week, now that we have a frontend component testing framework.
 
 - Sven Annist (42486720): This week, I pivoted our portfolio implementation from a PDF workflow to a web portfolio workflow to match updated milestone expectations. I implemented the in-app generation/render path for portfolio data, updated API/schema wiring so report summary and bullet content can be surfaced in the portfolio view, and refined the generated portfolio content for cleaner presentation. I also improved portfolio usability by changing project rendering to an accordion layout so entries can be expanded/collapsed, and updated tests to keep coverage aligned with the new behavior. I opened [PR #447](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/447), and reviewed [PR #437](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/437), [PR #431](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/431), and [PR #428](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/428).
-  
+
 **Features included in the project plan for this milestone are:**
 Everything up to and including Issue [COSC-499-W2025/capstone-project-team-20#443](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/443)
 
 **Continuing tasks from last week and plan for the next week:**
-Continuuing to implement our current functionality into the frontend and expanding on it as well. 
+Continuuing to implement our current functionality into the frontend and expanding on it as well.
 
 **Burnup chart:**
 ![Term 2 Week 9 Burnup chart](teamWeeklyLogsImages/T2_W9_burnup.png)
@@ -687,7 +687,7 @@ Continuuing to implement our current functionality into the frontend and expandi
 - Dylan Alexander (16394025): This week, I spent an extensive amount of time hunting for inefficiencies in our analysis methods. Upload zip had been taking an absurd amount of time for quite a while. This included setting a timer for each method in the chain of method calls when uploading zips. I managed to get the total time taken from ~157 seconds to just ~15 seconds (with the zip i was using for testing).[PR #453](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/453)[PR #455](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/455) In addition, I did a few tasks related to our frontend, in an effort to get our frontend to an acceptable place in time for peer testing. This includes adding interactive prompts in our frontend (prompting for consent, prompting to confirm cancellation of analysis), and designing and extending the "merge contributors" modal that Branden implemented.[PR #471](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/471)[PR #475](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/475)
 
 - Sven Annist (42486720): This week I focused on finishing and stabilizing our portfolio workflow ahead of peer testing by implementing private/public portfolio mode support, adding per-project customization persistence (custom title/overview/achievements/hidden flag), wiring mode + customization endpoints in the backend, and connecting the frontend flow so portfolios can be locked/unlocked and edited in private mode while still presenting filtered/searchable views in public mode; I also refined generated portfolio text output so defaults read better while staying compatible with tests, handled rebases/integration after recent merges, and opened [PR #484](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/484) and [PR #485](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/485), while reviewing [PR #453](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/453), [PR #455](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/455), [PR #463](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/463), [PR #465](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/465), and [PR #482](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/482), with next steps being final regression checks and demo prep for peer testing .
-  
+
 **Features included in the project plan for this milestone are:**
 Everything up to and including Issue [COSC-499-W2025/capstone-project-team-20#483](https://github.com/COSC-499-W2025/capstone-project-team-20/issues/483)
 
@@ -744,7 +744,7 @@ Continuuing tasks include implementing CRUD operations into both resume and port
 **Test Report:**
 ![Term 2 Week 11 BACK END Test Report](teamWeeklyLogsImages/w11_tests_backend.png)
 ![Term 2 Week 11 FRONT END Test Report](teamWeeklyLogsImages/w11_test_frontend.png)
- 
+
 
 
 ### Term 2 Week 12 (March 23rd - March 29th)
@@ -759,11 +759,11 @@ Continuuing tasks include implementing CRUD operations into both resume and port
 
 - Dylan Alexander (16394025): This week, I made 3 PRs. The first adds an Awards section to the Resume Template, as well as frontend functionality to add Experience, Education and Awards to Resumes. [PR #502](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/502). The second adds detection of Resumes that have exceeded one page, and a confirmation modal asking the user if they'd like to continue, or go back to edit the Resume. This was quite an interesting task. LaTeX processes each character differently, so coming up with a solution to know for sure when a Resume has exceeded the first page was not obvious to me. In the end, our system generates the Resume, checks if it is over one page, and then prompts the user. If the user wants to go back to shorten the Resume, the Resume is silently deleted. [PR #508](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/508). The third adds the option to select your Git Contributor on a per project basis. Previously there wasn't a way to do this from the frontend, and so analysis was broken unless you used the CLI to select your Git Contributor. The system first tries to use the email given in ProfileSetup as your Git Contributor automatically. If that fails, a modal appears upon analysis, asking you to select your Contributor. This is per-project, for the case that the user may have used two different identities across two diffent projects. I also added a way to change this at any time in Settings. [PR #510](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/510)
 
-- Sven Annist (42486720): This week, I focused on documentation enhancements and UX polish based on previous peer testing feedback. Significant effort was devoted to updating and refining architectural and workflow diagrams, clarifying system components for end-users and future contributors. The merged PR #527 incorporated comprehensive documentation updates, including new and improved diagrams and an updated README. I also reviewed PR #518 (improving PDF download UX) and PR #508 (resumé page limit warnings). 
+- Sven Annist (42486720): This week, I focused on documentation enhancements and UX polish based on previous peer testing feedback. Significant effort was devoted to updating and refining architectural and workflow diagrams, clarifying system components for end-users and future contributors. The merged PR #527 incorporated comprehensive documentation updates, including new and improved diagrams and an updated README. I also reviewed PR #518 (improving PDF download UX) and PR #508 (resumé page limit warnings).
 
 **Features included in the project plan for this milestone are:**
 
-Everything up to and including Issue #523. 
+Everything up to and including Issue #523.
 
 **Continuing tasks from last week and plan for the next week:**
 We do not have any continuuing tasks either than possibly designing/creating a logo that we could use to replace our name displayed as text.
@@ -784,5 +784,40 @@ We do not have any continuuing tasks either than possibly designing/creating a l
 
 ![Term 2 Week 12 Test Report Backend](teamWeeklyLogsImages/T2_W12_Test_Report.png)
 ![Term 2 Week 12 Test Report Frontend](teamWeeklyLogsImages/T2_W12_Frontend_Test.png)
- 
 
+ ### Term 2 Week 13 (March 29th - April 5th)
+
+**Work Performed:**
+
+- Branden Kennedy (42474551):
+
+- Necmi Kaan Sapoglu (17014796): Finalized LinkedIn sharing UX for badges and wrapped summaries, ensuring LinkedIn-specific actions open LinkedIn before executing copy/image logic while preserving existing sharing behavior. Refined implementation for clarity and maintainability, performed manual validation of popup and clipboard flows, updated test expectations, reviewed 1 PR, and completed Milestone 3 demo evaluations.
+
+- Lex Nash (84668540):
+
+- Dylan Alexander (16394025): This week, I created 3 PRs. The first had to do with exporting our web portfolio to a seperate page, enabling "Open Public Page" mode. [PR #535](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/535). The second fixed a key bug in the way our documentation scores were being displayed, and improved the logic of those scores, as well as refining skill detection. [PR #536](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/536). The third added our new heatmap that Sven made to the "Open Public Page" mode for the web portfolio. [PR #539](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/539).
+
+- Sven Annist (42486720): This week we focused on wrapping up key feature work and completing Milestone 3 demo evaluations. [PR #537](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/537) was merged, adding a portfolio activity heatmap with full-history support and date-range filtering, which improves how users view activity over time. We also continued peer review work on [PR #539](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/539), [PR #535](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/535), and [PR #541](https://github.com/COSC-499-W2025/capstone-project-team-20/pull/541). In addition to repository work, milestone responsibilities were completed by reviewing and voting on demo videos from teams 1 to 15.
+
+**Features included in the project plan for this milestone are:**
+
+
+
+**Continuing tasks from last week and plan for the next week:**
+
+**Burnup chart:**
+![Term 2 Week 13 Burnup chart](teamWeeklyLogsImages/w13_burnup.png)
+
+
+**Table View of Completed Tasks on Project Board:**
+![Term 2 Week 13 Completed Tasks](teamWeeklyLogsImages/w13_completed.png)
+
+
+**Table View of In-Progress Tasks on Project Board:**
+![Term 2 Week 13 In-Progress](teamWeeklyLogsImages/w13_in_progress.png)
+
+
+**Test Report:**
+
+![Term 2 Week 13 Test Report Backend](teamWeeklyLogsImages/w13_frontend_test.png)
+![Term 2 Week 13 Test Report Frontend](teamWeeklyLogsImages/w13_backend_test.png)
